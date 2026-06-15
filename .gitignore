@@ -1,0 +1,28 @@
+# Maschinenlokale Tool-Konfiguration
+.claude/settings.local.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+
+# Laufzeitdaten (Bilder-Bibliothek, DBs, Modelle — nie ins Repo)
+Data/
+*.sqlite
+*.sqlite-journal
+*.safetensors
+*.gguf
+*.onnx
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

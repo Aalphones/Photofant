@@ -1,0 +1,144 @@
+/* ============================================================
+   Photofant — Wartung (Maintenance)
+   Alle Klassen mnt- gepräft. Erbt Tokens aus styles.css.
+   ============================================================ */
+
+.mnt-page { padding: 20px 22px 80px; max-width: 900px; }
+
+/* ---- status overview bar ---- */
+.mnt-statusbar {
+  display: flex; flex-wrap: wrap; gap: 0;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-l);
+  overflow: hidden; margin-bottom: 28px;
+}
+.mnt-stat { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 3px;
+  padding: 14px 18px; border-right: 1px solid var(--line); }
+.mnt-stat:last-child { border-right: none; }
+.mnt-stat-lbl { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.mnt-stat-val { font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 7px; }
+.mnt-stat-val.ok { color: var(--good); }
+.mnt-stat-val.warn { color: var(--warn); }
+.mnt-stat-val.muted { color: var(--text-2); }
+.mnt-stat-sub { font-size: 11px; color: var(--text-3); }
+
+/* ---- section heads ---- */
+.mnt-sec { margin-bottom: 32px; }
+.mnt-sec-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.mnt-sec-ico { width: 38px; height: 38px; border-radius: 10px; flex: none; display: grid; place-items: center;
+  background: var(--surface); color: var(--text-2); }
+.mnt-sec-ico.accent { background: var(--accent-weak); color: var(--accent); }
+.mnt-sec-ico.warn { background: oklch(0.800 0.130 75 / .14); color: var(--warn); }
+.mnt-sec-ico.good { background: oklch(0.740 0.130 152 / .14); color: var(--good); }
+.mnt-sec-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.mnt-sec-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.45; text-wrap: pretty; }
+.mnt-sec-actions { margin-left: auto; display: flex; gap: 8px; flex: none; align-items: flex-start; }
+
+/* ---- card shell ---- */
+.mnt-card { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-l); overflow: hidden; }
+
+/* ---- scan bar (trigger + progress) ---- */
+.mnt-scan-bar { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.mnt-scan-bar .sb-info { flex: 1; min-width: 0; font-size: 12px; color: var(--text-3); }
+.mnt-scan-bar .sb-info b { color: var(--text-2); font-weight: 500; }
+.mnt-progress { flex: 1; min-width: 0; }
+.mnt-progress .mp-label { font-size: 12px; color: var(--text-2); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.mnt-progress .mp-spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line-2); border-top-color: var(--accent); animation: mnt-spin .7s linear infinite; flex: none; }
+@keyframes mnt-spin { to { transform: rotate(360deg); } }
+.mnt-progress .mp-bar { height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.mnt-progress .mp-bar > i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .4s ease; }
+
+/* ---- result tabs ---- */
+.mnt-tabs { display: flex; border-bottom: 1px solid var(--line); }
+.mnt-tab { display: flex; align-items: center; gap: 7px; padding: 11px 16px; font-size: 12.5px; font-weight: 600;
+  color: var(--text-3); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.mnt-tab:hover { color: var(--text-2); }
+.mnt-tab.on { color: var(--text); border-bottom-color: var(--accent); }
+.mnt-tab .tab-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 999px; font-size: 10px; font-weight: 700; background: var(--surface-2); color: var(--text-2); }
+.mnt-tab.on .tab-badge { background: var(--accent-weak); color: var(--accent); }
+.mnt-tab .tab-badge.warn { background: oklch(0.800 0.130 75 / .18); color: var(--warn); }
+.mnt-tab .tab-badge.err { background: var(--danger-weak); color: var(--danger); }
+
+/* ---- bulk action bar ---- */
+.mnt-bulk { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--accent-weak);
+  border-bottom: 1px solid var(--accent-line); }
+.mnt-bulk .bk-count { font-size: 12.5px; font-weight: 600; color: var(--accent); flex: 1; }
+.mnt-bulk .bk-clr { font-size: 11.5px; color: var(--text-2); }
+.mnt-bulk .bk-clr:hover { color: var(--text); text-decoration: underline; }
+
+/* ---- issue rows ---- */
+.mnt-issues { }
+.mnt-issue { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+.mnt-issue:last-child { border-bottom: none; }
+.mnt-issue:hover { background: var(--bg-2); }
+.mnt-issue .mi-chk { width: 18px; height: 18px; border-radius: 5px; flex: none; border: 1.5px solid var(--line-2); display: grid; place-items: center; cursor: pointer; }
+.mnt-issue .mi-chk.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.mnt-issue .mi-body { flex: 1; min-width: 0; }
+.mnt-issue .mi-path { font-family: var(--mono); font-size: 11.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mnt-issue .mi-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mnt-issue .mi-acts { display: flex; gap: 6px; flex: none; }
+.mnt-issue .mi-acts .mnt-btn { height: 28px; padding: 0 10px; font-size: 11.5px; }
+
+/* issue type badge */
+.mnt-badge { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; flex: none; }
+.mnt-badge.orphan { background: oklch(0.800 0.130 75 / .14); color: var(--warn); }
+.mnt-badge.missing { background: var(--danger-weak); color: var(--danger); }
+.mnt-badge.drift { background: var(--accent-weak); color: var(--accent); }
+
+/* empty state */
+.mnt-empty { padding: 36px 20px; text-align: center; color: var(--text-3); }
+.mnt-empty svg { margin-bottom: 10px; color: var(--line-2); }
+.mnt-empty .me-t { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.mnt-empty .me-s { font-size: 12px; margin-top: 4px; }
+
+/* ---- rebuild cards ---- */
+.mnt-op { display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-bottom: 1px solid var(--line); }
+.mnt-op:last-child { border-bottom: none; }
+.mnt-op-body { flex: 1; min-width: 0; }
+.mnt-op-title { font-size: 13.5px; font-weight: 600; }
+.mnt-op-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.5; text-wrap: pretty; }
+.mnt-op-result { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; margin-top: 9px; }
+.mnt-op-result.ok { color: var(--good); }
+.mnt-op-result.running { color: var(--accent); }
+.mnt-op-ctrl { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+/* ---- buttons ---- */
+.mnt-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; padding: 0 14px;
+  border-radius: 9px; font-size: 12.5px; font-weight: 600; white-space: nowrap; transition: background .12s, border-color .12s, color .12s; }
+.mnt-btn.ghost { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+.mnt-btn.ghost:hover { background: var(--surface-hover); }
+.mnt-btn.accent { background: var(--accent); color: #fff; }
+.mnt-btn.accent:hover { background: var(--accent-press); }
+.mnt-btn.warn { background: oklch(0.800 0.130 75 / .14); border: 1px solid oklch(0.800 0.130 75 / .35); color: var(--warn); }
+.mnt-btn.warn:hover { background: oklch(0.800 0.130 75 / .22); }
+.mnt-btn.danger { background: var(--surface); border: 1px solid var(--line); color: var(--danger); }
+.mnt-btn.danger:hover { background: var(--danger-weak); border-color: var(--danger); }
+.mnt-btn:disabled { opacity: .45; cursor: not-allowed; }
+.mnt-btn.sm { height: 28px; padding: 0 10px; font-size: 11.5px; }
+
+/* info note */
+.mnt-note { display: flex; gap: 9px; padding: 11px 14px; border-radius: var(--radius); font-size: 12px; color: var(--text-2); line-height: 1.5; text-wrap: pretty; margin-bottom: 14px; }
+.mnt-note svg { flex: none; color: var(--text-3); margin-top: 1px; }
+.mnt-note.warn { background: oklch(0.800 0.130 75 / .1); border: 1px solid oklch(0.800 0.130 75 / .3); }
+.mnt-note.warn svg { color: var(--warn); }
+.mnt-note.info { background: var(--bg); border: 1px solid var(--line); }
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+@media (max-width: 860px) {
+  .mnt-page { padding: 14px 14px 90px; }
+  .mnt-statusbar { flex-direction: column; gap: 0; }
+  .mnt-stat { border-right: none; border-bottom: 1px solid var(--line); padding: 11px 14px; }
+  .mnt-stat:last-child { border-bottom: none; }
+  .mnt-sec-head { flex-wrap: wrap; }
+  .mnt-sec-actions { width: 100%; }
+  .mnt-tabs { overflow-x: auto; }
+  .mnt-tabs::-webkit-scrollbar { display: none; }
+  .mnt-issue { flex-wrap: wrap; gap: 8px; }
+  .mnt-issue .mi-acts { width: 100%; }
+  .mnt-issue .mi-acts .mnt-btn { flex: 1; }
+  .mnt-op { flex-wrap: wrap; }
+  .mnt-op-ctrl { width: 100%; flex-direction: row; }
+  .mnt-op-ctrl .mnt-btn { flex: 1; }
+}
