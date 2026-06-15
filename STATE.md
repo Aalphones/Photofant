@@ -1,5 +1,4 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-06-12_p01-stage0-fundament/`
-**Phase:** 3/3 — Skripte & CI (pending)
-**Nächster Schritt:** `install.cmd` + `start.cmd` + CI-Integration (`ci.cmd` scharf stellen für Frontend), Alembic-Baseline anlegen
+**Aktiver Plan:** keiner — P1 Stage-0-Fundament archiviert.
+**Nächster Plan:** `docs/planning/2026-06-12_p02-galerie-mvp/` (Phase 1 — Schema & Import)

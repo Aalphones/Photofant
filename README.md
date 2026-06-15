@@ -8,11 +8,29 @@ Der Stack: Angular-Frontend, FastAPI-Backend, SQLite als Index. ML-Modelle (Gesi
 
 ## Status
 
-Konzeptphase. Die vollständige Spezifikation steht in [docs/Konzept-Photofant.md](docs/Konzept-Photofant.md), die UI-Prototypen in [docs/design/](docs/design/).
+Stage-0-Skeleton. Backend (FastAPI + SQLite) und Frontend (Angular 19 + NgRx) laufen und sind verbunden. Weitere Feature-Arbeit folgt schrittweise.
+
+Die vollständige Spezifikation steht in [docs/Konzept-Photofant.md](docs/Konzept-Photofant.md), die UI-Prototypen in [docs/design/](docs/design/).
 
 ## Quickstart
 
-Noch kein lauffähiger Code — das Grundgerüst (install-/start-Skripte, Backend + Frontend) entsteht in Stage 0, siehe [docs/PROJECT.md](docs/PROJECT.md).
+**Voraussetzungen:** [uv](https://docs.astral.sh/uv/) · Node 20+ mit npm · Python 3.12
+
+```cmd
+# 1. Dependencies installieren (einmalig oder nach Pull)
+install.cmd
+
+# 2. App starten (zwei Fenster: Backend + Frontend Dev-Server)
+start.cmd
+```
+
+- Backend: <http://localhost:8000> · API-Docs: <http://localhost:8000/docs>
+- Frontend: <http://localhost:4200>
+
+```cmd
+# CI lokal laufen lassen (Lint + Build + Tests)
+ci.cmd
+```
 
 ## Mitarbeit / Agenten
 

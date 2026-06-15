@@ -1,6 +1,6 @@
 # P1 — Stage-0-Fundament
 
-> Status: geparkt · Quelle: [Konzept](../../Konzept-Photofant.md) §18 Stage 0 · Abhängigkeiten: keine
+> Status: complete · Quelle: [Konzept](../../Konzept-Photofant.md) §18 Stage 0 · Abhängigkeiten: keine
 
 Walking Skeleton: Backend und Frontend stehen, sind verbunden, und ein Demo-Job läuft sichtbar über die Queue. Danach ist jede weitere Lieferung reine Feature-Arbeit.
 
@@ -10,7 +10,7 @@ Walking Skeleton: Backend und Frontend stehen, sind verbunden, und ein Demo-Job 
 |---|---|---|---|
 | 1 | [Backend-Skeleton](phase-1-backend-skeleton.md) | standard | complete |
 | 2 | [Frontend-Skeleton](phase-2-frontend-skeleton.md) | standard | complete |
-| 3 | [Skripte & CI](phase-3-skripte-und-ci.md) | mechanisch | pending |
+| 3 | [Skripte & CI](phase-3-skripte-und-ci.md) | mechanisch | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -42,10 +42,28 @@ Walking Skeleton: Backend und Frontend stehen, sind verbunden, und ein Demo-Job 
 
 ## Summary
 
+Stage-0-Fundament vollständig: Backend-Skeleton (FastAPI + SQLite + Alembic), Frontend-Skeleton (Angular 19 + NgRx + Tailwind v4), Install-/Start-Skripte, CI-Skript. App läuft end-to-end: Demo-Job über SSE, Health-Endpoint, App-Shell mit Nav-Rail.
+
 ## Files touched
+
+- `backend/` — FastAPI-App, Alembic-Migration, Job-Queue, Health-API
+- `frontend/` — Angular-App-Shell, NgRx-Store, SSE-Service, Job-Dock/Pill
+- `install.cmd`, `install.sh`, `start.cmd`, `start.sh` (neu)
+- `ci.cmd` (pre-existent, verifiziert)
+- `frontend/package.json` — lint-Script ergänzt
+- `backend/tests/test_health.py` (neu)
+- `README.md` — Quickstart aktualisiert
 
 ## Commits
 
+Alle Phasen committed auf `master`.
+
 ## Deviations from plan
 
+- `lint` in package.json auf `tsc --noEmit` statt Angular ESLint gesetzt (ESLint-Setup nicht im Plan; tsc reicht für Stage 0).
+- Health-Test angelegt (Pflicht, damit pytest nicht mit Exit-5 abbricht).
+
 ## Follow-ups
+
+- Angular ESLint optional nachrüsten wenn ESLint-Regeln gewünscht.
+- `ci.cmd` Frontend-Test: ChromeHeadless für Server-CI-Umgebungen konfigurieren.
