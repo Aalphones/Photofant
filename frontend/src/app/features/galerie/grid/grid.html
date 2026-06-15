@@ -1,0 +1,42 @@
+@if (isEmpty()) {
+  <div class="grid__empty">
+    <p>Noch keine Bilder importiert.</p>
+  </div>
+}
+
+@for (group of groups(); track group.label) {
+  <section class="grid__group">
+    <div class="grid__month-head">
+      <h3 class="grid__month-label">{{ group.label }}</h3>
+      <span class="grid__month-count">{{ group.assets.length }}</span>
+      <div class="grid__month-line"></div>
+    </div>
+
+    <div class="grid__row">
+      @for (asset of group.assets; track asset.id) {
+        <pf-galerie-cell
+          [asset]="asset"
+          [baseHeight]="baseHeight()"
+          (openAsset)="onOpenAsset($event)"
+        />
+      }
+      <div class="grid__spacer"></div>
+    </div>
+  </section>
+}
+
+@if (isLoading()) {
+  <div class="grid__skeleton-row">
+    @for (cell of skeletonCells; track cell.index) {
+      <div
+        class="grid__skeleton-cell"
+        [style.height.px]="baseHeight()"
+        [style.flex-grow]="cell.ratio"
+        [style.flex-basis.px]="cell.ratio * baseHeight()"
+      ></div>
+    }
+    <div class="grid__spacer"></div>
+  </div>
+}
+
+<div #loadSentinel class="grid__sentinel"></div>

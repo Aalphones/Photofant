@@ -1,0 +1,9 @@
+<pf-sub-toolbar />
+
+<pf-galerie-grid
+  [groups]="groups()"
+  [density]="density()"
+  [isLoading]="isLoading()"
+  (openAsset)="onOpenAsset($event)"
+  (loadMore)="onLoadMore()"
+/>

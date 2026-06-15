@@ -1,0 +1,78 @@
+:host {
+  display: block;
+  padding: 0 16px 24px;
+}
+
+.grid__empty {
+  display: grid;
+  place-items: center;
+  min-height: 40vh;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.grid__group {
+  margin-bottom: 8px;
+}
+
+.grid__month-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0 10px;
+}
+
+.grid__month-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.grid__month-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+  flex: none;
+}
+
+.grid__month-line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.grid__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grid__spacer {
+  flex-grow: 10;
+  flex-basis: 0;
+}
+
+.grid__skeleton-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.grid__skeleton-cell {
+  border-radius: var(--radius);
+  background: var(--surface);
+  animation: pf-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pf-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .45; }
+}
+
+.grid__sentinel {
+  height: 1px;
+  visibility: hidden;
+}

@@ -1,0 +1,28 @@
+<div class="cell__img-wrap">
+  <img
+    class="cell__img"
+    [src]="thumbnailSrc()"
+    [alt]="'Bild ' + asset().id"
+    loading="lazy"
+    draggable="false"
+  />
+</div>
+
+<div class="cell__veil"></div>
+
+<button class="cell__fav" [class.cell__fav--on]="asset().favourite" (click)="onFavClick($event)" aria-label="Favorit">
+  <pf-icon name="star" [size]="16" />
+</button>
+
+@if (badgeLabel()) {
+  <div class="cell__badges">
+    <span class="cell__badge cell__badge--{{ asset().source }}">{{ badgeLabel() }}</span>
+  </div>
+}
+
+@if (hasVersions()) {
+  <div class="cell__versions">
+    <pf-icon name="layers" [size]="11" />
+    <span>{{ asset().version_count }}</span>
+  </div>
+}

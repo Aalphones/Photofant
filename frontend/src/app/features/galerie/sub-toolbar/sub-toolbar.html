@@ -1,0 +1,39 @@
+<div class="subbar__left">
+  <span class="subbar__count">{{ total() }} Bilder</span>
+</div>
+
+<div class="subbar__tools">
+  <!-- Grouping segment -->
+  <div class="subbar__seg">
+    @for (item of GROUPS; track item.key) {
+      <button
+        class="subbar__seg-btn"
+        [class.subbar__seg-btn--on]="group() === item.key"
+        (click)="setGroup(item.key)"
+      >
+        {{ item.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Sort -->
+  <button class="subbar__btn" (click)="cycleSortKey()">
+    <pf-icon name="sort" [size]="15" />
+    <span>{{ sortLabel() }}</span>
+    <span class="subbar__order">{{ order() === 'asc' ? '↑' : '↓' }}</span>
+  </button>
+
+  <!-- Density -->
+  <div class="subbar__seg">
+    @for (item of DENSITIES; track item.key) {
+      <button
+        class="subbar__seg-btn subbar__seg-btn--icon"
+        [class.subbar__seg-btn--on]="density() === item.key"
+        (click)="setDensity(item.key)"
+        [title]="'Dichte ' + item.key"
+      >
+        <pf-icon name="gallery" [size]="item.size" />
+      </button>
+    }
+  </div>
+</div>
