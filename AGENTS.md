@@ -1,3 +1,5 @@
+🚧 Aktive Arbeit → STATE.md
+
 # Photofant — Agent Hub
 
 Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, Tagging/Captioning, semantische Suche, Editor, Trainingssets. Zur Laufzeit vollständig offline.
@@ -12,7 +14,7 @@ Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, 
 
 | Layer | Choice |
 |---|---|
-| Frontend | Angular + Tailwind v4 (Tokens) + NgRx classic |
+| Frontend | Angular 19.2 + Tailwind v4 (Tokens) + NgRx 19 classic |
 | Backend | Python + FastAPI + Uvicorn |
 | DB | SQLite + Alembic, `sqlite-vec` |
 | Inferenz | ONNX Runtime (Core) · torch/diffusers (generativ, gated) |

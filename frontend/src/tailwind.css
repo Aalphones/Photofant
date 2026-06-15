@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+
+@layer base {
+  :root {
+    /* surfaces */
+    --bg:            oklch(0.165 0.006 256);
+    --bg-2:          oklch(0.195 0.007 256);
+    --surface:       oklch(0.225 0.008 256);
+    --surface-2:     oklch(0.255 0.009 256);
+    --surface-hover: oklch(0.290 0.010 256);
+    --line:          oklch(0.305 0.010 256);
+    --line-2:        oklch(0.380 0.012 256);
+
+    /* text */
+    --text:   oklch(0.965 0.004 256);
+    --text-2: oklch(0.760 0.010 256);
+    --text-3: oklch(0.580 0.012 256);
+
+    /* accents */
+    --accent:        oklch(0.685 0.135 248);
+    --accent-press:  oklch(0.620 0.135 248);
+    --accent-weak:   oklch(0.685 0.135 248 / 0.16);
+    --accent-line:   oklch(0.685 0.135 248 / 0.45);
+    --semantic:      oklch(0.700 0.150 305);
+    --semantic-weak: oklch(0.700 0.150 305 / 0.16);
+    --gold:          oklch(0.820 0.130 86);
+    --good:          oklch(0.740 0.130 152);
+    --warn:          oklch(0.800 0.130 75);
+    --danger:        oklch(0.660 0.165 25);
+    --danger-weak:   oklch(0.660 0.165 25 / 0.16);
+
+    /* shape */
+    --radius:   10px;
+    --radius-s: 7px;
+    --radius-l: 14px;
+
+    /* shadow */
+    --shadow-1:   0 1px 2px rgba(0,0,0,.4);
+    --shadow-2:   0 6px 22px -6px rgba(0,0,0,.55);
+    --shadow-pop: 0 18px 48px -12px rgba(0,0,0,.7);
+
+    /* typography */
+    --font: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* layout */
+    --nav-w:  212px;
+    --rail-w: 264px;
+    --top-h:   58px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  #root, pf-root { height: 100%; display: block; }
+
+  button { font-family: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+  input  { font-family: inherit; }
+
+  ::selection { background: var(--accent-weak); }
+
+  *::-webkit-scrollbar         { width: 11px; height: 11px; }
+  *::-webkit-scrollbar-thumb   {
+    background: oklch(0.36 0.01 256);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 8px;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: oklch(0.45 0.01 256); background-clip: padding-box; }
+  *::-webkit-scrollbar-track  { background: transparent; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+}
+
+@layer components {
+  .iconbtn {
+    width: 36px; height: 36px; border-radius: 8px; flex: none;
+    display: grid; place-items: center; color: var(--text-2);
+    transition: background .12s, color .12s;
+  }
+  .iconbtn:hover { background: var(--surface); color: var(--text); }
+  .iconbtn.on    { background: var(--accent-weak); color: var(--accent); }
+
+  .placeholder-view {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    color: var(--text-3);
+    text-align: center;
+    gap: 8px;
+  }
+  .placeholder-view h3 { color: var(--text-2); margin: 6px 0 0; font-size: 15px; font-weight: 600; }
+  .placeholder-view p  { font-size: 13px; max-width: 320px; line-height: 1.5; margin: 0; }
+
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--line-2); border-top-color: var(--accent);
+    animation: pf-spin .8s linear infinite;
+  }
+  @keyframes pf-spin { to { transform: rotate(360deg); } }
+
+  @keyframes pf-pop { from { opacity: 0; transform: translateY(-6px); } }
+  @keyframes pf-pop2 { from { opacity: 0; transform: translateY(10px); } }
+  @keyframes pf-fade { from { opacity: 0; } to { opacity: 1; } }
+}

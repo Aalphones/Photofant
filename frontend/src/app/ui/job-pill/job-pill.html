@@ -1,0 +1,17 @@
+<button
+  class="jobpill"
+  [class.active]="activeCount() > 0"
+  [class.open]="isOpen()"
+  (click)="toggle.emit()"
+  [attr.aria-label]="activeCount() + ' Jobs'"
+>
+  @if (activeCount() > 0) {
+    <span class="spinner"></span>
+  } @else {
+    <pf-icon name="refresh" [size]="14" />
+  }
+  <span class="jp-word">Queue</span>
+  @if (activeCount() > 0) {
+    <span class="jp-count">{{ activeCount() }}</span>
+  }
+</button>

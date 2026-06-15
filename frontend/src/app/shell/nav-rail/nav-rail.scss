@@ -1,0 +1,115 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  padding: 14px 10px;
+  gap: 2px;
+  min-height: 0;
+  height: 100%;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 16px;
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex: none;
+  background:
+    radial-gradient(120% 120% at 30% 20%, oklch(0.78 0.14 248), transparent 60%),
+    linear-gradient(150deg, var(--accent), oklch(0.55 0.16 285));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), var(--shadow-1);
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: radial-gradient(50% 50% at 68% 70%, rgba(0,0,0,.35), transparent 70%);
+  }
+}
+
+.brand-name { font-weight: 700; letter-spacing: -.01em; font-size: 15px; }
+.brand-sub  { font-size: 10.5px; color: var(--text-3); letter-spacing: .04em; margin-top: 1px; }
+
+.nav-close { display: none; margin-left: auto; }
+
+.nav-group-label {
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 14px 10px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  color: var(--text-2);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background .12s, color .12s;
+
+  &:hover  { background: var(--surface); color: var(--text); }
+  &.active { background: var(--accent-weak); color: var(--text); }
+  &.active pf-icon { color: var(--accent); }
+}
+
+.count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--mono);
+}
+
+.nav-item.active .count { color: var(--accent); }
+
+.nav-spacer { flex: 1; }
+
+.nav-foot {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 10px;
+}
+
+.storage { padding: 6px 10px; }
+
+.storage-txt {
+  font-size: 10.5px;
+  color: var(--text-3);
+  display: flex;
+  justify-content: space-between;
+}
+
+.storage-label { color: var(--text-2); }
+
+.storage-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface);
+  overflow: hidden;
+  margin: 7px 0 5px;
+
+  i {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), oklch(0.62 0.15 285));
+    border-radius: 3px;
+  }
+}
+
+.mono { font-family: var(--mono); }
+
+@media (max-width: 860px) {
+  .nav-close { display: grid; }
+}

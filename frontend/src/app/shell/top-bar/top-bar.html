@@ -1,0 +1,24 @@
+<button class="iconbtn menu-btn" (click)="menuToggle.emit()" aria-label="Menü öffnen">
+  <pf-icon name="menu" [size]="20" />
+</button>
+
+<span class="top-title">{{ title() }}</span>
+
+<div class="search">
+  <div class="search-box">
+    <pf-icon name="search" [size]="16" />
+    <input type="search" placeholder="Nach Tags filtern…" aria-label="Suche" />
+  </div>
+</div>
+
+<div class="top-actions">
+  <button class="iconbtn hide-sm" aria-label="Importieren">
+    <pf-icon name="import" [size]="18" />
+  </button>
+  <div class="divider-v"></div>
+  <pf-job-pill
+    [activeCount]="activeJobs()"
+    [isOpen]="isDockOpen()"
+    (toggle)="dockToggle.emit()"
+  />
+</div>

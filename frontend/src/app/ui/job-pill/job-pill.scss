@@ -1,0 +1,24 @@
+:host { display: contents; }
+
+.jobpill {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 36px;
+  padding: 0 12px 0 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--text-2);
+  position: relative;
+  cursor: pointer;
+  transition: background .12s;
+
+  &:hover    { background: var(--surface-hover); }
+  &.active   { border-color: var(--accent-line); }
+  &.open     { background: var(--surface-hover); border-color: var(--accent-line); }
+}
+
+.jp-word  { white-space: nowrap; }
+.jp-count { font-family: var(--mono); color: var(--text); font-size: 12px; }

@@ -1,0 +1,55 @@
+<div class="brand">
+  <div class="brand-mark" aria-hidden="true"></div>
+  <div>
+    <div class="brand-name">Photofant</div>
+    <div class="brand-sub">vergisst nie</div>
+  </div>
+  <button class="iconbtn nav-close" (click)="close.emit()" aria-label="Menü schließen">
+    <pf-icon name="x" [size]="18" />
+  </button>
+</div>
+
+@for (item of mainItems; track item.id) {
+  <a
+    class="nav-item"
+    [routerLink]="'/' + item.id"
+    routerLinkActive="active"
+    [routerLinkActiveOptions]="{ exact: false }"
+  >
+    <pf-icon [name]="item.icon" [size]="18" />
+    <span>{{ item.label }}</span>
+    @if (item.count !== undefined) {
+      <span class="count">{{ item.count }}</span>
+    }
+  </a>
+}
+
+<div class="nav-group-label">Verwaltung</div>
+
+@for (item of toolItems; track item.id) {
+  <a
+    class="nav-item"
+    [routerLink]="'/' + item.id"
+    routerLinkActive="active"
+    [routerLinkActiveOptions]="{ exact: false }"
+  >
+    <pf-icon [name]="item.icon" [size]="18" />
+    <span>{{ item.label }}</span>
+  </a>
+}
+
+<div class="nav-spacer"></div>
+
+<div class="nav-foot">
+  <div class="storage">
+    <div class="storage-txt">
+      <span class="storage-label">Lokaler Speicher</span>
+      <span class="mono">—</span>
+    </div>
+    <div class="storage-bar"><i style="width: 0%"></i></div>
+    <div class="storage-txt">
+      <span>Bibliothek leer</span>
+      <span>0%</span>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,56 @@
+<div class="dock-scrim" (click)="close.emit()"></div>
+
+<div class="dock" (click)="$event.stopPropagation()">
+  <div class="dock-grab"></div>
+
+  <div class="dock-head">
+    <h4>
+      Aufgaben-Queue
+      <span class="dock-count">
+        {{ jobs().length === 0 ? 'bereit' : jobs().length + ' gesamt' }}
+      </span>
+    </h4>
+    <button class="iconbtn" (click)="close.emit()" aria-label="Schließen">
+      <pf-icon name="x" [size]="16" />
+    </button>
+  </div>
+
+  <div class="dock-body">
+    @for (job of jobs(); track job.id) {
+      <div class="job">
+        <div class="job-top">
+          <div class="job-ico">
+            <pf-icon [name]="iconFor(job.kind)" [size]="14" />
+          </div>
+          <div class="job-info">
+            <div class="job-name">{{ job.label }}</div>
+            @if (job.error) {
+              <div class="job-sub job-sub--error">{{ job.error }}</div>
+            } @else {
+              <div class="job-sub">{{ job.state }}</div>
+            }
+          </div>
+          <span class="job-pct">
+            {{ job.state === 'done' ? 'fertig' : pct(job) + '%' }}
+          </span>
+        </div>
+        <div
+          class="job-bar"
+          [class.done]="job.state === 'done'"
+          [class.dl]="job.kind === 'download'"
+        >
+          <i [style.width.%]="pct(job)"></i>
+        </div>
+      </div>
+    }
+
+    @if (jobs().length === 0) {
+      <div class="dock-empty">Keine Jobs in der Queue.</div>
+    }
+  </div>
+
+  <div class="dock-foot">
+    <pf-icon name="info" [size]="13" />
+    Verarbeitung läuft lokal · offline · einmal pro Bild
+  </div>
+</div>

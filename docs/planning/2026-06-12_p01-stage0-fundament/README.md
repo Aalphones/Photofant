@@ -9,7 +9,7 @@ Walking Skeleton: Backend und Frontend stehen, sind verbunden, und ein Demo-Job 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
 | 1 | [Backend-Skeleton](phase-1-backend-skeleton.md) | standard | complete |
-| 2 | [Frontend-Skeleton](phase-2-frontend-skeleton.md) | standard | pending |
+| 2 | [Frontend-Skeleton](phase-2-frontend-skeleton.md) | standard | complete |
 | 3 | [Skripte & CI](phase-3-skripte-und-ci.md) | mechanisch | pending |
 
 ## Kontrakt (Backend ↔ Frontend)

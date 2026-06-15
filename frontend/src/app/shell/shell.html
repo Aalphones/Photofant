@@ -1,0 +1,43 @@
+<div class="shell__nav" [class.shell__nav--open]="isNavOpen()">
+  @if (isNavOpen()) {
+    <div class="shell__nav-scrim" (click)="isNavOpen.set(false)"></div>
+  }
+  <pf-nav-rail (close)="isNavOpen.set(false)" />
+</div>
+
+<div class="shell__main">
+  <pf-top-bar
+    [title]="pageTitle()"
+    [activeJobs]="activeJobs()"
+    [isDockOpen]="isDockOpen()"
+    (menuToggle)="toggleNav()"
+    (dockToggle)="toggleDock()"
+  />
+
+  <div class="shell__content">
+    <router-outlet />
+  </div>
+</div>
+
+@if (isDockOpen()) {
+  <pf-job-dock [jobs]="allJobs()" (close)="closeDock()" />
+}
+
+<nav class="shell__mobnav" aria-label="Hauptnavigation (Mobile)">
+  <a class="shell__mobnav-btn" routerLink="/galerie" routerLinkActive="on">
+    <pf-icon name="gallery" [size]="22" />
+    <span>Galerie</span>
+  </a>
+  <a class="shell__mobnav-btn" routerLink="/personen" routerLinkActive="on">
+    <pf-icon name="people" [size]="22" />
+    <span>Personen</span>
+  </a>
+  <a class="shell__mobnav-btn" routerLink="/alben" routerLinkActive="on">
+    <pf-icon name="album" [size]="22" />
+    <span>Alben</span>
+  </a>
+  <a class="shell__mobnav-btn" routerLink="/einstellungen" routerLinkActive="on">
+    <pf-icon name="settings" [size]="22" />
+    <span>Mehr</span>
+  </a>
+</nav>
