@@ -60,13 +60,14 @@ Vollständig ausgeplant in `docs/planning/` — Umsetzung in dieser Reihenfolge,
 | P6 | [Suche & Alben](planning/2026-06-12_p06-suche-und-alben/README.md) | 2c | P5 |
 | P7 | [Personen & Faces](planning/2026-06-12_p07-personen/README.md) | 3 | P2, P4 |
 | P8 | [Editor CPU](planning/2026-06-12_p08-editor-cpu/README.md) | 4 | P2, P4 — **vor P7 vorziehbar** |
-| P9 | [Generativ](planning/2026-06-12_p09-generativ/README.md) | 5 | P8 — **optional/parkbar** |
+| P8b | [ComfyUI-Integration](planning/2026-06-15_p08b-comfyui-integration/README.md) | 5 | P2, P4, P8 — **koexistiert mit P9**, optional/parkbar |
+| P9 | [Generativ (in-process)](planning/2026-06-12_p09-generativ/README.md) | 5 | P8 — **optional/parkbar** |
 | P10 | [Trainingssets & Export](planning/2026-06-12_p10-trainingssets-export/README.md) | 6 | P5, P6 |
 
 Scope-Abweichung vom Konzept: Komponenten-Modelle (Flux) + VRAM-Matrix sind von Stage 2 nach P9 verschoben (gebraucht erst dort); Framing-Heuristik liefert P7 nach (braucht Face-BBox).
 
 ## Offene Fragen
 
-- Generatives Backend: **diffusers oder ComfyUI?** → wird als ADR-002 in P9 Phase 1 entschieden (Spike).
+- Generatives Backend: **diffusers oder ComfyUI?** → ADR-002 (P9 Phase 1) bleibt für den in-process-Pfad; der **koexistierende ComfyUI-Trigger-Pfad** (Fire-and-Forget) wird separat in **P8b** umgesetzt und in ADR-003 dokumentiert.
 - Vektorsuche: **`sqlite-vec` oder FAISS?** → wird als ADR-001 in P5 Phase 4 entschieden (Spike, Default-Empfehlung `sqlite-vec`).
 - Angular-Major und Test-Runner → werden in P1 gepinnt.

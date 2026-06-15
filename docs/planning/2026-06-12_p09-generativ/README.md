@@ -1,6 +1,8 @@
 # P9 — Generative Features (Stage 5)
 
 > Status: geparkt · **optional** · Quelle: [Konzept](../../Konzept-Photofant.md) §8, §12 · Abhängigkeiten: P8 (Versionierung), P4 (Registry), P5 Phase 6 (Settings-Renderer)
+>
+> **Koexistenz:** Dies ist der **in-process**-Pfad (torch/diffusers, ADR-002). Der **ComfyUI-Trigger-Pfad** (Fire-and-Forget) ist separat als [P8b](../2026-06-15_p08b-comfyui-integration/README.md) geplant (ADR-003) und ersetzt diesen nicht.
 
 GPU-gebundene, vollständig gegatete Features: Upscale (SeedVR2), Flux-Edit (img2img) mit Prompt-Templates, Inpainting, schwere Captioner. Holt den in P4 bewusst ausgeklammerten Modell-Management-Rest nach (Komponenten-Modelle, VRAM-Matrix, Kompatibilitäts-Warnung). Lizenz-Rahmen beachten: FLUX.2 non-commercial (PROJECT.md Constraints).
 
