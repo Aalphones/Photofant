@@ -9,5 +9,6 @@ export const jobsActions = createActionGroup({
     'Stream Error': props<{ error: string }>(),
     'Toggle Dock':  emptyProps(),
     'Close Dock':   emptyProps(),
+    'Trigger Demo': emptyProps(),
   },
 });

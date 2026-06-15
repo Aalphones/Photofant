@@ -62,4 +62,8 @@ export class Shell {
   protected closeDock(): void {
     this.store.dispatch(jobsActions.closeDock());
   }
+
+  protected triggerDemo(): void {
+    this.store.dispatch(jobsActions.triggerDemo());
+  }
 }

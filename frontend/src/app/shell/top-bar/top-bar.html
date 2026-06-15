@@ -15,6 +15,9 @@
   <button class="iconbtn hide-sm" aria-label="Importieren">
     <pf-icon name="import" [size]="18" />
   </button>
+  <button class="iconbtn hide-sm" (click)="demoTrigger.emit()" aria-label="Demo-Job starten" title="Demo-Job starten">
+    <pf-icon name="play" [size]="18" />
+  </button>
   <div class="divider-v"></div>
   <pf-job-pill
     [activeCount]="activeJobs()"

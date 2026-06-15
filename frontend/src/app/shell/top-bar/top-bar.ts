@@ -15,4 +15,5 @@ export class TopBar {
   readonly isDockOpen   = input<boolean>(false);
   readonly menuToggle   = output<void>();
   readonly dockToggle   = output<void>();
+  readonly demoTrigger  = output<void>();
 }

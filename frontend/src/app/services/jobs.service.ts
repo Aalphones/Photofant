@@ -4,6 +4,18 @@ import type { Job } from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
 export class JobsService {
+  triggerDemo(): Observable<string> {
+    return new Observable<string>((observer) => {
+      fetch('/api/jobs/demo', { method: 'POST' })
+        .then((response: Response) => response.json())
+        .then((body: { job_id: string }) => {
+          observer.next(body.job_id);
+          observer.complete();
+        })
+        .catch((error: Error) => observer.error(error));
+    });
+  }
+
   streamJobs(): Observable<Job> {
     return new Observable<Job>((observer) => {
       const source = new EventSource('/api/jobs/stream');
