@@ -1,6 +1,6 @@
 # P1 · Phase 1 — Backend-Skeleton
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -16,12 +16,22 @@
 
 ## Checkliste
 
-- [ ] `backend/` als uv-Projekt: `pyproject.toml` (Python gepinnt, fastapi, uvicorn, sqlalchemy, alembic, sse-starlette o.ä.), Lockfile
-- [ ] Package-Struktur `photofant/`: `main.py` (App-Factory), `api/` (Router), `db/` (Engine, Session), `jobs/` (Queue)
-- [ ] Job-Queue: asyncio-basiert, in-process; Job = (id, kind, label, coro), Status-Übergänge queued→running→done/error; Subscriber-Mechanik für SSE
-- [ ] `GET /api/jobs/stream` + `POST /api/jobs/demo` (Wegwerf-Job mit Schritt-Fortschritt)
-- [ ] Alembic-Init + Migration `app_config (key TEXT PK, value TEXT)`
-- [ ] `ruff` + `mypy`-Konfiguration in `pyproject.toml` gemäß linting.md
-- [ ] Doc-Update: AGENTS.md Stack-Tabelle um gepinnte Versionen ergänzen
+- [x] `backend/` als uv-Projekt: `pyproject.toml` (Python gepinnt, fastapi, uvicorn, sqlalchemy, alembic, sse-starlette o.ä.), Lockfile
+- [x] Package-Struktur `photofant/`: `main.py` (App-Factory), `api/` (Router), `db/` (Engine, Session), `jobs/` (Queue)
+- [x] Job-Queue: asyncio-basiert, in-process; Job = (id, kind, label, coro), Status-Übergänge queued→running→done/error; Subscriber-Mechanik für SSE
+- [x] `GET /api/jobs/stream` + `POST /api/jobs/demo` (Wegwerf-Job mit Schritt-Fortschritt)
+- [x] Alembic-Init + Migration `app_config (key TEXT PK, value TEXT)`
+- [x] `ruff` + `mypy`-Konfiguration in `pyproject.toml` gemäß linting.md
+- [x] Doc-Update: AGENTS.md Stack-Tabelle um gepinnte Versionen ergänzen
 
 ## Report-Back
+
+- `GET /api/health` → `{"status":"ok","version":"0.1.0"}` ✓
+- Job-Queue asyncio, Subscriber-Mechanik, SSE-Stream mit Ping-Heartbeat (15 s) ✓
+- `POST /api/jobs/demo` startet Wegwerf-Job mit 5 × 1 s Schritten über CoroFactory-Pattern ✓
+- Alembic 0001 läuft durch; `app_config`-Tabelle in `.photofant/db.sqlite` ✓
+- ruff + mypy --strict grün auf allen 10 Source-Files ✓
+- uv 0.11.21, Python 3.12, FastAPI 0.115, Uvicorn 0.49, SQLAlchemy 2.x, Alembic 1.14 ✓
+
+**Deviation:** uv war nicht installiert → Standalone-Installer astral.sh ausgeführt (wie Convention vorschreibt).
+**Note:** `VIRTUAL_ENV=C:\Python312` Warning beim `uv run` ist harmlos — system-venv kollidiert nicht, wird ignoriert.

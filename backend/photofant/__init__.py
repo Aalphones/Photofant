@@ -1,0 +1,1 @@
+"""Photofant — lokale, private Bildverwaltung."""
