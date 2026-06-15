@@ -29,8 +29,8 @@ def _dest_path(data_root: Path, meta: ImageMeta, source_path: Path) -> Path:
     return data_root / "_unknown" / "photos" / filename
 
 
-def _import_single(source_path: Path) -> str | None:
-    """Import one file; return content_hash if newly imported, None if duplicate."""
+def _import_single(source_path: Path) -> tuple[int, str] | None:
+    """Import one file; return (asset_id, dest_path) if newly imported, None if duplicate."""
     meta = read_meta(source_path)
 
     with SessionLocal() as session:
@@ -92,13 +92,16 @@ def _import_single(source_path: Path) -> str | None:
             log.info("Duplicate detected on commit for %s — skipped", source_path.name)
             return None
 
-    return meta.content_hash
+        return asset.id, str(dest.resolve())
 
 
 async def run_import_job(status: JobStatus, paths: list[str]) -> None:
+    from photofant.jobs.thumbnail_job import enqueue_thumbnails
+
     total = len(paths)
     imported = 0
     skipped = 0
+    imported_items: list[tuple[int, str]] = []
 
     for index, raw_path in enumerate(paths):
         source_path = Path(raw_path)
@@ -111,6 +114,7 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
         else:
             result = await asyncio.to_thread(_import_single, source_path)
             if result is not None:
+                imported_items.append(result)
                 imported += 1
             else:
                 skipped += 1
@@ -123,9 +127,14 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
         label_parts.append(f"{skipped} übersprungen")
     log.info("Import done: %s", ", ".join(label_parts))
 
+    if imported_items:
+        await enqueue_thumbnails(imported_items)
+
 
 async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     """Find image files under scan_root that are not yet in the DB, then import them."""
+    from photofant.jobs.thumbnail_job import enqueue_thumbnails
+
     with SessionLocal() as session:
         known_paths: set[str] = {
             str(row[0]) for row in session.execute(select(AssetInstance.path)).all()
@@ -142,11 +151,16 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     if not new_paths:
         return
 
-    # Reuse import logic for each discovered file
+    imported_items: list[tuple[int, str]] = []
     total = len(new_paths)
     for index, file_path in enumerate(new_paths):
-        await asyncio.to_thread(_import_single, file_path)
+        result = await asyncio.to_thread(_import_single, file_path)
+        if result is not None:
+            imported_items.append(result)
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
+
+    if imported_items:
+        await enqueue_thumbnails(imported_items)
 
 
 async def enqueue_import(paths: list[str]) -> JobStatus:

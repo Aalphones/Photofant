@@ -1,6 +1,6 @@
 # P2 · Phase 2 — Thumbnail-Cache
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -16,10 +16,10 @@
 
 ## Checkliste
 
-- [ ] Zweite SQLite-Engine/Session für die Cache-DB (eigene Datei, kein Alembic nötig — Schema wird bei Fehlen erzeugt, da Wegwerf-Cache)
-- [ ] Thumbnail-Generator (Pillow, EXIF-Orientierung beachten) als Queue-Job, Batch nach Import
-- [ ] Endpoint mit ETag/304 + sinnvoller Content-Type
-- [ ] On-Demand-Fallback: Thumb fehlt → synchron klein erzeugen oder Platzhalter + Job
-- [ ] Doc-Update: docs/models.md um Cache-DB ergänzen
+- [x] Zweite SQLite-Engine/Session für die Cache-DB (eigene Datei, kein Alembic nötig — Schema wird bei Fehlen erzeugt, da Wegwerf-Cache)
+- [x] Thumbnail-Generator (Pillow, EXIF-Orientierung beachten) als Queue-Job, Batch nach Import
+- [x] Endpoint mit ETag/304 + sinnvoller Content-Type
+- [x] On-Demand-Fallback: Thumb fehlt → synchron klein erzeugen oder Platzhalter + Job
+- [x] Doc-Update: docs/models.md um Cache-DB ergänzen
 
 ## Report-Back

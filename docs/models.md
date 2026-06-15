@@ -95,13 +95,19 @@ Once-only guarantee per content-hash.
 
 ---
 
-## Cache DB (`thumbnails.sqlite`)
+## Cache DB (`.photofant/thumbnails.sqlite`) — Phase 2
+
+Separate SQLite file; no Alembic — schema created via `CREATE TABLE IF NOT EXISTS` on first access. Throwaway cache: safe to delete and regenerate without touching `db.sqlite`.
+
+### `thumbnail`
 
 | Column | Type | Notes |
 |---|---|---|
 | `target_kind` | TEXT | `asset \| face \| edit` |
-| `target_id` | INTEGER | |
-| `size` | TEXT | `256 \| 512` |
-| `blob` | BLOB | compressed thumbnail |
+| `target_id` | INTEGER | `asset.id` for kind=asset |
+| `size` | INTEGER | `256` or `512` (px, longest edge) |
+| `blob` | BLOB | JPEG bytes |
 
-PK: `(target_kind, target_id, size)`. Added in P2 Phase 2 (Thumbnail-Cache).
+PK: `(target_kind, target_id, size)`.
+
+Path overridable via `PHOTOFANT_CACHE_DB_PATH` env var (mirrors the pattern of `PHOTOFANT_DB_PATH`).

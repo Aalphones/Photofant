@@ -1,23 +1,30 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import asc, desc, func
-from sqlalchemy.orm import Query as OrmQuery, Session
+from sqlalchemy.orm import Query as OrmQuery
+from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root
+from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
 from photofant.db.models import Asset, AssetInstance
 from photofant.db.session import get_session
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
+from photofant.media.thumbnails import generate_thumbnail
 
 router = APIRouter(prefix="/assets")
 
 DbSession = Annotated[Session, Depends(get_session)]
+
+_VALID_THUMB_SIZES = frozenset({256, 512})
 
 
 class SortField(StrEnum):
@@ -117,6 +124,52 @@ async def list_assets(
 
     items = [_to_dto(asset, instance) for asset, instance in rows]
     return AssetsPage(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.get("/{asset_id}/thumbnail")
+async def get_asset_thumbnail(
+    asset_id: int,
+    session: DbSession,
+    size: Annotated[int, Query()] = 256,
+    if_none_match: Annotated[str | None, Header(alias="If-None-Match")] = None,
+) -> Response:
+    if size not in _VALID_THUMB_SIZES:
+        raise HTTPException(status_code=422, detail="size must be 256 or 512")
+
+    row = (
+        session.query(Asset, AssetInstance)
+        .join(AssetInstance, AssetInstance.asset_id == Asset.id)
+        .filter(Asset.id == asset_id, AssetInstance.deleted_at.is_(None))
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    asset, instance = row
+    etag = f'"{asset.content_hash}-{size}"'
+
+    if if_none_match == etag:
+        return Response(status_code=304)
+
+    db_path = get_cache_db_path()
+    init_cache_db(db_path)
+    data = await asyncio.to_thread(get_thumbnail, db_path, asset.id, size)
+
+    if data is None:
+        source_path = Path(instance.path)
+        if not source_path.exists():
+            raise HTTPException(status_code=404, detail="Source file not found on disk")
+        data = await asyncio.to_thread(generate_thumbnail, source_path, size)
+        await asyncio.to_thread(store_thumbnail, db_path, asset.id, size, data)
+
+    return Response(
+        content=data,
+        media_type="image/jpeg",
+        headers={
+            "ETag": etag,
+            "Cache-Control": "max-age=31536000, immutable",
+        },
+    )
 
 
 @router.get("/{asset_id}", response_model=AssetDetailDto)
