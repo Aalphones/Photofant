@@ -8,7 +8,7 @@ Funktionierender lokaler Foto-Viewer ohne ML: Import mit Hash-Dedupe, Thumbnail-
 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
-| 1 | [Schema & Import-Backend](phase-1-schema-und-import.md) | standard | pending |
+| 1 | [Schema & Import-Backend](phase-1-schema-und-import.md) | standard | complete |
 | 2 | [Thumbnail-Cache](phase-2-thumbnails.md) | standard | pending |
 | 3 | [Galerie-Grid](phase-3-galerie-grid.md) | standard | pending |
 | 4 | [Lightbox & Detail](phase-4-lightbox-detail.md) | standard | pending |

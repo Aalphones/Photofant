@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from photofant.api import health, jobs
+from photofant.api import assets, health, jobs
 from photofant.jobs.queue import job_queue
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(health.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
+    app.include_router(assets.router, prefix="/api")
     return app
 
 

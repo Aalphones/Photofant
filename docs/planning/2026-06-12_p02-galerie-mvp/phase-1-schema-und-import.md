@@ -1,6 +1,6 @@
 # P2 · Phase 1 — Schema & Import-Backend
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -16,12 +16,12 @@
 
 ## Checkliste
 
-- [ ] Alembic-Migration: Tabellen aus Konzept §5 (asset, asset_instance, person, processing_ledger; tag/collection-Tabellen erst in P5/P6)
-- [ ] `Data/`-Root konfigurierbar (`app_config`), Ordnerstruktur-Anlage (`_unknown/photos|favourites|faces|edits`, `.photofant/`)
-- [ ] Hash- + Metadaten-Modul (Pillow für EXIF, PNG-Text-Chunks für ComfyUI/A1111-Workflows → `generation_meta` JSON, `source`-Heuristik)
-- [ ] Import-Job (Single/Bulk) + Scan-Job (Dateien ohne DB-Eintrag finden) über die Queue, Fortschritt pro Datei
-- [ ] `GET /api/assets` (Pagination, Sort date/size, favourite-Filter vorbereitet) + Detail-Endpoint
-- [ ] Indizes: `asset.content_hash` (unique), `asset.created_at`, `asset_instance.deleted_at`
-- [ ] Doc-Update: docs/models.md anlegen (Tabellen-Referenz)
+- [x] Alembic-Migration: Tabellen aus Konzept §5 (asset, asset_instance, person, processing_ledger; tag/collection-Tabellen erst in P5/P6)
+- [x] `Data/`-Root konfigurierbar (`app_config`), Ordnerstruktur-Anlage (`_unknown/photos|favourites|faces|edits`, `.photofant/`)
+- [x] Hash- + Metadaten-Modul (Pillow für EXIF, PNG-Text-Chunks für ComfyUI/A1111-Workflows → `generation_meta` JSON, `source`-Heuristik)
+- [x] Import-Job (Single/Bulk) + Scan-Job (Dateien ohne DB-Eintrag finden) über die Queue, Fortschritt pro Datei
+- [x] `GET /api/assets` (Pagination, Sort date/size, favourite-Filter vorbereitet) + Detail-Endpoint
+- [x] Indizes: `asset.content_hash` (unique), `asset.created_at`, `asset_instance.deleted_at`
+- [x] Doc-Update: docs/models.md anlegen (Tabellen-Referenz)
 
 ## Report-Back

@@ -1,0 +1,107 @@
+# Data Model Reference — Photofant
+
+> Source of truth: `docs/Konzept-Photofant.md` §5. This file is the quick-reference for existing tables. Update after each migration.
+
+---
+
+## Tables (main DB — `.photofant/db.sqlite`)
+
+### `app_config` (migration 0001)
+
+| Column | Type | Notes |
+|---|---|---|
+| `key` | TEXT PK | e.g. `data_root`, `models_dir` |
+| `value` | TEXT | nullable |
+
+### `person` (migration 0002)
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `name` | TEXT | nullable; `_unknown` for the seed row |
+| `is_unknown` | BOOLEAN | `1` for the `_unknown` catch-all person |
+
+Seed row: `id=1, name='_unknown', is_unknown=1` — inserted by migration 0002.
+
+### `asset` (migration 0002)
+
+One row per unique content-hash (canonical image).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `content_hash` | TEXT UNIQUE | SHA-256 hex; indexed |
+| `source` | TEXT | `original \| sdxl \| flux \| ai_generated` |
+| `width` | INTEGER | pixels |
+| `height` | INTEGER | pixels |
+| `file_size` | INTEGER | bytes |
+| `format` | TEXT | `png \| jpeg \| webp \| …` |
+| `framing` | TEXT | `close_up \| medium \| full_body \| …` (filled in P5) |
+| `quality_score` | REAL | (filled in P5) |
+| `age` | INTEGER | from `buffalo_l` (filled in P7) |
+| `caption` | TEXT | (filled in P5) |
+| `captioner` | TEXT | model name (filled in P5) |
+| `caption_preset_id` | INTEGER | FK to `caption_preset` (table added in P4) |
+| `tagger` | TEXT | model name (filled in P5) |
+| `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
+| `clip_embedding` | BLOB | CLIP/SigLIP embedding (filled in P5) |
+| `created_at` | DATETIME | EXIF capture date; UTC naive |
+| `imported_at` | DATETIME | import timestamp; UTC naive; indexed |
+| `processed_at` | DATETIME | last full pipeline run |
+
+Indexes: `ix_asset_content_hash` (unique), `ix_asset_created_at`.
+
+### `asset_instance` (migration 0002)
+
+Physical copy per person. Stage 1: one instance per asset (`person = _unknown`).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `asset_id` | INTEGER FK → `asset.id` | |
+| `person_id` | INTEGER FK → `person.id` | |
+| `path` | TEXT | absolute path; follows moves |
+| `favourite` | BOOLEAN | mirrors physical location in `favourites/` |
+| `fixed_person` | BOOLEAN | manually sorted — no auto-redistribution |
+| `deleted_at` | DATETIME | soft-delete; NULL = active; indexed |
+
+Unique constraint: `(asset_id, person_id)`. Index: `ix_asset_instance_deleted_at`.
+
+### `processing_ledger` (migration 0002)
+
+Once-only guarantee per content-hash.
+
+| Column | Type | Notes |
+|---|---|---|
+| `content_hash` | TEXT PK | |
+| `faces_done` | BOOLEAN | (set in P7) |
+| `tags_done` | BOOLEAN | (set in P5) |
+| `caption_done` | BOOLEAN | (set in P5) |
+| `classified` | BOOLEAN | (set in P5) |
+
+---
+
+## Upcoming tables (planned)
+
+| Table | Migration | Plan |
+|---|---|---|
+| `model_registry` | 0003 | P4 |
+| `caption_preset` | 0003 | P4 |
+| `version` | 0004 | P8 |
+| `face` | 0004 | P7 |
+| `tag`, `asset_tag` | 0005 | P5 |
+| `collection`, `collection_item`, `smart_trigger` | 0006 | P6 |
+| `prompt_template` | 0007 | P9 |
+
+---
+
+## Cache DB (`thumbnails.sqlite`)
+
+| Column | Type | Notes |
+|---|---|---|
+| `target_kind` | TEXT | `asset \| face \| edit` |
+| `target_id` | INTEGER | |
+| `size` | TEXT | `256 \| 512` |
+| `blob` | BLOB | compressed thumbnail |
+
+PK: `(target_kind, target_id, size)`. Added in P2 Phase 2 (Thumbnail-Cache).

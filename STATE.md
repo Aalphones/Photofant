@@ -1,4 +1,5 @@
 # STATE
 
-**Aktiver Plan:** keiner — P1 Stage-0-Fundament archiviert.
-**Nächster Plan:** `docs/planning/2026-06-12_p02-galerie-mvp/` (Phase 1 — Schema & Import)
+**Aktiver Plan:** `docs/planning/2026-06-12_p02-galerie-mvp/`
+**Phase:** 2/6 — Thumbnail-Cache (pending)
+**Nächster Schritt:** Migration 0003 + `thumbnails.sqlite` + `GET /api/assets/{id}/thumbnail`
