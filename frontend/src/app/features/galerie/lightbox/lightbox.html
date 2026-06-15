@@ -1,0 +1,100 @@
+<div class="lb-scrim" (click)="close()"></div>
+
+<div class="lb" role="dialog" aria-modal="true">
+
+  <!-- ── Stage (links) ── -->
+  <div class="lb-stage">
+    <button class="lb-btn lb-close" (click)="close()" aria-label="Schließen">
+      <pf-icon name="x" [size]="20" />
+    </button>
+
+    <button
+      class="lb-btn lb-nav lb-prev"
+      [disabled]="!hasPrev()"
+      (click)="prev()"
+      aria-label="Vorheriges Bild"
+    >
+      <pf-icon name="arrowLeft" [size]="22" />
+    </button>
+
+    <button
+      class="lb-btn lb-nav lb-next"
+      [disabled]="!hasNext()"
+      (click)="next()"
+      aria-label="Nächstes Bild"
+    >
+      <pf-icon name="arrowRight" [size]="22" />
+    </button>
+
+    @if (imageUrl()) {
+      <pf-zoom-stage [imageUrl]="imageUrl()" />
+    }
+  </div>
+
+  <!-- ── Detail-Panel (rechts) ── -->
+  <div class="panel">
+    @if (asset(); as asset) {
+
+      <!-- Header: ID + Datum -->
+      <div class="panel-sec panel-header">
+        <span class="panel-id">#{{ asset.id }}</span>
+        <span class="panel-date">{{ formattedDate() }}</span>
+      </div>
+
+      <!-- Aktionen -->
+      <div class="panel-sec">
+        <div class="psec-title">Aktionen</div>
+        <a
+          class="pbtn pbtn--ghost"
+          [href]="downloadUrl()"
+          download
+          target="_blank"
+          rel="noopener"
+        >
+          <pf-icon name="download" [size]="15" />
+          Herunterladen
+        </a>
+      </div>
+
+      <!-- Metadaten -->
+      <div class="panel-sec">
+        <div class="psec-title">Metadaten</div>
+        <dl class="kv">
+          <dt>Dimensionen</dt><dd>{{ dimensions() }}</dd>
+          <dt>Format</dt><dd>{{ asset.format?.toUpperCase() ?? '—' }}</dd>
+          <dt>Größe</dt><dd>{{ fileSize() }}</dd>
+          <dt>Quelle</dt><dd>{{ sourceLabel() }}</dd>
+          <dt>Datum</dt><dd>{{ formattedDate() }}</dd>
+          <dt>Hash</dt><dd class="kv-hash">{{ hashShort() }}</dd>
+        </dl>
+      </div>
+
+      <!-- Generierungs-Metadaten -->
+      @if (genMeta(); as meta) {
+        <div class="panel-sec">
+          <button class="psec-title psec-title--btn" (click)="toggleGenMeta()">
+            <pf-icon name="sparkle" [size]="13" />
+            Generierungs-Metadaten
+            <span class="psec-chev" [class.psec-chev--open]="showGenMeta()">
+              <pf-icon name="chevronDown" [size]="14" />
+            </span>
+          </button>
+          @if (showGenMeta()) {
+            <div class="gmeta">
+              @for (entry of meta; track entry.key) {
+                <div class="gmeta-row">
+                  <span class="gk">{{ entry.key }}:</span>
+                  <span class="gv">{{ entry.value }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Stub-Sektionen: ausgeblendet bis P5/P7/P8 -->
+      <!-- Caption, Tags, Gesichter, Versionen -->
+
+    }
+  </div>
+</div>

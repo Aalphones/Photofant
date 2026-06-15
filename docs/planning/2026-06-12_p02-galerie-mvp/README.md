@@ -11,7 +11,7 @@ Funktionierender lokaler Foto-Viewer ohne ML: Import mit Hash-Dedupe, Thumbnail-
 | 1 | [Schema & Import-Backend](phase-1-schema-und-import.md) | standard | complete |
 | 2 | [Thumbnail-Cache](phase-2-thumbnails.md) | standard | complete |
 | 3 | [Galerie-Grid](phase-3-galerie-grid.md) | standard | complete |
-| 4 | [Lightbox & Detail](phase-4-lightbox-detail.md) | standard | pending |
+| 4 | [Lightbox & Detail](phase-4-lightbox-detail.md) | standard | complete |
 | 5 | [Favoriten & Papierkorb](phase-5-favoriten-papierkorb.md) | heikel | pending |
 | 6 | [Import-UI & Shortcuts](phase-6-import-ui-shortcuts.md) | standard | pending |
 

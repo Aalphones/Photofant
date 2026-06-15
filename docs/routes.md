@@ -4,8 +4,8 @@
 |---|---|---|---|---|
 | `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional) | `AssetsPage { items, total, page, page_size }` |
 | `/galerie` (cell thumbnail) | `GET` | `/api/assets/{id}/thumbnail` | `size` (256\|512) | JPEG blob — `ETag: "{hash}-{size}"`, `Cache-Control: immutable` |
-| `/galerie` (lightbox, P4) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
-| `/galerie` (detail, P4) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`) |
+| `/galerie` (lightbox) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
+| `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`) |
 | `/galerie` (import) | `POST` | `/api/assets/import` | `{ paths: string[] }` | `{ job_id }` |
 | `/galerie` (scan) | `POST` | `/api/assets/scan` | — | `{ job_id }` |
 | `/galerie` (favourite, P5) | `PATCH` | `/api/assets/{id}/favourite` | `{ value: bool }` | aktualisiertes `AssetDto` |

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { catchError, EMPTY, map, mergeMap, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { AssetsPage } from '@photofant/models';
 import { AssetService } from '@photofant/services';
@@ -51,6 +51,38 @@ export class GalleryEffects {
           ),
         )
       ),
+    )
+  );
+
+  readonly onLightboxNext$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(galleryActions.lightboxNext),
+      concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxNavContext)),
+      mergeMap(([, { assets, lightboxId, hasMore, isLoading }]) => {
+        const index = lightboxId != null ? assets.findIndex((asset) => asset.id === lightboxId) : -1;
+        if (index < 0) return EMPTY;
+        if (index < assets.length - 1) {
+          return of(galleryActions.lightboxGoTo({ id: assets[index + 1]!.id })); // index < length - 1 guarantees slot exists
+        }
+        if (hasMore && !isLoading) {
+          return of(galleryActions.lightboxMarkPendingNext(), galleryActions.requestNextPage());
+        }
+        return EMPTY;
+      }),
+    )
+  );
+
+  readonly onLightboxPrev$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(galleryActions.lightboxPrev),
+      concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxNavContext)),
+      mergeMap(([, { assets, lightboxId }]) => {
+        const index = lightboxId != null ? assets.findIndex((asset) => asset.id === lightboxId) : -1;
+        if (index > 0) {
+          return of(galleryActions.lightboxGoTo({ id: assets[index - 1]!.id })); // index > 0 guarantees slot exists
+        }
+        return EMPTY;
+      }),
     )
   );
 }

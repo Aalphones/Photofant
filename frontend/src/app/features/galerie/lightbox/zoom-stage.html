@@ -1,0 +1,26 @@
+<div
+  class="zoom-wrap"
+  [class.zoom-wrap--zoomed]="isZoomed()"
+  #wrapEl
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+  (dblclick)="onDoubleClick($event)"
+>
+  <div class="zoom-inner" #innerEl>
+    <img [src]="imageUrl()" alt="" draggable="false" />
+  </div>
+
+  @if (isZoomed()) {
+    <button
+      class="zoom-pill"
+      title="Zoom zurücksetzen"
+      (click)="reset()"
+      (pointerdown)="$event.stopPropagation()"
+    >
+      {{ zoomPercent() }}%
+      <pf-icon name="x" [size]="11" />
+    </button>
+  }
+</div>

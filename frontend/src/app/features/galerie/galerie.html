@@ -7,3 +7,7 @@
   (openAsset)="onOpenAsset($event)"
   (loadMore)="onLoadMore()"
 />
+
+@if (lightboxId() != null) {
+  <pf-lightbox />
+}

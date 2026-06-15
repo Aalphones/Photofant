@@ -5,11 +5,13 @@ import { galleryFeature } from './gallery.reducer';
 
 const {
   selectAll,
+  selectEntities,
   selectTotal,
   selectPage,
   selectPageSize,
   selectIsLoading,
   selectError,
+  selectLightboxId,
 } = galleryFeature;
 
 function formatMonthLabel(dateStr: string | null): string {
@@ -57,6 +59,41 @@ const selectFetchParams = createSelector(
   (page, pageSize, sort, order, favourite) => ({ page, pageSize, sort, order, favourite })
 );
 
+const selectLightboxAsset = createSelector(
+  selectEntities,
+  selectLightboxId,
+  (entities, lightboxId) => (lightboxId != null ? (entities[lightboxId] ?? null) : null),
+);
+
+const selectLightboxCurrentIndex = createSelector(
+  selectAll,
+  selectLightboxId,
+  (assets: AssetDto[], lightboxId: number | null) =>
+    lightboxId != null ? assets.findIndex((asset: AssetDto) => asset.id === lightboxId) : -1,
+);
+
+const selectLightboxHasPrev = createSelector(
+  selectLightboxCurrentIndex,
+  (index: number) => index > 0,
+);
+
+const selectLightboxHasNext = createSelector(
+  selectAll,
+  selectLightboxCurrentIndex,
+  selectHasMore,
+  (assets: AssetDto[], index: number, hasMore: boolean) =>
+    index >= 0 && (index < assets.length - 1 || hasMore),
+);
+
+const selectLightboxNavContext = createSelector(
+  selectAll,
+  selectLightboxId,
+  selectHasMore,
+  selectIsLoading,
+  (assets: AssetDto[], lightboxId: number | null, hasMore: boolean, isLoading: boolean) =>
+    ({ assets, lightboxId, hasMore, isLoading }),
+);
+
 export const gallerySelectors = {
   selectAll,
   selectTotal,
@@ -67,4 +104,9 @@ export const gallerySelectors = {
   selectHasMore,
   selectGroups,
   selectFetchParams,
+  selectLightboxId,
+  selectLightboxAsset,
+  selectLightboxHasPrev,
+  selectLightboxHasNext,
+  selectLightboxNavContext,
 };

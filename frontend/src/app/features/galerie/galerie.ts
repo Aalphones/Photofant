@@ -3,21 +3,23 @@ import { Store } from '@ngrx/store';
 import { filtersSelectors, galleryActions, gallerySelectors } from '@photofant/store';
 import { GalerieGrid } from './grid/grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
+import { Lightbox } from './lightbox/lightbox';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid],
+  imports: [SubToolbar, GalerieGrid, Lightbox],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
 })
 export class Galerie {
   private readonly store = inject(Store);
 
-  protected readonly groups    = this.store.selectSignal(gallerySelectors.selectGroups);
-  protected readonly density   = this.store.selectSignal(filtersSelectors.density);
-  protected readonly isLoading = this.store.selectSignal(gallerySelectors.selectIsLoading);
-  protected readonly hasMore   = this.store.selectSignal(gallerySelectors.selectHasMore);
+  protected readonly groups      = this.store.selectSignal(gallerySelectors.selectGroups);
+  protected readonly density     = this.store.selectSignal(filtersSelectors.density);
+  protected readonly isLoading   = this.store.selectSignal(gallerySelectors.selectIsLoading);
+  protected readonly hasMore     = this.store.selectSignal(gallerySelectors.selectHasMore);
+  protected readonly lightboxId  = this.store.selectSignal(gallerySelectors.selectLightboxId);
 
   constructor() {
     this.store.dispatch(galleryActions.requestPage());
@@ -29,7 +31,7 @@ export class Galerie {
     }
   }
 
-  protected onOpenAsset(_id: number): void {
-    // Lightbox implemented in P4
+  protected onOpenAsset(id: number): void {
+    this.store.dispatch(galleryActions.openLightbox({ id }));
   }
 }

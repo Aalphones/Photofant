@@ -11,6 +11,8 @@ export interface GalleryState extends EntityState<AssetDto> {
   pageSize: number;
   isLoading: boolean;
   error: string | null;
+  lightboxId: number | null;
+  lightboxPendingNext: boolean;
 }
 
 const adapter: EntityAdapter<AssetDto> = createEntityAdapter<AssetDto>({
@@ -23,6 +25,8 @@ const initialState: GalleryState = adapter.getInitialState({
   pageSize: PAGE_SIZE,
   isLoading: false,
   error: null,
+  lightboxId: null,
+  lightboxPendingNext: false,
 });
 
 export const galleryFeature = createFeature({
@@ -43,14 +47,22 @@ export const galleryFeature = createFeature({
     on(galleryActions.reset, (state: GalleryState) =>
       adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null })
     ),
-    on(galleryActions.loadPageSuccess, (state: GalleryState, { items, total, page, pageSize }) =>
-      adapter.addMany(items, { ...state, total, page, pageSize, isLoading: false, error: null })
-    ),
+    on(galleryActions.loadPageSuccess, (state: GalleryState, { items, total, page, pageSize }) => {
+      const next = adapter.addMany(items, { ...state, total, page, pageSize, isLoading: false, error: null, lightboxPendingNext: false });
+      if (state.lightboxPendingNext && items.length > 0) {
+        return { ...next, lightboxId: items[0]!.id }; // items.length > 0 guarantees slot exists
+      }
+      return next;
+    }),
     on(galleryActions.loadPageFailure, (state: GalleryState, { error }) => ({
       ...state,
       isLoading: false,
       error,
     })),
+    on(galleryActions.openLightbox, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),
+    on(galleryActions.closeLightbox, (state: GalleryState) => ({ ...state, lightboxId: null, lightboxPendingNext: false })),
+    on(galleryActions.lightboxGoTo, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),
+    on(galleryActions.lightboxMarkPendingNext, (state: GalleryState) => ({ ...state, lightboxPendingNext: true })),
   ),
   extraSelectors: ({ selectGalleryState }) => ({
     ...adapter.getSelectors(selectGalleryState),

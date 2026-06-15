@@ -21,10 +21,15 @@ Generation-Meta-Viewer: ComfyUI-Workflows sind verschachteltes JSON — Prompt/S
 
 ## Checkliste
 
-- [ ] Lightbox-Feature (Overlay, Stage mit Zoom/Pan-Direktive, Nav-Buttons, Keyboard-Handling)
-- [ ] Detail-Panel: KV-Grid (Dimensionen, Größe, Format, Datum, Quelle, Hash), Generation-Meta-Sektion
-- [ ] Lightbox-State (geöffnete Id + Order) im gallery-Slice; Nachladen bei Navigation über Seitengrenze
-- [ ] Download-Action (`/file`)
-- [ ] Doc-Update: docs/routes.md ergänzen
+- [x] Lightbox-Feature (Overlay, Stage mit Zoom/Pan-Direktive, Nav-Buttons, Keyboard-Handling)
+- [x] Detail-Panel: KV-Grid (Dimensionen, Größe, Format, Datum, Quelle, Hash), Generation-Meta-Sektion
+- [x] Lightbox-State (geöffnete Id + Order) im gallery-Slice; Nachladen bei Navigation über Seitengrenze
+- [x] Download-Action (`/file`)
+- [x] Doc-Update: docs/routes.md ergänzen
 
 ## Report-Back
+
+Phase 4 umgesetzt. Neue Dateien: `lightbox/zoom-stage.{ts,html,scss}`, `lightbox/lightbox.{ts,html,scss}`.
+Store: `gallery.actions` um 6 Lightbox-Actions erweitert, `GalleryState` um `lightboxId` + `lightboxPendingNext`,
+`gallery.effects` um `onLightboxNext$` + `onLightboxPrev$` (cross-page navigation via `lightboxPendingNext`).
+Icon-Komponent um `arrowLeft`, `arrowRight`, `chevronDown` ergänzt.
