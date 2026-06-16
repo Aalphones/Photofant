@@ -24,6 +24,7 @@ class JobKind(StrEnum):
     IMPORT = "import"
     SCAN = "scan"
     THUMBNAIL = "thumbnail"
+    BACKUP = "backup"
 
 
 @dataclass

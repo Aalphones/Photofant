@@ -16,6 +16,10 @@ def _resolve_db_path() -> Path:
     return path
 
 
+def get_db_path() -> Path:
+    return _resolve_db_path()
+
+
 def create_db_engine() -> Engine:
     db_path = _resolve_db_path()
     url = f"sqlite:///{db_path}"

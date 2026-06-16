@@ -206,7 +206,7 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
 
 
 @router.post("/upload", response_model=JobStarted)
-async def upload_assets(files: list[UploadFile] = File(...)) -> JobStarted:
+async def upload_assets(files: Annotated[list[UploadFile], File()]) -> JobStarted:
     """Accept multipart uploads from the browser, save to a temp dir, enqueue import."""
     if not files:
         raise HTTPException(status_code=422, detail="No files provided")
