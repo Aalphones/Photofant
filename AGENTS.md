@@ -40,7 +40,12 @@ Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, 
 
 ## CI
 
-`ci.cmd` im Root fasst Lint + Tests für Backend und Frontend zusammen und überspringt, was noch nicht existiert. Vor jedem Commit mit Code-Änderungen laufen lassen.
+Vor jedem Commit mit Code-Änderungen — einzeln ausführen:
+
+```
+cd backend && uv run ruff check . && uv run pytest
+cd frontend && npm run lint && npm run build
+```
 
 ## Critical Rules
 
