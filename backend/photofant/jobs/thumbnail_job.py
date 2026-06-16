@@ -22,14 +22,17 @@ def _process_one(db_path: Path, asset_id: int, source_path: Path, size: int) -> 
         log.warning("Thumbnail generation failed for asset %d size %d: %s", asset_id, size, exc)
 
 
-async def run_thumbnail_job(status: JobStatus, items: list[tuple[int, str]]) -> None:
-    """Generate 256+512 thumbnails for a list of (asset_id, source_path) pairs."""
-    db_path = get_cache_db_path()
-    init_cache_db(db_path)
+async def generate_thumbnails(status: JobStatus, db_path: Path, items: list[tuple[int, str]]) -> None:
+    """Generate 256+512 thumbnails for a list of (asset_id, source_path) pairs, reporting progress.
 
+    Skips sizes that already exist in the cache DB — callers wanting a full
+    regeneration must clear the cache first (see the rebuild job).
+    """
     total = len(items) * len(THUMBNAIL_SIZES)
-    done = 0
+    if total == 0:
+        return
 
+    done = 0
     for asset_id, source_path_str in items:
         source_path = Path(source_path_str)
         for size in THUMBNAIL_SIZES:
@@ -37,6 +40,12 @@ async def run_thumbnail_job(status: JobStatus, items: list[tuple[int, str]]) -> 
             done += 1
             job_queue.update(status, progress=done / total, state=JobState.RUNNING)
 
+
+async def run_thumbnail_job(status: JobStatus, items: list[tuple[int, str]]) -> None:
+    """Generate 256+512 thumbnails for a list of (asset_id, source_path) pairs."""
+    db_path = get_cache_db_path()
+    init_cache_db(db_path)
+    await generate_thumbnails(status, db_path, items)
     log.info("Thumbnails generated for %d assets", len(items))
 
 

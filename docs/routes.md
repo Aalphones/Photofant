@@ -24,9 +24,11 @@
 |---|---|---|---|---|
 | `/einstellungen` (backup trigger) | `POST` | `/api/maintenance/backup` | `{ target_dir?: string }` | `{ job_id: string }` — BACKUP-Job in Queue |
 | `/einstellungen` (backup list) | `GET` | `/api/maintenance/backups` | — | `BackupInfo[]` (neueste zuerst) |
-| `/einstellungen` (reconcile trigger) | `POST` | `/api/maintenance/reconcile` | — | `{ job_id: string }` — RECONCILE-Job in Queue |
-| `/einstellungen` (reconcile report) | `GET` | `/api/maintenance/reconcile/report` | — | `ReconcileReport` (leerer Report wenn noch kein Scan) |
-| `/einstellungen` (reconcile repair) | `POST` | `/api/maintenance/reconcile/repair` | `{ actions: RepairAction[] }` | `RepairResponse` |
+| `/wartung` (reconcile trigger) | `POST` | `/api/maintenance/reconcile` | — | `{ job_id: string }` — RECONCILE-Job in Queue |
+| `/wartung` (reconcile report) | `GET` | `/api/maintenance/reconcile/report` | — | `ReconcileReport` (leerer Report wenn noch kein Scan) |
+| `/wartung` (reconcile repair) | `POST` | `/api/maintenance/reconcile/repair` | `{ actions: RepairAction[] }` | `RepairResponse` |
+| `/wartung` (rebuild trigger) | `POST` | `/api/maintenance/rebuild` | `{ target: 'thumbnails' }` | `{ job_id: string }` — REBUILD-Job in Queue |
+| `/wartung` (status) | `GET` | `/api/maintenance/status` | — | `MaintenanceStatus` |
 
 ```typescript
 interface ReconcileReport {
@@ -55,13 +57,22 @@ interface BackupInfo {
   size: number;        // Bytes
   created_at: string;  // ISO-8601
 }
+
+// RebuildTarget ist bewusst erweiterbar — P7 hängt 'faces' an.
+type RebuildTarget = 'thumbnails';
+
+interface MaintenanceStatus {
+  db_size: number;          // db.sqlite Größe in Bytes
+  thumbnail_count: number;  // Assets mit mindestens einem gecachten Thumbnail
+  cache_size: number;       // thumbnails.sqlite Größe in Bytes
+}
 ```
 
 ## Job-Stream
 
 | Trigger | Endpoint | Protokoll |
 |---|---|---|
-| Job-Fortschritt (import, scan, thumbnail) | `/api/jobs/stream` | SSE — jede Zeile ist ein `Job`-JSON |
+| Job-Fortschritt (import, scan, thumbnail, backup, reconcile, rebuild) | `/api/jobs/stream` | SSE — jede Zeile ist ein `Job`-JSON |
 
 ## AssetDto (Frontend-Typ)
 

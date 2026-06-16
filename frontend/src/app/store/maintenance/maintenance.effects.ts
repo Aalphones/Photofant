@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, filter, map, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { BackupInfo, Job, ReconcileReport, RepairResponse } from '@photofant/models';
+import type { BackupInfo, Job, MaintenanceStatus, ReconcileReport, RepairResponse } from '@photofant/models';
 import { MaintenanceService } from '@photofant/services';
 import { jobsActions } from '../jobs/jobs.actions';
 import { maintenanceActions } from './maintenance.actions';
@@ -107,6 +107,63 @@ export class MaintenanceEffects {
       filter(({ job }: { job: Job }) => job.kind === 'reconcile' && job.state === 'error'),
       map(({ job }: { job: Job }) =>
         maintenanceActions.triggerReconcileFailure({ error: job.error ?? 'Scan fehlgeschlagen' })
+      ),
+    )
+  );
+
+  readonly triggerRebuild$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.triggerRebuild),
+      switchMap(({ target }) =>
+        this.maintenanceService.triggerRebuild(target).pipe(
+          map((response: { job_id: string }) =>
+            maintenanceActions.triggerRebuildSuccess({ target, jobId: response.job_id })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.triggerRebuildFailure({ target, error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly loadStatus$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.loadStatus),
+      switchMap(() =>
+        this.maintenanceService.loadStatus().pipe(
+          map((status: MaintenanceStatus) =>
+            maintenanceActions.loadStatusSuccess({ status })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.loadStatusFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  // When a rebuild job finishes, clear the running flag and refresh the storage stats.
+  readonly rebuildJobDone$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'rebuild' && job.state === 'done'),
+      switchMap(() => [
+        maintenanceActions.rebuildDone({ target: 'thumbnails' }),
+        maintenanceActions.loadStatus(),
+      ]),
+    )
+  );
+
+  readonly rebuildJobFailed$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'rebuild' && job.state === 'error'),
+      map(({ job }: { job: Job }) =>
+        maintenanceActions.triggerRebuildFailure({
+          target: 'thumbnails',
+          error: job.error ?? 'Rebuild fehlgeschlagen',
+        })
       ),
     )
   );

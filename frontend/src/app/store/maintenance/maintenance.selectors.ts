@@ -8,6 +8,8 @@ const {
   selectReport,
   selectIsScanning,
   selectIsRepairing,
+  selectRebuildingTarget,
+  selectStatus,
   selectError,
 } = maintenanceFeature;
 
@@ -19,5 +21,7 @@ export const maintenanceSelectors = {
   selectReport,
   selectIsScanning,
   selectIsRepairing,
+  selectRebuildingTarget,
+  selectStatus,
   selectError,
 };

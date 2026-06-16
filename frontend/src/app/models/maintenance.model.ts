@@ -65,3 +65,12 @@ export interface RepairResponse {
   results: RepairResult[];
   import_job_id: string | null;
 }
+
+export const REBUILD_TARGETS = ['thumbnails'] as const;
+export type RebuildTarget = typeof REBUILD_TARGETS[number];
+
+export interface MaintenanceStatus {
+  db_size: number;          // db.sqlite size in bytes
+  thumbnail_count: number;  // assets with at least one cached thumbnail
+  cache_size: number;       // thumbnails.sqlite size in bytes
+}

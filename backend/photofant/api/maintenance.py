@@ -9,11 +9,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root, get_data_root_base
-from photofant.db.cache import get_cache_db_path
+from photofant.db.cache import count_thumbnail_targets, get_cache_db_path
+from photofant.db.engine import get_db_path
 from photofant.db.session import get_session
 from photofant.jobs.backup_job import enqueue_backup
 from photofant.jobs.import_job import enqueue_import
 from photofant.jobs.queue import JobStatus
+from photofant.jobs.rebuild_job import RebuildTarget, enqueue_rebuild
 from photofant.jobs.reconcile_job import enqueue_reconcile
 from photofant.maintenance import repair
 from photofant.maintenance.store import load_report
@@ -208,3 +210,39 @@ async def repair_reconcile(body: RepairRequest, session: DbSession) -> RepairRes
         import_job_id = import_status.id
 
     return RepairResponse(results=results, import_job_id=import_job_id)
+
+
+# ── Rebuild (Cache) ───────────────────────────────────────────────────────────
+
+
+class RebuildRequest(BaseModel):
+    target: RebuildTarget
+
+
+@router.post("/rebuild", response_model=JobResponse)
+async def trigger_rebuild(body: RebuildRequest) -> JobResponse:
+    status: JobStatus = await enqueue_rebuild(body.target)
+    return JobResponse(job_id=status.id)
+
+
+# ── Status ────────────────────────────────────────────────────────────────────
+
+
+class MaintenanceStatusDto(BaseModel):
+    db_size: int            # db.sqlite size in bytes
+    thumbnail_count: int    # assets with at least one cached thumbnail
+    cache_size: int         # thumbnails.sqlite size in bytes
+
+
+def _file_size(path: Path) -> int:
+    return path.stat().st_size if path.exists() else 0
+
+
+@router.get("/status", response_model=MaintenanceStatusDto)
+async def get_status() -> MaintenanceStatusDto:
+    cache_path = get_cache_db_path()
+    return MaintenanceStatusDto(
+        db_size=_file_size(get_db_path()),
+        thumbnail_count=count_thumbnail_targets(cache_path),
+        cache_size=_file_size(cache_path),
+    )

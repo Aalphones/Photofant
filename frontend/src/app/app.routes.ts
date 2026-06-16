@@ -40,6 +40,11 @@ export const routes: Routes = [
           import('./features/papierkorb/papierkorb').then((m) => m.Papierkorb),
       },
       {
+        path: 'wartung',
+        loadComponent: () =>
+          import('./features/wartung/wartung').then((m) => m.Wartung),
+      },
+      {
         path: 'einstellungen',
         loadComponent: () =>
           import('./features/einstellungen/einstellungen').then(

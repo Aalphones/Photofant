@@ -16,5 +16,7 @@ export type {
   RepairAction,
   RepairResult,
   RepairResponse,
+  RebuildTarget,
+  MaintenanceStatus,
 } from './maintenance.model';
-export { ISSUE_KINDS, REPAIR_ACTIONS } from './maintenance.model';
+export { ISSUE_KINDS, REPAIR_ACTIONS, REBUILD_TARGETS } from './maintenance.model';

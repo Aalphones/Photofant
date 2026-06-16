@@ -1,5 +1,12 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { BackupInfo, ReconcileReport, RepairAction, RepairResponse } from '@photofant/models';
+import type {
+  BackupInfo,
+  MaintenanceStatus,
+  RebuildTarget,
+  ReconcileReport,
+  RepairAction,
+  RepairResponse,
+} from '@photofant/models';
 
 export const maintenanceActions = createActionGroup({
   source: 'Maintenance',
@@ -20,5 +27,13 @@ export const maintenanceActions = createActionGroup({
     'Repair':                    props<{ actions: RepairAction[] }>(),
     'Repair Success':            props<{ actions: RepairAction[]; response: RepairResponse }>(),
     'Repair Failure':            props<{ error: string }>(),
+
+    'Trigger Rebuild':         props<{ target: RebuildTarget }>(),
+    'Trigger Rebuild Success': props<{ target: RebuildTarget; jobId: string }>(),
+    'Trigger Rebuild Failure': props<{ target: RebuildTarget; error: string }>(),
+    'Rebuild Done':            props<{ target: RebuildTarget }>(),
+    'Load Status':             emptyProps(),
+    'Load Status Success':     props<{ status: MaintenanceStatus }>(),
+    'Load Status Failure':     props<{ error: string }>(),
   },
 });

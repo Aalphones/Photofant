@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
   BackupInfo,
+  MaintenanceStatus,
+  RebuildTarget,
   ReconcileReport,
   RepairAction,
   RepairResponse,
@@ -34,5 +36,15 @@ export class MaintenanceService {
     return this.http.post<RepairResponse>('/api/maintenance/reconcile/repair', {
       actions,
     });
+  }
+
+  triggerRebuild(target: RebuildTarget): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>('/api/maintenance/rebuild', {
+      target,
+    });
+  }
+
+  loadStatus(): Observable<MaintenanceStatus> {
+    return this.http.get<MaintenanceStatus>('/api/maintenance/status');
   }
 }

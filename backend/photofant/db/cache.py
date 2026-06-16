@@ -79,3 +79,18 @@ def clear_cache(db_path: Path) -> None:
         con.commit()
     finally:
         con.close()
+
+
+def count_thumbnail_targets(db_path: Path, target_kind: str = "asset") -> int:
+    """Number of distinct targets (e.g. assets) that have at least one cached thumbnail."""
+    if not db_path.exists():
+        return 0
+    con = sqlite3.connect(db_path)
+    try:
+        row = con.execute(
+            "SELECT COUNT(DISTINCT target_id) FROM thumbnail WHERE target_kind = ?",
+            (target_kind,),
+        ).fetchone()
+        return int(row[0]) if row else 0
+    finally:
+        con.close()

@@ -1,5 +1,12 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { BackupInfo, ReconcileReport, RepairAction, RepairItem } from '@photofant/models';
+import type {
+  BackupInfo,
+  MaintenanceStatus,
+  RebuildTarget,
+  ReconcileReport,
+  RepairAction,
+  RepairItem,
+} from '@photofant/models';
 import { maintenanceActions } from './maintenance.actions';
 
 export interface MaintenanceState {
@@ -10,6 +17,8 @@ export interface MaintenanceState {
   report: ReconcileReport | null;
   isScanning: boolean;
   isRepairing: boolean;
+  rebuildingTarget: RebuildTarget | null;
+  status: MaintenanceStatus | null;
   error: string | null;
 }
 
@@ -21,6 +30,8 @@ const initialState: MaintenanceState = {
   report: null,
   isScanning: false,
   isRepairing: false,
+  rebuildingTarget: null,
+  status: null,
   error: null,
 };
 
@@ -114,6 +125,33 @@ export const maintenanceFeature = createFeature({
     on(maintenanceActions.repairFailure, (state: MaintenanceState, { error }) => ({
       ...state,
       isRepairing: false,
+      error,
+    })),
+
+    on(maintenanceActions.triggerRebuild, (state: MaintenanceState, { target }) => ({
+      ...state,
+      rebuildingTarget: target,
+      error: null,
+    })),
+    on(maintenanceActions.triggerRebuildSuccess, (state: MaintenanceState, { jobId }) => ({
+      ...state,
+      lastJobId: jobId,
+    })),
+    on(maintenanceActions.triggerRebuildFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
+      rebuildingTarget: null,
+      error,
+    })),
+    on(maintenanceActions.rebuildDone, (state: MaintenanceState) => ({
+      ...state,
+      rebuildingTarget: null,
+    })),
+    on(maintenanceActions.loadStatusSuccess, (state: MaintenanceState, { status }) => ({
+      ...state,
+      status,
+    })),
+    on(maintenanceActions.loadStatusFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
       error,
     })),
   ),
