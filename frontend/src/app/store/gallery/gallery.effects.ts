@@ -2,11 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
-import { catchError, EMPTY, map, mergeMap, of, switchMap } from 'rxjs';
+import { catchError, EMPTY, filter, map, mergeMap, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { AssetDto, AssetsPage } from '@photofant/models';
+import type { AssetDto, AssetsPage, Job } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { filtersActions } from '../filters/filters.actions';
+import { jobsActions } from '../jobs/jobs.actions';
 import { galleryActions } from './gallery.actions';
 import { gallerySelectors } from './gallery.selectors';
 
@@ -51,6 +52,16 @@ export class GalleryEffects {
           ),
         )
       ),
+    )
+  );
+
+  readonly reloadAfterImport$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) =>
+        (job.kind === 'import' || job.kind === 'scan') && job.state === 'done'
+      ),
+      map(() => galleryActions.reset()),
     )
   );
 

@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { gallerySelectors } from '@photofant/store';
 import { Icon } from '../../ui/icon/icon';
 
 interface NavItem {
@@ -19,12 +21,17 @@ interface NavItem {
 export class NavRail {
   readonly close = output<void>();
 
-  protected readonly mainItems: readonly NavItem[] = [
-    { id: 'galerie',      icon: 'gallery',  label: 'Galerie',      count: 0 },
-    { id: 'personen',     icon: 'people',   label: 'Personen',     count: 0 },
-    { id: 'alben',        icon: 'album',    label: 'Alben',        count: 0 },
-    { id: 'trainingssets',icon: 'training', label: 'Trainingssets',count: 0 },
-  ];
+  private readonly store = inject(Store);
+
+  private readonly galerieCount = this.store.selectSignal(gallerySelectors.selectServerTotal);
+
+  // Personen/Alben/Trainingssets have no backend yet (P6/P7) — no count chip until they do.
+  protected readonly mainItems = computed<readonly NavItem[]>(() => [
+    { id: 'galerie',      icon: 'gallery',  label: 'Galerie', count: this.galerieCount() },
+    { id: 'personen',     icon: 'people',   label: 'Personen'      },
+    { id: 'alben',        icon: 'album',    label: 'Alben'         },
+    { id: 'trainingssets',icon: 'training', label: 'Trainingssets' },
+  ]);
 
   protected readonly toolItems: readonly NavItem[] = [
     { id: 'modelle',       icon: 'model',    label: 'Modelle'      },

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import Query as OrmQuery
@@ -174,6 +174,23 @@ async def get_asset_thumbnail(
             "ETag": etag,
             "Cache-Control": "max-age=31536000, immutable",
         },
+    )
+
+
+@router.get("/{asset_id}/file")
+async def get_asset_file(asset_id: int, session: DbSession) -> FileResponse:
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    _, instance = row
+    source_path = Path(instance.path)
+    if not source_path.exists():
+        raise HTTPException(status_code=404, detail="Source file not found on disk")
+
+    return FileResponse(
+        source_path,
+        headers={"Cache-Control": "max-age=31536000, immutable"},
     )
 
 

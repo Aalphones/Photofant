@@ -95,18 +95,49 @@ def _import_single(source_path: Path) -> tuple[int, str] | None:
         return asset.id, str(dest.resolve())
 
 
+def _expand_paths(raw_paths: list[str]) -> list[Path]:
+    """Flatten input paths: directories are walked recursively for supported images.
+
+    Files are kept as-is (extension is validated later). Duplicate paths
+    (e.g. case-insensitive filesystems matching both globs) are removed,
+    preserving first-seen order.
+    """
+    collected: list[Path] = []
+    for raw_path in raw_paths:
+        path = Path(raw_path)
+        if path.is_dir():
+            for extension in SUPPORTED_EXTENSIONS:
+                collected.extend(path.rglob(f"*{extension}"))
+                collected.extend(path.rglob(f"*{extension.upper()}"))
+        else:
+            collected.append(path)
+
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for file_path in collected:
+        key = str(file_path.resolve())
+        if key not in seen:
+            seen.add(key)
+            unique.append(file_path)
+    return unique
+
+
 async def run_import_job(status: JobStatus, paths: list[str]) -> None:
     from photofant.jobs.thumbnail_job import enqueue_thumbnails
 
-    total = len(paths)
+    files = _expand_paths(paths)
+    total = len(files)
     imported = 0
     skipped = 0
     imported_items: list[tuple[int, str]] = []
 
-    for index, raw_path in enumerate(paths):
-        source_path = Path(raw_path)
+    if total == 0:
+        log.warning("Import: no importable files found in %d input path(s)", len(paths))
+        return
+
+    for index, source_path in enumerate(files):
         if not source_path.is_file():
-            log.warning("Import path not found: %s", raw_path)
+            log.warning("Import path not found: %s", source_path)
             skipped += 1
         elif source_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             log.info("Skipping unsupported format: %s", source_path.suffix)

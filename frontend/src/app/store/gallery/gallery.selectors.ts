@@ -43,8 +43,15 @@ function buildGroups(assets: AssetDto[], group: GroupKey): AssetGroup[] {
   return [...map.entries()].map(([label, groupAssets]) => ({ label, assets: groupAssets }));
 }
 
+// Adapter's `selectTotal` is shadowed onto the loaded-entity count, so read the
+// server-side total straight from feature state for "are there more pages" logic.
+const selectServerTotal = createSelector(
+  galleryFeature.selectGalleryState,
+  (state) => state.total,
+);
+
 const selectHasMore = createSelector(
-  selectTotal, selectPage, selectPageSize,
+  selectServerTotal, selectPage, selectPageSize,
   (total: number, page: number, pageSize: number) => total > page * pageSize
 );
 
@@ -97,6 +104,7 @@ const selectLightboxNavContext = createSelector(
 export const gallerySelectors = {
   selectAll,
   selectTotal,
+  selectServerTotal,
   selectPage,
   selectPageSize,
   selectIsLoading,

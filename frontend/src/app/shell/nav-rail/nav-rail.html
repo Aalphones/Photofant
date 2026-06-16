@@ -9,7 +9,7 @@
   </button>
 </div>
 
-@for (item of mainItems; track item.id) {
+@for (item of mainItems(); track item.id) {
   <a
     class="nav-item"
     [routerLink]="'/' + item.id"
