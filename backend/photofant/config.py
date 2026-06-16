@@ -12,6 +12,19 @@ _DEFAULT_DATA_ROOT = Path("Data")
 _PERSON_SUBFOLDERS = ["photos", "favourites", "faces", "edits"]
 
 
+def get_data_root_base() -> Path:
+    """Base data directory from env or default, *without* consulting the DB.
+
+    Single source of truth for where everything lives. The SQLite DB and the
+    thumbnail cache anchor their `.photofant/` folder here so the whole data set
+    sits under one backup-able directory. This deliberately cannot read the
+    DB-stored `data_root` override — the database file location can't depend on
+    a value stored inside that same database.
+    """
+    env_root = os.environ.get("PHOTOFANT_DATA_ROOT")
+    return Path(env_root) if env_root else _DEFAULT_DATA_ROOT
+
+
 def get_data_root(session: Session | None = None) -> Path:
     """Return the configured data root and ensure folder structure exists."""
     env_root = os.environ.get("PHOTOFANT_DATA_ROOT")

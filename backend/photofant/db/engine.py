@@ -6,12 +6,12 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
-_DEFAULT_DB_PATH = Path(".photofant") / "db.sqlite"
+from photofant.config import get_data_root_base
 
 
 def _resolve_db_path() -> Path:
-    raw = os.environ.get("PHOTOFANT_DB_PATH", str(_DEFAULT_DB_PATH))
-    path = Path(raw)
+    raw = os.environ.get("PHOTOFANT_DB_PATH")
+    path = Path(raw) if raw else get_data_root_base() / ".photofant" / "db.sqlite"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 

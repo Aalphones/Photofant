@@ -5,16 +5,16 @@ import os
 import sqlite3
 from pathlib import Path
 
-log = logging.getLogger(__name__)
+from photofant.config import get_data_root_base
 
-_DEFAULT_CACHE_DB_PATH = Path(".photofant") / "thumbnails.sqlite"
+log = logging.getLogger(__name__)
 
 THUMBNAIL_SIZES: tuple[int, ...] = (256, 512)
 
 
 def get_cache_db_path() -> Path:
-    raw = os.environ.get("PHOTOFANT_CACHE_DB_PATH", str(_DEFAULT_CACHE_DB_PATH))
-    path = Path(raw)
+    raw = os.environ.get("PHOTOFANT_CACHE_DB_PATH")
+    path = Path(raw) if raw else get_data_root_base() / ".photofant" / "thumbnails.sqlite"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
