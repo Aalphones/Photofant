@@ -1,6 +1,6 @@
 # P3 · Phase 1 — DB-Backup
 
-> Rating: mechanisch · Status: pending
+> Rating: mechanisch · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -14,9 +14,9 @@
 
 ## Checkliste
 
-- [ ] Backup-Job (sqlite3 `backup()`-API, nie File-Copy einer offenen DB)
-- [ ] Endpoint + Listing (`GET /api/maintenance/backups`)
-- [ ] UI-Sektion (Backup-Button, Ziel-Anzeige, Liste) in Einstellungen → Backup & Wartung
-- [ ] Doc-Update: routes.md
+- [x] Backup-Job (sqlite3 `backup()`-API, nie File-Copy einer offenen DB)
+- [x] Endpoint + Listing (`GET /api/maintenance/backups`)
+- [x] UI-Sektion (Backup-Button, Ziel-Anzeige, Liste) in Einstellungen → Backup & Wartung
+- [x] Doc-Update: routes.md
 
 ## Report-Back

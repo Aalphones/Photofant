@@ -18,6 +18,22 @@
 
 `PATCH /api/assets/{id}/favourite` und `DELETE /api/assets/{id}` liefern: Favourite → aktualisiertes `AssetDto`; Delete → `204`. `{id}` ist überall die `asset.id` (Stage 1: genau eine Instanz pro Asset).
 
+## Maintenance
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/einstellungen` (backup trigger) | `POST` | `/api/maintenance/backup` | `{ target_dir?: string }` | `{ job_id: string }` — BACKUP-Job in Queue |
+| `/einstellungen` (backup list) | `GET` | `/api/maintenance/backups` | — | `BackupInfo[]` (neueste zuerst) |
+
+```typescript
+interface BackupInfo {
+  filename: string;
+  path: string;
+  size: number;        // Bytes
+  created_at: string;  // ISO-8601
+}
+```
+
 ## Job-Stream
 
 | Trigger | Endpoint | Protokoll |
