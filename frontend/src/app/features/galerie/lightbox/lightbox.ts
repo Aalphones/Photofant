@@ -11,6 +11,7 @@ import { DOCUMENT } from '@angular/common';
 import { Store } from '@ngrx/store';
 import type { AssetDto } from '@photofant/models';
 import { AssetService } from '@photofant/services';
+import { ShortcutService } from '../../../services/shortcut.service';
 import { Icon } from '@photofant/ui';
 import { galleryActions, gallerySelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
@@ -61,10 +62,11 @@ function formatDate(dateStr: string | null): string {
   styleUrl: './lightbox.scss',
 })
 export class Lightbox {
-  private readonly store = inject(Store);
-  private readonly assetService = inject(AssetService);
-  private readonly document = inject(DOCUMENT);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly store           = inject(Store);
+  private readonly assetService    = inject(AssetService);
+  private readonly shortcutService = inject(ShortcutService);
+  private readonly document        = inject(DOCUMENT);
+  private readonly destroyRef      = inject(DestroyRef);
 
   protected readonly asset = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
   protected readonly hasPrev = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
@@ -142,6 +144,15 @@ export class Lightbox {
     };
     this.document.addEventListener('keydown', onKeyDown);
     this.destroyRef.onDestroy(() => this.document.removeEventListener('keydown', onKeyDown));
+
+    const deregister = this.shortcutService.register([
+      { key: '←',   description: 'Vorheriges Bild',       context: 'Lightbox' },
+      { key: '→',   description: 'Nächstes Bild',         context: 'Lightbox' },
+      { key: 'F',   description: 'Favorit setzen/entfernen', context: 'Lightbox' },
+      { key: 'Entf', description: 'In Papierkorb legen',  context: 'Lightbox' },
+      { key: 'Esc', description: 'Lightbox schließen',    context: 'Lightbox' },
+    ]);
+    this.destroyRef.onDestroy(deregister);
   }
 
   protected close(): void {

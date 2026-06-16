@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import asc, desc, func
@@ -185,6 +186,25 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
     asset, instance = row
     base = build_asset_dto(asset, instance)
     return AssetDetailDto(**base.model_dump(), path=instance.path)
+
+
+@router.post("/upload", response_model=JobStarted)
+async def upload_assets(files: list[UploadFile] = File(...)) -> JobStarted:
+    """Accept multipart uploads from the browser, save to a temp dir, enqueue import."""
+    if not files:
+        raise HTTPException(status_code=422, detail="No files provided")
+
+    tmp_dir = Path(tempfile.mkdtemp(prefix="pf_upload_"))
+    saved: list[str] = []
+    for upload in files:
+        suffix = Path(upload.filename or "").suffix.lower() or ".jpg"
+        dest = tmp_dir / (upload.filename or f"upload{suffix}")
+        content = await upload.read()
+        dest.write_bytes(content)
+        saved.append(str(dest))
+
+    status = await enqueue_import(saved)
+    return JobStarted(job_id=status.id)
 
 
 @router.post("/import", response_model=JobStarted)

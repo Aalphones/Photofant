@@ -13,7 +13,7 @@ Funktionierender lokaler Foto-Viewer ohne ML: Import mit Hash-Dedupe, Thumbnail-
 | 3 | [Galerie-Grid](phase-3-galerie-grid.md) | standard | complete |
 | 4 | [Lightbox & Detail](phase-4-lightbox-detail.md) | standard | complete |
 | 5 | [Favoriten & Papierkorb](phase-5-favoriten-papierkorb.md) | heikel | complete |
-| 6 | [Import-UI & Shortcuts](phase-6-import-ui-shortcuts.md) | standard | pending |
+| 6 | [Import-UI & Shortcuts](phase-6-import-ui-shortcuts.md) | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -48,10 +48,22 @@ Funktionierender lokaler Foto-Viewer ohne ML: Import mit Hash-Dedupe, Thumbnail-
 
 ## Summary
 
+P2 Galerie-MVP abgeschlossen: lokaler Foto-Viewer ohne ML. Import mit Content-Hash-Dedupe, Thumbnail-Cache, justiertes Brick-Grid (3 Dichte-Stufen), Lightbox mit Zoom/Pan, Favoriten (physischer Move), Papierkorb mit Restore/Purge, Import-Dialog + globale DnD, Shortcut-Legende, Empty-State.
+
 ## Files touched
 
-## Commits
+Backend: `photofant/api/assets.py`, `photofant/jobs/import_job.py`, `photofant/jobs/thumbnail_job.py`, `photofant/api/trash.py`, `photofant/media/moves.py`, `photofant/media/meta.py`, `photofant/media/thumbnails.py`, `pyproject.toml`
+
+Frontend: `shell/`, `features/galerie/` (inkl. Lightbox, Grid, Cell, SubToolbar, Papierkorb), `ui/` (Icon, JobPill, JobDock, ImportDialog, ShortcutLegend), `services/` (AssetService, JobsService, ShortcutService), `store/` (gallery, filters, jobs, trash), `models/`
+
+Docs: `routes.md`, `docs/planning/2026-06-12_p02-galerie-mvp/`
 
 ## Deviations from plan
 
+- `/api/assets/upload` als separater Endpunkt statt multipart auf `/api/assets/import` (FastAPI-Limitation: Form-Data und JSON-Body nicht mischbar auf einer Route). Kontrakt-Semantik identisch.
+
 ## Follow-ups
+
+- Animierte Spinner im Import-Dialog wären nice-to-have
+- Import-Dialog: Ordner-Browse-Dialog wäre komfortabler als manuelle Pfadeingabe (Browser-Security-Limitation auf Desktop-App-Level lösbar via Tauri/Electron)
+- ShortcutService: weitere Shortcuts (Galerie-Level, Bulk-Aktionen) in P-späteren Phasen registrieren

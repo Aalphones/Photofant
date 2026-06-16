@@ -55,6 +55,22 @@ export class AssetService {
     return this.http.delete<void>('/api/trash');
   }
 
+  importPaths(paths: string[]): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>('/api/assets/import', { paths });
+  }
+
+  uploadFiles(files: File[]): Observable<{ job_id: string }> {
+    const form = new FormData();
+    for (const file of files) {
+      form.append('files', file, file.name);
+    }
+    return this.http.post<{ job_id: string }>('/api/assets/upload', form);
+  }
+
+  scan(): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>('/api/assets/scan', {});
+  }
+
   thumbnailUrl(id: number, size: 256 | 512 = 256): string {
     return `/api/assets/${id}/thumbnail?size=${size}`;
   }

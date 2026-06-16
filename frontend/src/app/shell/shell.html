@@ -12,7 +12,9 @@
     [isDockOpen]="isDockOpen()"
     (menuToggle)="toggleNav()"
     (dockToggle)="toggleDock()"
-    (demoTrigger)="triggerDemo()"
+    (importClick)="openImport()"
+    (scanClick)="triggerScan()"
+    (shortcutClick)="toggleShortcutLegend()"
   />
 
   <div class="shell__content">
@@ -22,6 +24,28 @@
 
 @if (isDockOpen()) {
   <pf-job-dock [jobs]="allJobs()" (close)="closeDock()" />
+}
+
+<!-- Global DnD overlay pill -->
+@if (isDraggingFiles()) {
+  <div class="shell__dnd-pill">
+    <pf-icon name="import" [size]="16" />
+    Bilder loslassen zum Importieren
+  </div>
+}
+
+<!-- Import Dialog -->
+@if (isImportOpen()) {
+  <pf-import-dialog
+    [initialFiles]="droppedFiles()"
+    (close)="closeImport()"
+    (imported)="onImported()"
+  />
+}
+
+<!-- Shortcut Legend -->
+@if (shortcutService.isLegendVisible()) {
+  <pf-shortcut-legend (close)="shortcutService.closeLegend()" />
 }
 
 <nav class="shell__mobnav" aria-label="Hauptnavigation (Mobile)">

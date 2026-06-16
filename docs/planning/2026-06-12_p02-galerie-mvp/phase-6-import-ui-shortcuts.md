@@ -17,11 +17,24 @@
 
 ## Checkliste
 
-- [ ] Import-Dialog + globale DnD-Zone (Overlay nach Prototyp)
-- [ ] Multipart-Upload-Pfad im Backend (zusätzlich zum Pfad-Import)
-- [ ] Scan-Trigger in der Top-Bar/Galerie
-- [ ] Shortcut-Service (zentrale Registry, Konflikt-frei, Legende-Overlay-Komponente)
-- [ ] Empty-State der Galerie
-- [ ] Doc-Update: routes.md; README Features-Stand
+- [x] Import-Dialog + globale DnD-Zone (Overlay nach Prototyp)
+- [x] Multipart-Upload-Pfad im Backend (zusätzlich zum Pfad-Import) — `POST /api/assets/upload`, `python-multipart` als Dep
+- [x] Scan-Trigger in der Top-Bar/Galerie
+- [x] Shortcut-Service (zentrale Registry, Konflikt-frei, Legende-Overlay-Komponente)
+- [x] Empty-State der Galerie
+- [x] Doc-Update: routes.md; README Features-Stand
 
 ## Report-Back
+
+Phase 6 abgeschlossen. Alle AK umgesetzt:
+
+- **Import-Dialog**: zwei Modi (Pfad-Import via Textarea + Browser-Upload via Multipart). Globale DnD-Zone im Shell-Level: Drag über das Fenster → Pill-Overlay → Drop öffnet den Dialog mit den gefallenen Dateien.
+- **Backend `/api/assets/upload`**: nimmt `multipart/form-data; files[]`, speichert in `tempfile.mkdtemp()`, ruft `enqueue_import` auf — identische Pipeline wie Pfad-Import.
+- **Scan-Trigger**: Scan-Icon in der TopBar, ruft `POST /api/assets/scan` → Job im Dock.
+- **ShortcutService**: zentrale Registry (`register(entries): deregister`), `?`-Taste aus dem Service selbst (singleton), Lightbox registriert ihre 5 Shortcuts beim Mount und deregistriert beim Unmount via `destroyRef`.
+- **ShortcutLegend**: Overlay (nach `?`-Taste oder Keyboard-Button in der TopBar), gruppiert nach Context, zeigt alle registrierten Shortcuts.
+- **Demo-Job-Button**: entfernt.
+- **Empty-State**: Galerie zeigt bei leerer Bibliothek "Noch keine Bilder" mit Drag-Hinweis.
+- **Icons**: `folder`, `plus`, `scan`, `keyboard` zu `icon.ts` hinzugefügt.
+
+Abweichung: `/api/assets/upload` ist ein separater Endpunkt (nicht multipart auf `/api/assets/import`), weil FastAPI Form-Data und JSON-Body nicht auf derselben Route mixen kann. routes.md ist aktualisiert.

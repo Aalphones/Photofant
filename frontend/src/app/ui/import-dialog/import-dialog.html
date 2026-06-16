@@ -1,0 +1,146 @@
+<div class="imp-scrim" (click)="onClose()"></div>
+
+<div class="imp-modal"
+     (dragenter)="onDragEnter($event)"
+     (dragleave)="onDragLeave($event)"
+     (dragover)="onDragOver($event)"
+     (drop)="onDrop($event)"
+     [class.drag]="isDragging()">
+
+  <!-- Header -->
+  <div class="imp-head">
+    <div class="ih-ico">
+      <pf-icon name="import" [size]="18" />
+    </div>
+    <div class="ih-text">
+      <div class="imp-title">Bilder importieren</div>
+      <div class="imp-sub">Lokal verarbeitet · keine Cloud-Uploads</div>
+    </div>
+    <button class="iconbtn" (click)="onClose()" aria-label="Schließen">
+      <pf-icon name="x" [size]="18" />
+    </button>
+  </div>
+
+  <!-- Mode Tabs -->
+  <div class="imp-tabs">
+    <button class="imp-tab" [class.on]="mode() === 'path'" (click)="setMode('path')">
+      <pf-icon name="folder" [size]="15" />
+      Pfad-Import
+    </button>
+    <button class="imp-tab" [class.on]="mode() === 'upload'" (click)="setMode('upload')">
+      <pf-icon name="import" [size]="15" />
+      Datei-Upload
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="imp-body">
+
+    <!-- PATH MODE -->
+    @if (mode() === 'path') {
+      <div class="fld">
+        <label class="fld-lbl" for="pathInput">Verzeichnis- oder Dateipfade (eine Zeile pro Pfad)</label>
+        <textarea
+          id="pathInput"
+          class="path-input"
+          [ngModel]="pathInput()"
+          (ngModelChange)="pathInput.set($event)"
+          placeholder="C:\Users\Sascha\Bilder\Session2024&#10;C:\Exports\render_batch"
+          rows="6"
+          autocomplete="off"
+          spellcheck="false"
+        ></textarea>
+        <p class="fld-hint">Server-seitige Pfade — der Backend-Prozess muss darauf zugreifen können.</p>
+      </div>
+    }
+
+    <!-- UPLOAD MODE -->
+    @if (mode() === 'upload') {
+      <input
+        #fileInput
+        type="file"
+        accept="image/*"
+        multiple
+        style="display: none"
+        (change)="onFileChange($event)"
+      />
+
+      @if (files().length === 0) {
+        <div class="imp-drop" (click)="openFilePicker()">
+          <div class="dz-ico">
+            <pf-icon name="import" [size]="28" />
+          </div>
+          <div class="dz-title">Dateien hierher ziehen</div>
+          <div class="dz-sub">JPG, PNG, WebP</div>
+          <div class="dz-or">oder</div>
+          <button class="dz-btn" (click)="$event.stopPropagation(); openFilePicker()">
+            <pf-icon name="import" [size]="14" />
+            Dateien wählen
+          </button>
+        </div>
+      } @else {
+        <div class="imp-filelist">
+          <div class="filelist-bar">
+            <span class="fb-count">{{ files().length }} Datei{{ files().length === 1 ? '' : 'en' }}</span>
+            <button class="imp-addmore" (click)="openFilePicker()">
+              <pf-icon name="plus" [size]="14" />
+              Hinzufügen
+            </button>
+          </div>
+          <div class="filelist-items">
+            @for (file of files(); track file.name; let i = $index) {
+              <div class="filelist-row">
+                <pf-icon name="gallery" [size]="16" />
+                <span class="fl-name">{{ file.name }}</span>
+                <span class="fl-size">{{ formatSize(file.size) }}</span>
+                <button class="fl-x iconbtn" (click)="removeFile(i)" aria-label="Entfernen">
+                  <pf-icon name="x" [size]="14" />
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+
+  </div>
+
+  <!-- Error -->
+  @if (errorMsg()) {
+    <div class="imp-error">
+      <pf-icon name="info" [size]="14" />
+      {{ errorMsg() }}
+    </div>
+  }
+
+  <!-- Footer -->
+  <div class="imp-foot">
+    <div class="foot-info">
+      <pf-icon name="info" [size]="13" />
+      Duplikate werden per Content-Hash automatisch übersprungen.
+    </div>
+    <div class="foot-actions">
+      <button class="foot-btn ghost" (click)="onClose()">Abbrechen</button>
+      <button class="foot-btn primary" [disabled]="!canSubmit()" (click)="submit()">
+        @if (isLoading()) {
+          <span class="spinner"></span>
+          Startet…
+        } @else {
+          <pf-icon name="import" [size]="15" />
+          {{ mode() === 'path' ? 'Importieren' : 'Hochladen' }}
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Drag Overlay -->
+  @if (isDragging()) {
+    <div class="imp-dragveil">
+      <div class="dv-pill">
+        <pf-icon name="import" [size]="16" />
+        Loslassen zum Hinzufügen
+      </div>
+    </div>
+  }
+
+</div>
