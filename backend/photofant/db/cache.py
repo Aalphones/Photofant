@@ -60,6 +60,18 @@ def store_thumbnail(db_path: Path, target_id: int, size: int, data: bytes, targe
         con.close()
 
 
+def delete_thumbnails(db_path: Path, target_id: int, target_kind: str = "asset") -> None:
+    con = sqlite3.connect(db_path)
+    try:
+        con.execute(
+            "DELETE FROM thumbnail WHERE target_kind = ? AND target_id = ?",
+            (target_kind, target_id),
+        )
+        con.commit()
+    finally:
+        con.close()
+
+
 def clear_cache(db_path: Path) -> None:
     con = sqlite3.connect(db_path)
     try:

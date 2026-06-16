@@ -15,5 +15,11 @@ export const galleryActions = createActionGroup({
     'Lightbox Next':             emptyProps(),
     'Lightbox Prev':             emptyProps(),
     'Lightbox Mark Pending Next': emptyProps(),
+    'Toggle Favourite':          props<{ id: number; value: boolean }>(),
+    'Toggle Favourite Success':  props<{ asset: AssetDto }>(),
+    'Toggle Favourite Failure':  props<{ id: number; previous: boolean }>(),
+    'Delete Asset':              props<{ id: number }>(),
+    'Delete Asset Success':      props<{ id: number }>(),
+    'Delete Asset Failure':      props<{ error: string }>(),
   },
 });

@@ -4,7 +4,7 @@ import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, EMPTY, map, mergeMap, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { AssetsPage } from '@photofant/models';
+import type { AssetDto, AssetsPage } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { filtersActions } from '../filters/filters.actions';
 import { galleryActions } from './gallery.actions';
@@ -83,6 +83,32 @@ export class GalleryEffects {
         }
         return EMPTY;
       }),
+    )
+  );
+
+  readonly toggleFavourite$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(galleryActions.toggleFavourite),
+      mergeMap(({ id, value }) =>
+        this.assetService.setFavourite(id, value).pipe(
+          map((asset: AssetDto) => galleryActions.toggleFavouriteSuccess({ asset })),
+          catchError(() => of(galleryActions.toggleFavouriteFailure({ id, previous: !value }))),
+        )
+      ),
+    )
+  );
+
+  readonly deleteAsset$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(galleryActions.deleteAsset),
+      mergeMap(({ id }) =>
+        this.assetService.deleteAsset(id).pipe(
+          map(() => galleryActions.deleteAssetSuccess({ id })),
+          catchError((error: HttpErrorResponse) =>
+            of(galleryActions.deleteAssetFailure({ error: error.message }))
+          ),
+        )
+      ),
     )
   );
 }

@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { Store } from '@ngrx/store';
 import type { AssetDto } from '@photofant/models';
 import { AssetService } from '@photofant/services';
+import { galleryActions } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
 function sourceLabel(source: string | null): string {
@@ -24,6 +26,7 @@ function sourceLabel(source: string | null): string {
 })
 export class GalerieCell {
   private readonly assetService = inject(AssetService);
+  private readonly store = inject(Store);
 
   readonly asset      = input.required<AssetDto>();
   readonly baseHeight = input.required<number>();
@@ -57,6 +60,7 @@ export class GalerieCell {
 
   protected onFavClick(event: MouseEvent): void {
     event.stopPropagation();
-    // Favourite toggle implemented in P5
+    const asset: AssetDto = this.asset();
+    this.store.dispatch(galleryActions.toggleFavourite({ id: asset.id, value: !asset.favourite }));
   }
 }

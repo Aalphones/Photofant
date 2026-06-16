@@ -63,6 +63,19 @@ export const galleryFeature = createFeature({
     on(galleryActions.closeLightbox, (state: GalleryState) => ({ ...state, lightboxId: null, lightboxPendingNext: false })),
     on(galleryActions.lightboxGoTo, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),
     on(galleryActions.lightboxMarkPendingNext, (state: GalleryState) => ({ ...state, lightboxPendingNext: true })),
+    on(galleryActions.toggleFavourite, (state: GalleryState, { id, value }) =>
+      adapter.updateOne({ id, changes: { favourite: value } }, state)
+    ),
+    on(galleryActions.toggleFavouriteSuccess, (state: GalleryState, { asset }) =>
+      adapter.updateOne({ id: asset.id, changes: asset }, state)
+    ),
+    on(galleryActions.toggleFavouriteFailure, (state: GalleryState, { id, previous }) =>
+      adapter.updateOne({ id, changes: { favourite: previous } }, state)
+    ),
+    on(galleryActions.deleteAssetSuccess, (state: GalleryState, { id }) => {
+      const removed = adapter.removeOne(id, state);
+      return state.lightboxId === id ? { ...removed, lightboxId: null } : removed;
+    }),
   ),
   extraSelectors: ({ selectGalleryState }) => ({
     ...adapter.getSelectors(selectGalleryState),

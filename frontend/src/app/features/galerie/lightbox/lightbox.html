@@ -44,6 +44,21 @@
       <!-- Aktionen -->
       <div class="panel-sec">
         <div class="psec-title">Aktionen</div>
+        <div class="pbtn-row">
+          <button
+            class="pbtn pbtn--ghost"
+            [class.pbtn--fav-on]="isFavourite()"
+            (click)="toggleFavourite()"
+            [attr.aria-pressed]="isFavourite()"
+          >
+            <pf-icon name="star" [size]="15" />
+            {{ isFavourite() ? 'Favorit' : 'Favorisieren' }}
+          </button>
+          <button class="pbtn pbtn--danger" (click)="deleteAsset()" aria-label="In den Papierkorb">
+            <pf-icon name="trash" [size]="15" />
+            Papierkorb
+          </button>
+        </div>
         <a
           class="pbtn pbtn--ghost"
           [href]="downloadUrl()"

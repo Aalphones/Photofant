@@ -1,6 +1,6 @@
 # P2 · Phase 5 — Favoriten & Papierkorb
 
-> Rating: **heikel** (physischer Move + DB müssen crash-sicher zusammenpassen — Kernmuster für P7) · Status: pending
+> Rating: **heikel** (physischer Move + DB müssen crash-sicher zusammenpassen — Kernmuster für P7) · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -17,11 +17,29 @@
 
 ## Checkliste
 
-- [ ] Move-Modul im Backend (atomar so weit das FS es hergibt: gleicher Volume-Rename; Kollisions-Suffix; DB-Update in derselben Operation kapseln)
-- [ ] Favourite-Endpoint + Trash-Endpoints (Liste/Restore/Endgültig) inkl. Thumbnail-Aufräumen
-- [ ] Unit-Tests fürs Move-Modul (Erfolg, Kollision, Datei fehlt, simulierter Abbruch) — hier ausnahmsweise Pflicht trotz Lean-Profil, siehe testing.md
-- [ ] Frontend: Fav-Toggle (Zelle hover + Lightbox), optimistisch mit Failure-Rollback-Action
-- [ ] Papierkorb-Ansicht (Liste mit Restore/Löschen, Leeren-Button) + `store/trash/`
-- [ ] Doc-Update: docs/models.md (deleted_at-Semantik), routes.md
+- [x] Move-Modul im Backend (atomar so weit das FS es hergibt: gleicher Volume-Rename; Kollisions-Suffix; DB-Update in derselben Operation kapseln)
+- [x] Favourite-Endpoint + Trash-Endpoints (Liste/Restore/Endgültig) inkl. Thumbnail-Aufräumen
+- [x] Unit-Tests fürs Move-Modul (Erfolg, Kollision, Datei fehlt, simulierter Abbruch) — hier ausnahmsweise Pflicht trotz Lean-Profil, siehe testing.md
+- [x] Frontend: Fav-Toggle (Zelle hover + Lightbox), optimistisch mit Failure-Rollback-Action
+- [x] Papierkorb-Ansicht (Liste mit Restore/Löschen, Leeren-Button) + `store/trash/`
+- [x] Doc-Update: docs/models.md (deleted_at-Semantik), routes.md
 
 ## Report-Back
+
+**Backend** — `photofant/media/moves.py` ist *das* wiederverwendbare Move-Modul:
+`_perform_move` macht den physischen Move (Filesystem-first), restartbar (Quelle weg +
+Ziel da → Ziel adoptieren), mit Kollisions-Suffix. High-Level-Ops (`set_favourite`,
+`soft_delete`, `restore`, `purge`) führen den Move im Thread aus und committen die DB in
+**einem** Commit, sodass Pfad + Flag/deleted_at nie auseinanderlaufen. Endpoints:
+`PATCH /assets/{id}/favourite`, `DELETE /assets/{id}` (soft) in `api/assets.py`;
+`api/trash.py` mit Liste/Restore/Purge/Leeren. `delete_thumbnails` in `db/cache.py`.
+11 Move-Tests (Erfolg/Kollision/fehlt/Abbruch-Recovery/Favorit/Trash/Restore/Purge).
+
+**Frontend** — Fav-Toggle in Zelle + Lightbox, optimistisch über `gallery`-Store mit
+Rollback-Action bei Fehler; Delete als confirm-then-remove (schließt Lightbox bei aktivem
+Bild). Neuer `store/trash/`-Slice (Entity-Adapter) + `features/papierkorb/`-View (Liste,
+Restore/Endgültig-löschen, Leeren-Button). Lightbox-Keys: `F` Favorit, `Entf` Papierkorb.
+
+**Abweichung:** Papierkorb hängt interim als eigener Nav-Eintrag (`/papierkorb`) statt in
+einer Wartungs-Seite — die volle „Wartung"-View (FS↔DB-Abgleich aus dem Prototyp) kommt
+erst in P3. Funktional vollständig, nur die Heimat ist provisorisch.

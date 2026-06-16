@@ -10,9 +10,12 @@
 | `/galerie` (scan) | `POST` | `/api/assets/scan` | — | `{ job_id }` |
 | `/galerie` (favourite, P5) | `PATCH` | `/api/assets/{id}/favourite` | `{ value: bool }` | aktualisiertes `AssetDto` |
 | `/galerie` (trash, P5) | `DELETE` | `/api/assets/{id}` | — | Soft-Delete |
-| Trash-View (P5) | `GET` | `/api/trash` | — | `AssetDto[]` |
+| Trash-View (P5) | `GET` | `/api/trash` | — | `AssetDto[]` (sortiert nach `deleted_at` desc) |
 | Trash-View (P5) | `POST` | `/api/trash/{id}/restore` | — | wiederhergestelltes `AssetDto` |
-| Trash-View (P5) | `DELETE` | `/api/trash/{id}` | — | endgültig gelöscht |
+| Trash-View (P5) | `DELETE` | `/api/trash/{id}` | — | `204` — endgültig gelöscht (Datei + Thumbnails + DB-Zeilen) |
+| Trash-View (P5) | `DELETE` | `/api/trash` | — | `204` — Papierkorb leeren (alle endgültig) |
+
+`PATCH /api/assets/{id}/favourite` und `DELETE /api/assets/{id}` liefern: Favourite → aktualisiertes `AssetDto`; Delete → `204`. `{id}` ist überall die `asset.id` (Stage 1: genau eine Instanz pro Asset).
 
 ## Job-Stream
 

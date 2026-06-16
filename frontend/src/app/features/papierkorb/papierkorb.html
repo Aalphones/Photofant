@@ -1,0 +1,40 @@
+<div class="trash-head">
+  <h3 class="trash-title">Papierkorb</h3>
+  <div class="trash-line"></div>
+  <span class="trash-count">{{ total() }} {{ total() === 1 ? 'Eintrag' : 'Einträge' }}</span>
+  @if (total() > 0) {
+    <button class="trash-empty-btn" (click)="onEmpty()">
+      <pf-icon name="trash" [size]="14" />
+      Papierkorb leeren
+    </button>
+  }
+</div>
+
+@if (total() === 0 && !isLoading()) {
+  <div class="trash-blank">
+    <pf-icon name="trash" [size]="40" />
+    <p>Der Papierkorb ist leer.</p>
+  </div>
+}
+
+<div class="trash-list">
+  @for (asset of items(); track asset.id) {
+    <div class="trash-row">
+      <img class="trash-thumb" [src]="thumbnailUrl(asset.id)" [alt]="'Bild ' + asset.id" loading="lazy" />
+      <div class="trash-meta">
+        <span class="trash-id">#{{ asset.id }}</span>
+        <span class="trash-sub">{{ formatDate(asset.created_at ?? asset.imported_at) }} · {{ formatBytes(asset.file_size) }}</span>
+      </div>
+      <div class="trash-acts">
+        <button class="trash-act" (click)="onRestore(asset.id)">
+          <pf-icon name="refresh" [size]="14" />
+          Wiederherstellen
+        </button>
+        <button class="trash-act trash-act--danger" (click)="onPurge(asset.id)">
+          <pf-icon name="trash" [size]="14" />
+          Endgültig löschen
+        </button>
+      </div>
+    </div>
+  }
+</div>

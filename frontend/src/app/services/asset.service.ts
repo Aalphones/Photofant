@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { AssetDetailDto, AssetsPage, SortKey, SortOrder } from '@photofant/models';
+import type { AssetDetailDto, AssetDto, AssetsPage, SortKey, SortOrder } from '@photofant/models';
 
 export interface ListAssetsParams {
   page: number;
@@ -29,6 +29,30 @@ export class AssetService {
 
   getAsset(id: number): Observable<AssetDetailDto> {
     return this.http.get<AssetDetailDto>(`/api/assets/${id}`);
+  }
+
+  setFavourite(id: number, value: boolean): Observable<AssetDto> {
+    return this.http.patch<AssetDto>(`/api/assets/${id}/favourite`, { value });
+  }
+
+  deleteAsset(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/assets/${id}`);
+  }
+
+  listTrash(): Observable<AssetDto[]> {
+    return this.http.get<AssetDto[]>('/api/trash');
+  }
+
+  restoreAsset(id: number): Observable<AssetDto> {
+    return this.http.post<AssetDto>(`/api/trash/${id}/restore`, {});
+  }
+
+  purgeAsset(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/trash/${id}`);
+  }
+
+  emptyTrash(): Observable<void> {
+    return this.http.delete<void>('/api/trash');
   }
 
   thumbnailUrl(id: number, size: 256 | 512 = 256): string {

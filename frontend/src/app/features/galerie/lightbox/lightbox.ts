@@ -107,6 +107,10 @@ export class Lightbox {
     return asset != null ? this.assetService.fileUrl(asset.id) : '#';
   });
 
+  protected readonly isFavourite = computed((): boolean =>
+    this.asset()?.favourite ?? false
+  );
+
   protected readonly sourceLabel = computed((): string => {
     const source = this.asset()?.source;
     if (!source) return '—';
@@ -131,6 +135,9 @@ export class Lightbox {
         case 'Escape':     this.close(); break;
         case 'ArrowLeft':  this.prev(); break;
         case 'ArrowRight': this.next(); break;
+        case 'f':
+        case 'F':          this.toggleFavourite(); break;
+        case 'Delete':     this.deleteAsset(); break;
       }
     };
     this.document.addEventListener('keydown', onKeyDown);
@@ -151,5 +158,19 @@ export class Lightbox {
 
   protected toggleGenMeta(): void {
     this.showGenMeta.update((visible: boolean) => !visible);
+  }
+
+  protected toggleFavourite(): void {
+    const asset: AssetDto | null = this.asset();
+    if (asset != null) {
+      this.store.dispatch(galleryActions.toggleFavourite({ id: asset.id, value: !asset.favourite }));
+    }
+  }
+
+  protected deleteAsset(): void {
+    const asset: AssetDto | null = this.asset();
+    if (asset != null) {
+      this.store.dispatch(galleryActions.deleteAsset({ id: asset.id }));
+    }
   }
 }

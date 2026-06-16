@@ -35,6 +35,11 @@ export const routes: Routes = [
           import('./features/modelle/modelle').then((m) => m.Modelle),
       },
       {
+        path: 'papierkorb',
+        loadComponent: () =>
+          import('./features/papierkorb/papierkorb').then((m) => m.Papierkorb),
+      },
+      {
         path: 'einstellungen',
         loadComponent: () =>
           import('./features/einstellungen/einstellungen').then(

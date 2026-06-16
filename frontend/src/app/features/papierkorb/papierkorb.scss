@@ -1,0 +1,136 @@
+:host {
+  display: block;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.trash-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 22px 10px;
+}
+
+.trash-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.trash-line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.trash-count {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.trash-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: oklch(0.66 0.165 25 / 0.16);
+    border-color: oklch(0.66 0.165 25 / 0.45);
+    color: var(--danger);
+  }
+}
+
+.trash-blank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 80px 0;
+  color: var(--text-3);
+}
+
+.trash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 22px 22px;
+}
+
+.trash-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.trash-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--radius-s);
+  flex: none;
+  background: var(--bg-2);
+}
+
+.trash-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.trash-id {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.trash-sub {
+  font-size: 11.5px;
+  font-family: var(--mono);
+  color: var(--text-3);
+}
+
+.trash-acts {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.trash-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover { background: var(--surface-hover); }
+
+  &--danger:hover {
+    background: oklch(0.66 0.165 25 / 0.16);
+    border-color: oklch(0.66 0.165 25 / 0.45);
+    color: var(--danger);
+  }
+}

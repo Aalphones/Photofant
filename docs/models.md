@@ -61,11 +61,23 @@ Physical copy per person. Stage 1: one instance per asset (`person = _unknown`).
 | `asset_id` | INTEGER FK → `asset.id` | |
 | `person_id` | INTEGER FK → `person.id` | |
 | `path` | TEXT | absolute path; follows moves |
-| `favourite` | BOOLEAN | mirrors physical location in `favourites/` |
+| `favourite` | BOOLEAN | mirrors physical location in `favourites/` (P5: toggled via physical move) |
 | `fixed_person` | BOOLEAN | manually sorted — no auto-redistribution |
 | `deleted_at` | DATETIME | soft-delete; NULL = active; indexed |
 
 Unique constraint: `(asset_id, person_id)`. Index: `ix_asset_instance_deleted_at`.
+
+**`path` + `deleted_at` semantics (P5).** `path` always tracks the file's *actual* on-disk
+location and is rewritten on every physical move (favourite, soft-delete, restore).
+Soft-delete sets `deleted_at` and moves the file into `<data_root>/.photofant/trash/`,
+**mirroring the data-root-relative tree** (e.g. `_unknown/photos/<hash>.png` →
+`.photofant/trash/_unknown/photos/<hash>.png`) so a restore can reconstruct the original
+path with no extra column. Order is always *filesystem-first, then a single DB commit*;
+the move helper (`photofant/media/moves.py`) is restartable (source gone + dest present →
+adopt dest) so a crash between move and commit leaves only forward-recoverable drift
+(detected by P3 reconciliation). Final delete removes file + thumbnails + the
+`asset_instance` row, plus the `asset` + `processing_ledger` rows once the asset's last
+instance is gone.
 
 ### `processing_ledger` (migration 0002)
 

@@ -18,6 +18,7 @@ from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, 
 from photofant.db.models import Asset, AssetInstance
 from photofant.db.session import get_session
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
+from photofant.media import moves
 from photofant.media.thumbnails import generate_thumbnail
 
 router = APIRouter(prefix="/assets")
@@ -71,7 +72,11 @@ class JobStarted(BaseModel):
     job_id: str
 
 
-def _to_dto(asset: Asset, instance: AssetInstance) -> AssetDto:
+class FavouriteRequest(BaseModel):
+    value: bool
+
+
+def build_asset_dto(asset: Asset, instance: AssetInstance) -> AssetDto:
     return AssetDto(
         id=asset.id,
         content_hash=asset.content_hash,
@@ -94,6 +99,10 @@ def _base_query(session: Session) -> OrmQuery[Any]:
         .join(AssetInstance, AssetInstance.asset_id == Asset.id)
         .filter(AssetInstance.deleted_at.is_(None))
     )
+
+
+def _active_row(session: Session, asset_id: int) -> tuple[Asset, AssetInstance] | None:
+    return _base_query(session).filter(Asset.id == asset_id).first()
 
 
 @router.get("", response_model=AssetsPage)
@@ -122,7 +131,7 @@ async def list_assets(
     total: int = query.count()
     rows = query.offset((page - 1) * page_size).limit(page_size).all()
 
-    items = [_to_dto(asset, instance) for asset, instance in rows]
+    items = [build_asset_dto(asset, instance) for asset, instance in rows]
     return AssetsPage(items=items, total=total, page=page, page_size=page_size)
 
 
@@ -136,12 +145,7 @@ async def get_asset_thumbnail(
     if size not in _VALID_THUMB_SIZES:
         raise HTTPException(status_code=422, detail="size must be 256 or 512")
 
-    row = (
-        session.query(Asset, AssetInstance)
-        .join(AssetInstance, AssetInstance.asset_id == Asset.id)
-        .filter(Asset.id == asset_id, AssetInstance.deleted_at.is_(None))
-        .first()
-    )
+    row = _active_row(session, asset_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Asset not found")
 
@@ -174,17 +178,12 @@ async def get_asset_thumbnail(
 
 @router.get("/{asset_id}", response_model=AssetDetailDto)
 async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
-    row = (
-        session.query(Asset, AssetInstance)
-        .join(AssetInstance, AssetInstance.asset_id == Asset.id)
-        .filter(Asset.id == asset_id, AssetInstance.deleted_at.is_(None))
-        .first()
-    )
+    row = _active_row(session, asset_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Asset not found")
 
     asset, instance = row
-    base = _to_dto(asset, instance)
+    base = build_asset_dto(asset, instance)
     return AssetDetailDto(**base.model_dump(), path=instance.path)
 
 
@@ -201,3 +200,26 @@ async def scan_assets(session: DbSession) -> JobStarted:
     data_root = get_data_root(session)
     status = await enqueue_scan(Path(data_root))
     return JobStarted(job_id=status.id)
+
+
+@router.patch("/{asset_id}/favourite", response_model=AssetDto)
+async def set_asset_favourite(asset_id: int, body: FavouriteRequest, session: DbSession) -> AssetDto:
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    asset, instance = row
+    await moves.set_favourite(session, instance, body.value)
+    return build_asset_dto(asset, instance)
+
+
+@router.delete("/{asset_id}", status_code=204)
+async def delete_asset(asset_id: int, session: DbSession) -> Response:
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    _, instance = row
+    data_root = get_data_root(session)
+    await moves.soft_delete(session, instance, data_root)
+    return Response(status_code=204)

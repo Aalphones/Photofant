@@ -28,6 +28,7 @@ export class NavRail {
 
   protected readonly toolItems: readonly NavItem[] = [
     { id: 'modelle',       icon: 'model',    label: 'Modelle'      },
+    { id: 'papierkorb',    icon: 'trash',    label: 'Papierkorb'   },
     { id: 'einstellungen', icon: 'settings', label: 'Einstellungen'},
   ];
 }
