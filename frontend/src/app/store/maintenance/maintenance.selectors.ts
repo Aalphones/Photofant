@@ -5,6 +5,9 @@ const {
   selectIsLoadingBackups,
   selectIsRunningBackup,
   selectLastJobId,
+  selectReport,
+  selectIsScanning,
+  selectIsRepairing,
   selectError,
 } = maintenanceFeature;
 
@@ -13,5 +16,8 @@ export const maintenanceSelectors = {
   selectIsLoadingBackups,
   selectIsRunningBackup,
   selectLastJobId,
+  selectReport,
+  selectIsScanning,
+  selectIsRepairing,
   selectError,
 };

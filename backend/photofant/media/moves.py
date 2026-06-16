@@ -153,6 +153,23 @@ async def restore(session: Session, instance: AssetInstance, data_root: Path) ->
     return instance
 
 
+async def trash_orphan_file(source: Path, data_root: Path) -> Path:
+    """Move an *untracked* file (no DB row) into the trash, mirroring the tree.
+
+    Used by reconcile repair for orphaned files: there is no asset_instance to
+    update, so this only relocates the file. Mirrors `soft_delete`'s trash layout
+    so a manual restore lands the file back where it was.
+    """
+    root = data_root.resolve()
+    trash_root = root / _TRASH_SUBDIR
+    try:
+        relative = source.resolve().relative_to(root)
+    except ValueError:
+        relative = Path(source.name)
+    dest = trash_root / relative
+    return await asyncio.to_thread(_perform_move, source, dest)
+
+
 def _delete_file_and_thumbnails(file_path: Path, cache_db_path: Path, asset_id: int) -> None:
     with contextlib.suppress(FileNotFoundError):
         file_path.unlink()

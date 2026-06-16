@@ -64,6 +64,7 @@ Physical copy per person. Stage 1: one instance per asset (`person = _unknown`).
 | `favourite` | BOOLEAN | mirrors physical location in `favourites/` (P5: toggled via physical move) |
 | `fixed_person` | BOOLEAN | manually sorted — no auto-redistribution |
 | `deleted_at` | DATETIME | soft-delete; NULL = active; indexed |
+| `missing_at` | DATETIME | reconcile marker (migration 0003); NULL = present; a timestamp = acknowledged-missing, hidden from the next FS↔DB scan |
 
 Unique constraint: `(asset_id, person_id)`. Index: `ix_asset_instance_deleted_at`.
 
@@ -97,13 +98,15 @@ Once-only guarantee per content-hash.
 
 | Table | Migration | Plan |
 |---|---|---|
-| `model_registry` | 0003 | P4 |
-| `caption_preset` | 0003 | P4 |
-| `version` | 0004 | P8 |
-| `face` | 0004 | P7 |
-| `tag`, `asset_tag` | 0005 | P5 |
-| `collection`, `collection_item`, `smart_trigger` | 0006 | P6 |
-| `prompt_template` | 0007 | P9 |
+| `model_registry` | 0004 | P4 |
+| `caption_preset` | 0004 | P4 |
+| `version` | 0005 | P8 |
+| `face` | 0005 | P7 |
+| `tag`, `asset_tag` | 0006 | P5 |
+| `collection`, `collection_item`, `smart_trigger` | 0007 | P6 |
+| `prompt_template` | 0008 | P9 |
+
+> Migration `0003` is taken by P3 (reconcile `missing_at` marker) — downstream plan numbers shifted up by one.
 
 ---
 

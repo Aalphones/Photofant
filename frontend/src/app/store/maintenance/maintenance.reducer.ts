@@ -1,5 +1,5 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { BackupInfo } from '@photofant/models';
+import type { BackupInfo, ReconcileReport, RepairAction, RepairItem } from '@photofant/models';
 import { maintenanceActions } from './maintenance.actions';
 
 export interface MaintenanceState {
@@ -7,6 +7,9 @@ export interface MaintenanceState {
   isLoadingBackups: boolean;
   isRunningBackup: boolean;
   lastJobId: string | null;
+  report: ReconcileReport | null;
+  isScanning: boolean;
+  isRepairing: boolean;
   error: string | null;
 }
 
@@ -15,8 +18,27 @@ const initialState: MaintenanceState = {
   isLoadingBackups: false,
   isRunningBackup: false,
   lastJobId: null,
+  report: null,
+  isScanning: false,
+  isRepairing: false,
   error: null,
 };
+
+function repairedItems(actions: RepairAction[], statuses: ('ok' | 'error')[]): RepairItem[] {
+  return actions.filter((_action: RepairAction, index: number) => statuses[index] === 'ok').map((action: RepairAction) => action.item);
+}
+
+function pruneReport(report: ReconcileReport, removed: RepairItem[]): ReconcileReport {
+  const orphanPaths = new Set(removed.filter((item: RepairItem) => item.kind === 'orphan').map((item: RepairItem) => item.path));
+  const missingIds = new Set(removed.filter((item: RepairItem) => item.kind === 'missing').map((item: RepairItem) => item.instance_id));
+  const driftIds = new Set(removed.filter((item: RepairItem) => item.kind === 'drift').map((item: RepairItem) => item.instance_id));
+  return {
+    ...report,
+    orphaned_files: report.orphaned_files.filter((file) => !orphanPaths.has(file.path)),
+    missing_files: report.missing_files.filter((file) => !missingIds.has(file.instance_id)),
+    path_drift: report.path_drift.filter((file) => !driftIds.has(file.instance_id)),
+  };
+}
 
 export const maintenanceFeature = createFeature({
   name: 'maintenance',
@@ -50,6 +72,48 @@ export const maintenanceFeature = createFeature({
     on(maintenanceActions.loadBackupsFailure, (state: MaintenanceState, { error }) => ({
       ...state,
       isLoadingBackups: false,
+      error,
+    })),
+
+    on(maintenanceActions.triggerReconcile, (state: MaintenanceState) => ({
+      ...state,
+      isScanning: true,
+      error: null,
+    })),
+    on(maintenanceActions.triggerReconcileSuccess, (state: MaintenanceState, { jobId }) => ({
+      ...state,
+      lastJobId: jobId,
+    })),
+    on(maintenanceActions.triggerReconcileFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
+      isScanning: false,
+      error,
+    })),
+    on(maintenanceActions.loadReportSuccess, (state: MaintenanceState, { report }) => ({
+      ...state,
+      isScanning: false,
+      report,
+    })),
+    on(maintenanceActions.loadReportFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
+      isScanning: false,
+      error,
+    })),
+    on(maintenanceActions.repair, (state: MaintenanceState) => ({
+      ...state,
+      isRepairing: true,
+      error: null,
+    })),
+    on(maintenanceActions.repairSuccess, (state: MaintenanceState, { actions, response }) => ({
+      ...state,
+      isRepairing: false,
+      report: state.report
+        ? pruneReport(state.report, repairedItems(actions, response.results.map((result) => result.status)))
+        : state.report,
+    })),
+    on(maintenanceActions.repairFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
+      isRepairing: false,
       error,
     })),
   ),

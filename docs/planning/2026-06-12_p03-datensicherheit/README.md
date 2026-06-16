@@ -9,7 +9,7 @@ Die DB ist die alleinige Metadaten-Wahrheit (bewusst akzeptiertes Risiko) — di
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
 | 1 | [DB-Backup](phase-1-db-backup.md) | mechanisch | complete |
-| 2 | [FS↔DB-Reconciliation](phase-2-reconciliation.md) | heikel | pending |
+| 2 | [FS↔DB-Reconciliation](phase-2-reconciliation.md) | heikel | complete |
 | 3 | [Rebuild & Wartungs-View](phase-3-rebuild-wartung.md) | standard | pending |
 
 ## Kontrakt (Backend ↔ Frontend)

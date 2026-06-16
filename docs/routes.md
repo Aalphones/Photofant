@@ -24,6 +24,29 @@
 |---|---|---|---|---|
 | `/einstellungen` (backup trigger) | `POST` | `/api/maintenance/backup` | `{ target_dir?: string }` | `{ job_id: string }` — BACKUP-Job in Queue |
 | `/einstellungen` (backup list) | `GET` | `/api/maintenance/backups` | — | `BackupInfo[]` (neueste zuerst) |
+| `/einstellungen` (reconcile trigger) | `POST` | `/api/maintenance/reconcile` | — | `{ job_id: string }` — RECONCILE-Job in Queue |
+| `/einstellungen` (reconcile report) | `GET` | `/api/maintenance/reconcile/report` | — | `ReconcileReport` (leerer Report wenn noch kein Scan) |
+| `/einstellungen` (reconcile repair) | `POST` | `/api/maintenance/reconcile/repair` | `{ actions: RepairAction[] }` | `RepairResponse` |
+
+```typescript
+interface ReconcileReport {
+  generated_at: string | null;               // ISO-8601; null = noch kein Scan
+  orphaned_files: OrphanFile[];               // FS vorhanden, keine DB-Zeile
+  missing_files: MissingFile[];               // DB-Zeile, FS fehlt
+  path_drift: DriftFile[];                    // FS woanders gefunden (Hash-Match)
+}
+
+interface OrphanFile { path: string; size: number; person_name: string | null; detail: string; }
+interface MissingFile { instance_id: number; asset_id: number; path: string; person_name: string | null; detail: string; }
+interface DriftFile { instance_id: number; asset_id: number; db_path: string; found_path: string; person_name: string | null; detail: string; }
+
+// Repair: pro Item genau eine explizit gewählte Aktion (kein Auto-Repair).
+// Gültige (kind, action)-Paare: orphan→index|trash, missing→mark_missing|trash, drift→fix_path.
+interface RepairItem { kind: 'orphan' | 'missing' | 'drift'; instance_id?: number; path?: string; found_path?: string; }
+interface RepairAction { item: RepairItem; action: 'index' | 'mark_missing' | 'trash' | 'fix_path'; }
+interface RepairResult { kind: string; action: string; status: 'ok' | 'error'; message: string | null; }
+interface RepairResponse { results: RepairResult[]; import_job_id: string | null; }  // import_job_id gesetzt, wenn orphan→index Dateien neu importiert wurden
+```
 
 ```typescript
 interface BackupInfo {

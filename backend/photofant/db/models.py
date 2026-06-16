@@ -53,6 +53,7 @@ class AssetInstance(Base):
     favourite: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     fixed_person: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    missing_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ProcessingLedger(Base):

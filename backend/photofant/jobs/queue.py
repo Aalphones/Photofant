@@ -25,6 +25,7 @@ class JobKind(StrEnum):
     SCAN = "scan"
     THUMBNAIL = "thumbnail"
     BACKUP = "backup"
+    RECONCILE = "reconcile"
 
 
 @dataclass

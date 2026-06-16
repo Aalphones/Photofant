@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { catchError, filter, map, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { BackupInfo } from '@photofant/models';
+import type { BackupInfo, Job, ReconcileReport, RepairResponse } from '@photofant/models';
 import { MaintenanceService } from '@photofant/services';
+import { jobsActions } from '../jobs/jobs.actions';
 import { maintenanceActions } from './maintenance.actions';
 
 @Injectable()
@@ -39,6 +40,73 @@ export class MaintenanceEffects {
             of(maintenanceActions.loadBackupsFailure({ error: error.message }))
           ),
         )
+      ),
+    )
+  );
+
+  readonly triggerReconcile$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.triggerReconcile),
+      switchMap(() =>
+        this.maintenanceService.triggerReconcile().pipe(
+          map((response: { job_id: string }) =>
+            maintenanceActions.triggerReconcileSuccess({ jobId: response.job_id })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.triggerReconcileFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly loadReport$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.loadReport),
+      switchMap(() =>
+        this.maintenanceService.loadReconcileReport().pipe(
+          map((report: ReconcileReport) =>
+            maintenanceActions.loadReportSuccess({ report })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.loadReportFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly repair$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.repair),
+      switchMap(({ actions }) =>
+        this.maintenanceService.repair(actions).pipe(
+          map((response: RepairResponse) =>
+            maintenanceActions.repairSuccess({ actions, response })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.repairFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  // When the reconcile scan job finishes, pull the freshly persisted report.
+  readonly reconcileJobDone$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'reconcile' && job.state === 'done'),
+      map(() => maintenanceActions.loadReport()),
+    )
+  );
+
+  readonly reconcileJobFailed$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'reconcile' && job.state === 'error'),
+      map(({ job }: { job: Job }) =>
+        maintenanceActions.triggerReconcileFailure({ error: job.error ?? 'Scan fehlgeschlagen' })
       ),
     )
   );
