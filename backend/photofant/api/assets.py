@@ -70,11 +70,28 @@ class AssetDetailDto(AssetDto):
     caption_preset_id: int | None
 
 
+class FacetItem(BaseModel):
+    value: str
+    count: int
+
+
+class TagFacetItem(BaseModel):
+    id: int
+    name: str
+    count: int
+
+
+class Facets(BaseModel):
+    sources: list[FacetItem]
+    tags_top: list[TagFacetItem]
+
+
 class AssetsPage(BaseModel):
     items: list[AssetDto]
     total: int
     page: int
     page_size: int
+    facets: Facets
 
 
 class ImportRequest(BaseModel):
@@ -130,6 +147,34 @@ def _active_row(session: Session, asset_id: int) -> tuple[Asset, AssetInstance] 
     return _base_query(session).filter(Asset.id == asset_id).first()
 
 
+def _compute_facets(session: Session, filtered: OrmQuery[Any]) -> Facets:
+    src_rows = (
+        filtered
+        .with_entities(Asset.source, func.count(Asset.id).label("cnt"))
+        .group_by(Asset.source)
+        .all()
+    )
+    sources = [
+        FacetItem(value=row.source, count=row.cnt)
+        for row in src_rows
+        if row.source is not None
+    ]
+
+    asset_id_sub = filtered.with_entities(Asset.id).subquery()
+    tag_rows = (
+        session.query(Tag.id, Tag.name, func.count(AssetTag.id).label("cnt"))
+        .join(AssetTag, AssetTag.tag_id == Tag.id)
+        .filter(AssetTag.asset_id.in_(asset_id_sub))
+        .group_by(Tag.id, Tag.name)
+        .order_by(func.count(AssetTag.id).desc())
+        .limit(30)
+        .all()
+    )
+    tags_top = [TagFacetItem(id=row.id, name=row.name, count=row.cnt) for row in tag_rows]
+
+    return Facets(sources=sources, tags_top=tags_top)
+
+
 @router.get("", response_model=AssetsPage)
 async def list_assets(
     session: DbSession,
@@ -138,11 +183,24 @@ async def list_assets(
     sort: SortField = SortField.DATE,
     order: SortOrder = SortOrder.DESC,
     favourite: bool | None = None,
+    source: Annotated[list[str] | None, Query()] = None,
+    quality_min: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
+    tags: Annotated[list[int] | None, Query()] = None,
 ) -> AssetsPage:
     query = _base_query(session)
 
     if favourite is not None:
         query = query.filter(AssetInstance.favourite.is_(favourite))
+    if source:
+        query = query.filter(Asset.source.in_(source))
+    if quality_min is not None and quality_min > 0.0:
+        query = query.filter(Asset.quality_score >= quality_min)
+    for tag_id in (tags or []):
+        tag_sub = session.query(AssetTag.asset_id).filter(AssetTag.tag_id == tag_id).subquery()
+        query = query.filter(Asset.id.in_(tag_sub))
+
+    facets = _compute_facets(session, query)
+    total: int = query.count()
 
     sort_col: Any
     if sort == SortField.DATE:
@@ -151,13 +209,10 @@ async def list_assets(
         sort_col = Asset.file_size
 
     order_fn = asc if order == SortOrder.ASC else desc
-    query = query.order_by(order_fn(sort_col))
-
-    total: int = query.count()
-    rows = query.offset((page - 1) * page_size).limit(page_size).all()
+    rows = query.order_by(order_fn(sort_col)).offset((page - 1) * page_size).limit(page_size).all()
 
     items = [build_asset_dto(asset, instance) for asset, instance in rows]
-    return AssetsPage(items=items, total=total, page=page, page_size=page_size)
+    return AssetsPage(items=items, total=total, page=page, page_size=page_size, facets=facets)
 
 
 @router.get("/{asset_id}/thumbnail")

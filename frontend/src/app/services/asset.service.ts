@@ -9,6 +9,9 @@ export interface ListAssetsParams {
   sort: SortKey;
   order: SortOrder;
   favourite?: boolean | null;
+  sources?: string[];
+  qualityMin?: number;
+  tagIds?: number[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -23,6 +26,19 @@ export class AssetService {
       .set('order', params.order);
     if (params.favourite != null) {
       httpParams = httpParams.set('favourite', String(params.favourite));
+    }
+    if (params.sources?.length) {
+      for (const source of params.sources) {
+        httpParams = httpParams.append('source', source);
+      }
+    }
+    if (params.qualityMin) {
+      httpParams = httpParams.set('quality_min', String(params.qualityMin));
+    }
+    if (params.tagIds?.length) {
+      for (const tagId of params.tagIds) {
+        httpParams = httpParams.append('tags', String(tagId));
+      }
     }
     return this.http.get<AssetsPage>('/api/assets', { params: httpParams });
   }

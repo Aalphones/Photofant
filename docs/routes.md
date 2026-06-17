@@ -2,7 +2,7 @@
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional) | `AssetsPage { items, total, page, page_size }` |
+| `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable) | `AssetsPage { items, total, page, page_size, facets }` |
 | `/galerie` (cell thumbnail) | `GET` | `/api/assets/{id}/thumbnail` | `size` (256\|512) | JPEG blob — `ETag: "{hash}-{size}"`, `Cache-Control: immutable` |
 | `/galerie` (lightbox) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
 | `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`) |

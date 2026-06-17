@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { AssetDto } from '@photofant/models';
+import type { AssetDto, Facets } from '@photofant/models';
 
 export const galleryActions = createActionGroup({
   source: 'Gallery',
@@ -7,7 +7,7 @@ export const galleryActions = createActionGroup({
     'Request Page':              emptyProps(),
     'Request Next Page':         emptyProps(),
     'Reset':                     emptyProps(),
-    'Load Page Success':         props<{ items: AssetDto[]; total: number; page: number; pageSize: number }>(),
+    'Load Page Success':         props<{ items: AssetDto[]; total: number; page: number; pageSize: number; facets: Facets }>(),
     'Load Page Failure':         props<{ error: string }>(),
     'Open Lightbox':             props<{ id: number }>(),
     'Close Lightbox':            emptyProps(),

@@ -24,6 +24,10 @@ export class GalleryEffects {
         filtersActions.setGroup,
         filtersActions.setDensity,
         filtersActions.setFavourite,
+        filtersActions.setSources,
+        filtersActions.setQualityMin,
+        filtersActions.setTagIds,
+        filtersActions.clearAllFilters,
       ),
       map(() => galleryActions.reset()),
     )
@@ -40,12 +44,16 @@ export class GalleryEffects {
           sort: params.sort,
           order: params.order,
           favourite: params.favourite,
+          sources: params.sources,
+          qualityMin: params.qualityMin,
+          tagIds: params.tagIds,
         }).pipe(
           map((result: AssetsPage) => galleryActions.loadPageSuccess({
             items: result.items,
             total: result.total,
             page: result.page,
             pageSize: result.page_size,
+            facets: result.facets,
           })),
           catchError((error: HttpErrorResponse) =>
             of(galleryActions.loadPageFailure({ error: error.message }))

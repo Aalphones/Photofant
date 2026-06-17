@@ -1,5 +1,25 @@
 <div class="subbar__left">
-  <span class="subbar__count">{{ total() }} Bilder</span>
+  <button class="subbar__btn subbar__btn--filter" (click)="railToggle.emit()" title="Filter ein-/ausblenden">
+    <pf-icon name="filter" [size]="14" />
+  </button>
+
+  <span class="subbar__count">
+    {{ total() }} {{ hasActiveFilters() ? 'Treffer' : 'Bilder' }}
+  </span>
+
+  @if (hasActiveFilters()) {
+    <span class="subbar__div"></span>
+    @for (chip of chips(); track chip.label) {
+      <span class="subbar__chip">
+        <span class="subbar__chip-label">{{ chip.label }}</span>
+        <button class="subbar__chip-x" (click)="removeChip(chip)" [attr.aria-label]="'Filter entfernen: ' + chip.label">
+          <pf-icon name="x" [size]="11" />
+        </button>
+      </span>
+    }
+    <button class="subbar__clear" (click)="clearAllFilters()">Alle entfernen</button>
+  }
+
   <button class="subbar__btn" (click)="openRerunAllDialog()" title="Alle Bilder neu klassifizieren">
     <pf-icon name="refresh" [size]="14" />
     <span>Klassifizieren</span>

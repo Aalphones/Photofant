@@ -12,6 +12,7 @@ const {
   selectIsLoading,
   selectError,
   selectLightboxId,
+  selectFacets,
 } = galleryFeature;
 
 function formatMonthLabel(dateStr: string | null): string {
@@ -63,7 +64,9 @@ const selectGroups = createSelector(
 const selectFetchParams = createSelector(
   selectPage, selectPageSize,
   filtersFeature.selectSort, filtersFeature.selectOrder, filtersFeature.selectFavourite,
-  (page, pageSize, sort, order, favourite) => ({ page, pageSize, sort, order, favourite })
+  filtersFeature.selectSources, filtersFeature.selectQualityMin, filtersFeature.selectTagIds,
+  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds) =>
+    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds })
 );
 
 const selectLightboxAsset = createSelector(
@@ -112,6 +115,7 @@ export const gallerySelectors = {
   selectHasMore,
   selectGroups,
   selectFetchParams,
+  selectFacets,
   selectLightboxId,
   selectLightboxAsset,
   selectLightboxHasPrev,

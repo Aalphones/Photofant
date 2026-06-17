@@ -2,6 +2,16 @@
   display: block;
 }
 
+.galerie__body {
+  display: flex;
+  align-items: flex-start;
+}
+
+.galerie__main {
+  flex: 1;
+  min-width: 0;
+}
+
 .galerie-empty {
   display: flex;
   flex-direction: column;

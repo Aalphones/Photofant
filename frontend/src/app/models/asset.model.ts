@@ -12,6 +12,22 @@ export type GroupKey = (typeof GROUP_KEYS)[number];
 
 export const BASE_HEIGHTS: Record<Density, number> = { sm: 150, md: 196, lg: 250 };
 
+export interface FacetItem {
+  value: string;
+  count: number;
+}
+
+export interface TagFacetItem {
+  id: number;
+  name: string;
+  count: number;
+}
+
+export interface Facets {
+  sources: FacetItem[];
+  tags_top: TagFacetItem[];
+}
+
 export interface AssetDto {
   id: number;
   content_hash: string;
@@ -48,6 +64,7 @@ export interface AssetsPage {
   total: number;
   page: number;
   page_size: number;
+  facets: Facets;
 }
 
 export interface AssetGroup {

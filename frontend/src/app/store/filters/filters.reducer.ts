@@ -8,6 +8,9 @@ interface FiltersState {
   group: GroupKey;
   density: Density;
   favourite: boolean | null;
+  sources: string[];
+  qualityMin: number;
+  tagIds: number[];
 }
 
 const initialState: FiltersState = {
@@ -16,6 +19,9 @@ const initialState: FiltersState = {
   group: 'month',
   density: 'md',
   favourite: null,
+  sources: [],
+  qualityMin: 0,
+  tagIds: [],
 };
 
 export const filtersFeature = createFeature({
@@ -38,6 +44,25 @@ export const filtersFeature = createFeature({
     on(filtersActions.setFavourite, (state: FiltersState, { favourite }) => ({
       ...state,
       favourite,
+    })),
+    on(filtersActions.setSources, (state: FiltersState, { sources }) => ({
+      ...state,
+      sources,
+    })),
+    on(filtersActions.setQualityMin, (state: FiltersState, { qualityMin }) => ({
+      ...state,
+      qualityMin,
+    })),
+    on(filtersActions.setTagIds, (state: FiltersState, { tagIds }) => ({
+      ...state,
+      tagIds,
+    })),
+    on(filtersActions.clearAllFilters, (state: FiltersState) => ({
+      ...state,
+      favourite: null,
+      sources: [],
+      qualityMin: 0,
+      tagIds: [],
     })),
   ),
 });

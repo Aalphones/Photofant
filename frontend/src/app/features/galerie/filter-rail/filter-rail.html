@@ -1,0 +1,93 @@
+<div class="rail__head">
+  <h4 class="rail__title">Filter</h4>
+  <button class="rail__close" (click)="close.emit()" aria-label="Filter schließen">
+    <pf-icon name="x" [size]="16" />
+  </button>
+</div>
+
+<!-- Quelle -->
+<div class="rail__facet" [class.rail__facet--closed]="!openQuelle()">
+  <button class="rail__facet-head" (click)="openQuelle.set(!openQuelle())">
+    <span class="rail__facet-title">Quelle</span>
+    <span class="rail__chev"><pf-icon name="chevronDown" [size]="14" /></span>
+  </button>
+  <div class="rail__facet-body">
+    @for (src of ['original', 'sdxl', 'flux']; track src) {
+      <div
+        class="rail__row"
+        [class.rail__row--on]="sources().includes(src)"
+        (click)="toggleSource(src)"
+      >
+        <span
+          class="rail__swatch"
+          [style.background]="src === 'flux' ? 'oklch(0.55 0.16 285)' : src === 'sdxl' ? 'oklch(0.52 0.13 200)' : 'oklch(0.55 0.02 256)'"
+        ></span>
+        <div class="rail__cbox" [class.rail__cbox--on]="sources().includes(src)">
+          @if (sources().includes(src)) {
+            <pf-icon name="check" [size]="10" />
+          }
+        </div>
+        <span class="rail__row-label">{{ SOURCE_LABELS[src] }}</span>
+        <span class="rail__count">{{ sourceFacetCount(src) }}</span>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Qualität -->
+<div class="rail__facet" [class.rail__facet--closed]="!openQualitaet()">
+  <button class="rail__facet-head" (click)="openQualitaet.set(!openQualitaet())">
+    <span class="rail__facet-title">Qualität (min.)</span>
+    <span class="rail__chev"><pf-icon name="chevronDown" [size]="14" /></span>
+  </button>
+  <div class="rail__facet-body">
+    <div
+      class="rail__qual-track"
+      #sliderTrack
+      (mousedown)="sliderMouseDown($event)"
+    >
+      <div class="rail__qual-fill" [style.width.%]="qualityMin() * 100"></div>
+      <div class="rail__qual-knob" [style.left.%]="qualityMin() * 100"></div>
+    </div>
+    <div class="rail__qual-labels">
+      <span>≥ {{ (qualityMin() * 100) | number:'1.0-0' }}</span>
+      <span>100</span>
+    </div>
+  </div>
+</div>
+
+<!-- Tags -->
+<div class="rail__facet" [class.rail__facet--closed]="!openTags()">
+  <button class="rail__facet-head" (click)="openTags.set(!openTags())">
+    <span class="rail__facet-title">Tags</span>
+    <span class="rail__chev"><pf-icon name="chevronDown" [size]="14" /></span>
+  </button>
+  <div class="rail__facet-body">
+    <div class="rail__tag-search">
+      <pf-icon name="search" [size]="13" />
+      <input
+        [value]="tagQuery()"
+        placeholder="Tag suchen…"
+        (input)="tagQuery.set($any($event.target).value)"
+      />
+    </div>
+    @for (tag of filteredTags(); track tag.id) {
+      <div
+        class="rail__row"
+        [class.rail__row--on]="tagIds().includes(tag.id)"
+        (click)="toggleTag(tag.id)"
+      >
+        <div class="rail__cbox" [class.rail__cbox--on]="tagIds().includes(tag.id)">
+          @if (tagIds().includes(tag.id)) {
+            <pf-icon name="check" [size]="10" />
+          }
+        </div>
+        <span class="rail__row-label">{{ tag.name }}</span>
+        <span class="rail__count">{{ tag.count }}</span>
+      </div>
+    }
+    @if (filteredTags().length === 0) {
+      <span class="rail__empty">Keine Tags gefunden</span>
+    }
+  </div>
+</div>

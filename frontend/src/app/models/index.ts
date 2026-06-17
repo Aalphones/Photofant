@@ -10,7 +10,7 @@ export type {
 } from './caption-preset.model';
 export { JOB_STATES, JOB_KINDS } from './job.model';
 
-export type { AssetDto, AssetDetailDto, AssetsPage, AssetGroup, TagDto, Density, SortKey, SortOrder, GroupKey } from './asset.model';
+export type { AssetDto, AssetDetailDto, AssetsPage, AssetGroup, TagDto, FacetItem, TagFacetItem, Facets, Density, SortKey, SortOrder, GroupKey } from './asset.model';
 export { DENSITIES, SORT_KEYS, SORT_ORDERS, GROUP_KEYS, BASE_HEIGHTS } from './asset.model';
 
 export type { ModelDto, ModelView, ModelStatus, ModelTier, CapabilitiesDto, ModelBindError } from './model.model';

@@ -1,6 +1,6 @@
 import { createEntityAdapter, type EntityAdapter, type EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { AssetDto } from '@photofant/models';
+import type { AssetDto, Facets } from '@photofant/models';
 import { galleryActions } from './gallery.actions';
 
 const PAGE_SIZE = 50;
@@ -13,6 +13,7 @@ export interface GalleryState extends EntityState<AssetDto> {
   error: string | null;
   lightboxId: number | null;
   lightboxPendingNext: boolean;
+  facets: Facets | null;
 }
 
 const adapter: EntityAdapter<AssetDto> = createEntityAdapter<AssetDto>({
@@ -27,6 +28,7 @@ const initialState: GalleryState = adapter.getInitialState({
   error: null,
   lightboxId: null,
   lightboxPendingNext: false,
+  facets: null,
 });
 
 export const galleryFeature = createFeature({
@@ -45,10 +47,10 @@ export const galleryFeature = createFeature({
       error: null,
     })),
     on(galleryActions.reset, (state: GalleryState) =>
-      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null })
+      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null })
     ),
-    on(galleryActions.loadPageSuccess, (state: GalleryState, { items, total, page, pageSize }) => {
-      const next = adapter.addMany(items, { ...state, total, page, pageSize, isLoading: false, error: null, lightboxPendingNext: false });
+    on(galleryActions.loadPageSuccess, (state: GalleryState, { items, total, page, pageSize, facets }) => {
+      const next = adapter.addMany(items, { ...state, total, page, pageSize, isLoading: false, error: null, lightboxPendingNext: false, facets });
       if (state.lightboxPendingNext && items.length > 0) {
         return { ...next, lightboxId: items[0]!.id }; // items.length > 0 guarantees slot exists
       }

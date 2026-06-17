@@ -1,22 +1,30 @@
-<pf-sub-toolbar />
+<pf-sub-toolbar (railToggle)="railOpen.set(!railOpen())" />
 
-@if (isEmpty()) {
-  <div class="galerie-empty">
-    <div class="empty-icon">
-      <pf-icon name="gallery" [size]="40" />
-    </div>
-    <h2 class="empty-title">Noch keine Bilder</h2>
-    <p class="empty-sub">Bilder hierher ziehen oder den Import-Button oben rechts nutzen.</p>
+<div class="galerie__body">
+  @if (railOpen()) {
+    <pf-filter-rail (close)="railOpen.set(false)" />
+  }
+
+  <div class="galerie__main">
+    @if (isEmpty()) {
+      <div class="galerie-empty">
+        <div class="empty-icon">
+          <pf-icon name="gallery" [size]="40" />
+        </div>
+        <h2 class="empty-title">Noch keine Bilder</h2>
+        <p class="empty-sub">Bilder hierher ziehen oder den Import-Button oben rechts nutzen.</p>
+      </div>
+    } @else {
+      <pf-galerie-grid
+        [groups]="groups()"
+        [density]="density()"
+        [isLoading]="isLoading()"
+        (openAsset)="onOpenAsset($event)"
+        (loadMore)="onLoadMore()"
+      />
+    }
   </div>
-} @else {
-  <pf-galerie-grid
-    [groups]="groups()"
-    [density]="density()"
-    [isLoading]="isLoading()"
-    (openAsset)="onOpenAsset($event)"
-    (loadMore)="onLoadMore()"
-  />
-}
+</div>
 
 @if (lightboxId() != null) {
   <pf-lightbox />
