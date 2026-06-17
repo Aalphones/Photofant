@@ -17,10 +17,20 @@
 
 ## Checkliste
 
-- [ ] Backend-Filter + Facets-Aggregation
-- [ ] Rail-Komponenten (Facette, Checkbox-Row, Slider) nach Prototyp-Maßen
-- [ ] Chips + URL-Sync (Router-Query ↔ filters-Slice)
-- [ ] Gruppierung nach Quelle im Grid
-- [ ] Doc-Update: routes.md
+- [x] Backend-Filter + Facets-Aggregation
+- [x] Rail-Komponenten (Facette, Checkbox-Row, Slider) nach Prototyp-Maßen
+- [x] Chips + URL-Sync (Router-Query ↔ filters-Slice)
+- [x] Gruppierung nach Quelle im Grid
+- [x] Doc-Update: routes.md
 
 ## Report-Back
+
+Backend: `list_assets` akzeptiert jetzt `source[]`, `quality_min`, `tags[]` (AND per Tag).
+Response enthält `facets { sources, tags_top }` aus dem gefilterten Set.
+Frontend: filters-Slice um `sources/qualityMin/tagIds` + `clearAllFilters` erweitert;
+Gallery-Slice speichert `facets: Facets | null`; neue `FilterRail`-Komponente
+(3 Accordion-Facetten: Quelle, Qualität, Tags); Sub-Toolbar zeigt aktive
+Filter-Chips + "Alle entfernen"; URL-Sync per Router QueryParams.
+
+Abweichung: Framing-Facette weggelassen (kein Backend-Filter-Param für Framing im P6-Kontrakt).
+Personen- und Sammlungs-Facette als Platzhalter ebenfalls weggelassen (P7 bzw. P6 Phase 4).

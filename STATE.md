@@ -1,5 +1,5 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p06-suche-und-alben/`
-**Phase:** 1/4 — Filter-Facetten (pending)
-**Nächster Schritt:** Backend-Filter + Facets-Aggregation implementieren (phase-1-filter-facetten.md, Checkliste oben)
+**Phase:** 2/4 — 3-Modi-Suche (pending)
+**Nächster Schritt:** Search-Slice anlegen, Top-Bar Search-Box verdrahten, Semantic-Endpoint anbinden (phase-2-suche.md)
