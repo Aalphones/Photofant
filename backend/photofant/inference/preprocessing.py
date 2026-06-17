@@ -49,6 +49,22 @@ def resize_center_crop(image: np.ndarray, size: int) -> np.ndarray:
     return np.asarray(pil, dtype=np.uint8)
 
 
+def resize_squash(image: np.ndarray, size: int) -> np.ndarray:
+    """Resize image to (size, size), ignoring aspect ratio (no crop, no pad).
+
+    image: uint8 RGB (H, W, 3).
+    Returns uint8 RGB (size, size, 3).
+
+    Florence-2's reference image processor resizes directly to a square
+    (do_center_crop = false) rather than crop — keeping the whole frame visible.
+    """
+    from PIL import Image as PILImage
+
+    pil = PILImage.fromarray(image).convert("RGB")
+    pil = pil.resize((size, size), PILImage.LANCZOS)
+    return np.asarray(pil, dtype=np.uint8)
+
+
 def normalize_imagenet(image: np.ndarray) -> np.ndarray:
     """Normalize uint8 RGB (H, W, 3) to float32 (3, H, W) with ImageNet stats.
 
@@ -85,9 +101,13 @@ def preprocess_for_clip(image: np.ndarray, size: int = 224) -> np.ndarray:
     return normalized[np.newaxis, ...]  # NCHW
 
 
-def preprocess_for_florence(image: np.ndarray, size: int = 224) -> np.ndarray:
-    """Florence-2 preprocessing: center-crop → CHW ImageNet-normalized NCHW.
+def preprocess_for_florence(image: np.ndarray, size: int = 768) -> np.ndarray:
+    """Florence-2 preprocessing: squash-resize to 768² → CHW ImageNet-normalized NCHW.
 
-    Florence-2 shares the standard ViT preprocessing contract with CLIP.
+    Florence-2 resizes directly to a square (do_center_crop = false) and
+    normalizes with ImageNet mean/std at 768×768 — distinct from CLIP's
+    224² center-crop contract.
     """
-    return preprocess_for_clip(image, size)
+    resized = resize_squash(image, size)
+    normalized = normalize_imagenet(resized)
+    return normalized[np.newaxis, ...]  # NCHW

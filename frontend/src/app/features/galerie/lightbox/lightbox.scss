@@ -202,6 +202,14 @@ pf-zoom-stage {
   }
 }
 
+// Caption
+.caption-text {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
 // Tags
 .tag-list {
   display: flex;

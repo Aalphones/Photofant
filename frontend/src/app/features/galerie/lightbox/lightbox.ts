@@ -91,6 +91,8 @@ export class Lightbox {
     }))
   );
 
+  protected readonly caption = computed((): string | null => this.detail()?.caption ?? null);
+
   protected readonly imageUrl = computed((): string => {
     const asset = this.asset();
     return asset != null ? this.assetService.fileUrl(asset.id) : '';

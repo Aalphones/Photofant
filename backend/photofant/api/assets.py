@@ -65,6 +65,9 @@ class AssetDetailDto(AssetDto):
     path: str | None
     tags: list[TagDto]
     tagger: str | None
+    caption: str | None
+    captioner: str | None
+    caption_preset_id: int | None
 
 
 class AssetsPage(BaseModel):
@@ -224,7 +227,15 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
     asset, instance = row
     base = build_asset_dto(asset, instance)
     tags = _load_asset_tags(session, asset.id)
-    return AssetDetailDto(**base.model_dump(), path=instance.path, tags=tags, tagger=asset.tagger)
+    return AssetDetailDto(
+        **base.model_dump(),
+        path=instance.path,
+        tags=tags,
+        tagger=asset.tagger,
+        caption=asset.caption,
+        captioner=asset.captioner,
+        caption_preset_id=asset.caption_preset_id,
+    )
 
 
 @router.post("/upload", response_model=JobStarted)

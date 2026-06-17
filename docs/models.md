@@ -39,9 +39,9 @@ One row per unique content-hash (canonical image).
 | `framing` | TEXT | `close_up \| medium \| full_body \| …` (filled in P5) |
 | `quality_score` | REAL | (filled in P5) |
 | `age` | INTEGER | from `buffalo_l` (filled in P7) |
-| `caption` | TEXT | (filled in P5) |
-| `captioner` | TEXT | model name (filled in P5) |
-| `caption_preset_id` | INTEGER | FK to `caption_preset` (table added in P4) |
+| `caption` | TEXT | Florence-2 caption (filled in P5 Phase 3) |
+| `captioner` | TEXT | captioner manifest_id, e.g. `florence-2-base` (P5 Phase 3) |
+| `caption_preset_id` | INTEGER | FK to `caption_preset` — provenance: which preset produced the caption (P5 Phase 3) |
 | `tagger` | TEXT | model name (filled in P5) |
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
 | `clip_embedding` | BLOB | CLIP/SigLIP embedding (filled in P5) |
@@ -129,8 +129,10 @@ Named, reusable captioner configurations. See §12.6.
 | `name` | TEXT | e.g. "Natürliche Sprache", "Danbooru-Tags" |
 | `model_id` | INTEGER FK → `model_registry.id` | NULL = cross-model preset |
 | `config` | JSON | mode-specific config (task-token / system-prompt / builder blocks + sampling) |
-| `is_default` | BOOLEAN | default preset per captioner |
+| `is_default` | BOOLEAN | default preset per captioner (cleared on the previous default within the same model scope) |
 | `created_at` | DATETIME | UTC naive |
+
+Seed presets (migration 0006, model-agnostic `task_token`): **Kurz** (`<CAPTION>`, 256 tokens) and **Detailliert** (`<DETAILED_CAPTION>`, 1024 tokens, global default). CRUD: `GET/POST /api/caption-presets`, `PATCH/DELETE /api/caption-presets/{id}` — config is validated against the model's `caption_mode` (`photofant/inference/caption_config.py`).
 
 ---
 

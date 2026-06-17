@@ -161,6 +161,7 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
     if imported_items:
         await enqueue_thumbnails(imported_items)
         await _enqueue_tagging_batch(imported_items)
+        await _enqueue_caption_batch(imported_items)
 
 
 async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
@@ -194,6 +195,7 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     if imported_items:
         await enqueue_thumbnails(imported_items)
         await _enqueue_tagging_batch(imported_items)
+        await _enqueue_caption_batch(imported_items)
 
 
 async def enqueue_import(paths: list[str]) -> JobStatus:
@@ -217,3 +219,10 @@ async def _enqueue_tagging_batch(items: list[tuple[int, str]]) -> None:
 
     for asset_id, asset_path in items:
         await enqueue_tagging(asset_id, asset_path)
+
+
+async def _enqueue_caption_batch(items: list[tuple[int, str]]) -> None:
+    from photofant.jobs.caption_job import enqueue_caption
+
+    for asset_id, asset_path in items:
+        await enqueue_caption(asset_id, asset_path)

@@ -107,6 +107,14 @@
         </div>
       }
 
+      <!-- Caption -->
+      @if (caption(); as captionText) {
+        <div class="panel-sec">
+          <div class="psec-title">Caption</div>
+          <p class="caption-text">{{ captionText }}</p>
+        </div>
+      }
+
       <!-- Tags -->
       @if (displayTags().length > 0) {
         <div class="panel-sec">
@@ -119,8 +127,8 @@
         </div>
       }
 
-      <!-- Stub-Sektionen: ausgeblendet bis P5/P7/P8 -->
-      <!-- Caption, Gesichter, Versionen -->
+      <!-- Stub-Sektionen: ausgeblendet bis P7/P8 -->
+      <!-- Gesichter, Versionen -->
 
     }
   </div>

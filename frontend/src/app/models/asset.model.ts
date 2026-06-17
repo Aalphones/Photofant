@@ -38,6 +38,9 @@ export interface AssetDetailDto extends AssetDto {
   path: string | null;
   tags: TagDto[];
   tagger: string | null;
+  caption: string | null;
+  captioner: string | null;
+  caption_preset_id: number | null;
 }
 
 export interface AssetsPage {
