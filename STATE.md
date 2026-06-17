@@ -1,5 +1,5 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p06-suche-und-alben/`
-**Phase:** 3/4 — Tag-Verwaltung & Korrektur (pending)
-**Nächster Schritt:** Tag-Edit am Asset (hinzufügen/entfernen), Caption-Edit, Tag-Verwaltung (umbenennen, mergen, Bulk) — phase-3-tag-verwaltung.md
+**Phase:** 4/4 — Smart-Alben (pending)
+**Nächster Schritt:** Smart-Album-Datenmodell (collection, collection_item, smart_trigger), CRUD-Endpoints, Neubewertungs-Queue-Job, Frontend Alben-View — phase-4-smart-alben.md

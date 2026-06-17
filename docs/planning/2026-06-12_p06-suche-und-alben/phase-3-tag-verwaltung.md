@@ -1,6 +1,6 @@
 # P6 · Phase 3 — Tag-Verwaltung & manuelle Korrektur
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -16,11 +16,11 @@
 
 ## Checkliste
 
-- [ ] DB-Erweiterung: Mechanik für „manuell entfernt"/„manuell editiert" (kleine Migration; Konzept lässt die Form offen → Findung dokumentieren)
-- [ ] Endpoints (assets/tags, assets/caption, tags CRUD/merge/bulk) inkl. Alias-Auflösung in Filter/Suche
-- [ ] Detail-Panel-Editierbarkeit (Tags, Caption)
-- [ ] Tag-Verwaltungs-View + Bulk-Bar-Aktion „Taggen"
-- [ ] Neubewertungs-Hook vorbereiten (no-op bis Phase 4, danach echt)
+- [x] DB-Erweiterung: tag.alias_of, asset_tag.manually_removed, asset.caption_edited (Migration 0011)
+- [x] Endpoints (assets/tags, assets/caption, tags CRUD/merge/bulk) inkl. Alias-Auflösung in Filter/Suche
+- [x] Detail-Panel-Editierbarkeit (Tags, Caption)
+- [x] Tag-Verwaltungs-View + Bulk-Bar-Aktion „Taggen"
+- [x] Neubewertungs-Hook vorbereiten (no-op bis Phase 4, danach echt)
 - [ ] Doc-Update: routes.md, docs/models.md
 
 ## Report-Back

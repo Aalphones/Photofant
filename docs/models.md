@@ -45,6 +45,7 @@ One row per unique content-hash (canonical image).
 | `tagger` | TEXT | model name (filled in P5) |
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
 | `clip_embedding` | BLOB | CLIP ViT-L/14 image embedding, float32 unit-norm bytes (768-dim); source of truth for the vector index (P5 Phase 4) |
+| `caption_edited` | BOOLEAN | `1` = Caption wurde manuell editiert; Captioner überspringt den Asset beim nächsten Rerun (P6 Phase 3) |
 | `created_at` | DATETIME | EXIF capture date; UTC naive |
 | `imported_at` | DATETIME | import timestamp; UTC naive; indexed |
 | `processed_at` | DATETIME | last full pipeline run |
@@ -137,7 +138,7 @@ Seed presets (migration 0006, model-agnostic `task_token`): **Kurz** (`<CAPTION>
 
 ---
 
-### `tag` (migration 0005)
+### `tag` (migration 0005, erweitert 0011)
 
 Deduplicated vocabulary; one row per unique tag name (canonical form: lowercase + underscores).
 
@@ -145,8 +146,9 @@ Deduplicated vocabulary; one row per unique tag name (canonical form: lowercase 
 |---|---|---|
 | `id` | INTEGER PK | |
 | `name` | TEXT UNIQUE | lowercase + underscores (e.g. `long_hair`); display: replace `_` with space |
+| `alias_of` | INTEGER FK → `tag.id` | NULL = kanonischer Tag; gesetzt durch `POST /api/tags/merge` (P6 Phase 3) |
 
-Index: `ix_tag_name` (unique).
+Indexes: `ix_tag_name` (unique), `ix_tag_alias_of`.
 
 ### `asset_tag` (migration 0005)
 
@@ -159,6 +161,7 @@ Many-to-many join between assets and tags.
 | `tag_id` | INTEGER FK → `tag.id` | |
 | `kind` | TEXT | `auto` (WD14) \| `manual` (P6) |
 | `score` | REAL | confidence from WD14 (nullable for manual tags) |
+| `manually_removed` | BOOLEAN | `1` = User hat diesen Tag entfernt; Tagging-Job fügt ihn nicht wieder hinzu (P6 Phase 3) |
 
 Unique constraint: `(asset_id, tag_id)`. Index: `ix_asset_tag_asset_id`.
 
