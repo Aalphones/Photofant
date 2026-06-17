@@ -1,6 +1,18 @@
 <div class="subbar__left">
   <span class="subbar__count">{{ total() }} Bilder</span>
+  <button class="subbar__btn" (click)="openRerunAllDialog()" title="Alle Bilder neu klassifizieren">
+    <pf-icon name="refresh" [size]="14" />
+    <span>Klassifizieren</span>
+  </button>
 </div>
+
+@if (showRerunAllDialog()) {
+  <pf-rerun-dialog
+    scopeLabel="Alle Bilder"
+    (confirm)="onRerunAllConfirm($event)"
+    (cancel)="onRerunAllCancel()"
+  />
+}
 
 <div class="subbar__tools">
   <!-- Grouping segment -->

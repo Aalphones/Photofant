@@ -1,0 +1,51 @@
+<div class="rr-scrim" (click)="handleScrimClick()"></div>
+
+<div class="rr-modal" (click)="$event.stopPropagation()">
+  <div class="rr-head">
+    <div class="rr-head__icon">
+      <pf-icon name="refresh" [size]="18" />
+    </div>
+    <div class="rr-head__info">
+      <div class="rr-title">Neu klassifizieren</div>
+      <div class="rr-sub">{{ scopeLabel() }}</div>
+    </div>
+    <button class="rr-close" (click)="handleCancel()" aria-label="Schließen">
+      <pf-icon name="x" [size]="17" />
+    </button>
+  </div>
+
+  <div class="rr-body">
+    <div class="rr-field-lbl">Schritte auswählen</div>
+    @for (step of STEPS; track step.key) {
+      <label class="rr-step" (click)="toggleStep(step.key)">
+        <div class="rr-chk" [class.rr-chk--on]="isSelected(step.key)">
+          @if (isSelected(step.key)) {
+            <pf-icon name="check" [size]="12" />
+          }
+        </div>
+        <div class="rr-step__info">
+          <div class="rr-step__name">{{ step.label }}</div>
+          <div class="rr-step__desc">{{ step.desc }}</div>
+        </div>
+      </label>
+    }
+  </div>
+
+  <div class="rr-foot">
+    <div class="rr-foot__info">
+      <pf-icon name="info" [size]="13" />
+      Ledger-Flags werden zurückgesetzt, dann neu berechnet.
+    </div>
+    <div class="rr-foot__actions">
+      <button class="md-btn ghost" (click)="handleCancel()">Abbrechen</button>
+      <button
+        class="md-btn primary"
+        [disabled]="isDisabled()"
+        (click)="handleConfirm()"
+      >
+        <pf-icon name="refresh" [size]="15" />
+        Starten
+      </button>
+    </div>
+  </div>
+</div>

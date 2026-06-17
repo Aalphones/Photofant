@@ -137,6 +137,29 @@ interface ModelValidationDetail {
 `DELETE` lässt bei In-Place-Modellen (`managed = 0`) die referenzierte Datei unangetastet
 (`file_removed: false`); bei managed-Modellen werden Datei/Ordner mitgelöscht.
 
+## Klassifizierung / Rerun (P5 Phase 5)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/galerie` (Rerun einzeln) | `POST` | `/api/classify/rerun` | `RerunRequest` | `{ job_id: string }` |
+| `/galerie` (Rerun alle) | `POST` | `/api/classify/rerun` | `RerunRequest` | `{ job_id: string }` |
+
+```typescript
+type ClassifyStep = 'tags' | 'caption' | 'embedding' | 'heuristics';
+
+interface RerunRequest {
+  asset_ids: number[] | 'all';   // konkrete IDs oder gesamter Bestand
+  steps: ClassifyStep[];          // mindestens einen Step angeben
+  caption_preset_id?: number;     // optional: Caption-Preset für den caption-Step
+}
+```
+
+Verhalten:
+- Ledger-Flags der gewählten Steps werden **zurückgesetzt**, dann die Schritte neu berechnet.
+- Ein einzelner Batch-Job in der Queue; Fortschritt per `/api/jobs/stream` sichtbar.
+- Modell deaktiviert → Schritt wird übersprungen, kein Fehler.
+- Fehler: `422` wenn `steps` leer.
+
 ## Semantische Suche (P5 Phase 4)
 
 | Angular Route | Method | Backend Endpoint | Request | Response |

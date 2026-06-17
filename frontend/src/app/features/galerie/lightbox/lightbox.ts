@@ -12,9 +12,10 @@ import { DOCUMENT } from '@angular/common';
 import { switchMap, of } from 'rxjs';
 import { Store } from '@ngrx/store';
 import type { AssetDto, TagDto } from '@photofant/models';
-import { AssetService } from '@photofant/services';
+import { AssetService, ClassifyService } from '@photofant/services';
+import type { ClassifyStep } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
-import { Icon } from '@photofant/ui';
+import { Icon, RerunDialog } from '@photofant/ui';
 import { galleryActions, gallerySelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 
@@ -59,16 +60,19 @@ function formatDate(dateStr: string | null): string {
 @Component({
   selector: 'pf-lightbox',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ZoomStage, Icon],
+  imports: [ZoomStage, Icon, RerunDialog],
   templateUrl: './lightbox.html',
   styleUrl: './lightbox.scss',
 })
 export class Lightbox {
   private readonly store           = inject(Store);
   private readonly assetService    = inject(AssetService);
+  private readonly classifyService = inject(ClassifyService);
   private readonly shortcutService = inject(ShortcutService);
   private readonly document        = inject(DOCUMENT);
   private readonly destroyRef      = inject(DestroyRef);
+
+  protected readonly showRerunDialog = signal(false);
 
   protected readonly asset = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
   protected readonly hasPrev = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
@@ -202,5 +206,20 @@ export class Lightbox {
     if (asset != null) {
       this.store.dispatch(galleryActions.deleteAsset({ id: asset.id }));
     }
+  }
+
+  protected openRerunDialog(): void {
+    this.showRerunDialog.set(true);
+  }
+
+  protected onRerunConfirm(steps: ClassifyStep[]): void {
+    this.showRerunDialog.set(false);
+    const asset: AssetDto | null = this.asset();
+    if (asset == null) { return; }
+    this.classifyService.rerun({ asset_ids: [asset.id], steps }).subscribe();
+  }
+
+  protected onRerunCancel(): void {
+    this.showRerunDialog.set(false);
   }
 }

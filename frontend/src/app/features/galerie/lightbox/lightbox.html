@@ -59,16 +59,22 @@
             Papierkorb
           </button>
         </div>
-        <a
-          class="pbtn pbtn--ghost"
-          [href]="downloadUrl()"
-          download
-          target="_blank"
-          rel="noopener"
-        >
-          <pf-icon name="download" [size]="15" />
-          Herunterladen
-        </a>
+        <div class="pbtn-row">
+          <a
+            class="pbtn pbtn--ghost"
+            [href]="downloadUrl()"
+            download
+            target="_blank"
+            rel="noopener"
+          >
+            <pf-icon name="download" [size]="15" />
+            Herunterladen
+          </a>
+          <button class="pbtn pbtn--ghost" (click)="openRerunDialog()">
+            <pf-icon name="refresh" [size]="15" />
+            Klassifizieren
+          </button>
+        </div>
       </div>
 
       <!-- Metadaten -->
@@ -133,3 +139,11 @@
     }
   </div>
 </div>
+
+@if (showRerunDialog()) {
+  <pf-rerun-dialog
+    [scopeLabel]="'Dieses Bild (#' + (asset()?.id ?? '?') + ')'"
+    (confirm)="onRerunConfirm($event)"
+    (cancel)="onRerunCancel()"
+  />
+}

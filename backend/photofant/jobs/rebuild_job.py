@@ -13,10 +13,11 @@ from photofant.jobs.thumbnail_job import generate_thumbnails
 
 log = logging.getLogger(__name__)
 
-RebuildTarget = Literal["thumbnails"]
+RebuildTarget = Literal["thumbnails", "embeddings"]
 
 _TARGET_LABELS: dict[str, str] = {
     "thumbnails": "Thumbnails neu aufbauen",
+    "embeddings": "Vektor-Index neu aufbauen",
 }
 
 
@@ -46,9 +47,28 @@ async def _rebuild_thumbnails(status: JobStatus) -> None:
     log.info("Thumbnail cache rebuilt for %d instances", len(items))
 
 
+async def _rebuild_embeddings(status: JobStatus) -> None:
+    """Rebuild the sqlite-vec vector index from asset.clip_embedding BLOBs."""
+    import asyncio
+
+    from photofant.db.session import SessionLocal
+    from photofant.db.vector_index import rebuild_index
+
+    job_queue.update(status, progress=0.1, state=JobState.RUNNING)
+
+    def _do_rebuild() -> int:
+        with SessionLocal() as session:
+            return rebuild_index(session)
+
+    count = await asyncio.to_thread(_do_rebuild)
+    log.info("Vector index rebuilt: %d embedding(s)", count)
+
+
 async def run_rebuild_job(status: JobStatus, target: RebuildTarget) -> None:
     if target == "thumbnails":
         await _rebuild_thumbnails(status)
+    elif target == "embeddings":
+        await _rebuild_embeddings(status)
     else:  # pragma: no cover - guarded by the API Literal
         raise ValueError(f"unknown rebuild target '{target}'")
 

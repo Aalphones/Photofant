@@ -160,6 +160,7 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
 
     if imported_items:
         await enqueue_thumbnails(imported_items)
+        await _enqueue_heuristics_batch(imported_items)
         await _enqueue_tagging_batch(imported_items)
         await _enqueue_caption_batch(imported_items)
         await _enqueue_embedding_batch(imported_items)
@@ -195,6 +196,7 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
 
     if imported_items:
         await enqueue_thumbnails(imported_items)
+        await _enqueue_heuristics_batch(imported_items)
         await _enqueue_tagging_batch(imported_items)
         await _enqueue_caption_batch(imported_items)
         await _enqueue_embedding_batch(imported_items)
@@ -214,6 +216,13 @@ async def enqueue_scan(scan_root: Path) -> JobStatus:
         label=f"Scan: {scan_root}",
         coro_factory=lambda job_status: run_scan_job(job_status, scan_root),
     )
+
+
+async def _enqueue_heuristics_batch(items: list[tuple[int, str]]) -> None:
+    from photofant.jobs.heuristics_job import enqueue_heuristics
+
+    for asset_id, asset_path in items:
+        await enqueue_heuristics(asset_id, asset_path)
 
 
 async def _enqueue_tagging_batch(items: list[tuple[int, str]]) -> None:

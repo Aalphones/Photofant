@@ -1,18 +1,23 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
 import type { Density, GroupKey, SortKey, SortOrder } from '@photofant/models';
 import { filtersActions, filtersSelectors, gallerySelectors } from '@photofant/store';
-import { Icon } from '@photofant/ui';
+import { ClassifyService } from '@photofant/services';
+import type { ClassifyStep } from '@photofant/services';
+import { Icon, RerunDialog } from '@photofant/ui';
 
 @Component({
   selector: 'pf-sub-toolbar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon],
+  imports: [Icon, RerunDialog],
   templateUrl: './sub-toolbar.html',
   styleUrl: './sub-toolbar.scss',
 })
 export class SubToolbar {
-  private readonly store = inject(Store);
+  private readonly store           = inject(Store);
+  private readonly classifyService = inject(ClassifyService);
+
+  protected readonly showRerunAllDialog = signal(false);
 
   protected readonly total   = this.store.selectSignal(gallerySelectors.selectTotal);
   protected readonly sort    = this.store.selectSignal(filtersSelectors.sort);
@@ -62,5 +67,18 @@ export class SubToolbar {
 
   protected sortLabel(): string {
     return this.sort() === 'date' ? 'Datum' : 'Größe';
+  }
+
+  protected openRerunAllDialog(): void {
+    this.showRerunAllDialog.set(true);
+  }
+
+  protected onRerunAllConfirm(steps: ClassifyStep[]): void {
+    this.showRerunAllDialog.set(false);
+    this.classifyService.rerun({ asset_ids: 'all', steps }).subscribe();
+  }
+
+  protected onRerunAllCancel(): void {
+    this.showRerunAllDialog.set(false);
   }
 }

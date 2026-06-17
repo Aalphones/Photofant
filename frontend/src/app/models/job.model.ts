@@ -1,7 +1,7 @@
 export const JOB_STATES = ['queued', 'running', 'done', 'error'] as const;
 export type JobState = typeof JOB_STATES[number];
 
-export const JOB_KINDS = ['demo', 'import', 'scan', 'thumbnail', 'tag', 'face', 'caption', 'download', 'backup', 'reconcile', 'rebuild'] as const;
+export const JOB_KINDS = ['demo', 'import', 'scan', 'thumbnail', 'tag', 'face', 'caption', 'download', 'backup', 'reconcile', 'rebuild', 'tagging', 'captioning', 'embedding', 'heuristics', 'rerun'] as const;
 export type JobKind = typeof JOB_KINDS[number];
 
 export interface Job {

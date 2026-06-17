@@ -67,6 +67,7 @@ class ProcessingLedger(Base):
     tags_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     caption_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     embedding_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    heuristics_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     classified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
 
 

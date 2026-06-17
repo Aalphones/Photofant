@@ -6,6 +6,6 @@
 
 **P5 — Klassifizierung** · [`docs/planning/2026-06-12_p05-klassifizierung/`](docs/planning/2026-06-12_p05-klassifizierung/README.md)
 
-**Phase:** 5/6 — Heuristiken & Pipeline-Integration (pending)
+**Phase:** 6/6 — Captioner-Settings & Presets (pending)
 
-**Nächster Schritt:** Phase 5 starten — `POST /classify/rerun` (Bulk/Single-Neuberechnung mit Ledger-Reset je Step, inkl. neuem `embedding_done`), Heuristiken (`quality_score`, `framing`), `classified`-Flag, Pipeline-Verdrahtung. Bausteine bereit: `enqueue_tagging/caption/embedding`, `vector_index.rebuild_index`. Details: [phase-5-heuristiken-pipeline.md](docs/planning/2026-06-12_p05-klassifizierung/phase-5-heuristiken-pipeline.md), offene Findings in FINDINGS.md.
+**Nächster Schritt:** Phase 6 starten — `GET/POST/PATCH/DELETE /api/caption-presets` CRUD (Preset-Provenienz ist bereit: `asset.caption_preset_id`), `model_registry.capabilities`-Descriptor für Florence-2 befüllen, Default-Preset je Captioner. Details: [phase-6-captioner-presets.md](docs/planning/2026-06-12_p05-klassifizierung/phase-6-captioner-presets.md).

@@ -32,6 +32,7 @@ class JobKind(StrEnum):
     CAPTIONING = "captioning"
     EMBEDDING = "embedding"
     HEURISTICS = "heuristics"
+    RERUN = "rerun"
 
 
 @dataclass

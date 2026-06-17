@@ -47,8 +47,23 @@ def _resolve_default_preset() -> tuple[int | None, dict]:  # type: ignore[type-a
     return None, default_task_token_config()
 
 
-def _run_caption(asset_id: int, asset_path: str) -> None:
-    """Blocking: run Florence-2 inference + persist the caption for one asset."""
+def _resolve_preset_by_id(preset_id: int) -> tuple[int | None, dict]:  # type: ignore[type-arg]
+    """Return (preset_id, config) for a specific preset; falls back to default if not found."""
+    with SessionLocal() as session:
+        preset = session.get(CaptionPreset, preset_id)
+        if preset is None:
+            log.warning("Caption preset %d not found — falling back to default", preset_id)
+            return _resolve_default_preset()
+        return preset.id, dict(preset.config)
+
+
+def _run_caption_with_preset(
+    asset_id: int, asset_path: str, override_preset_id: int | None = None
+) -> None:
+    """Blocking: run Florence-2 inference + persist the caption for one asset.
+
+    If override_preset_id is given, that preset is used instead of the default.
+    """
     from PIL import Image as PILImage
 
     from photofant.inference.adapters.florence2 import resolve_florence_captioner
@@ -58,7 +73,10 @@ def _run_caption(asset_id: int, asset_path: str) -> None:
         log.info("Florence-2 not enabled — skipping caption for asset %d", asset_id)
         return
 
-    preset_id, preset_config = _resolve_default_preset()
+    if override_preset_id is not None:
+        preset_id, preset_config = _resolve_preset_by_id(override_preset_id)
+    else:
+        preset_id, preset_config = _resolve_default_preset()
 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
     caption = captioner.caption(image, preset_config)
@@ -80,6 +98,11 @@ def _run_caption(asset_id: int, asset_path: str) -> None:
         session.commit()
 
     log.info("Captioned asset %d (%d chars, preset %s)", asset_id, len(caption), preset_id)
+
+
+def _run_caption(asset_id: int, asset_path: str) -> None:
+    """Blocking: run Florence-2 inference + persist the caption for one asset."""
+    _run_caption_with_preset(asset_id, asset_path)
 
 
 async def run_caption_job(status: JobStatus, asset_id: int, asset_path: str) -> None:
