@@ -30,6 +30,7 @@ export class NavRail {
     { id: 'galerie',      icon: 'gallery',  label: 'Galerie', count: this.galerieCount() },
     { id: 'personen',     icon: 'people',   label: 'Personen'      },
     { id: 'alben',        icon: 'album',    label: 'Alben'         },
+    { id: 'tags',         icon: 'tag',      label: 'Tags'          },
     { id: 'trainingssets',icon: 'training', label: 'Trainingssets' },
   ]);
 

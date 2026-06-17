@@ -79,6 +79,14 @@ export class AssetService {
     return this.http.delete<void>('/api/trash');
   }
 
+  patchTags(id: number, add: string[], remove: number[]): Observable<AssetDetailDto> {
+    return this.http.patch<AssetDetailDto>(`/api/assets/${id}/tags`, { add, remove });
+  }
+
+  patchCaption(id: number, caption: string): Observable<AssetDetailDto> {
+    return this.http.patch<AssetDetailDto>(`/api/assets/${id}/caption`, { caption });
+  }
+
   importPaths(paths: string[]): Observable<{ job_id: string }> {
     return this.http.post<{ job_id: string }>('/api/assets/import', { paths });
   }

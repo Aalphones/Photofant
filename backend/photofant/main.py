@@ -7,7 +7,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from photofant.api import assets, caption_presets, classify, config, health, jobs, maintenance, models, search, tags, trash
+from photofant.api import (
+    assets,
+    caption_presets,
+    classify,
+    config,
+    health,
+    jobs,
+    maintenance,
+    models,
+    search,
+    tags,
+    trash,
+)
 from photofant.inference.session_manager import session_manager
 from photofant.jobs.queue import job_queue
 from photofant.models.loader import load_manifest

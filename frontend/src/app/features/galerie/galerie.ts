@@ -1,30 +1,32 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { filtersActions, filtersSelectors, galleryActions, gallerySelectors } from '@photofant/store';
+import { filtersActions, filtersSelectors, galleryActions, gallerySelectors, tagsActions } from '@photofant/store';
 import { GalerieGrid } from './grid/grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
 import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
-import { Icon } from '@photofant/ui';
+import { BulkBar, Icon } from '@photofant/ui';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon],
+  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon, BulkBar],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
 })
 export class Galerie {
-  private readonly store = inject(Store);
+  private readonly store  = inject(Store);
   private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
+  private readonly route  = inject(ActivatedRoute);
 
-  protected readonly groups     = this.store.selectSignal(gallerySelectors.selectGroups);
-  protected readonly density    = this.store.selectSignal(filtersSelectors.density);
-  protected readonly isLoading  = this.store.selectSignal(gallerySelectors.selectIsLoading);
-  protected readonly hasMore    = this.store.selectSignal(gallerySelectors.selectHasMore);
-  protected readonly lightboxId = this.store.selectSignal(gallerySelectors.selectLightboxId);
+  protected readonly groups        = this.store.selectSignal(gallerySelectors.selectGroups);
+  protected readonly density       = this.store.selectSignal(filtersSelectors.density);
+  protected readonly isLoading     = this.store.selectSignal(gallerySelectors.selectIsLoading);
+  protected readonly hasMore       = this.store.selectSignal(gallerySelectors.selectHasMore);
+  protected readonly lightboxId    = this.store.selectSignal(gallerySelectors.selectLightboxId);
+  protected readonly selectionMode = this.store.selectSignal(gallerySelectors.selectSelectionMode);
+  protected readonly selectedIds   = this.store.selectSignal(gallerySelectors.selectSelectedIds);
 
   private readonly filterSources    = this.store.selectSignal(filtersSelectors.sources);
   private readonly filterQualityMin = this.store.selectSignal(filtersSelectors.qualityMin);
@@ -37,6 +39,8 @@ export class Galerie {
   protected readonly isEmpty = computed((): boolean =>
     !this.isLoading() && this.groups().length === 0
   );
+
+  protected readonly selectedCount = computed((): number => this.selectedIds().length);
 
   constructor() {
     // URL → store: apply filter params from URL on load
@@ -82,5 +86,32 @@ export class Galerie {
 
   protected onOpenAsset(id: number): void {
     this.store.dispatch(galleryActions.openLightbox({ id }));
+  }
+
+  protected toggleSelectionMode(): void {
+    if (this.selectionMode()) {
+      this.store.dispatch(galleryActions.disableSelectionMode());
+    } else {
+      this.store.dispatch(galleryActions.enableSelectionMode());
+    }
+  }
+
+  protected onSelectAll(ids: number[]): void {
+    this.store.dispatch(galleryActions.selectAll({ ids }));
+  }
+
+  protected onBulkClose(): void {
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onBulkTag(payload: { add: string[]; remove: number[] }): void {
+    const ids = this.selectedIds();
+    if (!ids.length) { return; }
+    this.store.dispatch(tagsActions.bulkTag({
+      asset_ids: ids,
+      add: payload.add,
+      remove: payload.remove,
+    }));
+    this.store.dispatch(galleryActions.clearSelection());
   }
 }

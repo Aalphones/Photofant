@@ -9,10 +9,11 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
-import { switchMap, of } from 'rxjs';
+import { combineLatest, of, switchMap } from 'rxjs';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDto, TagDto } from '@photofant/models';
-import { AssetService, ClassifyService } from '@photofant/services';
+import type { AssetDto, TagDto, TagListItem } from '@photofant/models';
+import { AssetService, ClassifyService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
@@ -44,9 +45,9 @@ function extractGenMeta(meta: Record<string, unknown>): GenMetaEntry[] {
 
 function formatBytes(bytes: number | null): string {
   if (bytes == null) return '—';
-  if (bytes >= 1_048_576) return (bytes / 1_048_576).toFixed(1) + ' MB';
-  if (bytes >= 1_024) return Math.round(bytes / 1_024) + ' KB';
-  return bytes + ' B';
+  if (bytes >= 1_048_576) return (bytes / 1_048_576).toFixed(1) + ' MB';
+  if (bytes >= 1_024) return Math.round(bytes / 1_024) + ' KB';
+  return bytes + ' B';
 }
 
 function formatDate(dateStr: string | null): string {
@@ -65,35 +66,59 @@ function formatDate(dateStr: string | null): string {
   styleUrl: './lightbox.scss',
 })
 export class Lightbox {
-  private readonly store           = inject(Store);
-  private readonly assetService    = inject(AssetService);
-  private readonly classifyService = inject(ClassifyService);
-  private readonly shortcutService = inject(ShortcutService);
+  private readonly store            = inject(Store);
+  private readonly assetService     = inject(AssetService);
+  private readonly tagService       = inject(TagService);
+  private readonly classifyService  = inject(ClassifyService);
+  private readonly shortcutService  = inject(ShortcutService);
   private readonly document        = inject(DOCUMENT);
   private readonly destroyRef      = inject(DestroyRef);
 
   protected readonly showRerunDialog = signal(false);
 
-  protected readonly asset = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
-  protected readonly presets = this.store.selectSignal(presetsSelectors.selectPresets);
-  protected readonly hasPrev = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
-  protected readonly hasNext = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
+  protected readonly asset    = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
+  protected readonly presets  = this.store.selectSignal(presetsSelectors.selectPresets);
+  protected readonly hasPrev  = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
+  protected readonly hasNext  = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
 
   protected readonly showGenMeta = signal(false);
 
+  // Reload trigger: bump to force a fresh detail fetch
+  private readonly reloadTrigger = signal(0);
+
   private readonly detail = toSignal(
-    this.store.select(gallerySelectors.selectLightboxAsset).pipe(
-      switchMap((asset: AssetDto | null) =>
+    combineLatest([
+      this.store.select(gallerySelectors.selectLightboxAsset),
+      toObservable(this.reloadTrigger),
+    ]).pipe(
+      switchMap(([asset]) =>
         asset != null ? this.assetService.getAsset(asset.id) : of(null)
       ),
     ),
   );
 
+  // ── Tag autocomplete ──────────────────────────────────────────────────────
+
+  protected readonly addingTag       = signal(false);
+  protected readonly tagInputValue   = signal('');
+  protected readonly tagSuggestions  = toSignal(
+    toObservable(this.tagInputValue).pipe(
+      switchMap((q: string) =>
+        q.length >= 1 ? this.tagService.listTags(q, 8) : of([])
+      ),
+    ),
+    { initialValue: [] as TagListItem[] },
+  );
+
+  // ── Caption editing ───────────────────────────────────────────────────────
+
+  protected readonly editingCaption  = signal(false);
+  protected readonly captionDraft    = signal('');
+
+  // ── Computed display ─────────────────────────────────────────────────────
+
   protected readonly displayTags = computed(() =>
-    (this.detail()?.tags ?? []).map((tag: TagDto) => ({
-      id: tag.id,
-      displayName: tag.name.replace(/_/g, ' '),
-    }))
+    (this.detail()?.tags ?? []).filter((tag: TagDto) => !this.isTagHidden(tag.id))
   );
 
   protected readonly caption = computed((): string | null => this.detail()?.caption ?? null);
@@ -111,7 +136,7 @@ export class Lightbox {
   protected readonly dimensions = computed((): string => {
     const asset = this.asset();
     if (!asset?.width || !asset?.height) return '—';
-    return `${asset.width} × ${asset.height}`;
+    return `${asset.width} × ${asset.height}`;
   });
 
   protected readonly fileSize = computed((): string =>
@@ -148,15 +173,27 @@ export class Lightbox {
     return labels[source] ?? source;
   });
 
+  // Optimistic hidden tag IDs (removed but not yet reloaded)
+  private readonly hiddenTagIds = signal<number[]>([]);
+
+  private isTagHidden(tagId: number): boolean {
+    return this.hiddenTagIds().includes(tagId);
+  }
+
   constructor() {
     effect((): void => {
       const asset: AssetDto | null = this.asset();
       this.showGenMeta.set(asset?.source != null && asset.source !== 'original');
+      // Reset editing state when navigating
+      this.addingTag.set(false);
+      this.tagInputValue.set('');
+      this.editingCaption.set(false);
+      this.hiddenTagIds.set([]);
     });
 
     const onKeyDown = (event: KeyboardEvent): void => {
-      if ((event.target as HTMLElement).tagName === 'INPUT') return;
-      if ((event.target as HTMLElement).tagName === 'TEXTAREA') return;
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
       switch (event.key) {
         case 'Escape':     this.close(); break;
         case 'ArrowLeft':  this.prev(); break;
@@ -227,5 +264,76 @@ export class Lightbox {
 
   protected onRerunCancel(): void {
     this.showRerunDialog.set(false);
+  }
+
+  // ── Tag editing ───────────────────────────────────────────────────────────
+
+  protected removeTag(tagId: number): void {
+    const assetId = this.asset()?.id;
+    if (assetId == null) { return; }
+    // Optimistic hide
+    this.hiddenTagIds.update((ids: number[]) => [...ids, tagId]);
+    this.assetService.patchTags(assetId, [], [tagId]).subscribe({
+      next: () => { this.reloadTrigger.update((count: number) => count + 1); },
+      error: () => {
+        // Rollback optimistic hide
+        this.hiddenTagIds.update((ids: number[]) => ids.filter((id: number) => id !== tagId));
+      },
+    });
+  }
+
+  protected openAddTag(): void {
+    this.addingTag.set(true);
+    this.tagInputValue.set('');
+  }
+
+  protected confirmAddTag(): void {
+    const name = this.tagInputValue().trim();
+    const assetId = this.asset()?.id;
+    if (!name || assetId == null) {
+      this.addingTag.set(false);
+      return;
+    }
+    this.assetService.patchTags(assetId, [name], []).subscribe({
+      next: () => { this.reloadTrigger.update((count: number) => count + 1); },
+    });
+    this.addingTag.set(false);
+    this.tagInputValue.set('');
+  }
+
+  protected onTagInputKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      this.confirmAddTag();
+    } else if (event.key === 'Escape') {
+      this.addingTag.set(false);
+      this.tagInputValue.set('');
+    }
+  }
+
+  protected pickSuggestion(name: string): void {
+    this.tagInputValue.set(name);
+    this.confirmAddTag();
+  }
+
+  // ── Caption editing ───────────────────────────────────────────────────────
+
+  protected startCaptionEdit(): void {
+    this.captionDraft.set(this.caption() ?? '');
+    this.editingCaption.set(true);
+  }
+
+  protected saveCaptionEdit(): void {
+    if (!this.editingCaption()) { return; }
+    const assetId = this.asset()?.id;
+    const draft   = this.captionDraft().trim();
+    this.editingCaption.set(false);
+    if (assetId == null || draft === (this.caption() ?? '').trim()) { return; }
+    this.assetService.patchCaption(assetId, draft).subscribe({
+      next: () => { this.reloadTrigger.update((count: number) => count + 1); },
+    });
+  }
+
+  protected cancelCaptionEdit(): void {
+    this.editingCaption.set(false);
   }
 }

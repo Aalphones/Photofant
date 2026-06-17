@@ -12,6 +12,37 @@
   min-width: 0;
 }
 
+.galerie__sel-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.25rem 1rem 0;
+}
+
+.galerie__sel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: var(--surface);
+    color: var(--text-2);
+  }
+
+  &--on {
+    background: var(--accent-weak, oklch(0.55 0.18 285 / 0.12));
+    border-color: var(--accent-line, oklch(0.55 0.18 285 / 0.35));
+    color: var(--accent);
+  }
+}
+
 .galerie-empty {
   display: flex;
   flex-direction: column;

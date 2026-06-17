@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import tempfile
 from datetime import datetime
 from enum import StrEnum
@@ -11,7 +12,7 @@ import numpy as np
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
-from sqlalchemy import asc, desc, func
+from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.orm import Query as OrmQuery
 from sqlalchemy.orm import Session
 
@@ -23,6 +24,8 @@ from photofant.db.session import get_session
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
 from photofant.media import moves
 from photofant.media.thumbnails import generate_thumbnail
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assets")
 
@@ -112,6 +115,15 @@ class JobStarted(BaseModel):
 
 class FavouriteRequest(BaseModel):
     value: bool
+
+
+class PatchTagsRequest(BaseModel):
+    add: list[str]   # tag names → upsert as kind=manual
+    remove: list[int]  # tag IDs to remove from this asset
+
+
+class PatchCaptionRequest(BaseModel):
+    caption: str
 
 
 def build_asset_dto(asset: Asset, instance: AssetInstance) -> AssetDto:
@@ -223,7 +235,16 @@ async def list_assets(
     if quality_min is not None and quality_min > 0.0:
         query = query.filter(Asset.quality_score >= quality_min)
     for tag_id in (tags or []):
-        tag_sub = session.query(AssetTag.asset_id).filter(AssetTag.tag_id == tag_id).subquery()
+        # Include aliases that point to this canonical tag
+        alias_ids_sub = session.query(Tag.id).filter(Tag.alias_of == tag_id).subquery()
+        tag_sub = (
+            session.query(AssetTag.asset_id)
+            .filter(
+                AssetTag.manually_removed.is_(False),
+                or_(AssetTag.tag_id == tag_id, AssetTag.tag_id.in_(alias_ids_sub)),
+            )
+            .subquery()
+        )
         query = query.filter(Asset.id.in_(tag_sub))
 
     # Text / semantic search
@@ -231,10 +252,19 @@ async def list_assets(
     q_clean = (q or "").strip()
     if q_clean:
         if q_mode == SearchMode.TAGS:
+            # Matching tag IDs (by name)
+            matching_tag_ids = session.query(Tag.id).filter(Tag.name.ilike(f"%{q_clean}%")).subquery()
+            # Also include tags that are aliases of any matching tag
+            alias_of_matching = session.query(Tag.id).filter(Tag.alias_of.in_(matching_tag_ids)).subquery()
             name_sub = (
                 session.query(AssetTag.asset_id)
-                .join(Tag, Tag.id == AssetTag.tag_id)
-                .filter(Tag.name.ilike(f"%{q_clean}%"))
+                .filter(
+                    AssetTag.manually_removed.is_(False),
+                    or_(
+                        AssetTag.tag_id.in_(matching_tag_ids),
+                        AssetTag.tag_id.in_(alias_of_matching),
+                    ),
+                )
                 .subquery()
             )
             query = query.filter(Asset.id.in_(name_sub))
@@ -246,7 +276,7 @@ async def list_assets(
             if not candidates:
                 return AssetsPage(items=[], total=0, page=page, page_size=page_size, facets=_empty_facets())
             candidate_ids = [asset_id for asset_id, _ in candidates]
-            semantic_score_map = {asset_id: score for asset_id, score in candidates}
+            semantic_score_map = dict(candidates)
             query = query.filter(Asset.id.in_(candidate_ids))
 
     facets = _compute_facets(session, query)
@@ -398,6 +428,92 @@ async def set_asset_favourite(asset_id: int, body: FavouriteRequest, session: Db
     asset, instance = row
     await moves.set_favourite(session, instance, body.value)
     return build_asset_dto(asset, instance)
+
+
+@router.patch("/{asset_id}/tags", response_model=AssetDetailDto)
+async def patch_asset_tags(asset_id: int, body: PatchTagsRequest, session: DbSession) -> AssetDetailDto:
+    """Add/remove tags manually on a single asset."""
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset, instance = row
+
+    for name in body.add:
+        normalized = name.strip().lower().replace(" ", "_")
+        if not normalized:
+            continue
+        tag = session.query(Tag).filter_by(name=normalized).first()
+        if tag is None:
+            tag = Tag(name=normalized)
+            session.add(tag)
+            session.flush()
+        # Resolve to canonical if alias
+        if tag.alias_of is not None:
+            canonical = session.get(Tag, tag.alias_of)
+            if canonical is not None:
+                tag = canonical
+
+        existing = session.query(AssetTag).filter_by(asset_id=asset_id, tag_id=tag.id).first()
+        if existing is None:
+            session.add(AssetTag(asset_id=asset_id, tag_id=tag.id, kind="manual"))
+        else:
+            existing.kind = "manual"
+            existing.manually_removed = False
+
+    for tag_id in body.remove:
+        existing = session.query(AssetTag).filter_by(asset_id=asset_id, tag_id=tag_id).first()
+        if existing is None:
+            continue
+        if existing.kind == "manual":
+            session.delete(existing)
+        else:
+            # Auto tag: soft-remove so the tagger won't re-add it on rerun
+            existing.manually_removed = True
+
+    session.commit()
+    session.refresh(asset)
+    log.info("patch_asset_tags: asset %d +%d -%d", asset_id, len(body.add), len(body.remove))
+
+    # No-op hook for smart-album re-evaluation (Phase 4 will implement this)
+    base = build_asset_dto(asset, instance)
+    tags = _load_asset_tags(session, asset.id)
+    return AssetDetailDto(
+        **base.model_dump(),
+        path=instance.path,
+        tags=tags,
+        tagger=asset.tagger,
+        caption=asset.caption,
+        captioner=asset.captioner,
+        caption_preset_id=asset.caption_preset_id,
+    )
+
+
+@router.patch("/{asset_id}/caption", response_model=AssetDetailDto)
+async def patch_asset_caption(asset_id: int, body: PatchCaptionRequest, session: DbSession) -> AssetDetailDto:
+    """Manually edit the caption; marks it as user-edited so reruns won't overwrite it."""
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset, instance = row
+
+    asset.caption = body.caption
+    asset.caption_edited = True
+    session.commit()
+    session.refresh(asset)
+    log.info("patch_asset_caption: asset %d", asset_id)
+
+    # No-op hook for smart-album re-evaluation (Phase 4 will implement this)
+    base = build_asset_dto(asset, instance)
+    tags = _load_asset_tags(session, asset.id)
+    return AssetDetailDto(
+        **base.model_dump(),
+        path=instance.path,
+        tags=tags,
+        tagger=asset.tagger,
+        caption=asset.caption,
+        captioner=asset.captioner,
+        caption_preset_id=asset.caption_preset_id,
+    )
 
 
 @router.delete("/{asset_id}", status_code=204)

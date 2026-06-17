@@ -1,0 +1,29 @@
+<div class="bulkbar__inner">
+  <span class="bulkbar__count">{{ countLabel() }}</span>
+  <div class="bulkbar__divider"></div>
+
+  @if (showTagInput()) {
+    <div class="bulkbar__tag-input">
+      <pf-icon name="tag" [size]="14" />
+      <input
+        class="bulkbar__tag-field"
+        [value]="tagInput()"
+        (input)="tagInput.set($any($event.target).value)"
+        (keydown)="onTagKeyDown($event)"
+        (blur)="applyTags()"
+        placeholder="Tags kommagetrennt…"
+        autofocus
+      />
+    </div>
+  } @else {
+    <button class="bulkbar__action" (click)="openTagInput()">
+      <pf-icon name="tag" [size]="15" />
+      Taggen
+    </button>
+  }
+
+  <div class="bulkbar__divider"></div>
+  <button class="bulkbar__close" (click)="onClose()" aria-label="Auswahl aufheben">
+    <pf-icon name="x" [size]="16" />
+  </button>
+</div>

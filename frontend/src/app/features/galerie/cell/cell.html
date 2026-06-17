@@ -10,6 +10,19 @@
 
 <div class="cell__veil"></div>
 
+<!-- Selection checkbox (visible in selmode or when selected) -->
+<button
+  class="cell__pick"
+  [class.cell__pick--selected]="isSelected()"
+  (click)="onPickClick($event)"
+  [attr.aria-label]="isSelected() ? 'Abwählen' : 'Auswählen'"
+  [attr.aria-pressed]="isSelected()"
+>
+  @if (isSelected()) {
+    <pf-icon name="check" [size]="13" />
+  }
+</button>
+
 <button class="cell__fav" [class.cell__fav--on]="asset().favourite" (click)="onFavClick($event)" aria-label="Favorit">
   <pf-icon name="star" [size]="16" />
 </button>

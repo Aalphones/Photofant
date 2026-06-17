@@ -78,6 +78,16 @@ def _run_caption_with_preset(
     else:
         preset_id, preset_config = _resolve_default_preset()
 
+    # Respect manually edited captions — do not overwrite
+    with SessionLocal() as session:
+        asset_check = session.get(Asset, asset_id)
+        if asset_check is None:
+            log.warning("Asset %d not found — skipping caption", asset_id)
+            return
+        if asset_check.caption_edited:
+            log.info("Asset %d has a manually edited caption — skipping captioner", asset_id)
+            return
+
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
     caption = captioner.caption(image, preset_config)
 

@@ -5,6 +5,7 @@ export interface TagListItem {
   id: number;
   name: string;
   count: number;
+  alias_of: number | null;
 }
 
 export const DENSITIES = ['sm', 'md', 'lg'] as const;

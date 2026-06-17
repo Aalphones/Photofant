@@ -6,3 +6,4 @@ export * from './trash/index';
 export * from './maintenance/index';
 export * from './models/index';
 export * from './presets/index';
+export * from './tags/index';

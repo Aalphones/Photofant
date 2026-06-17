@@ -10,3 +10,4 @@ export type { RerunPayload } from './rerun-dialog/rerun-dialog';
 export { CaptionPresetForm } from './caption-preset-form/caption-preset-form';
 export { PresetDialog } from './preset-dialog/preset-dialog';
 export type { PresetSavePayload } from './preset-dialog/preset-dialog';
+export { BulkBar } from './bulk-bar/bulk-bar';

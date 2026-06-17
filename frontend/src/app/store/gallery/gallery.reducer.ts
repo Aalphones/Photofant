@@ -14,6 +14,8 @@ export interface GalleryState extends EntityState<AssetDto> {
   lightboxId: number | null;
   lightboxPendingNext: boolean;
   facets: Facets | null;
+  selectionMode: boolean;
+  selectedIds: number[];
 }
 
 const adapter: EntityAdapter<AssetDto> = createEntityAdapter<AssetDto>({
@@ -29,6 +31,8 @@ const initialState: GalleryState = adapter.getInitialState({
   lightboxId: null,
   lightboxPendingNext: false,
   facets: null,
+  selectionMode: false,
+  selectedIds: [],
 });
 
 export const galleryFeature = createFeature({
@@ -78,6 +82,27 @@ export const galleryFeature = createFeature({
       const removed = adapter.removeOne(id, state);
       return state.lightboxId === id ? { ...removed, lightboxId: null } : removed;
     }),
+    // Selection
+    on(galleryActions.enableSelectionMode, (state: GalleryState) => ({
+      ...state, selectionMode: true,
+    })),
+    on(galleryActions.disableSelectionMode, (state: GalleryState) => ({
+      ...state, selectionMode: false, selectedIds: [],
+    })),
+    on(galleryActions.toggleSelected, (state: GalleryState, { id }) => {
+      const isSelected = state.selectedIds.includes(id);
+      const selectedIds = isSelected
+        ? state.selectedIds.filter((existingId: number) => existingId !== id)
+        : [...state.selectedIds, id];
+      return { ...state, selectedIds };
+    }),
+    on(galleryActions.selectAll, (state: GalleryState, { ids }) => {
+      const merged = Array.from(new Set([...state.selectedIds, ...ids]));
+      return { ...state, selectedIds: merged };
+    }),
+    on(galleryActions.clearSelection, (state: GalleryState) => ({
+      ...state, selectedIds: [], selectionMode: false,
+    })),
   ),
   extraSelectors: ({ selectGalleryState }) => ({
     ...adapter.getSelectors(selectGalleryState),

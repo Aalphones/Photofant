@@ -11,7 +11,19 @@
 
     .cell__veil  { opacity: 1; }
     .cell__fav   { opacity: 1; }
+    .cell__pick  { opacity: 1; }
   }
+
+  // Selected state
+  &.cell--selected {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+
+    .cell__pick { opacity: 1; background: var(--accent); color: #fff; }
+  }
+
+  // Selection mode: always show pick button faintly
+  &.cell--selmode .cell__pick { opacity: 0.6; }
 }
 
 .cell__img-wrap {
@@ -34,6 +46,23 @@
   opacity: 0;
   transition: opacity .15s ease;
   pointer-events: none;
+}
+
+.cell__pick {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.8);
+  background: rgba(0,0,0,.35);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity .15s, background .15s;
+  backdrop-filter: blur(4px);
 }
 
 .cell__fav {

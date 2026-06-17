@@ -18,18 +18,22 @@ function sourceLabel(source: string | null): string {
   templateUrl: './cell.html',
   styleUrl: './cell.scss',
   host: {
-    '[style.height.px]':     'baseHeight()',
-    '[style.flex-grow]':     'aspectRatio()',
-    '[style.flex-basis.px]': 'flexBasis()',
-    '(click)':               'onCellClick()',
+    '[style.height.px]':          'baseHeight()',
+    '[style.flex-grow]':          'aspectRatio()',
+    '[style.flex-basis.px]':      'flexBasis()',
+    '[class.cell--selected]':     'isSelected()',
+    '[class.cell--selmode]':      'selectionMode()',
+    '(click)':                    'onCellClick($event)',
   },
 })
 export class GalerieCell {
   private readonly assetService = inject(AssetService);
   private readonly store = inject(Store);
 
-  readonly asset      = input.required<AssetDto>();
-  readonly baseHeight = input.required<number>();
+  readonly asset         = input.required<AssetDto>();
+  readonly baseHeight    = input.required<number>();
+  readonly isSelected    = input<boolean>(false);
+  readonly selectionMode = input<boolean>(false);
 
   readonly openAsset = output<number>();
 
@@ -54,8 +58,18 @@ export class GalerieCell {
     this.asset().version_count > 1
   );
 
-  protected onCellClick(): void {
-    this.openAsset.emit(this.asset().id);
+  protected onCellClick(event: MouseEvent): void {
+    if (this.selectionMode() || event.ctrlKey || event.metaKey) {
+      event.stopPropagation();
+      this.store.dispatch(galleryActions.toggleSelected({ id: this.asset().id }));
+    } else {
+      this.openAsset.emit(this.asset().id);
+    }
+  }
+
+  protected onPickClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.store.dispatch(galleryActions.toggleSelected({ id: this.asset().id }));
   }
 
   protected onFavClick(event: MouseEvent): void {

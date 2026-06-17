@@ -21,5 +21,11 @@ export const galleryActions = createActionGroup({
     'Delete Asset':              props<{ id: number }>(),
     'Delete Asset Success':      props<{ id: number }>(),
     'Delete Asset Failure':      props<{ error: string }>(),
+    // Selection
+    'Enable Selection Mode':     emptyProps(),
+    'Disable Selection Mode':    emptyProps(),
+    'Toggle Selected':           props<{ id: number }>(),
+    'Select All':                props<{ ids: number[] }>(),
+    'Clear Selection':           emptyProps(),
   },
 });

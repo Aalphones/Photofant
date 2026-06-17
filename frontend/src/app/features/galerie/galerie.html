@@ -6,6 +6,19 @@
   }
 
   <div class="galerie__main">
+    <!-- Selection mode toggle -->
+    <div class="galerie__sel-bar">
+      <button
+        class="galerie__sel-btn"
+        [class.galerie__sel-btn--on]="selectionMode()"
+        (click)="toggleSelectionMode()"
+        [attr.aria-pressed]="selectionMode()"
+      >
+        <pf-icon name="select" [size]="15" />
+        <span>{{ selectionMode() ? 'Auswählen beenden' : 'Auswählen' }}</span>
+      </button>
+    </div>
+
     @if (isEmpty()) {
       <div class="galerie-empty">
         <div class="empty-icon">
@@ -19,7 +32,10 @@
         [groups]="groups()"
         [density]="density()"
         [isLoading]="isLoading()"
+        [selectionMode]="selectionMode()"
+        [selectedIds]="selectedIds()"
         (openAsset)="onOpenAsset($event)"
+        (selectAll)="onSelectAll($event)"
         (loadMore)="onLoadMore()"
       />
     }
@@ -28,4 +44,12 @@
 
 @if (lightboxId() != null) {
   <pf-lightbox />
+}
+
+@if (selectedCount() > 0) {
+  <pf-bulk-bar
+    [count]="selectedCount()"
+    (close)="onBulkClose()"
+    (tagAction)="onBulkTag($event)"
+  />
 }

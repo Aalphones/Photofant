@@ -40,6 +40,7 @@ class Asset(Base):
     tagger: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    caption_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     imported_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -95,6 +96,7 @@ class Tag(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text, unique=True, nullable=False)  # lowercase + underscores (canonical)
+    alias_of: Mapped[int | None] = mapped_column(ForeignKey("tag.id"), nullable=True, index=True)  # P6 Phase 3
 
 
 class AssetTag(Base):
@@ -109,6 +111,7 @@ class AssetTag(Base):
     tag_id: Mapped[int] = mapped_column(ForeignKey("tag.id"), nullable=False)
     kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="auto")  # auto | manual
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    manually_removed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
 
 
 class CaptionPreset(Base):

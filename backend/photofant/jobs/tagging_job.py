@@ -78,6 +78,10 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
                     kind="auto",
                     score=tag_score.score,
                 ))
+            elif existing_asset_tag.manually_removed:
+                pass  # user explicitly removed this tag — don't re-add
+            elif existing_asset_tag.kind == "manual":
+                pass  # user manually added this tag — don't overwrite
             else:
                 existing_asset_tag.score = tag_score.score
 

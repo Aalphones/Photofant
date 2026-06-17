@@ -14,6 +14,8 @@ const {
   selectError,
   selectLightboxId,
   selectFacets,
+  selectSelectionMode,
+  selectSelectedIds,
 } = galleryFeature;
 
 function formatMonthLabel(dateStr: string | null): string {
@@ -123,4 +125,6 @@ export const gallerySelectors = {
   selectLightboxHasPrev,
   selectLightboxHasNext,
   selectLightboxNavContext,
+  selectSelectionMode,
+  selectSelectedIds,
 };

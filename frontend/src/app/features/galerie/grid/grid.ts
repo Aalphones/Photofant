@@ -10,7 +10,7 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import type { AssetGroup, Density } from '@photofant/models';
+import type { AssetDto, AssetGroup, Density } from '@photofant/models';
 import { BASE_HEIGHTS } from '@photofant/models';
 import { GalerieCell } from '../cell/cell';
 
@@ -26,11 +26,15 @@ const SKELETON_RATIOS = [1.4, 0.75, 1.0, 1.6, 0.85, 1.2, 0.7, 1.5, 1.1, 0.9];
 export class GalerieGrid {
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly groups    = input.required<AssetGroup[]>();
-  readonly density   = input.required<Density>();
-  readonly isLoading = input.required<boolean>();
+  readonly groups        = input.required<AssetGroup[]>();
+  readonly density       = input.required<Density>();
+  readonly isLoading     = input.required<boolean>();
+  readonly selectionMode = input<boolean>(false);
+  readonly selectedIds   = input<number[]>([]);
 
   readonly openAsset = output<number>();
+  readonly selectAll = output<number[]>();
+  readonly loadMore  = output<void>();
 
   private readonly sentinel = viewChild.required<ElementRef<HTMLDivElement>>('loadSentinel');
 
@@ -57,9 +61,19 @@ export class GalerieGrid {
     });
   }
 
-  readonly loadMore = output<void>();
+  protected isAssetSelected(assetId: number): boolean {
+    return this.selectedIds().includes(assetId);
+  }
+
+  protected groupIds(group: AssetGroup): number[] {
+    return group.assets.map((asset: AssetDto) => asset.id);
+  }
 
   protected onOpenAsset(id: number): void {
     this.openAsset.emit(id);
+  }
+
+  protected onSelectAll(ids: number[]): void {
+    this.selectAll.emit(ids);
   }
 }

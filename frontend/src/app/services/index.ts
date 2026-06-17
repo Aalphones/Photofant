@@ -9,3 +9,4 @@ export { MaintenanceService } from './maintenance.service';
 export { ModelService } from './model.service';
 export { CaptionPresetService } from './caption-preset.service';
 export { TagService } from './tag.service';
+export type { MergeTagsRequest, BulkTagRequest } from './tag.service';

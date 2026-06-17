@@ -113,25 +113,92 @@
         </div>
       }
 
-      <!-- Caption -->
-      @if (caption(); as captionText) {
-        <div class="panel-sec">
-          <div class="psec-title">Caption</div>
-          <p class="caption-text">{{ captionText }}</p>
+      <!-- Caption (editierbar) -->
+      <div class="panel-sec">
+        <div class="psec-title psec-title--row">
+          Caption
+          @if (!editingCaption()) {
+            <button class="psec-edit-btn" (click)="startCaptionEdit()" aria-label="Caption bearbeiten">
+              <pf-icon name="pencil" [size]="12" />
+            </button>
+          }
         </div>
-      }
+        @if (editingCaption()) {
+          <textarea
+            class="caption-editor"
+            [value]="captionDraft()"
+            (input)="captionDraft.set($any($event.target).value)"
+            (keydown.escape)="cancelCaptionEdit()"
+            (blur)="saveCaptionEdit()"
+            rows="4"
+            autofocus
+          ></textarea>
+          <div class="caption-edit-hint">Enter bestätigt nicht — Tab oder Klick außen speichert</div>
+        } @else if (caption()) {
+          <p class="caption-text" (click)="startCaptionEdit()">{{ caption() }}</p>
+        } @else {
+          <p class="caption-empty" (click)="startCaptionEdit()">Noch keine Caption — klicken zum Hinzufügen</p>
+        }
+      </div>
 
-      <!-- Tags -->
-      @if (displayTags().length > 0) {
-        <div class="panel-sec">
-          <div class="psec-title">Tags</div>
-          <div class="tag-list">
-            @for (tag of displayTags(); track tag.id) {
-              <span class="tag-chip">{{ tag.displayName }}</span>
-            }
-          </div>
+      <!-- Tags (editierbar) -->
+      <div class="panel-sec">
+        <div class="psec-title">Tags</div>
+
+        <div class="tag-list">
+          @for (tag of displayTags(); track tag.id) {
+            <span
+              class="tag-chip"
+              [class.tag-chip--manual]="tag.kind === 'manual'"
+              [title]="tag.kind === 'manual' ? 'Manuell hinzugefügt' : ''"
+            >
+              @if (tag.kind === 'manual') {
+                <span class="tag-chip__dot"></span>
+              }
+              {{ tag.name.replaceAll('_', ' ') }}
+              <button
+                class="tag-chip__remove"
+                (click)="removeTag(tag.id)"
+                [attr.aria-label]="'Tag ' + tag.name + ' entfernen'"
+              >
+                <pf-icon name="x" [size]="10" />
+              </button>
+            </span>
+          }
+
+          <!-- Add-Tag-Button / Input -->
+          @if (addingTag()) {
+            <div class="tag-add-wrap">
+              <input
+                class="tag-add-input"
+                [value]="tagInputValue()"
+                (input)="tagInputValue.set($any($event.target).value)"
+                (keydown)="onTagInputKeyDown($event)"
+                (blur)="confirmAddTag()"
+                placeholder="Tag eingeben…"
+                autofocus
+              />
+              @if (tagSuggestions().length > 0) {
+                <div class="tag-suggestions">
+                  @for (suggestion of tagSuggestions(); track suggestion.id) {
+                    <button
+                      class="tag-suggestion"
+                      (mousedown)="pickSuggestion(suggestion.name)"
+                    >
+                      {{ suggestion.name.replace('_', ' ') }}
+                      <span class="tag-suggestion__count">{{ suggestion.count }}</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          } @else {
+            <button class="tag-add-btn" (click)="openAddTag()" aria-label="Tag hinzufügen">
+              <pf-icon name="plus" [size]="12" />
+            </button>
+          }
         </div>
-      }
+      </div>
 
       <!-- Stub-Sektionen: ausgeblendet bis P7/P8 -->
       <!-- Gesichter, Versionen -->
