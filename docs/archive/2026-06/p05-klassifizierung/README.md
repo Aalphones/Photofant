@@ -1,6 +1,6 @@
 # P5 — Klassifizierung (Stage 2b)
 
-> Status: geparkt · Quelle: [Konzept](../../Konzept-Photofant.md) §6, §12.5, §12.6 · Abhängigkeiten: P2, P4
+> Status: complete · Quelle: [Konzept](../../Konzept-Photofant.md) §6, §12.5, §12.6 · Abhängigkeiten: P2, P4
 
 Die ML-Pipeline: ONNX-Inferenz-Layer, WD14-Tags, Florence-2-Captions, CLIP/SigLIP-Embeddings, Heuristiken — integriert in den Import-Fluss und nachträglich auf den Bestand anwendbar. Enthält den laut Konzept (§19.6) **aufwändigsten ML-Teil** (Florence-2-Generierungs-Loop auf onnxruntime).
 
@@ -13,7 +13,7 @@ Die ML-Pipeline: ONNX-Inferenz-Layer, WD14-Tags, Florence-2-Captions, CLIP/SigLI
 | 3 | [Florence-2-Captioning](phase-3-florence-captioning.md) | heikel | complete |
 | 4 | [CLIP-Embeddings & Vektor-Index](phase-4-clip-vektorindex.md) | heikel | complete |
 | 5 | [Heuristiken & Pipeline-Integration](phase-5-heuristiken-pipeline.md) | standard | complete |
-| 6 | [Captioner-Settings & Presets](phase-6-captioner-presets.md) | standard | pending |
+| 6 | [Captioner-Settings & Presets](phase-6-captioner-presets.md) | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -42,10 +42,37 @@ Die ML-Pipeline: ONNX-Inferenz-Layer, WD14-Tags, Florence-2-Captions, CLIP/SigLI
 
 ## Summary
 
+Vollständige ML-Pipeline: ONNX-Inferenz-Layer, WD14-Tagging, Florence-2-Captioning,
+CLIP-Embeddings + Vektor-Index, Heuristiken, Rerun-Endpoint und Caption-Presets mit
+deklarativem UI-Renderer. Alle 6 Phasen abgeschlossen.
+
 ## Files touched
+
+Backend: `photofant/inference/` (adapters, interfaces, preprocessing, session_manager,
+caption_config), `photofant/jobs/` (tagging/caption/embedding/heuristics/rerun/rebuild),
+`photofant/api/` (classify, caption_presets, models, search), `photofant/db/` (models,
+vector_index), `alembic/versions/0005–0010`, `photofant/models/manifest.json+loader`.
+
+Frontend: `store/presets/`, `ui/caption-preset-form/`, `ui/preset-dialog/`,
+`ui/rerun-dialog/`, `features/einstellungen/`, `features/galerie/sub-toolbar/lightbox/`,
+`models/caption-preset.model.ts`, `services/caption-preset.service.ts`,
+`models/model.model.ts`, `app.config.ts`.
 
 ## Commits
 
+- `f32b0bf` Phase 3 — Florence-2-Captioning
+- `c05bdbe` Phase 4 — CLIP-Embeddings & Vektor-Index
+- `fa7f5e9` Phase 5 — Heuristiken & Pipeline-Integration
+- `679ba4d` Phase 6 — Captioner-Settings & Presets
+
 ## Deviations from plan
 
+Keine wesentlichen. `settings`-Slice wurde als eigener `presets`-Slice implementiert
+(saubere Trennung statt Erweiterung des `models`-Slice).
+
 ## Follow-ups
+
+- P9: Qwen2.5-VL / JoyCaption — neuer `instruct`/`instruct_guided`-Descriptor reicht;
+  `CaptionPresetForm` und Renderer-Architektur sind bereits vorbereitet.
+- CLIP-Manifest: `allow_patterns` um nicht benötigte ONNX-Varianten zu filtern
+  (Plattenplatz — FINDINGS Phase 6 Eintrag).

@@ -137,6 +137,27 @@ interface ModelValidationDetail {
 `DELETE` lässt bei In-Place-Modellen (`managed = 0`) die referenzierte Datei unangetastet
 (`file_removed: false`); bei managed-Modellen werden Datei/Ordner mitgelöscht.
 
+## Caption-Presets (P5 Phase 6)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/einstellungen` | `GET` | `/api/caption-presets` | `?model_id=` (optional) | `CaptionPresetDto[]` |
+| `/einstellungen` | `POST` | `/api/caption-presets` | `CaptionPresetCreate` | `CaptionPresetDto` (201) |
+| `/einstellungen` | `PATCH` | `/api/caption-presets/{id}` | `CaptionPresetUpdate` | `CaptionPresetDto` |
+| `/einstellungen` | `DELETE` | `/api/caption-presets/{id}` | — | 204 |
+
+```typescript
+interface CaptionPresetDto {
+  id: number;
+  name: string;
+  model_id: number | null;   // null = model-agnostic
+  config: Record<string, unknown>;
+  is_default: boolean;
+}
+```
+
+Config wird gegen `caption_mode` des Modells validiert (`caption_config.py`). Default-Setzen löscht bisherigen Default im selben Modell-Scope. `ModelDto` enthält `caption_mode` und `capabilities` (deklarativer UI-Descriptor §12.6, aus Manifest).
+
 ## Klassifizierung / Rerun (P5 Phase 5)
 
 | Angular Route | Method | Backend Endpoint | Request | Response |

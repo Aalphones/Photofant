@@ -1,5 +1,3 @@
-🚧 Aktive Arbeit → STATE.md
-
 # Photofant — Agent Hub
 
 Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, Tagging/Captioning, semantische Suche, Editor, Trainingssets. Zur Laufzeit vollständig offline.

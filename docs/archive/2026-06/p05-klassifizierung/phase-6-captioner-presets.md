@@ -1,6 +1,6 @@
 # P5 · Phase 6 — Captioner-Settings & Presets (UI)
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -16,10 +16,10 @@
 
 ## Checkliste
 
-- [ ] Descriptor-Schema festlegen (Feld-Typen: dropdown/number/slider/textarea/checkbox + Erklärtext) und für Florence-2 im Manifest/Registry hinterlegen
-- [ ] Deklarativer Form-Renderer (Reactive Forms, generiert aus Descriptor)
-- [ ] Preset-CRUD-UI + `settings`-Slice-Erweiterung
-- [ ] Verdrahtung in den Rerun-Dialog (Modell + Preset wählen)
+- [x] Descriptor-Schema festlegen (Feld-Typen: dropdown/number/slider/textarea/checkbox + Erklärtext) und für Florence-2 im Manifest/Registry hinterlegen
+- [x] Deklarativer Form-Renderer (Reactive Forms, generiert aus Descriptor)
+- [x] Preset-CRUD-UI + `presets`-Slice (NgRx)
+- [x] Verdrahtung in den Rerun-Dialog (Modell + Preset wählen)
 - [ ] Doc-Update: routes.md (caption-presets), docs/models.md
 
 ## Report-Back
