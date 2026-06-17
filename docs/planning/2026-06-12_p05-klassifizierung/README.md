@@ -8,7 +8,7 @@ Die ML-Pipeline: ONNX-Inferenz-Layer, WD14-Tags, Florence-2-Captions, CLIP/SigLI
 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
-| 1 | [Inferenz-Layer](phase-1-inferenz-layer.md) | heikel | pending |
+| 1 | [Inferenz-Layer](phase-1-inferenz-layer.md) | heikel | complete |
 | 2 | [WD14-Tagging](phase-2-wd14-tagging.md) | standard | pending |
 | 3 | [Florence-2-Captioning](phase-3-florence-captioning.md) | heikel | pending |
 | 4 | [CLIP-Embeddings & Vektor-Index](phase-4-clip-vektorindex.md) | heikel | pending |

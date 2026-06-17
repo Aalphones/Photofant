@@ -28,6 +28,10 @@ class JobKind(StrEnum):
     RECONCILE = "reconcile"
     REBUILD = "rebuild"
     DOWNLOAD = "download_model"
+    TAGGING = "tagging"
+    CAPTIONING = "captioning"
+    EMBEDDING = "embedding"
+    HEURISTICS = "heuristics"
 
 
 @dataclass

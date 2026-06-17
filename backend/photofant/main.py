@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from photofant.api import assets, config, health, jobs, maintenance, models, trash
+from photofant.inference.session_manager import session_manager
 from photofant.jobs.queue import job_queue
 from photofant.models.loader import load_manifest
 
@@ -23,6 +24,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     log.info("Shutting down Photofant backend")
     await job_queue.stop()
+    session_manager.evict_all()
 
 
 def create_app() -> FastAPI:

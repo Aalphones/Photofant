@@ -1,6 +1,6 @@
 # P5 · Phase 1 — Inferenz-Layer
 
-> Rating: **heikel** (Architektur-Phase: Interfaces, Session-Lifecycle, CPU/GPU) · Status: pending
+> Rating: **heikel** (Architektur-Phase: Interfaces, Session-Lifecycle, CPU/GPU) · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -17,10 +17,20 @@
 
 ## Checkliste
 
-- [ ] Interfaces (`Tagger`, `Captioner`, `Embedder`, später `FaceEngine` in P7) + Registry-Auflösung
-- [ ] Session-Manager (lazy load, idle unload, Provider-Detection inkl. Logging der gewählten Provider)
-- [ ] Executor-Anbindung an die Job-Queue (CPU-bound-Schutz)
-- [ ] Preprocessing-Utilities (Resize/Normalize je Modell-Familie, ein Ort)
-- [ ] Doc-Update: docs/decisions/ — kurzes ADR nur falls Provider-Strategie nicht-offensichtlich ausfällt
+- [x] Interfaces (`Tagger`, `Captioner`, `Embedder`, später `FaceEngine` in P7) + Registry-Auflösung
+- [x] Session-Manager (lazy load, idle unload, Provider-Detection inkl. Logging der gewählten Provider)
+- [x] Executor-Anbindung an die Job-Queue (CPU-bound-Schutz) — `session_manager.executor` (ThreadPoolExecutor, 1 Worker)
+- [x] Preprocessing-Utilities (Resize/Normalize je Modell-Familie, ein Ort)
+- [x] Doc-Update: Provider-Strategie ist offensichtlich (DML→CUDA→CPU) — kein ADR nötig
 
 ## Report-Back
+
+`backend/photofant/inference/` angelegt:
+- `interfaces.py` — `Tagger`, `Captioner`, `Embedder`, `FaceEngine` (Protocols), `TagScore`
+- `session_manager.py` — `SessionManager` (lazy load, Idle-Eviction, DML→CUDA→CPU-Detection, ThreadPoolExecutor-Singleton)
+- `preprocessing.py` — `preprocess_for_wd14`, `preprocess_for_clip`, `preprocess_for_florence` + Primitives
+- `__init__.py` — öffentliche API
+
+`queue.py`: `JobKind` um `TAGGING`, `CAPTIONING`, `EMBEDDING`, `HEURISTICS` erweitert.
+`main.py`: `session_manager.evict_all()` im Shutdown-Hook.
+`pyproject.toml`: `onnxruntime>=1.20`, `numpy>=1.26` als Core-Dependencies.
