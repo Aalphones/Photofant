@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "_note": "SHA-256 values are null — to be populated before Phase 2 download verification. Verify by downloading each file once and running sha256sum.",
+  "models": [
+    {
+      "id": "buffalo_l",
+      "role": "face",
+      "name": "InsightFace buffalo_l",
+      "variant": "default",
+      "format": "onnx_bundle",
+      "files": [
+        {
+          "url": "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip",
+          "filename": "buffalo_l.zip",
+          "sha256": null,
+          "size_bytes": 293601280
+        }
+      ],
+      "size_bytes": 293601280,
+      "license_note": "MIT (code); model weights: InsightFace — verify license before commercial use",
+      "tier": "core"
+    },
+    {
+      "id": "wd-swinv2-v3",
+      "role": "tagger",
+      "name": "WD14 SwinV2 Tagger V3",
+      "variant": "default",
+      "format": "onnx",
+      "files": [
+        {
+          "url": "https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3/resolve/main/model.onnx",
+          "filename": "model.onnx",
+          "sha256": null,
+          "size_bytes": 351473680
+        },
+        {
+          "url": "https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3/resolve/main/selected_tags.csv",
+          "filename": "selected_tags.csv",
+          "sha256": null,
+          "size_bytes": 498000
+        }
+      ],
+      "size_bytes": 351971680,
+      "license_note": "Apache 2.0",
+      "tier": "core"
+    },
+    {
+      "id": "florence-2-base",
+      "role": "captioner",
+      "name": "Florence-2 Base",
+      "variant": "default",
+      "format": "onnx_folder",
+      "caption_mode": "task_token",
+      "hf_repo": "onnx-community/Florence-2-base",
+      "files": [],
+      "size_bytes": 460000000,
+      "license_note": "MIT",
+      "tier": "core",
+      "_download_note": "Multi-file HuggingFace repo — Phase 2 download job uses HF snapshot_download"
+    },
+    {
+      "id": "clip-vit-l-14",
+      "role": "semantic_search",
+      "name": "CLIP ViT-L/14",
+      "variant": "default",
+      "format": "onnx",
+      "files": [
+        {
+          "url": "https://huggingface.co/Xenova/clip-vit-large-patch14/resolve/main/onnx/model.onnx",
+          "filename": "clip-vit-l-14.onnx",
+          "sha256": null,
+          "size_bytes": 876838912
+        }
+      ],
+      "size_bytes": 876838912,
+      "license_note": "MIT",
+      "tier": "core"
+    },
+    {
+      "id": "rembg-u2net",
+      "role": "rembg",
+      "name": "rembg u2net",
+      "variant": "default",
+      "format": "onnx",
+      "files": [
+        {
+          "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx",
+          "filename": "u2net.onnx",
+          "sha256": null,
+          "size_bytes": 184549376
+        }
+      ],
+      "size_bytes": 184549376,
+      "license_note": "Apache 2.0",
+      "tier": "core"
+    }
+  ]
+}

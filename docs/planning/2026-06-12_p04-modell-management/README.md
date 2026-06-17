@@ -8,7 +8,7 @@ Registry, Beschaffung (Download / In-Place) und Gating für **Core-ONNX-Modelle*
 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
-| 1 | [Registry & Manifest](phase-1-registry-manifest.md) | standard | pending |
+| 1 | [Registry & Manifest](phase-1-registry-manifest.md) | standard | complete |
 | 2 | [Download & Scan](phase-2-download-scan.md) | standard | pending |
 | 3 | [In-Place-Binding & Validierung](phase-3-inplace-validierung.md) | heikel | pending |
 | 4 | [Modelle-View & Gating](phase-4-modelle-view-gating.md) | standard | pending |

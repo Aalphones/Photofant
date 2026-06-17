@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, LargeBinary, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -64,3 +65,33 @@ class ProcessingLedger(Base):
     tags_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     caption_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     classified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
+
+class ModelRegistry(Base):
+    __tablename__ = "model_registry"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    manifest_id: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    role: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    variant: Mapped[str | None] = mapped_column(Text, nullable=True)
+    format: Mapped[str | None] = mapped_column(Text, nullable=True)
+    path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    components: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
+    sha256: Mapped[str | None] = mapped_column(Text, nullable=True)
+    managed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    caption_mode: Mapped[str | None] = mapped_column(Text, nullable=True)
+    capabilities: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
+
+class CaptionPreset(Base):
+    __tablename__ = "caption_preset"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    model_id: Mapped[int | None] = mapped_column(ForeignKey("model_registry.id"), nullable=True)
+    config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)  # type: ignore[type-arg]
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

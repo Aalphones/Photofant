@@ -92,14 +92,52 @@ Once-only guarantee per content-hash.
 | `caption_done` | BOOLEAN | (set in P5) |
 | `classified` | BOOLEAN | (set in P5) |
 
+### `model_registry` (migration 0004)
+
+Core + optional AI models known to the app. Each row links to a manifest entry via `manifest_id`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `manifest_id` | TEXT UNIQUE | matches `id` in `manifest.json` |
+| `role` | TEXT | `face \| tagger \| captioner \| semantic_search \| rembg` |
+| `name` | TEXT | display name |
+| `variant` | TEXT | `default \| fp16 \| fp8 \| gguf-q4 \| …` |
+| `format` | TEXT | `onnx \| onnx_bundle \| onnx_folder \| safetensors \| gguf` |
+| `path` | TEXT | absolute path to file or folder; NULL for component-only models |
+| `components` | JSON | named component paths (e.g. Flux: `{"diffusion": …, "text_encoder": …, "vae": …}`) |
+| `sha256` | TEXT | managed: verified at download; in-place: informative only |
+| `managed` | BOOLEAN | `1` = app manages file in `models_dir`; `0` = in-place reference, never touched |
+| `caption_mode` | TEXT | captioner only: `task_token \| instruct \| instruct_guided` (§12.6) |
+| `capabilities` | JSON | declarative UI descriptor for settings panel |
+| `enabled` | BOOLEAN | `0` = downloaded but not active; `1` = active |
+| `is_default` | BOOLEAN | default selection per role |
+
+Status semantics (computed by `GET /api/models`, never stored):
+- `missing` — no registry row, or managed+enabled but path gone
+- `available` — managed, file present, `enabled=0`
+- `active` — managed, file present, `enabled=1`
+- `inplace` — `managed=0` (external reference; enabled state shown separately)
+
+### `caption_preset` (migration 0004)
+
+Named, reusable captioner configurations. See §12.6.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `name` | TEXT | e.g. "Natürliche Sprache", "Danbooru-Tags" |
+| `model_id` | INTEGER FK → `model_registry.id` | NULL = cross-model preset |
+| `config` | JSON | mode-specific config (task-token / system-prompt / builder blocks + sampling) |
+| `is_default` | BOOLEAN | default preset per captioner |
+| `created_at` | DATETIME | UTC naive |
+
 ---
 
 ## Upcoming tables (planned)
 
 | Table | Migration | Plan |
 |---|---|---|
-| `model_registry` | 0004 | P4 |
-| `caption_preset` | 0004 | P4 |
 | `version` | 0005 | P8 |
 | `face` | 0005 | P7 |
 | `tag`, `asset_tag` | 0006 | P5 |
