@@ -28,9 +28,13 @@ if ($LASTEXITCODE -ne 0) { Write-Error 'Migration fehlgeschlagen'; exit 1 }
 Pop-Location
 
 Write-Host '=== Backend starten (http://localhost:8000) ===' -ForegroundColor Cyan
+# --reload-dir photofant: nur den Paketordner ueberwachen, NICHT den ganzen
+# backend-Baum. Sonst watcht uvicorn auch .venv (zigtausend Dateien) und tests/
+# — auf Windows reisst der File-Watcher dort reproduzierbar ab und nimmt uvicorn
+# mit, was den Watchdog unten alles abschiessen laesst.
 $backend = Start-Process `
     -FilePath 'uv' `
-    -ArgumentList 'run', 'uvicorn', 'photofant.main:app', '--reload', '--port', '8000' `
+    -ArgumentList 'run', 'uvicorn', 'photofant.main:app', '--reload', '--reload-dir', 'photofant', '--port', '8000' `
     -WorkingDirectory "$root\backend" `
     -NoNewWindow -PassThru
 
@@ -77,6 +81,13 @@ Write-Host 'Ctrl+C zum Beenden.' -ForegroundColor Yellow
 try {
     while (!$backend.HasExited -and !$frontend.HasExited) {
         Start-Sleep -Milliseconds 500
+    }
+    # Wer ist gekippt? Festhalten, statt stumm alles abzuschiessen — damit ein
+    # unerwarteter Abbruch nachvollziehbar ist und nicht geraten werden muss.
+    if ($backend.HasExited) {
+        Write-Host "Backend ist beendet (ExitCode $($backend.ExitCode)) — fahre Frontend mit herunter." -ForegroundColor Red
+    } else {
+        Write-Host "Frontend ist beendet (ExitCode $($frontend.ExitCode)) — fahre Backend mit herunter." -ForegroundColor Red
     }
 } finally {
     Write-Host ''
