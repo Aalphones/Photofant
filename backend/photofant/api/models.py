@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shutil
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -16,6 +17,11 @@ from photofant.db.models import ModelRegistry
 from photofant.db.session import get_session
 from photofant.jobs.download_job import ScanResult, enqueue_download, scan_models_dir
 from photofant.models.loader import ManifestEntry, get_manifest_entry, load_manifest
+from photofant.models.validation import (
+    ModelErrorCode,
+    ModelValidationError,
+    validate_in_place,
+)
 
 log = logging.getLogger(__name__)
 
@@ -155,6 +161,108 @@ async def scan_models(session: DbSession) -> ScanResponse:
     models_dir = get_models_dir(session)
     found = await asyncio.to_thread(scan_models_dir, models_dir)
     return ScanResponse(registered=found)
+
+
+class RegisterLocalRequest(BaseModel):
+    manifest_id: str
+    path: str
+
+
+@router.post("/register-local", response_model=ModelDto)
+async def register_local(body: RegisterLocalRequest, session: DbSession) -> ModelDto:
+    """Bind an already-present file/folder to a manifest slot without copying it.
+
+    Runs the §12.2a validation pipeline first; only on success is a `managed = 0`
+    registry row written. A failed validation returns a structured 422 and leaves
+    both the DB and the filesystem untouched.
+    """
+    entry = get_manifest_entry(body.manifest_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail={"code": ModelErrorCode.NOT_FOUND})
+
+    try:
+        validation = await asyncio.to_thread(validate_in_place, entry, body.path)
+    except ModelValidationError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": error.code,
+                "expected": error.expected,
+                "found": error.found,
+                "next_step": error.next_step,
+            },
+        ) from error
+
+    row = session.query(ModelRegistry).filter(ModelRegistry.manifest_id == entry.id).first()
+    if row is None:
+        row = ModelRegistry(manifest_id=entry.id)
+        session.add(row)
+
+    row.role = entry.role
+    row.name = entry.name
+    row.variant = entry.variant
+    row.format = entry.format
+    row.path = body.path
+    row.sha256 = validation.sha256
+    row.managed = False
+    row.enabled = True
+    row.caption_mode = entry.caption_mode
+    session.commit()
+    session.refresh(row)
+
+    log.info("Registered in-place model %s at %s", entry.id, body.path)
+    return ModelDto(
+        id=entry.id,
+        role=entry.role,
+        name=entry.name,
+        variant=entry.variant,
+        format=entry.format,
+        path=row.path,
+        sha256=row.sha256,
+        managed=row.managed,
+        enabled=row.enabled,
+        is_default=row.is_default,
+        status=_derive_status(entry, row),
+        size_bytes=entry.size_bytes,
+        license_note=entry.license_note,
+    )
+
+
+class DeleteResponse(BaseModel):
+    deleted: bool
+    file_removed: bool
+
+
+@router.delete("/{manifest_id}", response_model=DeleteResponse)
+def delete_model(manifest_id: str, session: DbSession) -> DeleteResponse:
+    """Remove a model from the registry.
+
+    Managed models: delete the downloaded file/folder *and* the row. In-place
+    models (`managed = 0`): delete only the row — the user's original file is
+    referenced, not owned, and stays exactly where it is.
+    """
+    row = session.query(ModelRegistry).filter(ModelRegistry.manifest_id == manifest_id).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail={"code": ModelErrorCode.NOT_FOUND})
+
+    was_managed = row.managed
+    file_removed = False
+    if was_managed and row.path:
+        target = Path(row.path)
+        try:
+            if target.is_dir():
+                shutil.rmtree(target)
+                file_removed = True
+            elif target.is_file():
+                target.unlink()
+                file_removed = True
+        except OSError as error:
+            log.warning("Could not remove managed model files at %s: %s", target, error)
+
+    session.delete(row)
+    session.commit()
+    log.info("Removed model %s (managed=%s, file_removed=%s)", manifest_id, was_managed, file_removed)
+    return DeleteResponse(deleted=True, file_removed=file_removed)
 
 
 @router.get("/capabilities", response_model=CapabilitiesDto)

@@ -76,6 +76,8 @@ interface MaintenanceStatus {
 | `/einstellungen` (capabilities) | `GET` | `/api/models/capabilities` | — | `CapabilitiesDto` |
 | `/einstellungen` (download) | `POST` | `/api/models/{manifest_id}/download` | `{ license_ack?: bool }` | `{ job_id: string }` |
 | `/einstellungen` (scan) | `POST` | `/api/models/scan` | — | `{ registered: ScanResult[] }` |
+| `/einstellungen` (in-place) | `POST` | `/api/models/register-local` | `{ manifest_id: string, path: string }` | `ModelDto` |
+| `/einstellungen` (remove) | `DELETE` | `/api/models/{manifest_id}` | — | `{ deleted: bool, file_removed: bool }` |
 
 ```typescript
 interface ModelDto {
@@ -109,9 +111,31 @@ interface ScanResult {
 ```
 
 Fehler-Codes (strukturiert im `detail`-Feld):
-- `404 { code: "MODEL_NOT_FOUND" }` — `manifest_id` nicht im Manifest
+- `404 { code: "MODEL_NOT_FOUND" }` — `manifest_id` nicht im Manifest (auch bei `DELETE`)
 - `409 { code: "LICENSE_ACK_REQUIRED", license_note: string }` — `license_ack: true` fehlt
 - Job-Fehler (async, im Job-Stream): `MODEL_HASH_MISMATCH`, `MODEL_INCOMPLETE`
+
+`POST /api/models/register-local` — In-Place-Validierung (Konzept §12.2a), fünf Stufen
+in Reihenfolge: Existenz → Format → Rolle → Vollständigkeit → Ladbarkeit. Bei Fehler
+`422` mit strukturiertem `detail`, das Frontend auf „erwartet · gefunden · nächster Schritt" mappt:
+
+```typescript
+// 422 detail
+interface ModelValidationDetail {
+  code:
+    | 'MODEL_NOT_FOUND'      // Pfad existiert nicht / nicht lesbar
+    | 'MODEL_WRONG_FORMAT'   // Magic-Bytes/Endung passen nicht (onnx erwartet, gguf/safetensors gefunden); auch Datei↔Ordner-Verwechslung
+    | 'MODEL_WRONG_ROLE'     // ONNX-Graph passt nicht zur Slot-Rolle (nur wenn onnxruntime verfügbar)
+    | 'MODEL_INCOMPLETE'     // Ordner-Modell: Pflicht-Begleitdatei fehlt (z.B. selected_tags.csv, config.json)
+    | 'MODEL_LOAD_FAILED';   // Probe-Load scheitert (ONNX-Session bzw. Protobuf-Header)
+  expected: string;
+  found: string;
+  next_step: string;
+}
+```
+
+`DELETE` lässt bei In-Place-Modellen (`managed = 0`) die referenzierte Datei unangetastet
+(`file_removed: false`); bei managed-Modellen werden Datei/Ordner mitgelöscht.
 
 ## Job-Stream
 

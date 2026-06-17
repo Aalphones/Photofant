@@ -12,12 +12,12 @@
 |---|---|---|
 | 1 | Registry & Manifest | ✅ complete |
 | 2 | Download & Scan | ✅ complete |
-| 3 | In-Place-Binding & Validierung | 🔲 pending |
+| 3 | In-Place-Binding & Validierung | ✅ complete |
 | 4 | Modelle-View & Gating | 🔲 pending |
 
 ## Nächster Schritt
 
-→ **Phase 3 starten** — In-Place-Binding & Validierung (`POST /api/models/register-local`, `DELETE /api/models/{id}`).
-Einstieg: [`docs/planning/2026-06-12_p04-modell-management/phase-3-inplace-validierung.md`](docs/planning/2026-06-12_p04-modell-management/phase-3-inplace-validierung.md)
+→ **Phase 4 starten** — Modelle-View & Gating (Angular `/einstellungen`: Modell-Liste, Download-Buttons, In-Place-Picker, Feature-Gating über `GET /api/models/capabilities`).
+Einstieg: [`docs/planning/2026-06-12_p04-modell-management/phase-4-modelle-view-gating.md`](docs/planning/2026-06-12_p04-modell-management/phase-4-modelle-view-gating.md)
 
-Rating: heikel → `/clear`, dann `opusplan` empfohlen für Phase 3.
+Rating: standard → `/clear`, dann `/model sonnet` reicht für Phase 4 (Frontend, kein `ng test` im private-Profil).
