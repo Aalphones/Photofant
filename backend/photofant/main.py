@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from photofant.api import assets, caption_presets, config, health, jobs, maintenance, models, trash
+from photofant.api import assets, caption_presets, config, health, jobs, maintenance, models, search, trash
 from photofant.inference.session_manager import session_manager
 from photofant.jobs.queue import job_queue
 from photofant.models.loader import load_manifest
@@ -43,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(models.router, prefix="/api")
     app.include_router(caption_presets.router, prefix="/api")
     app.include_router(config.router, prefix="/api")
+    app.include_router(search.router, prefix="/api")
     return app
 
 

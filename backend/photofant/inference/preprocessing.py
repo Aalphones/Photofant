@@ -78,6 +78,19 @@ def normalize_imagenet(image: np.ndarray) -> np.ndarray:
     return arr.transpose(2, 0, 1)  # HWC → CHW
 
 
+def normalize_clip(image: np.ndarray) -> np.ndarray:
+    """Normalize uint8 RGB (H, W, 3) to float32 (3, H, W) with CLIP's own stats.
+
+    CLIP does NOT use ImageNet mean/std — it ships its own (OpenAI CLIP) values.
+    Used by the CLIP/SigLIP image encoder; distinct from `normalize_imagenet`.
+    """
+    mean = np.array([0.48145466, 0.4578275, 0.40821073], dtype=np.float32)
+    std = np.array([0.26862954, 0.26130258, 0.27577711], dtype=np.float32)
+    arr = image.astype(np.float32) / 255.0
+    arr = (arr - mean) / std
+    return arr.transpose(2, 0, 1)  # HWC → CHW
+
+
 def normalize_wd14(image: np.ndarray) -> np.ndarray:
     """Normalize uint8 RGB (H, W, 3) to float32 (1, H, W, 3) for WD14/ONNX.
 
@@ -95,9 +108,9 @@ def preprocess_for_wd14(image: np.ndarray, size: int = 448) -> np.ndarray:
 
 
 def preprocess_for_clip(image: np.ndarray, size: int = 224) -> np.ndarray:
-    """Full CLIP/SigLIP preprocessing: center-crop → CHW ImageNet-normalized NCHW."""
+    """Full CLIP/SigLIP preprocessing: 224² center-crop → CLIP-normalized NCHW."""
     cropped = resize_center_crop(image, size)
-    normalized = normalize_imagenet(cropped)
+    normalized = normalize_clip(cropped)
     return normalized[np.newaxis, ...]  # NCHW
 
 

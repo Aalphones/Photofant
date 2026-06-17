@@ -41,10 +41,10 @@ One row per unique content-hash (canonical image).
 | `age` | INTEGER | from `buffalo_l` (filled in P7) |
 | `caption` | TEXT | Florence-2 caption (filled in P5 Phase 3) |
 | `captioner` | TEXT | captioner manifest_id, e.g. `florence-2-base` (P5 Phase 3) |
-| `caption_preset_id` | INTEGER | FK to `caption_preset` — provenance: which preset produced the caption (P5 Phase 3) |
+| `caption_preset_id` | INTEGER FK → `caption_preset.id` | provenance: which preset produced the caption (FK added P5 Phase 4, `fk_asset_caption_preset`) |
 | `tagger` | TEXT | model name (filled in P5) |
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
-| `clip_embedding` | BLOB | CLIP/SigLIP embedding (filled in P5) |
+| `clip_embedding` | BLOB | CLIP ViT-L/14 image embedding, float32 unit-norm bytes (768-dim); source of truth for the vector index (P5 Phase 4) |
 | `created_at` | DATETIME | EXIF capture date; UTC naive |
 | `imported_at` | DATETIME | import timestamp; UTC naive; indexed |
 | `processed_at` | DATETIME | last full pipeline run |
@@ -90,6 +90,7 @@ Once-only guarantee per content-hash.
 | `faces_done` | BOOLEAN | (set in P7) |
 | `tags_done` | BOOLEAN | (set in P5) |
 | `caption_done` | BOOLEAN | (set in P5) |
+| `embedding_done` | BOOLEAN | CLIP embedding computed (migration 0007, set in P5 Phase 4) |
 | `classified` | BOOLEAN | (set in P5) |
 
 ### `model_registry` (migration 0004)
@@ -161,16 +162,34 @@ Many-to-many join between assets and tags.
 
 Unique constraint: `(asset_id, tag_id)`. Index: `ix_asset_tag_asset_id`.
 
+### `vec_asset_embedding` (migration 0007)
+
+sqlite-vec `vec0` virtual table — the searchable CLIP vector index (ADR-001). Rowid =
+`asset.id`; one row per embedded asset. The canonical embedding lives on
+`asset.clip_embedding` (BLOB); this table is a **rebuildable** index over those BLOBs
+(`photofant/db/vector_index.py:rebuild_index`). Persists in `db.sqlite`, so it survives a
+restart with no reconstruction. Maintained on import (insert) and final delete (remove);
+not part of `Base.metadata` — created only by the migration, so code that touches it
+degrades gracefully when the table is absent (e.g. throw-away test DBs).
+
+| Column | Type | Notes |
+|---|---|---|
+| `rowid` | INTEGER | = `asset.id` |
+| `embedding` | `float[768]` | `distance_metric=cosine`; cosine similarity = `1 − distance` |
+
+> Requires the sqlite-vec loadable extension, loaded per connection via the SQLAlchemy
+> `connect` event (`photofant/db/engine.py`) and inside migration 0007 (`op.get_bind()`).
+
 ---
 
 ## Upcoming tables (planned)
 
 | Table | Migration | Plan |
 |---|---|---|
-| `version` | 0006 | P8 |
-| `face` | 0006 | P7 |
-| `collection`, `collection_item`, `smart_trigger` | 0007 | P6 |
-| `prompt_template` | 0008 | P9 |
+| `version` | 0008 | P8 |
+| `face` | 0008 | P7 |
+| `collection`, `collection_item`, `smart_trigger` | 0009 | P6 |
+| `prompt_template` | 0010 | P9 |
 
 ---
 

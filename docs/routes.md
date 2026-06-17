@@ -137,11 +137,38 @@ interface ModelValidationDetail {
 `DELETE` lässt bei In-Place-Modellen (`managed = 0`) die referenzierte Datei unangetastet
 (`file_removed: false`); bei managed-Modellen werden Datei/Ordner mitgelöscht.
 
+## Semantische Suche (P5 Phase 4)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| Such-UI (ab P6; bis dahin API) | `POST` | `/api/search/semantic` | `SemanticSearchRequest` | `SemanticSearchResponse` |
+
+```typescript
+// Genau eines von query / like_asset_id setzen (sonst 422).
+interface SemanticSearchRequest {
+  query?: string;          // Freitext → CLIP-Text-Embedding (text→image)
+  like_asset_id?: number;  // „mehr wie dieses" → nutzt das gespeicherte Embedding (image→image)
+  limit?: number;          // 1..100, default 24
+}
+
+interface SearchHit { asset_id: number; score: number; }   // score = Cosine-Ähnlichkeit (1.0 = identisch)
+interface SemanticSearchResponse { hits: SearchHit[]; }
+```
+
+Treffer sind nach Cosine-Ähnlichkeit absteigend sortiert; soft-gelöschte Assets werden
+herausgefiltert, bei `like_asset_id` ist das Quell-Asset selbst ausgeschlossen.
+
+Fehler-Codes (strukturiert im `detail`-Feld):
+- `422` — weder oder beide von `query`/`like_asset_id` gesetzt
+- `404` — `like_asset_id` existiert nicht
+- `409 { code: "SEMANTIC_SEARCH_UNAVAILABLE" }` — CLIP-Modell nicht aktiv (Textsuche nicht möglich)
+- `409 { code: "NO_EMBEDDING" }` — `like_asset_id` hat noch kein Embedding
+
 ## Job-Stream
 
 | Trigger | Endpoint | Protokoll |
 |---|---|---|
-| Job-Fortschritt (import, scan, thumbnail, backup, reconcile, rebuild) | `/api/jobs/stream` | SSE — jede Zeile ist ein `Job`-JSON |
+| Job-Fortschritt (import, scan, thumbnail, backup, reconcile, rebuild, tagging, captioning, embedding) | `/api/jobs/stream` | SSE — jede Zeile ist ein `Job`-JSON |
 
 ## AssetDto (Frontend-Typ)
 

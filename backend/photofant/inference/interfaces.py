@@ -51,12 +51,19 @@ class Captioner(Protocol):
 
 @runtime_checkable
 class Embedder(Protocol):
-    """Produces a feature embedding for an image."""
+    """Produces a feature embedding in a shared image/text space (CLIP-style)."""
 
     def embed(self, image: np.ndarray) -> np.ndarray:
-        """Return a 1-D float32 unit-norm embedding vector.
+        """Return a 1-D float32 unit-norm image embedding.
 
         image: uint8 RGB array (H, W, 3).
+        """
+        ...
+
+    def embed_text(self, text: str) -> np.ndarray:
+        """Return a 1-D float32 unit-norm text embedding in the same space.
+
+        Used to embed a free-text query for text→image semantic search.
         """
         ...
 

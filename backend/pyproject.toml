@@ -18,6 +18,7 @@ dependencies = [
     "onnxruntime>=1.20",
     "numpy>=1.26",
     "tokenizers>=0.20",
+    "sqlite-vec>=0.1.9",
 ]
 
 [project.optional-dependencies]

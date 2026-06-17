@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from photofant.db.cache import delete_thumbnails, init_cache_db
 from photofant.db.models import Asset, AssetInstance, ProcessingLedger
+from photofant.db.vector_index import delete_embedding
 
 log = logging.getLogger(__name__)
 
@@ -204,5 +205,6 @@ async def purge(session: Session, instance: AssetInstance, cache_db_path: Path) 
             if ledger is not None:
                 session.delete(ledger)
             session.delete(asset)
+            delete_embedding(session, asset_id)
 
     session.commit()

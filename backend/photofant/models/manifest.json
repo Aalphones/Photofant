@@ -63,18 +63,13 @@
       "role": "semantic_search",
       "name": "CLIP ViT-L/14",
       "variant": "default",
-      "format": "onnx",
-      "files": [
-        {
-          "url": "https://huggingface.co/Xenova/clip-vit-large-patch14/resolve/main/onnx/model.onnx",
-          "filename": "clip-vit-l-14.onnx",
-          "sha256": null,
-          "size_bytes": 876838912
-        }
-      ],
-      "size_bytes": 876838912,
+      "format": "onnx_folder",
+      "hf_repo": "Xenova/clip-vit-large-patch14",
+      "files": [],
+      "size_bytes": 1750000000,
       "license_note": "MIT",
-      "tier": "core"
+      "tier": "core",
+      "_download_note": "Multi-file HuggingFace repo — snapshot_download fetches onnx/vision_model.onnx, onnx/text_model.onnx and tokenizer.json (separate image/text encoders for the embedding + query paths)"
     },
     {
       "id": "rembg-u2net",

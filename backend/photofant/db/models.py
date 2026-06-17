@@ -34,7 +34,9 @@ class Asset(Base):
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     caption: Mapped[str | None] = mapped_column(Text, nullable=True)
     captioner: Mapped[str | None] = mapped_column(Text, nullable=True)
-    caption_preset_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # FK added in P4
+    caption_preset_id: Mapped[int | None] = mapped_column(
+        ForeignKey("caption_preset.id"), nullable=True
+    )
     tagger: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
@@ -64,6 +66,7 @@ class ProcessingLedger(Base):
     faces_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     tags_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     caption_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    embedding_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     classified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
 
 
