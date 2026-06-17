@@ -1,3 +1,12 @@
+export const SEARCH_MODES = ['tags', 'caption', 'semantic'] as const;
+export type SearchMode = (typeof SEARCH_MODES)[number];
+
+export interface TagListItem {
+  id: number;
+  name: string;
+  count: number;
+}
+
 export const DENSITIES = ['sm', 'md', 'lg'] as const;
 export type Density = (typeof DENSITIES)[number];
 

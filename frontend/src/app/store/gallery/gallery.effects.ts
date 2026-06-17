@@ -7,6 +7,7 @@ import type { HttpErrorResponse } from '@angular/common/http';
 import type { AssetDto, AssetsPage, Job } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { filtersActions } from '../filters/filters.actions';
+import { searchActions } from '../search/search.actions';
 import { jobsActions } from '../jobs/jobs.actions';
 import { galleryActions } from './gallery.actions';
 import { gallerySelectors } from './gallery.selectors';
@@ -28,6 +29,9 @@ export class GalleryEffects {
         filtersActions.setQualityMin,
         filtersActions.setTagIds,
         filtersActions.clearAllFilters,
+        searchActions.setQuery,
+        searchActions.setMode,
+        searchActions.clear,
       ),
       map(() => galleryActions.reset()),
     )
@@ -47,6 +51,7 @@ export class GalleryEffects {
           sources: params.sources,
           qualityMin: params.qualityMin,
           tagIds: params.tagIds,
+          ...(params.q ? { q: params.q, qMode: params.qMode } : {}),
         }).pipe(
           map((result: AssetsPage) => galleryActions.loadPageSuccess({
             items: result.items,

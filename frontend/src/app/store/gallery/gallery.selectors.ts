@@ -1,6 +1,7 @@
 import { createSelector } from '@ngrx/store';
 import type { AssetDto, AssetGroup, GroupKey } from '@photofant/models';
 import { filtersFeature } from '../filters/filters.reducer';
+import { searchFeature } from '../search/search.reducer';
 import { galleryFeature } from './gallery.reducer';
 
 const {
@@ -65,8 +66,9 @@ const selectFetchParams = createSelector(
   selectPage, selectPageSize,
   filtersFeature.selectSort, filtersFeature.selectOrder, filtersFeature.selectFavourite,
   filtersFeature.selectSources, filtersFeature.selectQualityMin, filtersFeature.selectTagIds,
-  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds) =>
-    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds })
+  searchFeature.selectQ, searchFeature.selectMode,
+  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, q, qMode) =>
+    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, q, qMode })
 );
 
 const selectLightboxAsset = createSelector(

@@ -1,0 +1,74 @@
+<div
+  class="search-box"
+  [class.search-box--open]="isOpen() && suggestions().length > 0"
+>
+  <pf-icon name="search" [size]="16" />
+
+  <input
+    class="search-box__input"
+    type="search"
+    [placeholder]="placeholder()"
+    [value]="localQuery()"
+    (input)="onInput($event)"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+    (keydown.escape)="clearSearch()"
+    aria-label="Suche"
+    autocomplete="off"
+  />
+
+  @if (localQuery()) {
+    <button
+      class="search-box__clear"
+      type="button"
+      (click)="clearSearch()"
+      aria-label="Suche löschen"
+    >
+      <pf-icon name="x" [size]="14" />
+    </button>
+  }
+
+  <!-- Desktop: mode pills -->
+  <div class="search-box__pills" role="group" aria-label="Suchmodus">
+    @for (m of modes; track m.value) {
+      <button
+        class="search-box__pill"
+        [class.search-box__pill--active]="currentMode() === m.value"
+        [class.search-box__pill--semantic]="m.value === 'semantic' && currentMode() === 'semantic'"
+        type="button"
+        (click)="setMode(m.value)"
+      >{{ m.label }}</button>
+    }
+  </div>
+
+  <!-- Mobile: cycle button -->
+  <button
+    class="search-box__cycle"
+    type="button"
+    (click)="cycleMode()"
+    [attr.aria-label]="'Suchmodus: ' + modeLabel()"
+    [class.search-box__cycle--semantic]="currentMode() === 'semantic'"
+  >
+    {{ modeLabel() }}
+  </button>
+</div>
+
+<!-- Autocomplete dropdown -->
+@if (isOpen() && suggestions().length > 0) {
+  <div class="search-box__dropdown" role="listbox">
+    @for (item of suggestions(); track item.text) {
+      <button
+        class="search-box__suggestion"
+        type="button"
+        role="option"
+        (click)="selectSuggestion(item)"
+      >
+        <pf-icon name="tag" [size]="12" />
+        <span class="search-box__suggestion-text">{{ item.text }}</span>
+        @if (item.count != null) {
+          <span class="search-box__suggestion-count">{{ item.count }}</span>
+        }
+      </button>
+    }
+  </div>
+}

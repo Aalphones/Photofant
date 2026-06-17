@@ -1,4 +1,5 @@
 export { Icon } from './icon/icon';
+export { SearchBox } from './search-box/search-box';
 export { JobPill } from './job-pill/job-pill';
 export { JobDock } from './job-dock/job-dock';
 export { ImportDialog } from './import-dialog/import-dialog';

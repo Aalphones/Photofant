@@ -7,6 +7,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
 
+import numpy as np
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
@@ -15,6 +16,7 @@ from sqlalchemy.orm import Query as OrmQuery
 from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root
+from photofant.db import vector_index
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
 from photofant.db.models import Asset, AssetInstance, AssetTag, Tag
 from photofant.db.session import get_session
@@ -37,6 +39,12 @@ class SortField(StrEnum):
 class SortOrder(StrEnum):
     ASC = "asc"
     DESC = "desc"
+
+
+class SearchMode(StrEnum):
+    TAGS = "tags"
+    CAPTION = "caption"
+    SEMANTIC = "semantic"
 
 
 class AssetDto(BaseModel):
@@ -147,6 +155,23 @@ def _active_row(session: Session, asset_id: int) -> tuple[Asset, AssetInstance] 
     return _base_query(session).filter(Asset.id == asset_id).first()
 
 
+def _empty_facets() -> Facets:
+    return Facets(sources=[], tags_top=[])
+
+
+async def _embed_semantic(query: str) -> np.ndarray:
+    """Embed *query* via CLIP text encoder. Raises 409 if model unavailable."""
+    from photofant.inference.adapters.clip import resolve_clip_embedder
+
+    embedder = resolve_clip_embedder()
+    if embedder is None:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "SEMANTIC_SEARCH_UNAVAILABLE", "message": "CLIP-Modell ist nicht aktiv."},
+        )
+    return await asyncio.to_thread(embedder.embed_text, query)
+
+
 def _compute_facets(session: Session, filtered: OrmQuery[Any]) -> Facets:
     src_rows = (
         filtered
@@ -186,6 +211,8 @@ async def list_assets(
     source: Annotated[list[str] | None, Query()] = None,
     quality_min: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
     tags: Annotated[list[int] | None, Query()] = None,
+    q: str | None = None,
+    q_mode: SearchMode = SearchMode.TAGS,
 ) -> AssetsPage:
     query = _base_query(session)
 
@@ -199,19 +226,54 @@ async def list_assets(
         tag_sub = session.query(AssetTag.asset_id).filter(AssetTag.tag_id == tag_id).subquery()
         query = query.filter(Asset.id.in_(tag_sub))
 
+    # Text / semantic search
+    semantic_score_map: dict[int, float] = {}
+    q_clean = (q or "").strip()
+    if q_clean:
+        if q_mode == SearchMode.TAGS:
+            name_sub = (
+                session.query(AssetTag.asset_id)
+                .join(Tag, Tag.id == AssetTag.tag_id)
+                .filter(Tag.name.ilike(f"%{q_clean}%"))
+                .subquery()
+            )
+            query = query.filter(Asset.id.in_(name_sub))
+        elif q_mode == SearchMode.CAPTION:
+            query = query.filter(Asset.caption.ilike(f"%{q_clean}%"))
+        elif q_mode == SearchMode.SEMANTIC:
+            query_embedding = await _embed_semantic(q_clean)
+            candidates = vector_index.search(session, query_embedding, limit=200)
+            if not candidates:
+                return AssetsPage(items=[], total=0, page=page, page_size=page_size, facets=_empty_facets())
+            candidate_ids = [asset_id for asset_id, _ in candidates]
+            semantic_score_map = {asset_id: score for asset_id, score in candidates}
+            query = query.filter(Asset.id.in_(candidate_ids))
+
     facets = _compute_facets(session, query)
-    total: int = query.count()
+    total: int
+    items: list[AssetDto]
 
-    sort_col: Any
-    if sort == SortField.DATE:
-        sort_col = func.coalesce(Asset.created_at, Asset.imported_at)
+    if semantic_score_map:
+        all_rows: list[tuple[Asset, AssetInstance]] = query.all()
+
+        def _by_score(row: tuple[Asset, AssetInstance]) -> float:
+            return semantic_score_map.get(row[0].id, 0.0)
+
+        all_rows.sort(key=_by_score, reverse=True)
+        total = len(all_rows)
+        start = (page - 1) * page_size
+        items = [build_asset_dto(a, i) for a, i in all_rows[start : start + page_size]]
     else:
-        sort_col = Asset.file_size
+        total = query.count()
+        sort_col: Any
+        if sort == SortField.DATE:
+            sort_col = func.coalesce(Asset.created_at, Asset.imported_at)
+        else:
+            sort_col = Asset.file_size
+        order_fn = asc if order == SortOrder.ASC else desc
+        rows = query.order_by(order_fn(sort_col)).offset((page - 1) * page_size).limit(page_size).all()
+        items = [build_asset_dto(asset, instance) for asset, instance in rows]
 
-    order_fn = asc if order == SortOrder.ASC else desc
-    rows = query.order_by(order_fn(sort_col)).offset((page - 1) * page_size).limit(page_size).all()
-
-    items = [build_asset_dto(asset, instance) for asset, instance in rows]
     return AssetsPage(items=items, total=total, page=page, page_size=page_size, facets=facets)
 
 
