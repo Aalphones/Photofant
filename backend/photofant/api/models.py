@@ -6,7 +6,7 @@ import logging
 import shutil
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -51,6 +51,8 @@ class ModelDto(BaseModel):
     status: str
     size_bytes: int | None
     license_note: str | None
+    caption_mode: str | None
+    capabilities: dict[str, Any] | None
 
 
 class CapabilitiesDto(BaseModel):
@@ -109,6 +111,8 @@ def list_models(session: DbSession) -> list[ModelDto]:
             status=status,
             size_bytes=entry.size_bytes,
             license_note=entry.license_note,
+            caption_mode=entry.caption_mode,
+            capabilities=entry.capabilities,
         ))
 
     return result
@@ -207,6 +211,7 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Mode
     row.managed = False
     row.enabled = True
     row.caption_mode = entry.caption_mode
+    row.capabilities = entry.capabilities
     session.commit()
     session.refresh(row)
 
@@ -225,6 +230,8 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Mode
         status=_derive_status(entry, row),
         size_bytes=entry.size_bytes,
         license_note=entry.license_note,
+        caption_mode=entry.caption_mode,
+        capabilities=entry.capabilities,
     )
 
 

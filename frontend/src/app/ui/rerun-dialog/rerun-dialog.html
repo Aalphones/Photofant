@@ -29,6 +29,26 @@
         </div>
       </label>
     }
+
+    @if (isCaptionSelected() && activePresets().length > 0) {
+      <div class="rr-preset-row">
+        <label class="rr-field-lbl" for="rr-preset">Preset</label>
+        <select
+          class="rr-preset-select"
+          id="rr-preset"
+          (change)="selectPreset($event)"
+        >
+          @for (preset of activePresets(); track preset.id) {
+            <option
+              [value]="preset.id"
+              [selected]="preset.id === effectivePresetId()"
+            >
+              {{ preset.name }}{{ preset.is_default ? ' (Standard)' : '' }}
+            </option>
+          }
+        </select>
+      </div>
+    }
   </div>
 
   <div class="rr-foot">

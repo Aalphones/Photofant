@@ -143,6 +143,7 @@
 @if (showRerunDialog()) {
   <pf-rerun-dialog
     [scopeLabel]="'Dieses Bild (#' + (asset()?.id ?? '?') + ')'"
+    [presets]="presets()"
     (confirm)="onRerunConfirm($event)"
     (cancel)="onRerunCancel()"
   />

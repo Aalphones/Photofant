@@ -87,6 +87,7 @@ def _upsert_registry_row(
         existing.path = model_path
         existing.managed = managed
         existing.enabled = True
+        existing.capabilities = entry.capabilities
     else:
         row = ModelRegistry(
             manifest_id=entry.id,
@@ -98,6 +99,7 @@ def _upsert_registry_row(
             managed=managed,
             enabled=True,
             caption_mode=entry.caption_mode,
+            capabilities=entry.capabilities,
         )
         session.add(row)
     log.info("Registered model %s at %s (managed=%s)", entry.id, model_path, managed)

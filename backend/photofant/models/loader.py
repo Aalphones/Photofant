@@ -27,6 +27,7 @@ class ManifestEntry:
         self.variant: str | None = raw.get("variant")
         self.format: str = raw["format"]
         self.caption_mode: str | None = raw.get("caption_mode")
+        self.capabilities: dict[str, Any] | None = raw.get("capabilities")
         self.hf_repo: str | None = raw.get("hf_repo")
         self.files: list[dict[str, Any]] = raw.get("files", [])
         self.size_bytes: int | None = raw.get("size_bytes")

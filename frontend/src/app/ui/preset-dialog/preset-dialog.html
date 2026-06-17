@@ -1,0 +1,55 @@
+<div class="pd-scrim" (click)="handleScrimClick()"></div>
+
+<div class="pd-modal" (click)="$event.stopPropagation()">
+  <div class="pd-head">
+    <div class="pd-head__icon">
+      <pf-icon name="text" [size]="18" />
+    </div>
+    <div class="pd-head__info">
+      <div class="pd-title">{{ isEditMode ? 'Preset bearbeiten' : 'Neues Preset' }}</div>
+      <div class="pd-sub">Caption-Konfiguration</div>
+    </div>
+    <button class="pd-close" (click)="handleCancel()" aria-label="Schließen">
+      <pf-icon name="x" [size]="17" />
+    </button>
+  </div>
+
+  <div class="pd-body">
+    <form [formGroup]="metaForm" class="pd-meta">
+      <div class="pd-field">
+        <label class="pd-label" for="pd-name">Name</label>
+        <input
+          class="pd-input"
+          id="pd-name"
+          type="text"
+          formControlName="name"
+          placeholder="z.B. Natürliche Sprache"
+        />
+      </div>
+
+      <label class="pd-checkbox-row">
+        <input type="checkbox" formControlName="isDefault" />
+        <span class="pd-checkbox-label">Als Standard-Preset verwenden</span>
+      </label>
+    </form>
+
+    <div class="pd-divider"></div>
+
+    <pf-caption-preset-form
+      [capabilities]="capabilities()"
+      [initialConfig]="presetConfig()"
+      (configChange)="onConfigChange($event)"
+    />
+  </div>
+
+  <div class="pd-foot">
+    <button class="md-btn ghost" (click)="handleCancel()">Abbrechen</button>
+    <button
+      class="md-btn primary"
+      [disabled]="metaForm.invalid"
+      (click)="handleSave()"
+    >
+      Speichern
+    </button>
+  </div>
+</div>

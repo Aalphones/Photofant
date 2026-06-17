@@ -1,6 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { Icon } from '../icon/icon';
+import type { CaptionPresetDto } from '@photofant/models';
 import type { ClassifyStep } from '@photofant/services';
+
+export interface RerunPayload {
+  steps: ClassifyStep[];
+  captionPresetId: number | null;
+}
 
 interface StepOption {
   key: ClassifyStep;
@@ -24,17 +30,31 @@ const ALL_STEPS: StepOption[] = [
 })
 export class RerunDialog {
   readonly scopeLabel = input.required<string>();
-  readonly confirm = output<ClassifyStep[]>();
+  readonly presets = input<CaptionPresetDto[]>([]);
+  readonly confirm = output<RerunPayload>();
   readonly cancel = output<void>();
 
   protected readonly STEPS = ALL_STEPS;
   protected readonly selected = signal<Set<ClassifyStep>>(new Set(ALL_STEPS.map((step: StepOption) => step.key)));
+  protected readonly selectedPresetId = signal<number | null>(null);
 
   protected readonly selectedSteps = computed((): ClassifyStep[] =>
     ALL_STEPS.map((step: StepOption) => step.key).filter((key: ClassifyStep) => this.selected().has(key))
   );
 
+  protected readonly isCaptionSelected = computed((): boolean => this.selected().has('caption'));
+
   protected readonly isDisabled = computed((): boolean => this.selectedSteps().length === 0);
+
+  protected readonly activePresets = computed((): CaptionPresetDto[] => this.presets());
+
+  protected readonly effectivePresetId = computed((): number | null => {
+    if (!this.isCaptionSelected()) { return null; }
+    const explicit = this.selectedPresetId();
+    if (explicit != null) { return explicit; }
+    const defaultPreset = this.presets().find((preset: CaptionPresetDto) => preset.is_default);
+    return defaultPreset?.id ?? null;
+  });
 
   protected isSelected(key: ClassifyStep): boolean {
     return this.selected().has(key);
@@ -52,9 +72,17 @@ export class RerunDialog {
     });
   }
 
+  protected selectPreset(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.selectedPresetId.set(value ? Number(value) : null);
+  }
+
   protected handleConfirm(): void {
     if (this.isDisabled()) { return; }
-    this.confirm.emit(this.selectedSteps());
+    this.confirm.emit({
+      steps: this.selectedSteps(),
+      captionPresetId: this.effectivePresetId(),
+    });
   }
 
   protected handleCancel(): void {

@@ -7,3 +7,4 @@ export { ShortcutService } from './shortcut.service';
 export type { ShortcutEntry } from './shortcut.service';
 export { MaintenanceService } from './maintenance.service';
 export { ModelService } from './model.service';
+export { CaptionPresetService } from './caption-preset.service';

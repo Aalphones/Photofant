@@ -9,6 +9,7 @@
 @if (showRerunAllDialog()) {
   <pf-rerun-dialog
     scopeLabel="Alle Bilder"
+    [presets]="presets()"
     (confirm)="onRerunAllConfirm($event)"
     (cancel)="onRerunAllCancel()"
   />

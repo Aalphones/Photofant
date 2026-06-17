@@ -1,0 +1,49 @@
+@if (capabilities().info) {
+  <div class="cpf-info">
+    {{ capabilities().info }}
+  </div>
+}
+
+<form [formGroup]="form" class="cpf-fields">
+  @for (field of getFields(); track field.key) {
+    <div class="cpf-field">
+      <label class="cpf-label" [for]="'cpf-' + field.key">
+        {{ field.label }}
+      </label>
+
+      @switch (field.type) {
+        @case ('dropdown') {
+          <select
+            class="cpf-select"
+            [id]="'cpf-' + field.key"
+            [formControlName]="field.key"
+          >
+            @for (option of getDropdownOptions(field); track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        }
+        @case ('number') {
+          <input
+            class="cpf-input cpf-input--number"
+            type="number"
+            [id]="'cpf-' + field.key"
+            [formControlName]="field.key"
+            [min]="field.min ?? 1"
+            [max]="field.max ?? 9999"
+          />
+        }
+        @default {
+          <input
+            class="cpf-input"
+            type="text"
+            [id]="'cpf-' + field.key"
+            [formControlName]="field.key"
+          />
+        }
+      }
+
+      <div class="cpf-desc">{{ field.desc }}</div>
+    </div>
+  }
+</form>

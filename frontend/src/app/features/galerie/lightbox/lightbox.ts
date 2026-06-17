@@ -13,10 +13,10 @@ import { switchMap, of } from 'rxjs';
 import { Store } from '@ngrx/store';
 import type { AssetDto, TagDto } from '@photofant/models';
 import { AssetService, ClassifyService } from '@photofant/services';
-import type { ClassifyStep } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { Icon, RerunDialog } from '@photofant/ui';
-import { galleryActions, gallerySelectors } from '@photofant/store';
+import type { RerunPayload } from '@photofant/ui';
+import { galleryActions, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 
 interface GenMetaEntry { key: string; value: string }
@@ -75,6 +75,7 @@ export class Lightbox {
   protected readonly showRerunDialog = signal(false);
 
   protected readonly asset = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
+  protected readonly presets = this.store.selectSignal(presetsSelectors.selectPresets);
   protected readonly hasPrev = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
   protected readonly hasNext = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
 
@@ -209,14 +210,19 @@ export class Lightbox {
   }
 
   protected openRerunDialog(): void {
+    this.store.dispatch(presetsActions.loadPresets());
     this.showRerunDialog.set(true);
   }
 
-  protected onRerunConfirm(steps: ClassifyStep[]): void {
+  protected onRerunConfirm(payload: RerunPayload): void {
     this.showRerunDialog.set(false);
     const asset: AssetDto | null = this.asset();
     if (asset == null) { return; }
-    this.classifyService.rerun({ asset_ids: [asset.id], steps }).subscribe();
+    this.classifyService.rerun({
+      asset_ids: [asset.id],
+      steps: payload.steps,
+      ...(payload.captionPresetId != null ? { caption_preset_id: payload.captionPresetId } : {}),
+    }).subscribe();
   }
 
   protected onRerunCancel(): void {

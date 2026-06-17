@@ -1,3 +1,5 @@
+import type { CapabilityDescriptor } from './caption-preset.model';
+
 export type ModelStatus = 'active' | 'available' | 'missing' | 'inplace';
 export type ModelTier = 'core' | 'optional' | 'generativ';
 
@@ -15,6 +17,8 @@ export interface ModelDto {
   status: ModelStatus;
   size_bytes: number | null;
   license_note: string | null;
+  caption_mode: string | null;
+  capabilities: CapabilityDescriptor | null;
 }
 
 export interface ModelView extends ModelDto {

@@ -1,4 +1,13 @@
 export type { Job, JobState, JobKind } from './job.model';
+export type {
+  CaptionPresetDto,
+  CaptionPresetCreate,
+  CaptionPresetUpdate,
+  CapabilityDescriptor,
+  CapabilityField,
+  CapabilityFieldOption,
+  CapabilityFieldType,
+} from './caption-preset.model';
 export { JOB_STATES, JOB_KINDS } from './job.model';
 
 export type { AssetDto, AssetDetailDto, AssetsPage, AssetGroup, TagDto, Density, SortKey, SortOrder, GroupKey } from './asset.model';

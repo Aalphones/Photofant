@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { routes } from './app.routes';
-import { jobsFeature, JobsEffects, filtersFeature, galleryFeature, GalleryEffects, trashFeature, TrashEffects, maintenanceFeature, MaintenanceEffects, modelsFeature, ModelsEffects } from './store';
+import { jobsFeature, JobsEffects, filtersFeature, galleryFeature, GalleryEffects, trashFeature, TrashEffects, maintenanceFeature, MaintenanceEffects, modelsFeature, ModelsEffects, presetsFeature, PresetsEffects } from './store';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,7 +18,8 @@ export const appConfig: ApplicationConfig = {
       [trashFeature.name]:       trashFeature.reducer,
       [maintenanceFeature.name]: maintenanceFeature.reducer,
       [modelsFeature.name]:      modelsFeature.reducer,
+      [presetsFeature.name]:     presetsFeature.reducer,
     }),
-    provideEffects([JobsEffects, GalleryEffects, TrashEffects, MaintenanceEffects, ModelsEffects]),
+    provideEffects([JobsEffects, GalleryEffects, TrashEffects, MaintenanceEffects, ModelsEffects, PresetsEffects]),
   ],
 };

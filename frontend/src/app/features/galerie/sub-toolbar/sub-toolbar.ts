@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
 import type { Density, GroupKey, SortKey, SortOrder } from '@photofant/models';
-import { filtersActions, filtersSelectors, gallerySelectors } from '@photofant/store';
+import { filtersActions, filtersSelectors, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ClassifyService } from '@photofant/services';
-import type { ClassifyStep } from '@photofant/services';
 import { Icon, RerunDialog } from '@photofant/ui';
+import type { RerunPayload } from '@photofant/ui';
 
 @Component({
   selector: 'pf-sub-toolbar',
@@ -24,6 +24,7 @@ export class SubToolbar {
   protected readonly order   = this.store.selectSignal(filtersSelectors.order);
   protected readonly group   = this.store.selectSignal(filtersSelectors.group);
   protected readonly density = this.store.selectSignal(filtersSelectors.density);
+  protected readonly presets = this.store.selectSignal(presetsSelectors.selectPresets);
 
   protected readonly GROUPS: { key: GroupKey; label: string }[] = [
     { key: 'month',  label: 'Monat' },
@@ -70,12 +71,17 @@ export class SubToolbar {
   }
 
   protected openRerunAllDialog(): void {
+    this.store.dispatch(presetsActions.loadPresets());
     this.showRerunAllDialog.set(true);
   }
 
-  protected onRerunAllConfirm(steps: ClassifyStep[]): void {
+  protected onRerunAllConfirm(payload: RerunPayload): void {
     this.showRerunAllDialog.set(false);
-    this.classifyService.rerun({ asset_ids: 'all', steps }).subscribe();
+    this.classifyService.rerun({
+      asset_ids: 'all',
+      steps: payload.steps,
+      ...(payload.captionPresetId != null ? { caption_preset_id: payload.captionPresetId } : {}),
+    }).subscribe();
   }
 
   protected onRerunAllCancel(): void {

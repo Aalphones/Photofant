@@ -5,3 +5,7 @@ export { ImportDialog } from './import-dialog/import-dialog';
 export { ShortcutLegend } from './shortcut-legend/shortcut-legend';
 export { GatedFeature } from './gated-feature/gated-feature';
 export { RerunDialog } from './rerun-dialog/rerun-dialog';
+export type { RerunPayload } from './rerun-dialog/rerun-dialog';
+export { CaptionPresetForm } from './caption-preset-form/caption-preset-form';
+export { PresetDialog } from './preset-dialog/preset-dialog';
+export type { PresetSavePayload } from './preset-dialog/preset-dialog';
