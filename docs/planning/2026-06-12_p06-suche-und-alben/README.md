@@ -9,7 +9,7 @@ Die in P5 erzeugten Daten werden bedienbar: vollständige Filter-Rail, 3-Modi-Su
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
 | 1 | [Filter-Facetten](phase-1-filter-facetten.md) | standard | complete |
-| 2 | [3-Modi-Suche](phase-2-suche.md) | standard | pending |
+| 2 | [3-Modi-Suche](phase-2-suche.md) | standard | complete |
 | 3 | [Tag-Verwaltung & Korrektur](phase-3-tag-verwaltung.md) | standard | pending |
 | 4 | [Smart-Alben](phase-4-smart-alben.md) | heikel | pending |
 
