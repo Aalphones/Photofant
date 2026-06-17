@@ -6,6 +6,6 @@
 
 **P5 — Klassifizierung** · [`docs/planning/2026-06-12_p05-klassifizierung/`](docs/planning/2026-06-12_p05-klassifizierung/README.md)
 
-**Phase:** 2/6 — WD14-Tagging (pending)
+**Phase:** 3/6 — Florence-2-Captioning (pending)
 
-**Nächster Schritt:** WD14-Adapter implementieren (`photofant/inference/adapters/wd14.py`) — Registry-Auflösung, ONNX-Session, Tag-CSV-Laden, `tag(image)`.
+**Nächster Schritt:** Florence-2-Adapter implementieren (`photofant/inference/adapters/florence2.py`) — HF-Snapshot-Ordner, Tokenizer + ONNX-Session, Task-Token-Preset, `caption(image, preset) → str`.
