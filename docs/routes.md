@@ -68,6 +68,51 @@ interface MaintenanceStatus {
 }
 ```
 
+## Modelle (P4)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/einstellungen` (model list) | `GET` | `/api/models` | — | `ModelDto[]` |
+| `/einstellungen` (capabilities) | `GET` | `/api/models/capabilities` | — | `CapabilitiesDto` |
+| `/einstellungen` (download) | `POST` | `/api/models/{manifest_id}/download` | `{ license_ack?: bool }` | `{ job_id: string }` |
+| `/einstellungen` (scan) | `POST` | `/api/models/scan` | — | `{ registered: ScanResult[] }` |
+
+```typescript
+interface ModelDto {
+  id: string;
+  role: 'face' | 'tagger' | 'captioner' | 'semantic_search' | 'rembg';
+  name: string;
+  variant: string | null;
+  format: 'onnx' | 'onnx_bundle' | 'onnx_folder';
+  path: string | null;
+  sha256: string | null;
+  managed: boolean;
+  enabled: boolean;
+  is_default: boolean;
+  status: 'active' | 'available' | 'missing' | 'inplace';
+  size_bytes: number | null;
+  license_note: string | null;
+}
+
+interface CapabilitiesDto {
+  faces: boolean;
+  tagging: boolean;
+  captioning: boolean;
+  semantic_search: boolean;
+  rembg: boolean;
+}
+
+interface ScanResult {
+  manifest_id: string;
+  path: string;
+}
+```
+
+Fehler-Codes (strukturiert im `detail`-Feld):
+- `404 { code: "MODEL_NOT_FOUND" }` — `manifest_id` nicht im Manifest
+- `409 { code: "LICENSE_ACK_REQUIRED", license_note: string }` — `license_ack: true` fehlt
+- Job-Fehler (async, im Job-Stream): `MODEL_HASH_MISMATCH`, `MODEL_INCOMPLETE`
+
 ## Job-Stream
 
 | Trigger | Endpoint | Protokoll |

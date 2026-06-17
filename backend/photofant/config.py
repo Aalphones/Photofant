@@ -42,6 +42,19 @@ def get_data_root(session: Session | None = None) -> Path:
     return root
 
 
+def get_models_dir(session: Session) -> Path:
+    """Return the configured models_dir from DB config, ensuring it exists."""
+    from sqlalchemy import text
+
+    row = session.execute(text("SELECT value FROM app_config WHERE key = 'models_dir'")).fetchone()
+    if row and row[0]:
+        models_dir = Path(row[0])
+    else:
+        models_dir = get_data_root_base() / ".photofant" / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    return models_dir
+
+
 def _ensure_folder_structure(root: Path) -> None:
     root.mkdir(parents=True, exist_ok=True)
     unknown_dir = root / "_unknown"

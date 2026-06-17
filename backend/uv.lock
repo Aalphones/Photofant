@@ -716,6 +716,8 @@ dependencies = [
     { name = "aiosqlite" },
     { name = "alembic" },
     { name = "fastapi" },
+    { name = "httpx" },
+    { name = "huggingface-hub" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "python-multipart" },
@@ -732,7 +734,6 @@ generative = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -745,6 +746,8 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.14" },
     { name = "diffusers", marker = "extra == 'generative'" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "huggingface-hub", specifier = ">=0.26" },
     { name = "pillow", specifier = ">=10.0" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "python-multipart", specifier = ">=0.0.32" },
@@ -757,7 +760,6 @@ provides-extras = ["generative"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx", specifier = ">=0.28" },
     { name = "mypy", specifier = ">=1.15" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.25" },

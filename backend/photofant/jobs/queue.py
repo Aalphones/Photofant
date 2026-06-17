@@ -27,6 +27,7 @@ class JobKind(StrEnum):
     BACKUP = "backup"
     RECONCILE = "reconcile"
     REBUILD = "rebuild"
+    DOWNLOAD = "download_model"
 
 
 @dataclass

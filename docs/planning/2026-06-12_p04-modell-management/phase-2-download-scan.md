@@ -1,6 +1,6 @@
 # P4 · Phase 2 — Download & Scan
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -17,10 +17,22 @@
 
 ## Checkliste
 
-- [ ] Download-Job (httpx, Streaming, Range-Resume, Temp-Datei + Rename nach Prüfung)
-- [ ] SHA-Prüfung + Registrierung als letzter Schritt (transaktional)
-- [ ] Scan-Endpoint (Dateien hashen, Manifest-Match, registrieren)
-- [ ] Lizenz-Bestätigung im Flow verankern (Manifest-Flag `requires_license_ack` → Frontend-Dialog in Phase 4)
-- [ ] Doc-Update: routes.md
+- [x] Download-Job (httpx, Streaming, Range-Resume, Temp-Datei + Rename nach Prüfung)
+- [x] SHA-Prüfung + Registrierung als letzter Schritt (transaktional)
+- [x] Scan-Endpoint (Dateien hashen, Manifest-Match, registrieren)
+- [x] Lizenz-Bestätigung im Flow verankern (Manifest-Flag `requires_license_ack` → Frontend-Dialog in Phase 4)
+- [x] Doc-Update: routes.md
 
 ## Report-Back
+
+Neue Dateien: `backend/photofant/jobs/download_job.py` (Download-Job, Scan-Helper).
+
+Geändert:
+- `backend/pyproject.toml` — `httpx>=0.28`, `huggingface_hub>=0.26` in Haupt-Deps (von dev)
+- `backend/photofant/config.py` — `get_models_dir(session)` Helper
+- `backend/photofant/models/loader.py` — `requires_license_ack` in `ManifestEntry`
+- `backend/photofant/jobs/queue.py` — `DOWNLOAD = "download_model"` in `JobKind`
+- `backend/photofant/api/models.py` — `POST /{manifest_id}/download`, `POST /scan`
+- `docs/routes.md` — Models-Sektion mit allen Endpoints + Typen + Fehler-Codes
+
+SHA-256 in manifest.json sind noch null — Download-Job loggt Warning und überspringt Hash-Check. Werte müssen manuell eingetragen werden (FINDING bleibt offen bis nach erstem tatsächlichem Download).

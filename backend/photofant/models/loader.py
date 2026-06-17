@@ -31,6 +31,7 @@ class ManifestEntry:
         self.files: list[dict[str, Any]] = raw.get("files", [])
         self.size_bytes: int | None = raw.get("size_bytes")
         self.license_note: str | None = raw.get("license_note")
+        self.requires_license_ack: bool = bool(raw.get("requires_license_ack", False))
         self.tier: str = raw["tier"]
 
 

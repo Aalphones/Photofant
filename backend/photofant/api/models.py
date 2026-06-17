@@ -1,18 +1,21 @@
-"""GET /api/models, GET /api/models/capabilities — Registry + Manifest join."""
+"""GET /api/models, POST /api/models/{id}/download, POST /api/models/scan."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from photofant.config import get_models_dir
 from photofant.db.models import ModelRegistry
 from photofant.db.session import get_session
-from photofant.models.loader import ManifestEntry, load_manifest
+from photofant.jobs.download_job import ScanResult, enqueue_download, scan_models_dir
+from photofant.models.loader import ManifestEntry, get_manifest_entry, load_manifest
 
 log = logging.getLogger(__name__)
 
@@ -103,6 +106,55 @@ def list_models(session: DbSession) -> list[ModelDto]:
         ))
 
     return result
+
+
+class DownloadRequest(BaseModel):
+    license_ack: bool = False
+
+
+class DownloadResponse(BaseModel):
+    job_id: str
+
+
+class ScanResponse(BaseModel):
+    registered: list[ScanResult]
+
+
+@router.post("/{manifest_id}/download", response_model=DownloadResponse)
+async def download_model(
+    manifest_id: str,
+    body: DownloadRequest,
+    session: DbSession,
+) -> DownloadResponse:
+    """Enqueue a managed download for a manifest model.
+
+    Returns 409 with code LICENSE_ACK_REQUIRED if the model requires explicit
+    license acknowledgement and body.license_ack is False (Phase 4 handles dialog).
+    """
+    entry = get_manifest_entry(manifest_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail={"code": "MODEL_NOT_FOUND"})
+
+    if entry.requires_license_ack and not body.license_ack:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "LICENSE_ACK_REQUIRED",
+                "license_note": entry.license_note,
+            },
+        )
+
+    models_dir = get_models_dir(session)
+    job_status = await enqueue_download(manifest_id, models_dir)
+    return DownloadResponse(job_id=job_status.id)
+
+
+@router.post("/scan", response_model=ScanResponse)
+async def scan_models(session: DbSession) -> ScanResponse:
+    """Scan models_dir for manually placed files and register matched entries."""
+    models_dir = get_models_dir(session)
+    found = await asyncio.to_thread(scan_models_dir, models_dir)
+    return ScanResponse(registered=found)
 
 
 @router.get("/capabilities", response_model=CapabilitiesDto)
