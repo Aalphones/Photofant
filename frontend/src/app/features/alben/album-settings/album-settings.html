@@ -1,0 +1,166 @@
+<div class="set-head">
+  <div class="set-head__title">
+    <pf-icon name="settings" [size]="14" />
+    <span>Album-Einstellungen</span>
+  </div>
+  <button class="iconbtn" (click)="onClose()" aria-label="Schließen">
+    <pf-icon name="x" [size]="16" />
+  </button>
+</div>
+
+<!-- Smart toggle — the heart of the unification -->
+<div class="smart-card" [class.smart-card--on]="smartOn()">
+  <div class="smart-card__ico">
+    <pf-icon name="sparkle" [size]="16" />
+  </div>
+  <div class="smart-card__text">
+    <div class="smart-card__title">Automatisch befüllen</div>
+    <div class="smart-card__desc">Regeln füllen dieses Album automatisch — wie Smart-Alben bei Google Fotos.</div>
+  </div>
+  <button
+    class="switch"
+    [class.switch--on]="smartOn()"
+    role="switch"
+    [attr.aria-checked]="smartOn()"
+    (click)="toggleSmart()"
+  >
+    <span class="switch__knob"></span>
+  </button>
+</div>
+
+@if (smartOn()) {
+  <div class="live-stat">
+    <span class="live-stat__dot"></span>
+    <span class="live-stat__num">{{ memberCount() }}</span>
+    <span class="live-stat__lbl">Bilder · automatisch befüllt</span>
+  </div>
+
+  <div class="rules-block">
+    <div class="rules-block__label">Verknüpfung</div>
+    <div class="mode-seg">
+      <button [class.mode-seg__btn--on]="matchMode() === 'all'" (click)="setMode('all')">Alle (UND)</button>
+      <button [class.mode-seg__btn--on]="matchMode() === 'any'" (click)="setMode('any')">Eine (ODER)</button>
+    </div>
+  </div>
+
+  <div class="rules-block">
+    <div class="rules-block__label">Trigger · {{ triggers().length }}</div>
+    <div class="trig-list">
+      @if (triggers().length === 0) {
+        <div class="trig-empty">Noch keine Trigger — füge unten welche hinzu.</div>
+      }
+      @for (trigger of triggers(); track trigger.id; let i = $index) {
+        @if (i > 0) {
+          <div class="connector"><span>{{ matchMode() === 'all' ? 'UND' : 'ODER' }}</span></div>
+        }
+        <div class="trig-row" [class.trig-row--neg]="trigger.negate">
+          <div class="trig-row__ico">
+            <pf-icon [name]="triggerIcon(trigger)" [size]="14" />
+          </div>
+          <div class="trig-row__body">
+            <div class="trig-row__kind">{{ triggerKind(trigger) }}</div>
+            <div class="trig-row__val">{{ triggerLabel(trigger) }}</div>
+          </div>
+          <button
+            class="neg-btn"
+            [class.neg-btn--on]="trigger.negate"
+            (click)="toggleNegate(trigger)"
+            title="Ein- oder ausschließen"
+          >
+            {{ trigger.negate ? 'ausschließen' : 'einschließen' }}
+          </button>
+          <button class="trig-row__x" (click)="removeTrigger(trigger)" aria-label="Trigger entfernen">
+            <pf-icon name="x" [size]="13" />
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (adding()) {
+      <div class="add-trig">
+        <div class="add-trig__tabs">
+          <button class="add-trig__tab" [class.add-trig__tab--on]="addTab() === 'tag'" (click)="setAddTab('tag')">
+            <pf-icon name="tag" [size]="13" /> Tag
+          </button>
+          <button class="add-trig__tab" [class.add-trig__tab--on]="addTab() === 'caption'" (click)="setAddTab('caption')">
+            <pf-icon name="text" [size]="13" /> Caption
+          </button>
+          <button
+            class="add-trig__tab add-trig__tab--disabled"
+            [class.add-trig__tab--on]="addTab() === 'person'"
+            (click)="setAddTab('person')"
+            title="Personen-Trigger kommen mit der Gesichtserkennung (P7)"
+          >
+            <pf-icon name="face" [size]="13" /> Person
+          </button>
+          <button class="iconbtn add-trig__close" (click)="adding.set(false)" aria-label="Abbrechen">
+            <pf-icon name="x" [size]="14" />
+          </button>
+        </div>
+
+        @if (addTab() === 'tag') {
+          <div class="add-trig__search">
+            <pf-icon name="search" [size]="13" />
+            <input
+              [value]="tagQuery()"
+              (input)="tagQuery.set($any($event.target).value)"
+              placeholder="Tag suchen…"
+            />
+          </div>
+          <div class="add-trig__list">
+            @for (tag of availableTags(); track tag.id) {
+              <button class="add-trig__row" (click)="addTagTrigger(tag.id)">
+                <pf-icon name="tag" [size]="13" />
+                <span>{{ tag.name.replaceAll('_', ' ') }}</span>
+                <span class="add-trig__count">+{{ tag.count }}</span>
+              </button>
+            }
+            @if (availableTags().length === 0) {
+              <div class="trig-empty">Keine passenden Tags.</div>
+            }
+          </div>
+        }
+
+        @if (addTab() === 'caption') {
+          <div class="add-trig__search">
+            <pf-icon name="text" [size]="14" />
+            <input
+              [value]="phrase()"
+              (input)="phrase.set($any($event.target).value)"
+              (keydown)="onPhraseKeyDown($event)"
+              placeholder="Wort oder Phrase…"
+            />
+          </div>
+          @if (phrase().trim()) {
+            <button class="add-trig__row add-trig__row--hint" (click)="addCaptionTrigger()">
+              <pf-icon name="plus" [size]="13" />
+              <span>Caption enthält „{{ phrase().trim() }}"</span>
+            </button>
+          }
+        }
+
+        @if (addTab() === 'person') {
+          <div class="add-trig__person-note">
+            <pf-icon name="info" [size]="14" />
+            <span>Personen-Trigger werden mit der Gesichtserkennung aktiv (P7).</span>
+          </div>
+        }
+      </div>
+    } @else {
+      <button class="add-trig-btn" (click)="adding.set(true)">
+        <pf-icon name="plus" [size]="14" /> Trigger hinzufügen
+      </button>
+    }
+  </div>
+
+  <div class="rules-foot">
+    <pf-icon name="info" [size]="13" />
+    <span>Mitgliedschaft wird bei jeder Änderung an Tags, Caption oder Personen-Zuordnung neu bewertet — passende Bilder kommen rein, andere fallen raus.</span>
+  </div>
+} @else {
+  <div class="set-manual">
+    <pf-icon name="album" [size]="22" />
+    <div class="set-manual__title">Manuell kuratiert</div>
+    <p>Dieses Album enthält nur Bilder, die du selbst hinzugefügt hast. Schalte die automatische Befüllung ein, um es per Tag- oder Caption-Regeln zu füllen.</p>
+  </div>
+}

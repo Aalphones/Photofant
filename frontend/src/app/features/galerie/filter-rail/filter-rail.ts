@@ -11,7 +11,7 @@ import {
 import { DecimalPipe } from '@angular/common';
 import { Store } from '@ngrx/store';
 import type { TagFacetItem } from '@photofant/models';
-import { filtersActions, filtersSelectors, gallerySelectors } from '@photofant/store';
+import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
 @Component({
@@ -26,10 +26,12 @@ export class FilterRail {
 
   readonly close = output<void>();
 
-  protected readonly facets      = this.store.selectSignal(gallerySelectors.selectFacets);
-  protected readonly sources     = this.store.selectSignal(filtersSelectors.sources);
-  protected readonly qualityMin  = this.store.selectSignal(filtersSelectors.qualityMin);
-  protected readonly tagIds      = this.store.selectSignal(filtersSelectors.tagIds);
+  protected readonly facets       = this.store.selectSignal(gallerySelectors.selectFacets);
+  protected readonly sources      = this.store.selectSignal(filtersSelectors.sources);
+  protected readonly qualityMin   = this.store.selectSignal(filtersSelectors.qualityMin);
+  protected readonly tagIds       = this.store.selectSignal(filtersSelectors.tagIds);
+  protected readonly collections  = this.store.selectSignal(collectionsSelectors.selectAll);
+  protected readonly collectionId = this.store.selectSignal(filtersSelectors.collectionId);
 
   protected readonly tagQuery = signal('');
 
@@ -45,6 +47,7 @@ export class FilterRail {
   protected readonly openQuelle    = signal(true);
   protected readonly openQualitaet = signal(true);
   protected readonly openTags      = signal(true);
+  protected readonly openSammlung  = signal(true);
 
   // Slider drag
   private readonly sliderTrackRef = viewChild<ElementRef<HTMLDivElement>>('sliderTrack');
@@ -73,6 +76,11 @@ export class FilterRail {
       ? current.filter((id: number) => id !== tagId)
       : [...current, tagId];
     this.store.dispatch(filtersActions.setTagIds({ tagIds: next }));
+  }
+
+  protected toggleCollection(collectionId: number): void {
+    const next = this.collectionId() === collectionId ? null : collectionId;
+    this.store.dispatch(filtersActions.setCollectionId({ collectionId: next }));
   }
 
   protected sourceFacetCount(source: string): number {

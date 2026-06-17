@@ -19,8 +19,9 @@ from sqlalchemy.orm import Session
 from photofant.config import get_data_root
 from photofant.db import vector_index
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
-from photofant.db.models import Asset, AssetInstance, AssetTag, Tag
+from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Tag
 from photofant.db.session import get_session
+from photofant.jobs.collections_job import enqueue_reevaluate_assets
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
 from photofant.media import moves
 from photofant.media.thumbnails import generate_thumbnail
@@ -223,6 +224,7 @@ async def list_assets(
     source: Annotated[list[str] | None, Query()] = None,
     quality_min: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
     tags: Annotated[list[int] | None, Query()] = None,
+    collection_id: int | None = None,
     q: str | None = None,
     q_mode: SearchMode = SearchMode.TAGS,
 ) -> AssetsPage:
@@ -232,6 +234,13 @@ async def list_assets(
         query = query.filter(AssetInstance.favourite.is_(favourite))
     if source:
         query = query.filter(Asset.source.in_(source))
+    if collection_id is not None:
+        collection_sub = (
+            session.query(CollectionItem.asset_id)
+            .filter(CollectionItem.collection_id == collection_id)
+            .subquery()
+        )
+        query = query.filter(Asset.id.in_(collection_sub))
     if quality_min is not None and quality_min > 0.0:
         query = query.filter(Asset.quality_score >= quality_min)
     for tag_id in (tags or []):
@@ -474,7 +483,8 @@ async def patch_asset_tags(asset_id: int, body: PatchTagsRequest, session: DbSes
     session.refresh(asset)
     log.info("patch_asset_tags: asset %d +%d -%d", asset_id, len(body.add), len(body.remove))
 
-    # No-op hook for smart-album re-evaluation (Phase 4 will implement this)
+    # Tags changed → re-evaluate this asset against every smart album (Konzept §10.1)
+    await enqueue_reevaluate_assets([asset_id])
     base = build_asset_dto(asset, instance)
     tags = _load_asset_tags(session, asset.id)
     return AssetDetailDto(
@@ -502,7 +512,8 @@ async def patch_asset_caption(asset_id: int, body: PatchCaptionRequest, session:
     session.refresh(asset)
     log.info("patch_asset_caption: asset %d", asset_id)
 
-    # No-op hook for smart-album re-evaluation (Phase 4 will implement this)
+    # Caption changed → re-evaluate this asset against every smart album (Konzept §10.1)
+    await enqueue_reevaluate_assets([asset_id])
     base = build_asset_dto(asset, instance)
     tags = _load_asset_tags(session, asset.id)
     return AssetDetailDto(

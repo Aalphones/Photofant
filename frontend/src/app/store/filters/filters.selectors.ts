@@ -9,15 +9,17 @@ const {
   selectSources,
   selectQualityMin,
   selectTagIds,
+  selectCollectionId,
 } = filtersFeature;
 
 export const filtersSelectors = {
-  sort:       selectSort,
-  order:      selectOrder,
-  group:      selectGroup,
-  density:    selectDensity,
-  favourite:  selectFavourite,
-  sources:    selectSources,
-  qualityMin: selectQualityMin,
-  tagIds:     selectTagIds,
+  sort:         selectSort,
+  order:        selectOrder,
+  group:        selectGroup,
+  density:      selectDensity,
+  favourite:    selectFavourite,
+  sources:      selectSources,
+  qualityMin:   selectQualityMin,
+  tagIds:       selectTagIds,
+  collectionId: selectCollectionId,
 };

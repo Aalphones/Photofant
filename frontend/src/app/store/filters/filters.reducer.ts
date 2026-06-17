@@ -11,6 +11,7 @@ interface FiltersState {
   sources: string[];
   qualityMin: number;
   tagIds: number[];
+  collectionId: number | null;
 }
 
 const initialState: FiltersState = {
@@ -22,6 +23,7 @@ const initialState: FiltersState = {
   sources: [],
   qualityMin: 0,
   tagIds: [],
+  collectionId: null,
 };
 
 export const filtersFeature = createFeature({
@@ -57,12 +59,17 @@ export const filtersFeature = createFeature({
       ...state,
       tagIds,
     })),
+    on(filtersActions.setCollectionId, (state: FiltersState, { collectionId }) => ({
+      ...state,
+      collectionId,
+    })),
     on(filtersActions.clearAllFilters, (state: FiltersState) => ({
       ...state,
       favourite: null,
       sources: [],
       qualityMin: 0,
       tagIds: [],
+      collectionId: null,
     })),
   ),
 });

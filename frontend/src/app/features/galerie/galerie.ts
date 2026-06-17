@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { filtersActions, filtersSelectors, galleryActions, gallerySelectors, tagsActions } from '@photofant/store';
+import { collectionsActions, collectionsSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, tagsActions } from '@photofant/store';
 import { GalerieGrid } from './grid/grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
 import { Lightbox } from './lightbox/lightbox';
@@ -28,11 +28,14 @@ export class Galerie {
   protected readonly selectionMode = this.store.selectSignal(gallerySelectors.selectSelectionMode);
   protected readonly selectedIds   = this.store.selectSignal(gallerySelectors.selectSelectedIds);
 
-  private readonly filterSources    = this.store.selectSignal(filtersSelectors.sources);
-  private readonly filterQualityMin = this.store.selectSignal(filtersSelectors.qualityMin);
-  private readonly filterTagIds     = this.store.selectSignal(filtersSelectors.tagIds);
-  private readonly filterSort       = this.store.selectSignal(filtersSelectors.sort);
-  private readonly filterOrder      = this.store.selectSignal(filtersSelectors.order);
+  private readonly filterSources      = this.store.selectSignal(filtersSelectors.sources);
+  private readonly filterQualityMin   = this.store.selectSignal(filtersSelectors.qualityMin);
+  private readonly filterTagIds       = this.store.selectSignal(filtersSelectors.tagIds);
+  private readonly filterCollectionId = this.store.selectSignal(filtersSelectors.collectionId);
+  private readonly filterSort         = this.store.selectSignal(filtersSelectors.sort);
+  private readonly filterOrder        = this.store.selectSignal(filtersSelectors.order);
+
+  protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAll);
 
   protected readonly railOpen = signal(false);
 
@@ -48,27 +51,32 @@ export class Galerie {
     const urlSources = (qp.get('sources') ?? '').split(',').filter(Boolean);
     const urlQMin    = parseFloat(qp.get('q_min') ?? '0') || 0;
     const urlTagIds  = (qp.get('tags') ?? '').split(',').map(Number).filter((n: number) => n > 0);
+    const urlCollection = Number(qp.get('collection') ?? '') || 0;
 
     if (urlSources.length) this.store.dispatch(filtersActions.setSources({ sources: urlSources }));
     if (urlQMin > 0)       this.store.dispatch(filtersActions.setQualityMin({ qualityMin: urlQMin }));
     if (urlTagIds.length)  this.store.dispatch(filtersActions.setTagIds({ tagIds: urlTagIds }));
+    if (urlCollection > 0) this.store.dispatch(filtersActions.setCollectionId({ collectionId: urlCollection }));
 
+    this.store.dispatch(collectionsActions.load());
     this.store.dispatch(galleryActions.requestPage());
 
     // store → URL: keep query params in sync
     effect((): void => {
       const params: Record<string, string> = {};
-      const sources    = this.filterSources();
-      const qualityMin = this.filterQualityMin();
-      const tagIds     = this.filterTagIds();
-      const sort       = this.filterSort();
-      const order      = this.filterOrder();
+      const sources      = this.filterSources();
+      const qualityMin   = this.filterQualityMin();
+      const tagIds       = this.filterTagIds();
+      const collectionId = this.filterCollectionId();
+      const sort         = this.filterSort();
+      const order        = this.filterOrder();
 
-      if (sources.length)    params['sources'] = sources.join(',');
-      if (qualityMin > 0)    params['q_min']   = String(qualityMin);
-      if (tagIds.length)     params['tags']     = tagIds.join(',');
-      if (sort !== 'date')   params['sort']     = sort;
-      if (order !== 'desc')  params['order']    = order;
+      if (sources.length)     params['sources']    = sources.join(',');
+      if (qualityMin > 0)     params['q_min']      = String(qualityMin);
+      if (tagIds.length)      params['tags']       = tagIds.join(',');
+      if (collectionId != null) params['collection'] = String(collectionId);
+      if (sort !== 'date')    params['sort']       = sort;
+      if (order !== 'desc')   params['order']      = order;
 
       void this.router.navigate([], {
         queryParams: params,
@@ -112,6 +120,13 @@ export class Galerie {
       add: payload.add,
       remove: payload.remove,
     }));
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onAddToAlbum(collectionId: number): void {
+    const ids = this.selectedIds();
+    if (!ids.length) { return; }
+    this.store.dispatch(collectionsActions.addItems({ collectionId, assetIds: ids }));
     this.store.dispatch(galleryActions.clearSelection());
   }
 }

@@ -33,6 +33,7 @@ class JobKind(StrEnum):
     EMBEDDING = "embedding"
     HEURISTICS = "heuristics"
     RERUN = "rerun"
+    REEVALUATE = "reevaluate"
 
 
 @dataclass

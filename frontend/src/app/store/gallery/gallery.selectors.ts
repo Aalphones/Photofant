@@ -68,9 +68,10 @@ const selectFetchParams = createSelector(
   selectPage, selectPageSize,
   filtersFeature.selectSort, filtersFeature.selectOrder, filtersFeature.selectFavourite,
   filtersFeature.selectSources, filtersFeature.selectQualityMin, filtersFeature.selectTagIds,
+  filtersFeature.selectCollectionId,
   searchFeature.selectQ, searchFeature.selectMode,
-  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, q, qMode) =>
-    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, q, qMode })
+  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, q, qMode) =>
+    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, q, qMode })
 );
 
 const selectLightboxAsset = createSelector(

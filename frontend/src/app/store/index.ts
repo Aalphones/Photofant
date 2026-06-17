@@ -7,3 +7,4 @@ export * from './maintenance/index';
 export * from './models/index';
 export * from './presets/index';
 export * from './tags/index';
+export * from './collections/index';

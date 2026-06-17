@@ -12,6 +12,7 @@ export interface ListAssetsParams {
   sources?: string[];
   qualityMin?: number;
   tagIds?: number[];
+  collectionId?: number | null;
   q?: string;
   qMode?: SearchMode;
 }
@@ -41,6 +42,9 @@ export class AssetService {
       for (const tagId of params.tagIds) {
         httpParams = httpParams.append('tags', String(tagId));
       }
+    }
+    if (params.collectionId != null) {
+      httpParams = httpParams.set('collection_id', String(params.collectionId));
     }
     if (params.q) {
       httpParams = httpParams.set('q', params.q);

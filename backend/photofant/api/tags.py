@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from photofant.db.models import Asset, AssetTag, Tag
 from photofant.db.session import get_session
+from photofant.jobs.collections_job import enqueue_reevaluate_assets
 
 router = APIRouter(prefix="/tags")
 
@@ -88,6 +89,7 @@ async def merge_tags(body: MergeTagsRequest, session: DbSession) -> Response:
     if canonical is None:
         raise HTTPException(status_code=404, detail="Target tag not found")
 
+    affected_asset_ids: set[int] = set()
     for from_id in body.from_ids:
         if from_id == body.into_id:
             continue
@@ -98,6 +100,7 @@ async def merge_tags(body: MergeTagsRequest, session: DbSession) -> Response:
         # Re-point all asset_tags from the source tag to the canonical
         existing_rows = session.query(AssetTag).filter_by(tag_id=from_id).all()
         for row in existing_rows:
+            affected_asset_ids.add(row.asset_id)
             existing_in_canonical = (
                 session.query(AssetTag)
                 .filter_by(asset_id=row.asset_id, tag_id=body.into_id)
@@ -119,6 +122,9 @@ async def merge_tags(body: MergeTagsRequest, session: DbSession) -> Response:
         log.info("Merged tag %d (%s) → %d (%s)", from_id, source.name, body.into_id, canonical.name)
 
     session.commit()
+
+    # Merge re-pointed tags on these assets → re-evaluate them against smart albums
+    await enqueue_reevaluate_assets(sorted(affected_asset_ids))
     return Response(status_code=204)
 
 
@@ -158,6 +164,9 @@ async def bulk_tag(body: BulkTagRequest, session: DbSession) -> Response:
         "Bulk-tag: %d asset(s), +%d tags, -%d tags",
         len(body.asset_ids), len(add_tags), len(body.remove),
     )
+
+    # Tags changed on these assets → re-evaluate them against smart albums
+    await enqueue_reevaluate_assets(body.asset_ids)
     return Response(status_code=204)
 
 

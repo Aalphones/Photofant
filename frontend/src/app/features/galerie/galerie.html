@@ -49,7 +49,9 @@
 @if (selectedCount() > 0) {
   <pf-bulk-bar
     [count]="selectedCount()"
+    [albums]="albums()"
     (close)="onBulkClose()"
     (tagAction)="onBulkTag($event)"
+    (addToAlbum)="onAddToAlbum($event)"
   />
 }

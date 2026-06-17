@@ -23,6 +23,28 @@
   }
 
   <div class="bulkbar__divider"></div>
+
+  <div class="bulkbar__album">
+    <button class="bulkbar__action" (click)="toggleAlbumMenu()">
+      <pf-icon name="album" [size]="15" />
+      Zu Album
+    </button>
+    @if (showAlbumMenu()) {
+      <div class="bulkbar__album-menu">
+        @for (album of albums(); track album.id) {
+          <button class="bulkbar__album-item" (click)="pickAlbum(album.id)">
+            <pf-icon name="album" [size]="13" />
+            {{ album.name }}
+          </button>
+        }
+        @if (albums().length === 0) {
+          <span class="bulkbar__album-empty">Keine Alben angelegt</span>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="bulkbar__divider"></div>
   <button class="bulkbar__close" (click)="onClose()" aria-label="Auswahl aufheben">
     <pf-icon name="x" [size]="16" />
   </button>

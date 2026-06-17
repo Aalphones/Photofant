@@ -123,3 +123,35 @@ class CaptionPreset(Base):
     config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)  # type: ignore[type-arg]
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class Collection(Base):
+    __tablename__ = "collection"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    # album | training_set | smart_album
+    kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="album")
+    match_mode: Mapped[str] = mapped_column(Text, nullable=False, server_default="any")  # smart_album: any | all
+    settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
+
+
+class SmartTrigger(Base):
+    __tablename__ = "smart_trigger"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    collection_id: Mapped[int] = mapped_column(ForeignKey("collection.id"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False)  # person | tag | caption
+    person_id: Mapped[int | None] = mapped_column(ForeignKey("person.id"), nullable=True)
+    tag_id: Mapped[int | None] = mapped_column(ForeignKey("tag.id"), nullable=True)
+    phrase: Mapped[str | None] = mapped_column(Text, nullable=True)
+    negate: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
+
+class CollectionItem(Base):
+    __tablename__ = "collection_item"
+
+    collection_id: Mapped[int] = mapped_column(ForeignKey("collection.id"), primary_key=True)
+    asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), primary_key=True, index=True)
+    source: Mapped[str] = mapped_column(Text, nullable=False, server_default="manual")  # manual | smart
+    caption_override: Mapped[str | None] = mapped_column(Text, nullable=True)

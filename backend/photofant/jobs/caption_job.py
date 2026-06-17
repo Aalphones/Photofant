@@ -107,6 +107,12 @@ def _run_caption_with_preset(
 
         session.commit()
 
+    # Caption changed → keep smart-album membership in sync (covers initial import + rerun)
+    from photofant.collections import engine
+
+    with SessionLocal() as session:
+        engine.evaluate_asset(session, asset_id)
+
     log.info("Captioned asset %d (%d chars, preset %s)", asset_id, len(caption), preset_id)
 
 

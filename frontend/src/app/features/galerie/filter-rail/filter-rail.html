@@ -91,3 +91,31 @@
     }
   </div>
 </div>
+
+<!-- Sammlung -->
+<div class="rail__facet" [class.rail__facet--closed]="!openSammlung()">
+  <button class="rail__facet-head" (click)="openSammlung.set(!openSammlung())">
+    <span class="rail__facet-title">Sammlung</span>
+    <span class="rail__chev"><pf-icon name="chevronDown" [size]="14" /></span>
+  </button>
+  <div class="rail__facet-body">
+    @for (col of collections(); track col.id) {
+      <div
+        class="rail__row"
+        [class.rail__row--on]="collectionId() === col.id"
+        (click)="toggleCollection(col.id)"
+      >
+        <div class="rail__cbox rail__cbox--radio" [class.rail__cbox--on]="collectionId() === col.id">
+          @if (collectionId() === col.id) {
+            <pf-icon name="check" [size]="10" />
+          }
+        </div>
+        <span class="rail__row-label">{{ col.name }}</span>
+        <span class="rail__count">{{ col.member_count }}</span>
+      </div>
+    }
+    @if (collections().length === 0) {
+      <span class="rail__empty">Keine Alben angelegt</span>
+    }
+  </div>
+</div>

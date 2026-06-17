@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { Density, GroupKey, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
-import { filtersActions, filtersSelectors, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import type { Collection, Density, GroupKey, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
+import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ClassifyService } from '@photofant/services';
 import { Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
 
 interface FilterChip {
-  kind: 'source' | 'qualityMin' | 'tag';
+  kind: 'source' | 'qualityMin' | 'tag' | 'collection';
   label: string;
   id?: number;
   value?: string;
@@ -37,6 +37,8 @@ export class SubToolbar {
   protected readonly sources    = this.store.selectSignal(filtersSelectors.sources);
   protected readonly qualityMin = this.store.selectSignal(filtersSelectors.qualityMin);
   protected readonly tagIds     = this.store.selectSignal(filtersSelectors.tagIds);
+  protected readonly collectionId = this.store.selectSignal(filtersSelectors.collectionId);
+  protected readonly collections  = this.store.selectSignal(collectionsSelectors.selectAll);
   protected readonly facets     = this.store.selectSignal(gallerySelectors.selectFacets);
 
   protected readonly SOURCE_LABELS: Record<string, string> = {
@@ -57,6 +59,11 @@ export class SubToolbar {
     for (const tagId of this.tagIds()) {
       const tag = tags.find((t: TagFacetItem) => t.id === tagId);
       result.push({ kind: 'tag', label: tag?.name ?? `Tag ${tagId}`, id: tagId });
+    }
+    const collectionId = this.collectionId();
+    if (collectionId != null) {
+      const collection = this.collections().find((c: Collection) => c.id === collectionId);
+      result.push({ kind: 'collection', label: collection?.name ?? `Album ${collectionId}`, id: collectionId });
     }
     return result;
   });
@@ -84,6 +91,8 @@ export class SubToolbar {
     } else if (chip.kind === 'tag' && chip.id !== undefined) {
       const next = this.tagIds().filter((id: number) => id !== chip.id);
       this.store.dispatch(filtersActions.setTagIds({ tagIds: next }));
+    } else if (chip.kind === 'collection') {
+      this.store.dispatch(filtersActions.setCollectionId({ collectionId: null }));
     }
   }
 

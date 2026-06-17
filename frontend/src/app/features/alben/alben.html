@@ -1,0 +1,150 @@
+@if (openCollection(); as col) {
+  <!-- ───────────────── Detail ───────────────── -->
+  <div class="alb-detail" [class.alb-detail--settings]="settingsOpen()">
+    <div class="alb-detail__main">
+      <button class="back-row" (click)="back()">
+        <pf-icon name="arrowLeft" [size]="16" /> Alle Alben
+      </button>
+
+      <div class="adh">
+        <div class="album-cover" [class.album-cover--empty]="members().length === 0">
+          @if (members().length === 0) {
+            <pf-icon name="album" [size]="28" />
+          } @else {
+            @for (asset of members().slice(0, 4); track asset.id) {
+              <div class="album-cover__cell">
+                <img [src]="thumbnailUrl(asset.id)" alt="" loading="lazy" />
+              </div>
+            }
+          }
+        </div>
+
+        <div class="adh__text">
+          <div class="adh__name">
+            {{ col.name }}
+            @if (isSmart(col)) {
+              <span class="auto-badge"><pf-icon name="sparkle" [size]="12" /> Auto</span>
+            }
+          </div>
+          <div class="adh__sub">
+            <span class="mono">{{ col.member_count }} Bilder</span>
+            <span class="dotsep">·</span>
+            {{ isSmart(col) ? 'automatisch befüllt' : 'manuell kuratiert' }}
+          </div>
+        </div>
+
+        <div class="adh__actions">
+          <button
+            class="iconbtn iconbtn--gear"
+            [class.iconbtn--on]="settingsOpen()"
+            (click)="toggleSettings()"
+            title="Album-Einstellungen"
+          >
+            <pf-icon name="settings" [size]="18" />
+          </button>
+          <button class="iconbtn iconbtn--danger" (click)="deleteOpen()" title="Album löschen">
+            <pf-icon name="trash" [size]="17" />
+          </button>
+        </div>
+      </div>
+
+      @if (members().length === 0) {
+        <div class="placeholder-view">
+          <pf-icon [name]="isSmart(col) ? 'sparkle' : 'album'" [size]="40" />
+          <h3>{{ isSmart(col) ? 'Keine Treffer' : 'Album ist leer' }}</h3>
+          <p>
+            {{ isSmart(col)
+              ? 'Füge Trigger hinzu oder lockere die Verknüpfung (ODER).'
+              : 'Füge Bilder über die Galerie-Auswahl hinzu oder aktiviere die automatische Befüllung per Zahnrad.' }}
+          </p>
+        </div>
+      } @else {
+        <div class="member-grid">
+          @for (asset of members(); track asset.id) {
+            <div class="tile">
+              <img [src]="thumbnailUrl(asset.id)" alt="" loading="lazy" />
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    @if (settingsOpen()) {
+      <pf-album-settings
+        [collection]="col"
+        [memberCount]="col.member_count"
+        (close)="settingsOpen.set(false)"
+      />
+    }
+  </div>
+} @else {
+  <!-- ───────────────── Overview ───────────────── -->
+  <div class="alb-overview">
+    <div class="alb-sec-head">
+      <pf-icon name="album" [size]="16" />
+      <h3>Alben</h3>
+      <span class="m-count">{{ collections().length }}</span>
+      <div class="m-line"></div>
+      <span class="alb-note">Manuell oder — per Zahnrad — automatisch befüllt</span>
+    </div>
+
+    @if (isLoading() && collections().length === 0) {
+      <div class="placeholder-view"><p>Lade Alben…</p></div>
+    }
+
+    <div class="albums-grid">
+      @for (col of collections(); track col.id) {
+        <button class="album-card" (click)="open(col.id)">
+          <div class="album-cover" [class.album-cover--empty]="col.cover_asset_ids.length === 0">
+            @if (col.cover_asset_ids.length === 0) {
+              <pf-icon name="album" [size]="28" />
+            } @else {
+              @for (assetId of col.cover_asset_ids; track assetId) {
+                <div class="album-cover__cell">
+                  <img [src]="thumbnailUrl(assetId)" alt="" loading="lazy" />
+                </div>
+              }
+            }
+          </div>
+          @if (isSmart(col)) {
+            <span class="smart-tag"><pf-icon name="sparkle" [size]="11" /> Auto</span>
+          }
+          <div class="album-info">
+            <div class="album-name">{{ col.name }}</div>
+            <div class="album-sub">
+              <span class="mono">{{ col.member_count }}{{ col.member_count === 1 ? ' Bild' : ' Bilder' }}</span>
+              <span class="dotsep">·</span>
+              <span [class.auto-fill]="isSmart(col)">{{ isSmart(col) ? 'automatisch' : 'manuell' }}</span>
+            </div>
+          </div>
+        </button>
+      }
+
+      <!-- New album card -->
+      @if (creating()) {
+        <div class="album-card album-card--new">
+          <div class="album-cover album-cover--new"><pf-icon name="plus" [size]="24" /></div>
+          <div class="album-info">
+            <input
+              class="new-name-input"
+              [value]="newName()"
+              (input)="newName.set($any($event.target).value)"
+              (keydown)="onCreateKeyDown($event)"
+              (blur)="confirmCreate()"
+              placeholder="Albumname…"
+              autofocus
+            />
+          </div>
+        </div>
+      } @else {
+        <button class="album-card album-card--new" (click)="startCreate()">
+          <div class="album-cover album-cover--new"><pf-icon name="plus" [size]="24" /></div>
+          <div class="album-info">
+            <div class="album-name">Neues Album</div>
+            <div class="album-sub">Leer — später smart schaltbar</div>
+          </div>
+        </button>
+      }
+    </div>
+  </div>
+}

@@ -28,6 +28,7 @@ export class GalleryEffects {
         filtersActions.setSources,
         filtersActions.setQualityMin,
         filtersActions.setTagIds,
+        filtersActions.setCollectionId,
         filtersActions.clearAllFilters,
         searchActions.setQuery,
         searchActions.setMode,
@@ -51,6 +52,7 @@ export class GalleryEffects {
           sources: params.sources,
           qualityMin: params.qualityMin,
           tagIds: params.tagIds,
+          collectionId: params.collectionId,
           ...(params.q ? { q: params.q, qMode: params.qMode } : {}),
         }).pipe(
           map((result: AssetsPage) => galleryActions.loadPageSuccess({

@@ -2,7 +2,7 @@
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable), `q` (Suchtext), `q_mode` (`tags\|caption\|semantic`) | `AssetsPage { items, total, page, page_size, facets }` |
+| `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable), `collection_id` (Mitglied einer Sammlung), `q` (Suchtext), `q_mode` (`tags\|caption\|semantic`) | `AssetsPage { items, total, page, page_size, facets }` |
 | `/galerie` (cell thumbnail) | `GET` | `/api/assets/{id}/thumbnail` | `size` (256\|512) | JPEG blob — `ETag: "{hash}-{size}"`, `Cache-Control: immutable` |
 | `/galerie` (lightbox) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
 | `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`) |
@@ -36,6 +36,67 @@ interface TagListItem { id: number; name: string; count: number; alias_of: numbe
 **Alias-Auflösung:** Filter-Rail (`tags[]=`) und Tag-Suche (`q_mode=tags`) lösen Aliase auf — ein Tag mit `alias_of=X` findet Bilder, die mit X getaggt sind, und umgekehrt. `POST /api/tags/merge` setzt `alias_of` und re-pointet alle `asset_tag`-Zeilen auf den Ziel-Tag.
 
 **Manuelle Korrekturen:** `PATCH /api/assets/{id}/tags` setzt `kind=manual` auf hinzugefügten Tags und `manually_removed=true` auf entfernten Auto-Tags. Reruns (Tagging-Job, Caption-Job) respektieren diese Flags.
+
+## Collections / Smart-Alben (P6 Phase 4)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/alben` (Liste) | `GET` | `/api/collections` | — | `CollectionDto[]` |
+| `/alben` (Neu) | `POST` | `/api/collections` | `{ name, kind?, match_mode? }` | `CollectionDetailDto` (201) |
+| `/alben` (Detail) | `GET` | `/api/collections/{id}` | — | `CollectionDetailDto` (inkl. Triggern) |
+| `/alben` (Smart-Toggle / Modus / Umbenennen) | `PATCH` | `/api/collections/{id}` | `{ name?, kind?, match_mode? }` | `CollectionDetailDto` — Modus-/Smart-Wechsel triggert Neubewertung |
+| `/alben` (Löschen) | `DELETE` | `/api/collections/{id}` | — | `204` (Trigger + Items kaskadiert) |
+| `/alben` (Trigger lesen) | `GET` | `/api/collections/{id}/triggers` | — | `TriggerDto[]` |
+| `/alben` (Trigger hinzufügen) | `POST` | `/api/collections/{id}/triggers` | `CreateTriggerRequest` | `TriggerDto` (201) → Neubewertung |
+| `/alben` (Trigger negate) | `PATCH` | `/api/collections/{id}/triggers/{tid}` | `{ negate: bool }` | `TriggerDto` → Neubewertung |
+| `/alben` (Trigger entfernen) | `DELETE` | `/api/collections/{id}/triggers/{tid}` | — | `204` → Neubewertung |
+| `/alben` (manuell neu bewerten) | `POST` | `/api/collections/{id}/reevaluate` | — | `{ job_id }` (202) |
+| `/galerie` (Bulk-Bar „Zu Album") | `POST` | `/api/collections/{id}/items` | `{ asset_ids: number[] }` | `204` — als `source=manual` |
+| `/alben` (Mitglied entfernen) | `DELETE` | `/api/collections/{id}/items/{asset_id}` | — | `204` |
+
+```typescript
+type CollectionKind = 'album' | 'smart_album' | 'training_set';
+type MatchMode = 'any' | 'all';
+type TriggerType = 'person' | 'tag' | 'caption';
+
+interface CollectionDto {
+  id: number;
+  name: string;
+  kind: CollectionKind;
+  match_mode: MatchMode;
+  member_count: number;          // aktive (nicht gelöschte) Mitglieder
+  cover_asset_ids: number[];     // bis zu 4 für die Collage
+}
+
+interface TriggerDto {
+  id: number;
+  type: TriggerType;
+  person_id: number | null;      // person-Trigger: bis P7 inaktiv (matcht nichts)
+  tag_id: number | null;
+  tag_name: string | null;       // aufgelöst für die Anzeige
+  phrase: string | null;
+  negate: boolean;
+}
+
+interface CollectionDetailDto extends CollectionDto { triggers: TriggerDto[]; }
+
+interface CreateTriggerRequest {
+  type: TriggerType;
+  person_id?: number | null;     // type=person
+  tag_id?: number | null;        // type=tag
+  phrase?: string | null;        // type=caption
+  negate?: boolean;
+}
+```
+
+**Neubewertungs-Regel (Backend-intern, Konzept §10.1):** Tag-/Caption-Änderung an Asset X →
+`reevaluate`-Queue-Job bewertet X gegen alle Smart-Alben; Trigger-/Modus-Änderung an Album Y →
+Job bewertet Y gegen alle Assets. Smart-Mitgliedschaft materialisiert in
+`collection_item.source='smart'`; manuelle Mitglieder (`source='manual'`) bleiben unberührt und
+gewinnen bei Konflikt. Trigger-Logik: positive Trigger nach `match_mode` (any=ODER, all=UND),
+negierte schließen aus; ohne positiven Trigger ist die Smart-Mitgliedschaft leer. Person-Trigger
+existieren in Schema + UI, matchen aber bis P7 nichts. Hooks sitzen an Tag-Edit, Caption-Edit,
+Bulk-Tagging, Tag-Merge, Tagging-/Caption-Job (Import + Rerun) und Trigger-CRUD.
 
 ## Maintenance
 

@@ -93,6 +93,12 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
 
         session.commit()
 
+    # Tags changed → keep smart-album membership in sync (covers initial import + rerun)
+    from photofant.collections import engine
+
+    with SessionLocal() as session:
+        engine.evaluate_asset(session, asset_id)
+
     log.info("Tagged asset %d: %d tag(s) persisted", asset_id, len(tag_scores))
 
 

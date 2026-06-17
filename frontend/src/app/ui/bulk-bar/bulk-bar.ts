@@ -8,6 +8,11 @@ import {
 } from '@angular/core';
 import { Icon } from '../icon/icon';
 
+export interface BulkAlbumOption {
+  id: number;
+  name: string;
+}
+
 @Component({
   selector: 'pf-bulk-bar',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -17,12 +22,15 @@ import { Icon } from '../icon/icon';
 })
 export class BulkBar {
   readonly count = input.required<number>();
+  readonly albums = input<BulkAlbumOption[]>([]);
 
   readonly close = output<void>();
   readonly tagAction = output<{ add: string[]; remove: number[] }>();
+  readonly addToAlbum = output<number>();
 
   protected readonly showTagInput = signal(false);
   protected readonly tagInput = signal('');
+  protected readonly showAlbumMenu = signal(false);
 
   protected readonly countLabel = computed((): string => {
     const n = this.count();
@@ -50,6 +58,15 @@ export class BulkBar {
       this.showTagInput.set(false);
       this.tagInput.set('');
     }
+  }
+
+  protected toggleAlbumMenu(): void {
+    this.showAlbumMenu.update((open: boolean) => !open);
+  }
+
+  protected pickAlbum(collectionId: number): void {
+    this.addToAlbum.emit(collectionId);
+    this.showAlbumMenu.set(false);
   }
 
   protected onClose(): void {

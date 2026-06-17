@@ -183,16 +183,64 @@ degrades gracefully when the table is absent (e.g. throw-away test DBs).
 > Requires the sqlite-vec loadable extension, loaded per connection via the SQLAlchemy
 > `connect` event (`photofant/db/engine.py`) and inside migration 0007 (`op.get_bind()`).
 
+### `collection` (migration 0012)
+
+Albums, training sets and smart albums (Konzept §5/§10.1). One album type: `kind = 'album'`
+is hand-curated, `kind = 'smart_album'` is trigger-filled (and may still carry manual members).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `name` | TEXT | display name |
+| `kind` | TEXT | `album \| smart_album \| training_set` (training_set is schema-only until P10) |
+| `match_mode` | TEXT | smart_album only: `any` (OR) \| `all` (AND) |
+| `settings` | JSON | training_set only (trigger_word, prefix, suffix, split …); NULL otherwise |
+
+### `smart_trigger` (migration 0012)
+
+A trigger that auto-fills a smart album. Positive triggers combine via `collection.match_mode`;
+negated triggers exclude. Evaluation: `photofant/collections/engine.py`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `collection_id` | INTEGER FK → `collection.id` | indexed |
+| `type` | TEXT | `person \| tag \| caption` |
+| `person_id` | INTEGER FK → `person.id` | set when `type=person`; **inactive until P7** (matches nothing yet) |
+| `tag_id` | INTEGER FK → `tag.id` | set when `type=tag`; aliases resolved, `manually_removed` excluded |
+| `phrase` | TEXT | set when `type=caption`; case-insensitive substring match on `asset.caption` |
+| `negate` | BOOLEAN | `1` = exclude matches instead of include |
+
+### `collection_item` (migration 0012)
+
+Membership rows. Smart membership is materialized (`source='smart'`) and recomputed by the
+re-evaluation engine; hand-picked rows (`source='manual'`) are never auto-removed and win on
+conflict (a manual member that also matches the triggers stays `manual`).
+
+| Column | Type | Notes |
+|---|---|---|
+| `collection_id` | INTEGER PK, FK → `collection.id` | |
+| `asset_id` | INTEGER PK, FK → `asset.id` | indexed |
+| `source` | TEXT | `manual` (hand-picked) \| `smart` (auto via triggers) |
+| `caption_override` | TEXT | training sets only |
+
+PK: `(collection_id, asset_id)`. Index: `ix_collection_item_asset_id`.
+
+**Re-evaluation triggers (Konzept §10.1):** a tag/caption change on an asset re-evaluates that
+asset against every smart album; a trigger / match-mode change re-evaluates the whole album.
+Both run as `reevaluate` queue jobs (`photofant/jobs/collections_job.py`) so the UI never blocks.
+Hooks sit on: `PATCH /assets/{id}/tags`, `PATCH /assets/{id}/caption`, `POST /tags/bulk`,
+`POST /tags/merge`, the tagging/caption jobs (covers import + rerun), and the trigger CRUD endpoints.
+
 ---
 
 ## Upcoming tables (planned)
 
 | Table | Migration | Plan |
 |---|---|---|
-| `version` | 0008 | P8 |
-| `face` | 0008 | P7 |
-| `collection`, `collection_item`, `smart_trigger` | 0009 | P6 |
-| `prompt_template` | 0010 | P9 |
+| `version` | 0013 | P8 |
+| `face` | 0013 | P7 |
+| `prompt_template` | 0014 | P9 |
 
 ---
 
