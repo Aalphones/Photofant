@@ -22,6 +22,7 @@ if (Test-Path $envFile) {
 }
 
 Write-Host '=== Datenbank-Migration ===' -ForegroundColor Cyan
+Write-Host '  (Beim ersten Start baut uv die Python-Umgebung — das kann einige Minuten dauern.)' -ForegroundColor DarkGray
 Push-Location "$root\backend"
 uv run alembic upgrade head
 if ($LASTEXITCODE -ne 0) { Write-Error 'Migration fehlgeschlagen'; exit 1 }
@@ -57,21 +58,29 @@ Write-Host ''
 
 # Warte auf Frontend, dann Browser oeffnen
 $frontendUrl = 'http://localhost:4200'
-Write-Host 'Warte auf Frontend...' -ForegroundColor Cyan
+Write-Host 'Warte auf Frontend (Angular kompiliert beim ersten Mal ~30-60s)...' -ForegroundColor Cyan
 $deadline = (Get-Date).AddSeconds(90)
+$startedAt = Get-Date
 $browserOpened = $false
 while ((Get-Date) -lt $deadline -and !$frontend.HasExited) {
     try {
         $null = Invoke-WebRequest -Uri $frontendUrl -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+        # \r ueberschreibt die Heartbeat-Zeile, bevor die Erfolgsmeldung kommt
+        Write-Host "`r                                             " -NoNewline
+        Write-Host "`rBrowser geoeffnet." -ForegroundColor Green
         Start-Process $frontendUrl
-        Write-Host 'Browser geoeffnet.' -ForegroundColor Green
         $browserOpened = $true
         break
     } catch {
+        # Heartbeat: verstrichene Sekunden in-place anzeigen, damit es nicht
+        # eingefroren wirkt. -NoNewline + \r ueberschreibt dieselbe Zeile.
+        $elapsed = [int]((Get-Date) - $startedAt).TotalSeconds
+        Write-Host ("`r  ...warte seit {0,3}s (Timeout bei 90s)" -f $elapsed) -NoNewline -ForegroundColor DarkGray
         Start-Sleep -Milliseconds 800
     }
 }
 if (!$browserOpened) {
+    Write-Host ''  # Heartbeat-Zeile sauber abschliessen
     Write-Host "Frontend nicht erreichbar — $frontendUrl manuell oeffnen." -ForegroundColor Yellow
 }
 
