@@ -6,6 +6,6 @@
 
 **P5 — Klassifizierung** · [`docs/planning/2026-06-12_p05-klassifizierung/`](docs/planning/2026-06-12_p05-klassifizierung/README.md)
 
-**Phase:** 3/6 — Florence-2-Captioning (pending)
+**Phase:** 4/6 — CLIP-Embeddings & Vektor-Index (pending)
 
-**Nächster Schritt:** Florence-2-Adapter implementieren (`photofant/inference/adapters/florence2.py`) — HF-Snapshot-Ordner, Tokenizer + ONNX-Session, Task-Token-Preset, `caption(image, preset) → str`.
+**Nächster Schritt:** CLIP-ViT-L/14-Embedder implementieren (`photofant/inference/adapters/clip.py`) — `Embedder.embed(image) → ndarray`, 224er Center-Crop-Preprocessing (existiert), Embedding-Job + `sqlite-vec`-Index, „mehr wie dieses"-API-Test.
