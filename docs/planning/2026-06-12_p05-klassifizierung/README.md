@@ -11,7 +11,7 @@ Die ML-Pipeline: ONNX-Inferenz-Layer, WD14-Tags, Florence-2-Captions, CLIP/SigLI
 | 1 | [Inferenz-Layer](phase-1-inferenz-layer.md) | heikel | complete |
 | 2 | [WD14-Tagging](phase-2-wd14-tagging.md) | standard | complete |
 | 3 | [Florence-2-Captioning](phase-3-florence-captioning.md) | heikel | complete |
-| 4 | [CLIP-Embeddings & Vektor-Index](phase-4-clip-vektorindex.md) | heikel | pending |
+| 4 | [CLIP-Embeddings & Vektor-Index](phase-4-clip-vektorindex.md) | heikel | complete |
 | 5 | [Heuristiken & Pipeline-Integration](phase-5-heuristiken-pipeline.md) | standard | pending |
 | 6 | [Captioner-Settings & Presets](phase-6-captioner-presets.md) | standard | pending |
 
