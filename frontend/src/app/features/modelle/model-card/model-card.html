@@ -1,0 +1,51 @@
+<button
+  class="md-card"
+  [class.is-active]="model().status === 'active'"
+  [class.is-inplace]="model().status === 'inplace'"
+  [class.is-loading]="isPendingDownload()"
+  (click)="handleClick()"
+>
+  <div class="md-card__top">
+    <div class="md-ico" [class]="'role-' + model().role">
+      <pf-icon [name]="roleMeta().icon" [size]="20" />
+    </div>
+    <div class="md-card__id">
+      <div class="md-name">
+        {{ model().name }}
+        @if (model().is_default) {
+          <span class="md-default" title="Standard">
+            <pf-icon name="star" [size]="13" />
+          </span>
+        }
+      </div>
+      <div class="md-role">{{ roleMeta().label }} · {{ model().format }}</div>
+    </div>
+    <span class="md-status" [class]="statusMeta().label === 'Aktiv' ? 'active' : model().status">
+      @if (statusMeta().dot) { <span class="dot"></span> }
+      {{ statusMeta().label }}
+    </span>
+  </div>
+
+  <p class="md-desc">{{ model().desc }}</p>
+
+  @if (isPendingDownload()) {
+    <div class="md-prog">
+      <div class="md-prog__top">
+        <span>Herunterladen …</span>
+        <span class="md-prog__spinner"></span>
+      </div>
+    </div>
+  }
+
+  <div class="md-foot">
+    <div class="md-meta">
+      <span>{{ formatSize(model().size_bytes) }}</span>
+      @if (model().licenseNc) {
+        <span class="md-meta__dot">·</span>
+        <span class="md-meta__nc">non-commercial</span>
+      }
+    </div>
+    <div class="md-foot__spacer"></div>
+    <span class="md-linkbtn">Details</span>
+  </div>
+</button>

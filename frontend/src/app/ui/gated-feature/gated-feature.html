@@ -1,0 +1,13 @@
+<div class="gated-feature__box">
+  <pf-icon name="alertTriangle" [size]="18" />
+  <div class="gated-feature__body">
+    <span class="gated-feature__title">{{ featureName() }} nicht verfügbar</span>
+    @if (modelHint()) {
+      <span class="gated-feature__hint">{{ modelHint() }}</span>
+    }
+    <a class="gated-feature__link" routerLink="/modelle">
+      <pf-icon name="model" [size]="13" />
+      Modelle konfigurieren
+    </a>
+  </div>
+</div>

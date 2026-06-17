@@ -1,0 +1,83 @@
+<div class="dl-scrim" (click)="handleScrimClick()"></div>
+
+<div class="dl-modal" (click)="$event.stopPropagation()">
+  <div class="dl-head">
+    <div class="md-ico" [class]="'role-' + model().role">
+      <pf-icon [name]="roleMeta().icon" [size]="19" />
+    </div>
+    <div class="dl-head__info">
+      <div class="dl-title">Herunterladen</div>
+      <div class="dl-sub">{{ model().name }}</div>
+    </div>
+    <button class="dl-close" (click)="handleCancel()" aria-label="Schließen">
+      <pf-icon name="x" [size]="17" />
+    </button>
+  </div>
+
+  <div class="dl-body">
+    <div class="dl-field">
+      <div class="dl-field-lbl">Zielordner</div>
+      <div class="dl-target">
+        <pf-icon name="folder" [size]="15" />
+        <span class="dl-target__path">{{ targetPath() }}</span>
+      </div>
+    </div>
+
+    <div class="dl-field">
+      <div class="dl-field-lbl">Dateigröße</div>
+      <div class="dl-size">{{ formatSize(model().size_bytes) }}</div>
+    </div>
+
+    <div class="dl-field">
+      <div class="dl-field-lbl">Lizenz</div>
+      <div
+        class="dl-license"
+        [class.nc]="model().licenseNc"
+        [class.agreed]="licenseAgreed()"
+        (click)="toggleLicense()"
+      >
+        <div class="dl-chk" [class.on]="licenseAgreed() || !model().licenseNc">
+          @if (licenseAgreed() || !model().licenseNc) {
+            <pf-icon name="check" [size]="13" />
+          }
+        </div>
+        <div>
+          <div class="dl-license__title">{{ model().license_note ?? 'Lizenz prüfen' }}</div>
+          <div class="dl-license__sub">
+            @if (model().licenseNc) {
+              <b>Nur für nicht-kommerzielle Nutzung.</b>
+              Ich bestätige, dieses Modell ausschließlich privat zu verwenden.
+            } @else {
+              Ich habe die Lizenzbedingungen gelesen und akzeptiere sie.
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (model().licenseNc && !licenseAgreed()) {
+        <div class="dl-warn">
+          <pf-icon name="shield" [size]="14" />
+          Bitte die Lizenzbedingungen bestätigen, bevor der Download gestartet werden kann.
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="dl-foot">
+    <div class="dl-foot__info">
+      <pf-icon name="info" [size]="13" />
+      {{ formatSize(model().size_bytes) }} Download · Queue wird geöffnet
+    </div>
+    <div class="dl-foot__actions">
+      <button class="md-btn ghost" (click)="handleCancel()">Abbrechen</button>
+      <button
+        class="md-btn primary"
+        [disabled]="isDisabled()"
+        (click)="handleConfirm()"
+      >
+        <pf-icon name="download" [size]="15" />
+        Download starten
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,74 @@
+<div class="bd-scrim" (click)="handleScrimClick()"></div>
+
+<div class="bd-modal" (click)="$event.stopPropagation()">
+  <div class="bd-head">
+    <div class="md-ico" [class]="'role-' + model().role">
+      <pf-icon [name]="roleMeta().icon" [size]="19" />
+    </div>
+    <div class="bd-head__info">
+      <div class="bd-title">Vorhandene Datei einbinden</div>
+      <div class="bd-sub">{{ model().name }}</div>
+    </div>
+    <button class="bd-close" (click)="handleCancel()" aria-label="Schließen">
+      <pf-icon name="x" [size]="17" />
+    </button>
+  </div>
+
+  <div class="bd-body">
+    <div class="bd-field">
+      <label class="bd-field-lbl" for="bd-path">Pfad zur Datei oder zum Ordner</label>
+      <div class="bd-path-row">
+        <pf-icon name="folder" [size]="15" class="bd-path-icon" />
+        <input
+          id="bd-path"
+          class="bd-input"
+          type="text"
+          placeholder="/pfad/zum/modell"
+          [(ngModel)]="path"
+          [disabled]="isPending()"
+          (keydown.enter)="handleConfirm()"
+        />
+      </div>
+      <div class="bd-path-hint">
+        Einzeldatei (.onnx, .safetensors) oder Ordner (Diffusers-Layout, buffalo_l-Bundle).
+        Die Datei wird weder kopiert noch verändert.
+      </div>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="bd-error">
+        <pf-icon name="alertTriangle" [size]="14" />
+        <div>
+          <div class="bd-error__msg">{{ errorMessage() }}</div>
+          <div class="bd-error__hint">
+            Erwartet: Format passend zu <b>{{ model().role }}</b> · Pfad prüfen und erneut versuchen.
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (isPending()) {
+      <div class="bd-validating">
+        <span class="bd-spin"></span>
+        Validierung läuft …
+      </div>
+    }
+
+    <div class="bd-note">
+      <pf-icon name="info" [size]="13" />
+      Dateien werden weder kopiert noch verändert. Nur der Pfad wird in der Registry gespeichert.
+    </div>
+  </div>
+
+  <div class="bd-foot">
+    <button class="md-btn ghost" (click)="handleCancel()">Abbrechen</button>
+    <button
+      class="md-btn primary"
+      [disabled]="!canConfirm()"
+      (click)="handleConfirm()"
+    >
+      <pf-icon name="check" [size]="15" />
+      Einbinden &amp; aktivieren
+    </button>
+  </div>
+</div>

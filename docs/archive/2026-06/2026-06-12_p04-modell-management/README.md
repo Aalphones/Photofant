@@ -11,7 +11,7 @@ Registry, Beschaffung (Download / In-Place) und Gating für **Core-ONNX-Modelle*
 | 1 | [Registry & Manifest](phase-1-registry-manifest.md) | standard | complete |
 | 2 | [Download & Scan](phase-2-download-scan.md) | standard | complete |
 | 3 | [In-Place-Binding & Validierung](phase-3-inplace-validierung.md) | heikel | complete |
-| 4 | [Modelle-View & Gating](phase-4-modelle-view-gating.md) | standard | pending |
+| 4 | [Modelle-View & Gating](phase-4-modelle-view-gating.md) | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -43,10 +43,27 @@ Registry, Beschaffung (Download / In-Place) und Gating für **Core-ONNX-Modelle*
 
 ## Summary
 
+Vollständige Modell-Management-UI für P4 (Core-ONNX-Modelle): NgRx `models`-Slice mit Capabilities- und Config-Integration, Modelle-View mit Tier-Gruppen, Status-Badges und Inline-Drawer, Download- und Bind-Dialoge mit §12.2a-Fehlerdarstellung, `pf-gated-feature`-Komponente für P5–P9, `models_dir`-Picker in Einstellungen.
+
 ## Files touched
+
+**Frontend (neu):** `models/model.model.ts`, `services/model.service.ts`, `store/models/` (4 Dateien + Barrel), `ui/gated-feature/` (3), `ui/icon/icon.ts` (erweitert), `features/modelle/` (Seite + 4 Subkomponenten = 15 Dateien)
+
+**Frontend (geändert):** `models/index.ts`, `services/index.ts`, `store/index.ts`, `ui/index.ts`, `app.config.ts`, `features/einstellungen/einstellungen.ts`
 
 ## Commits
 
+Siehe `git log` auf Branch master.
+
 ## Deviations from plan
 
+- `store/settings/` → `store/models/` (konsistenterer Name)
+- Captioner-Settings-Dialog verschoben auf P5+ (Backend-`capabilities`-Descriptor fehlt noch)
+- `models_dir`-Picker: Text-Input statt nativem File-Picker (Electron/Tauri-Integration später)
+
 ## Follow-ups
+
+- Captioner-Settings-Dialog (wenn Backend capabilities-Descriptor via API liefert)
+- Native File-Picker-Integration (Electron/Tauri IPC)
+- VRAM-Erkennung über `GET /api/system` (Backend-Endpunkt noch nicht vorhanden)
+- `pf-gated-feature` in P5 (Tagging) einsetzen als ersten Abnehmer

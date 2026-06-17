@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DatePipe } from '@angular/common';
-import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
+import { maintenanceActions, maintenanceSelectors, modelsActions, modelsSelectors } from '@photofant/store';
 
 @Component({
   selector: 'pf-einstellungen',
@@ -9,6 +9,40 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
   imports: [DatePipe],
   template: `
     <div class="settings-layout">
+      <div class="settings-section">
+        <h2 class="settings-heading">Modelle</h2>
+
+        <div class="settings-card">
+          <div class="card-row">
+            <div>
+              <div class="card-label">Modell-Ordner</div>
+              <div class="card-desc">
+                Zielverzeichnis für neue Downloads. Bestehende Pfade bleiben bei Änderung erhalten.
+              </div>
+            </div>
+            @if (!isDirEditing()) {
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <code>{{ modelsDir() ?? '–' }}</code>
+                <button class="btn-ghost" (click)="startDirEdit()">Ändern</button>
+              </div>
+            } @else {
+              <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; justify-content: flex-end;">
+                <input
+                  class="dir-input"
+                  type="text"
+                  [value]="pendingDir()"
+                  (input)="pendingDir.set($any($event.target).value)"
+                  (keydown.enter)="saveDirEdit()"
+                  (keydown.escape)="cancelDirEdit()"
+                />
+                <button class="btn-primary" (click)="saveDirEdit()">Speichern</button>
+                <button class="btn-ghost" (click)="cancelDirEdit()">Abbrechen</button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
       <div class="settings-section">
         <h2 class="settings-heading">Backup</h2>
 
@@ -220,6 +254,22 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
       flex-shrink: 0;
     }
 
+    .dir-input {
+      height: 34px;
+      padding: 0 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-s);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      outline: none;
+      min-width: 0;
+      width: 260px;
+      flex-shrink: 1;
+    }
+    .dir-input:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+
     .spinner {
       width: 12px;
       height: 12px;
@@ -234,6 +284,10 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
 export class Einstellungen {
   private readonly store = inject(Store);
 
+  readonly modelsDir = this.store.selectSignal(modelsSelectors.selectModelsDir);
+  readonly isDirEditing = signal<boolean>(false);
+  readonly pendingDir = signal<string>('');
+
   readonly backups = this.store.selectSignal(maintenanceSelectors.selectBackups);
   readonly isLoadingBackups = this.store.selectSignal(maintenanceSelectors.selectIsLoadingBackups);
   readonly isRunningBackup = this.store.selectSignal(maintenanceSelectors.selectIsRunningBackup);
@@ -242,7 +296,25 @@ export class Einstellungen {
   constructor() {
     effect(() => {
       this.store.dispatch(maintenanceActions.loadBackups());
+      this.store.dispatch(modelsActions.loadConfig());
     });
+  }
+
+  startDirEdit(): void {
+    this.pendingDir.set(this.modelsDir() ?? '');
+    this.isDirEditing.set(true);
+  }
+
+  cancelDirEdit(): void {
+    this.isDirEditing.set(false);
+  }
+
+  saveDirEdit(): void {
+    const newDir = this.pendingDir().trim();
+    if (newDir.length > 0) {
+      this.store.dispatch(modelsActions.updateModelsDir({ path: newDir }));
+    }
+    this.isDirEditing.set(false);
   }
 
   triggerBackup(): void {

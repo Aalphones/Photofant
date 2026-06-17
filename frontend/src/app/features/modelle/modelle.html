@@ -1,0 +1,111 @@
+<div class="modelle__head">
+  <h3 class="modelle__title">Modelle</h3>
+  @if (!isLoading()) {
+    <span class="modelle__count">{{ getModelsForTier('core').length + getModelsForTier('optional').length + getModelsForTier('generativ').length }}</span>
+  }
+  <div class="modelle__line"></div>
+  <span class="modelle__summary">
+    {{ activeCount() }} aktiv
+    @if (missingCoreCount() > 0) {
+      · <span class="modelle__summary--warn">{{ missingCoreCount() }} Core fehlen</span>
+    } @else if (isAllCoreInstalled()) {
+      · Core vollständig
+    }
+  </span>
+</div>
+
+<div class="md-sysbar">
+  <div class="md-sys">
+    <div class="md-sys__ico"><pf-icon name="cpu" [size]="14" /></div>
+    <div>
+      <div class="md-sys__key">GPU</div>
+      <div class="md-sys__val">Wird erkannt …</div>
+    </div>
+  </div>
+  <div class="md-sys">
+    <div class="md-sys__ico"><pf-icon name="folder" [size]="14" /></div>
+    <div>
+      <div class="md-sys__key">Modell-Ordner</div>
+      <div class="md-sys__val md-sys__val--path">{{ modelsDir() ?? '–' }}</div>
+    </div>
+  </div>
+  <div class="md-sysbar__spacer"></div>
+  <div class="md-offline">Offline · lokal</div>
+</div>
+
+@if (!isAllCoreInstalled() && getModelsForTier('core').length > 0) {
+  <div class="modelle__setup-bar">
+    <div class="modelle__setup-info">
+      <pf-icon name="sparkle" [size]="16" />
+      <div>
+        <span class="modelle__setup-title">Core-Modelle einrichten</span>
+        <span class="modelle__setup-sub">buffalo_l · WD14 SwinV2 · Florence-2 · CLIP · rembg — insgesamt ~2 GB</span>
+      </div>
+    </div>
+    <button class="md-btn primary" (click)="triggerCoreSetup()">
+      <pf-icon name="download" [size]="15" />
+      Core-Modelle laden
+    </button>
+  </div>
+}
+
+<div class="md-page">
+  @for (tier of tiers; track tier) {
+    <div class="md-tier">
+      <div class="md-tier__head">
+        <h3>{{ tierLabel(tier) }}</h3>
+        <span class="md-tier__badge" [class]="'md-tier__badge--' + tier">{{ tier }}</span>
+        <span class="md-tier__desc">{{ tierDesc(tier) }}</span>
+        <span class="md-tier__agg">
+          {{ countActive(tier) }}/{{ getModelsForTier(tier).length }} aktiv
+        </span>
+      </div>
+
+      @if (getModelsForTier(tier).length > 0) {
+        <div class="md-grid">
+          @for (model of getModelsForTier(tier); track model.id) {
+            <pf-model-card
+              [model]="model"
+              [isPendingDownload]="isPendingDownload(model.id)"
+              (open)="openDrawer($event)"
+            />
+          }
+        </div>
+      } @else {
+        <div class="md-tier__empty">
+          <pf-icon name="sparkle" [size]="16" />
+          <span>Kommt später — {{ tierLabel(tier) }}-Modelle sind ab P9 verfügbar.</span>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (drawerModel()) {
+  <pf-model-drawer
+    [model]="drawerModel()!"
+    (close)="closeDrawer()"
+    (download)="onDownload($event)"
+    (bind)="onBind($event)"
+    (deleteModel)="onDelete($event)"
+  />
+}
+
+@if (downloadTarget()) {
+  <pf-download-dialog
+    [model]="downloadTarget()!"
+    [modelsDir]="modelsDir()"
+    (confirm)="onDownloadConfirm($event)"
+    (cancel)="downloadTarget.set(null)"
+  />
+}
+
+@if (bindTarget()) {
+  <pf-bind-dialog
+    [model]="bindTarget()!"
+    [bindError]="bindError()"
+    [isPending]="isPendingBind(bindTarget()!.id)"
+    (confirm)="onBindConfirm($event)"
+    (cancel)="onBindCancel()"
+  />
+}

@@ -1,0 +1,51 @@
+:host.gated-feature {
+  display: block;
+}
+
+.gated-feature__box {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: oklch(0.800 0.130 75 / .10);
+  border: 1px solid oklch(0.800 0.130 75 / .30);
+  color: var(--text-2);
+
+  pf-icon {
+    color: var(--warn);
+    margin-top: 1px;
+    flex: none;
+  }
+}
+
+.gated-feature__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.gated-feature__title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.gated-feature__hint {
+  color: var(--text-3);
+}
+
+.gated-feature__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+
+  &:hover { text-decoration: underline; }
+
+  pf-icon { flex: none; }
+}
