@@ -1,6 +1,6 @@
 # P6 — Suche & Alben (Stage 2c)
 
-> Status: geparkt · Quelle: [Konzept](../../Konzept-Photofant.md) §10 · Abhängigkeiten: P5
+> Status: complete · Quelle: [Konzept](../../Konzept-Photofant.md) §10 · Abhängigkeiten: P5
 
 Die in P5 erzeugten Daten werden bedienbar: vollständige Filter-Rail, 3-Modi-Suche, Tag-Verwaltung mit manueller Korrektur, Smart-Alben mit automatischem Rein & Raus. Überwiegend Frontend-Arbeit auf fertigen Backend-Daten.
 
@@ -11,7 +11,7 @@ Die in P5 erzeugten Daten werden bedienbar: vollständige Filter-Rail, 3-Modi-Su
 | 1 | [Filter-Facetten](phase-1-filter-facetten.md) | standard | complete |
 | 2 | [3-Modi-Suche](phase-2-suche.md) | standard | complete |
 | 3 | [Tag-Verwaltung & Korrektur](phase-3-tag-verwaltung.md) | standard | complete |
-| 4 | [Smart-Alben](phase-4-smart-alben.md) | heikel | pending |
+| 4 | [Smart-Alben](phase-4-smart-alben.md) | heikel | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -40,10 +40,37 @@ Die in P5 erzeugten Daten werden bedienbar: vollständige Filter-Rail, 3-Modi-Su
 
 ## Summary
 
+P6 macht die P5-Daten bedienbar: Filter-Rail, 3-Modi-Suche, Tag-Verwaltung mit manueller
+Korrektur und Smart-Alben mit automatischem Rein & Raus. Alle vier Phasen umgesetzt; Phase 4
+(Smart-Alben) ist der heikle Teil — Neubewertungs-Hooks an jedem Mutationspfad, sonst stille
+Inkonsistenz.
+
 ## Files touched
+
+**Backend (Phase 4):** `alembic/versions/0012_collections.py`, `db/models.py`,
+`collections/engine.py` (neu), `jobs/collections_job.py` (neu), `jobs/queue.py`,
+`api/collections.py` (neu), `api/assets.py`, `api/tags.py`, `jobs/tagging_job.py`,
+`jobs/caption_job.py`, `main.py`.
+
+**Frontend (Phase 4):** `models/collection.model.ts` (neu), `services/collection.service.ts` (neu),
+`store/collections/*` (neu), `features/alben/*` (Alben-View + `album-settings`),
+`features/galerie/{galerie,filter-rail,sub-toolbar}`, `ui/bulk-bar/*`, `store/filters/*`,
+`store/gallery/*`, `models/job.model.ts`, `app.config.ts`.
 
 ## Commits
 
+Siehe `git log` (P6 Phase 1–4, je ein feat-Commit + planning-chore).
+
 ## Deviations from plan
 
+- **Keine Integrationstests** (Phase-4-Checkliste nannte welche): private-Profil = keine Tests
+  (dokumentierte Projekt-Ausnahme). Engine stattdessen per Wegwerf-Skript funktional verifiziert.
+- **Trigger-PATCH** (`PATCH /collections/{id}/triggers/{tid}`) ergänzt, um „negate" sauber zu
+  togglen statt Trigger zu löschen + neu anzulegen.
+- **Import-Abdeckung:** Neubewertungs-Hook sitzt im Tagging-/Caption-Job — so landen auch
+  frisch importierte Bilder automatisch in passenden Smart-Alben (über die Phase-Checkliste hinaus).
+
 ## Follow-ups
+
+- Person-Trigger werden mit P7 (Gesichtserkennung) scharf geschaltet — Schema/UI stehen bereits.
+- Initial-Bundle-Budget 3 kB über Soll (nur Build-Warnung) — bei Gelegenheit Lazy-Boundaries prüfen.
