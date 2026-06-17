@@ -134,17 +134,41 @@ Named, reusable captioner configurations. See §12.6.
 
 ---
 
+### `tag` (migration 0005)
+
+Deduplicated vocabulary; one row per unique tag name (canonical form: lowercase + underscores).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `name` | TEXT UNIQUE | lowercase + underscores (e.g. `long_hair`); display: replace `_` with space |
+
+Index: `ix_tag_name` (unique).
+
+### `asset_tag` (migration 0005)
+
+Many-to-many join between assets and tags.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `asset_id` | INTEGER FK → `asset.id` | |
+| `tag_id` | INTEGER FK → `tag.id` | |
+| `kind` | TEXT | `auto` (WD14) \| `manual` (P6) |
+| `score` | REAL | confidence from WD14 (nullable for manual tags) |
+
+Unique constraint: `(asset_id, tag_id)`. Index: `ix_asset_tag_asset_id`.
+
+---
+
 ## Upcoming tables (planned)
 
 | Table | Migration | Plan |
 |---|---|---|
-| `version` | 0005 | P8 |
-| `face` | 0005 | P7 |
-| `tag`, `asset_tag` | 0006 | P5 |
+| `version` | 0006 | P8 |
+| `face` | 0006 | P7 |
 | `collection`, `collection_item`, `smart_trigger` | 0007 | P6 |
 | `prompt_template` | 0008 | P9 |
-
-> Migration `0003` is taken by P3 (reconcile `missing_at` marker) — downstream plan numbers shifted up by one.
 
 ---
 

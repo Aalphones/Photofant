@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
-from photofant.db.models import Asset, AssetInstance
+from photofant.db.models import Asset, AssetInstance, AssetTag, Tag
 from photofant.db.session import get_session
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
 from photofant.media import moves
@@ -54,8 +54,17 @@ class AssetDto(BaseModel):
     generation_meta: dict | None  # type: ignore[type-arg]
 
 
+class TagDto(BaseModel):
+    id: int
+    name: str
+    kind: str
+    score: float | None
+
+
 class AssetDetailDto(AssetDto):
     path: str | None
+    tags: list[TagDto]
+    tagger: str | None
 
 
 class AssetsPage(BaseModel):
@@ -92,6 +101,18 @@ def build_asset_dto(asset: Asset, instance: AssetInstance) -> AssetDto:
         version_count=0,  # version table added in P8
         generation_meta=asset.generation_meta,
     )
+
+
+def _load_asset_tags(session: Session, asset_id: int) -> list[TagDto]:
+    rows = (
+        session.query(AssetTag, Tag)
+        .join(Tag, Tag.id == AssetTag.tag_id)
+        .filter(AssetTag.asset_id == asset_id)
+        .order_by(AssetTag.score.desc().nulls_last())
+        .all()
+    )
+    return [TagDto(id=tag.id, name=tag.name, kind=asset_tag.kind, score=asset_tag.score)
+            for asset_tag, tag in rows]
 
 
 def _base_query(session: Session) -> OrmQuery[Any]:
@@ -202,7 +223,8 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
 
     asset, instance = row
     base = build_asset_dto(asset, instance)
-    return AssetDetailDto(**base.model_dump(), path=instance.path)
+    tags = _load_asset_tags(session, asset.id)
+    return AssetDetailDto(**base.model_dump(), path=instance.path, tags=tags, tagger=asset.tagger)
 
 
 @router.post("/upload", response_model=JobStarted)

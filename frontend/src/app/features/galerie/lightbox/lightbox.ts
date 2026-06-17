@@ -7,9 +7,11 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
+import { switchMap, of } from 'rxjs';
 import { Store } from '@ngrx/store';
-import type { AssetDto } from '@photofant/models';
+import type { AssetDto, TagDto } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { Icon } from '@photofant/ui';
@@ -73,6 +75,21 @@ export class Lightbox {
   protected readonly hasNext = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
 
   protected readonly showGenMeta = signal(false);
+
+  private readonly detail = toSignal(
+    this.store.select(gallerySelectors.selectLightboxAsset).pipe(
+      switchMap((asset: AssetDto | null) =>
+        asset != null ? this.assetService.getAsset(asset.id) : of(null)
+      ),
+    ),
+  );
+
+  protected readonly displayTags = computed(() =>
+    (this.detail()?.tags ?? []).map((tag: TagDto) => ({
+      id: tag.id,
+      displayName: tag.name.replace(/_/g, ' '),
+    }))
+  );
 
   protected readonly imageUrl = computed((): string => {
     const asset = this.asset();

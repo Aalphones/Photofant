@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, LargeBinary, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -84,6 +84,27 @@ class ModelRegistry(Base):
     capabilities: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
+
+class Tag(Base):
+    __tablename__ = "tag"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, unique=True, nullable=False)  # lowercase + underscores (canonical)
+
+
+class AssetTag(Base):
+    __tablename__ = "asset_tag"
+    __table_args__ = (
+        UniqueConstraint("asset_id", "tag_id", name="uq_asset_tag"),
+        Index("ix_asset_tag_asset_id", "asset_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
+    tag_id: Mapped[int] = mapped_column(ForeignKey("tag.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="auto")  # auto | manual
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class CaptionPreset(Base):

@@ -107,8 +107,20 @@
         </div>
       }
 
+      <!-- Tags -->
+      @if (displayTags().length > 0) {
+        <div class="panel-sec">
+          <div class="psec-title">Tags</div>
+          <div class="tag-list">
+            @for (tag of displayTags(); track tag.id) {
+              <span class="tag-chip">{{ tag.displayName }}</span>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Stub-Sektionen: ausgeblendet bis P5/P7/P8 -->
-      <!-- Caption, Tags, Gesichter, Versionen -->
+      <!-- Caption, Gesichter, Versionen -->
 
     }
   </div>

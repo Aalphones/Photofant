@@ -27,8 +27,17 @@ export interface AssetDto {
   generation_meta: Record<string, unknown> | null;
 }
 
+export interface TagDto {
+  id: number;
+  name: string;
+  kind: string;
+  score: number | null;
+}
+
 export interface AssetDetailDto extends AssetDto {
   path: string | null;
+  tags: TagDto[];
+  tagger: string | null;
 }
 
 export interface AssetsPage {
