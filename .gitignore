@@ -29,3 +29,5 @@ Data/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+settings.json
