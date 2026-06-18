@@ -1,56 +1,48 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
-
-from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
 
 _DEFAULT_DATA_ROOT = Path("Data")
+_DEFAULT_MODELS_DIR_NAME = "models"
 _PERSON_SUBFOLDERS = ["photos", "favourites", "faces", "edits"]
 
 
 def get_data_root_base() -> Path:
-    """Base data directory from env or default, *without* consulting the DB.
+    """Base data directory from settings.json (or default), without consulting the DB.
 
-    Single source of truth for where everything lives. The SQLite DB and the
-    thumbnail cache anchor their `.photofant/` folder here so the whole data set
-    sits under one backup-able directory. This deliberately cannot read the
-    DB-stored `data_root` override — the database file location can't depend on
-    a value stored inside that same database.
+    The SQLite DB and thumbnail cache anchor their .photofant/ folder here, so the
+    whole data set sits under one backup-able directory. Reads from settings.json
+    instead of the DB to avoid a circular dependency (DB location can't depend on
+    a value stored inside that same DB).
     """
-    env_root = os.environ.get("PHOTOFANT_DATA_ROOT")
-    return Path(env_root) if env_root else _DEFAULT_DATA_ROOT
+    from photofant.settings import load_settings
+
+    settings = load_settings()
+    raw = settings.get("data_root")
+    return Path(raw) if raw else _DEFAULT_DATA_ROOT
 
 
-def get_data_root(session: Session | None = None) -> Path:
+def get_data_root() -> Path:
     """Return the configured data root and ensure folder structure exists."""
-    env_root = os.environ.get("PHOTOFANT_DATA_ROOT")
-    if env_root:
-        root = Path(env_root)
-    elif session is not None:
-        from sqlalchemy import text
+    from photofant.settings import load_settings
 
-        row = session.execute(text("SELECT value FROM app_config WHERE key = 'data_root'")).fetchone()
-        root = Path(row[0]) if (row and row[0]) else _DEFAULT_DATA_ROOT
-    else:
-        root = _DEFAULT_DATA_ROOT
-
+    settings = load_settings()
+    raw = settings.get("data_root")
+    root = Path(raw) if raw else _DEFAULT_DATA_ROOT
     _ensure_folder_structure(root)
     return root
 
 
-def get_models_dir(session: Session) -> Path:
-    """Return the configured models_dir from DB config, ensuring it exists."""
-    from sqlalchemy import text
+def get_models_dir() -> Path:
+    """Return the configured models_dir from settings.json, ensuring it exists."""
+    from photofant.settings import load_settings
 
-    row = session.execute(text("SELECT value FROM app_config WHERE key = 'models_dir'")).fetchone()
-    if row and row[0]:
-        models_dir = Path(row[0])
-    else:
-        models_dir = get_data_root_base() / ".photofant" / "models"
+    settings = load_settings()
+    raw = settings.get("models_dir")
+    models_dir = Path(raw) if raw else get_data_root_base() / ".photofant" / _DEFAULT_MODELS_DIR_NAME
     models_dir.mkdir(parents=True, exist_ok=True)
     return models_dir
 

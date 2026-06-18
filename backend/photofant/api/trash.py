@@ -48,7 +48,7 @@ async def restore_asset(asset_id: int, session: DbSession) -> AssetDto:
         raise HTTPException(status_code=404, detail="Asset not in trash")
 
     asset, instance = row
-    data_root = get_data_root(session)
+    data_root = get_data_root()
     await moves.restore(session, instance, data_root)
     return build_asset_dto(asset, instance)
 

@@ -46,7 +46,7 @@ def _import_single(source_path: Path) -> tuple[int, str] | None:
             log.info("Skipping %s (hash %s already in DB)", source_path.name, meta.content_hash[:8])
             return None
 
-        data_root = get_data_root(session)
+        data_root = get_data_root()
         dest = _dest_path(data_root, meta, source_path)
 
         if not dest.exists():

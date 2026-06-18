@@ -24,6 +24,7 @@ from photofant.api import (
 from photofant.inference.session_manager import session_manager
 from photofant.jobs.queue import job_queue
 from photofant.models.loader import load_manifest
+from photofant.settings import ensure_settings_file
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     log.info("Starting Photofant backend")
+    ensure_settings_file()
     load_manifest()  # validate manifest.json at startup; logs errors, never crashes
     job_queue.start()
     yield

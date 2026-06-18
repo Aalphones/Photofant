@@ -98,6 +98,42 @@ negierte schließen aus; ohne positiven Trigger ist die Smart-Mitgliedschaft lee
 existieren in Schema + UI, matchen aber bis P7 nichts. Hooks sitzen an Tag-Edit, Caption-Edit,
 Bulk-Tagging, Tag-Merge, Tagging-/Caption-Job (Import + Rerun) und Trigger-CRUD.
 
+## Config / Settings (Settings-JSON-Infrastruktur)
+
+> Liest und schreibt `.photofant/settings.json` (kein DB-Zugriff mehr).
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/einstellungen` (lesen) | `GET` | `/api/config` | — | `ConfigResponse` |
+| `/einstellungen` (schreiben) | `PATCH` | `/api/config` | `ConfigPatchRequest` | `ConfigResponse` |
+
+```typescript
+interface ConfigResponse {
+  data: AppSettings;
+}
+
+interface ConfigPatchRequest {
+  data: Partial<AppSettings>;
+}
+
+interface AppSettings {
+  _schema_version: number;
+  data_root: string | null;
+  models_dir: string | null;
+  thumbnail_quality: 'sm' | 'md' | 'lg';
+  auto_tag: boolean;
+  auto_caption: boolean;
+  auto_embed: boolean;
+  tagging_threshold: number;   // 0.0–1.0
+  blur_threshold: number;
+  trash_auto_days: number;     // 0 = deaktiviert
+  keyboard_shortcuts: Record<string, string> | null;
+  display: { locale: string; date_format: string };
+}
+```
+
+Fehlende Keys in `PATCH` werden ignoriert (fehlende Keys = kein Update). Unbekannte Keys werden gespeichert (vorwärtskompatibel). Typfehler → `422`.
+
 ## Maintenance
 
 | Angular Route | Method | Backend Endpoint | Request | Response |

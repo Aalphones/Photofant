@@ -1,0 +1,130 @@
+"""Central settings module — reads/writes .photofant/settings.json."""
+from __future__ import annotations
+
+import copy
+import json
+import logging
+import os
+from pathlib import Path
+from typing import Any, TypedDict
+
+log = logging.getLogger(__name__)
+
+
+class DisplaySettings(TypedDict):
+    locale: str
+    date_format: str
+
+
+class AppSettings(TypedDict):
+    _schema_version: int
+    data_root: str | None
+    models_dir: str | None
+    thumbnail_quality: str
+    auto_tag: bool
+    auto_caption: bool
+    auto_embed: bool
+    tagging_threshold: float
+    blur_threshold: float
+    trash_auto_days: int
+    keyboard_shortcuts: dict[str, Any] | None
+    display: DisplaySettings
+
+
+SETTINGS_DEFAULTS: AppSettings = {
+    "_schema_version": 1,
+    "data_root": None,
+    "models_dir": None,
+    "thumbnail_quality": "md",
+    "auto_tag": True,
+    "auto_caption": True,
+    "auto_embed": True,
+    "tagging_threshold": 0.35,
+    "blur_threshold": 200.0,
+    "trash_auto_days": 30,
+    "keyboard_shortcuts": None,
+    "display": {
+        "locale": "de",
+        "date_format": "dmy",
+    },
+}
+
+# Maps known top-level keys to their expected Python types.
+# bool must come before int in tuples (bool is a subclass of int).
+_EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
+    "data_root": (str, type(None)),
+    "models_dir": (str, type(None)),
+    "thumbnail_quality": str,
+    "auto_tag": bool,
+    "auto_caption": bool,
+    "auto_embed": bool,
+    "tagging_threshold": (float, int),
+    "blur_threshold": (float, int),
+    "trash_auto_days": int,
+    "keyboard_shortcuts": (dict, type(None)),
+    "display": dict,
+}
+
+
+def get_settings_path() -> Path:
+    env_path = os.environ.get("PHOTOFANT_SETTINGS_PATH")
+    if env_path:
+        return Path(env_path)
+    settings_dir = Path.cwd() / ".photofant"
+    settings_dir.mkdir(parents=True, exist_ok=True)
+    return settings_dir / "settings.json"
+
+
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    result = copy.deepcopy(base)
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def load_settings() -> AppSettings:
+    path = get_settings_path()
+    if not path.exists():
+        return copy.deepcopy(SETTINGS_DEFAULTS)
+    try:
+        raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+        merged = _deep_merge(dict(SETTINGS_DEFAULTS), raw)
+        return merged  # type: ignore[return-value]
+    except json.JSONDecodeError as error:
+        log.warning("settings.json contains invalid JSON (%s) — falling back to defaults", error)
+        return copy.deepcopy(SETTINGS_DEFAULTS)
+
+
+def save_settings(settings: AppSettings) -> None:
+    path = get_settings_path()
+    tmp_path = path.parent / (path.name + ".tmp")
+    tmp_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp_path.rename(path)
+
+
+def patch_settings(partial: dict[str, Any]) -> AppSettings:
+    for key, value in partial.items():
+        if key not in _EXPECTED_TYPES:
+            continue
+        expected = _EXPECTED_TYPES[key]
+        # For bool fields, reject bare int so True/False aren't accidentally overwritten with 1/0.
+        if isinstance(expected, type) and expected is bool and not isinstance(value, bool):
+            raise TypeError(f"Setting '{key}' expects bool, got {type(value).__name__}")
+        if not isinstance(value, expected):
+            raise TypeError(
+                f"Setting '{key}' expects {expected}, got {type(value).__name__}"
+            )
+    current = load_settings()
+    updated: AppSettings = _deep_merge(dict(current), partial)  # type: ignore[assignment]
+    save_settings(updated)
+    return updated
+
+
+def ensure_settings_file() -> None:
+    path = get_settings_path()
+    if not path.exists():
+        log.info("First start — creating default settings.json at %s", path)
+        save_settings(copy.deepcopy(SETTINGS_DEFAULTS))

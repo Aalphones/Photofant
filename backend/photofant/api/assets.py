@@ -423,7 +423,7 @@ async def import_assets(body: ImportRequest, session: DbSession) -> JobStarted:
 
 @router.post("/scan", response_model=JobStarted)
 async def scan_assets(session: DbSession) -> JobStarted:
-    data_root = get_data_root(session)
+    data_root = get_data_root()
     status = await enqueue_scan(Path(data_root))
     return JobStarted(job_id=status.id)
 
@@ -534,6 +534,6 @@ async def delete_asset(asset_id: int, session: DbSession) -> Response:
         raise HTTPException(status_code=404, detail="Asset not found")
 
     _, instance = row
-    data_root = get_data_root(session)
+    data_root = get_data_root()
     await moves.soft_delete(session, instance, data_root)
     return Response(status_code=204)

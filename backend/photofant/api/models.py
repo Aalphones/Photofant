@@ -154,7 +154,7 @@ async def download_model(
             },
         )
 
-    models_dir = get_models_dir(session)
+    models_dir = get_models_dir()
     job_status = await enqueue_download(manifest_id, models_dir)
     return DownloadResponse(job_id=job_status.id)
 
@@ -162,7 +162,7 @@ async def download_model(
 @router.post("/scan", response_model=ScanResponse)
 async def scan_models(session: DbSession) -> ScanResponse:
     """Scan models_dir for manually placed files and register matched entries."""
-    models_dir = get_models_dir(session)
+    models_dir = get_models_dir()
     found = await asyncio.to_thread(scan_models_dir, models_dir)
     return ScanResponse(registered=found)
 

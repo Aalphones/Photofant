@@ -64,9 +64,7 @@ def _walk_data_root(data_root: Path) -> list[Path]:
 
 
 def _run_reconcile() -> int:
-    with SessionLocal() as session:
-        data_root = get_data_root(session)
-
+    data_root = get_data_root()
     active = _gather_active_instances()
     fs_paths = _walk_data_root(data_root)
     report = classify_reconcile(active, fs_paths)

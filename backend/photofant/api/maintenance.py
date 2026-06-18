@@ -192,7 +192,7 @@ async def _apply_one(
 
 @router.post("/reconcile/repair", response_model=RepairResponse)
 async def repair_reconcile(body: RepairRequest, session: DbSession) -> RepairResponse:
-    data_root = get_data_root(session)
+    data_root = get_data_root()
     import_paths: list[str] = []
     results: list[RepairResultDto] = []
 
