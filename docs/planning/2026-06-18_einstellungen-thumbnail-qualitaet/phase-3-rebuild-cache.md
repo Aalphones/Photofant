@@ -1,6 +1,6 @@
 # Thumbnails · Phase 3 — Rebuild-Job: 1024-px-Lücke bei bestehenden Assets füllen
 
-> Rating: **heikel** · Status: pending · Voraussetzung: Phase 1 + 2 abgeschlossen
+> Rating: **heikel** · Status: complete · Voraussetzung: Phase 1 + 2 abgeschlossen
 
 ## Kontext (vorher lesen)
 
@@ -29,22 +29,20 @@
 
 ## Checkliste
 
-- [ ] **Backend `maintenance.py`**: neuer Endpoint `POST /api/maintenance/rebuild-thumbnails`
+- [x] **Backend `maintenance.py`**: neuer Endpoint `POST /api/maintenance/rebuild-thumbnails`
   - Ruft `enqueue_thumbnail_rebuild()` aus `thumbnail_job.py` auf
   - Prüft: läuft bereits ein `THUMBNAIL_REBUILD`-Job → HTTP 409
   - Response: `{ job_id }`
-- [ ] **`thumbnail_job.py`**: neue Funktion `enqueue_thumbnail_rebuild()` / `run_thumbnail_rebuild_job()`
-  - Lädt alle aktiven Asset-IDs + Pfade aus DB
-  - Iteriert über alle Assets × `THUMBNAIL_SIZES`
-  - Skip wenn `get_thumbnail(db, asset_id, size)` bereits existiert
-  - Fortschritt via `job_queue.update()`
-  - `JobKind.THUMBNAIL_REBUILD` ergänzen (oder bestehenden `THUMBNAIL`-Kind prüfen ob ausreichend)
-- [ ] **`maintenance.model.ts`** (Frontend): `RebuildTarget` ggf. um `thumbnail_rebuild` ergänzen
-- [ ] **`maintenance.actions.ts`**: `triggerThumbnailRebuild()` Action
-- [ ] **`maintenance.effects.ts`**: Effect ruft `POST /api/maintenance/rebuild-thumbnails` auf
-- [ ] **`maintenance.service.ts`**: Methode `rebuildThumbnails()` → HTTP-POST
-- [ ] **`einstellungen.ts` / Wartung-UI**: Button "Thumbnails neu generieren"; disabled während Job läuft
-- [ ] Doc-Update: `docs/routes.md` — neuen Endpoint dokumentieren
+- [x] **`thumbnail_job.py`**: neue Funktion `enqueue_thumbnail_rebuild()` / `run_thumbnail_rebuild_job()`
+  - `gather_active_items()` aus `rebuild_job.py` hierher verschoben (public, wird von rebuild_job importiert)
+  - Iteriert über alle Assets × `THUMBNAIL_SIZES` via `generate_thumbnails()` (skip-if-exists bereits eingebaut)
+  - `JobKind.THUMBNAIL_REBUILD = "thumbnail_rebuild"` in `queue.py` ergänzt
+- [x] **`maintenance.model.ts`** (Frontend): kein neues RebuildTarget nötig — eigene State-Flag `isThumbnailRebuilding`
+- [x] **`maintenance.actions.ts`**: `triggerThumbnailRebuild` + Success/Failure/Done Actions
+- [x] **`maintenance.effects.ts`**: Effect + Job-Monitoring für kind `thumbnail_rebuild`
+- [x] **`maintenance.service.ts`**: Methode `rebuildThumbnails()` → HTTP-POST
+- [x] **Wartung-UI (`wartung.ts`)**: Karte "Fehlende Thumbnails ergänzen" + Button "Thumbnails neu generieren"; disabled während `isThumbnailRebuilding()`
+- [x] Doc-Update: `docs/routes.md` — neuen Endpoint dokumentiert
 
 ## Heikel: Was schiefgehen kann
 
@@ -56,3 +54,5 @@
 | Mehrfach-Klick auf "Rebuild" | HTTP 409, Frontend zeigt Toast "Rebuild läuft bereits" |
 
 ## Report-Back
+
+`gather_active_items()` aus `rebuild_job.py` nach `thumbnail_job.py` verschoben (Chesterton: diente dem destructive Rebuild, wird jetzt von beiden gebraucht — rebuild_job importiert es weiterhin). `JobKind.THUMBNAIL_REBUILD` ist separat vom bestehenden `REBUILD`, damit das 409-Gate spezifisch nur Thumbnail-Rebuilds sperrt. Frontend bekommt eigene `isThumbnailRebuilding`-Flag statt `rebuildingTarget` — kein Kontext-Mix mit dem destructiven Rebuild.

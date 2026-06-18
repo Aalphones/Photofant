@@ -3,13 +3,10 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from sqlalchemy import select
-
 from photofant.db.cache import clear_cache, get_cache_db_path, init_cache_db
-from photofant.db.models import AssetInstance
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
-from photofant.jobs.thumbnail_job import generate_thumbnails
+from photofant.jobs.thumbnail_job import gather_active_items, generate_thumbnails
 
 log = logging.getLogger(__name__)
 
@@ -19,17 +16,6 @@ _TARGET_LABELS: dict[str, str] = {
     "thumbnails": "Thumbnails neu aufbauen",
     "embeddings": "Vektor-Index neu aufbauen",
 }
-
-
-def _gather_active_items() -> list[tuple[int, str]]:
-    """(asset_id, path) for every active instance — not soft-deleted, not acknowledged-missing."""
-    with SessionLocal() as session:
-        rows = session.execute(
-            select(AssetInstance.asset_id, AssetInstance.path)
-            .where(AssetInstance.deleted_at.is_(None))
-            .where(AssetInstance.missing_at.is_(None))
-        ).all()
-    return [(row[0], row[1]) for row in rows]
 
 
 async def _rebuild_thumbnails(status: JobStatus) -> None:
@@ -42,7 +28,7 @@ async def _rebuild_thumbnails(status: JobStatus) -> None:
     init_cache_db(db_path)
     clear_cache(db_path)
 
-    items = _gather_active_items()
+    items = gather_active_items()
     await generate_thumbnails(status, db_path, items)
     log.info("Thumbnail cache rebuilt for %d instances", len(items))
 

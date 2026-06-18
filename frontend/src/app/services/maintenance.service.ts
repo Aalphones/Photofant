@@ -44,6 +44,10 @@ export class MaintenanceService {
     });
   }
 
+  rebuildThumbnails(): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>('/api/maintenance/rebuild-thumbnails', {});
+  }
+
   loadStatus(): Observable<MaintenanceStatus> {
     return this.http.get<MaintenanceStatus>('/api/maintenance/status');
   }

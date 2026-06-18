@@ -4,11 +4,26 @@ import asyncio
 import logging
 from pathlib import Path
 
+from sqlalchemy import select
+
 from photofant.db.cache import THUMBNAIL_SIZES, get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
+from photofant.db.models import AssetInstance
+from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.media.thumbnails import generate_thumbnail
 
 log = logging.getLogger(__name__)
+
+
+def gather_active_items() -> list[tuple[int, str]]:
+    """(asset_id, path) for every active instance — not soft-deleted, not acknowledged-missing."""
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(AssetInstance.asset_id, AssetInstance.path)
+            .where(AssetInstance.deleted_at.is_(None))
+            .where(AssetInstance.missing_at.is_(None))
+        ).all()
+    return [(row[0], row[1]) for row in rows]
 
 
 def _process_one(db_path: Path, asset_id: int, source_path: Path, size: int) -> None:
@@ -54,4 +69,21 @@ async def enqueue_thumbnails(items: list[tuple[int, str]]) -> JobStatus:
         kind=JobKind.THUMBNAIL,
         label=f"Thumbnails: {len(items)} Bild(er)",
         coro_factory=lambda job_status: run_thumbnail_job(job_status, items),
+    )
+
+
+async def run_thumbnail_rebuild_job(status: JobStatus) -> None:
+    """Additive rebuild: generate missing sizes only, never clears the cache."""
+    db_path = get_cache_db_path()
+    init_cache_db(db_path)
+    items = gather_active_items()
+    await generate_thumbnails(status, db_path, items)
+    log.info("Thumbnail rebuild (additive) complete for %d assets", len(items))
+
+
+async def enqueue_thumbnail_rebuild() -> JobStatus:
+    return await job_queue.enqueue(
+        kind=JobKind.THUMBNAIL_REBUILD,
+        label="Thumbnails neu generieren",
+        coro_factory=lambda job_status: run_thumbnail_rebuild_job(job_status),
     )

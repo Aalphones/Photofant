@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -14,8 +14,9 @@ from photofant.db.engine import get_db_path
 from photofant.db.session import get_session
 from photofant.jobs.backup_job import enqueue_backup
 from photofant.jobs.import_job import enqueue_import
-from photofant.jobs.queue import JobStatus
+from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.jobs.rebuild_job import RebuildTarget, enqueue_rebuild
+from photofant.jobs.thumbnail_job import enqueue_thumbnail_rebuild
 from photofant.jobs.reconcile_job import enqueue_reconcile
 from photofant.maintenance import repair
 from photofant.maintenance.store import load_report
@@ -222,6 +223,18 @@ class RebuildRequest(BaseModel):
 @router.post("/rebuild", response_model=JobResponse)
 async def trigger_rebuild(body: RebuildRequest) -> JobResponse:
     status: JobStatus = await enqueue_rebuild(body.target)
+    return JobResponse(job_id=status.id)
+
+
+@router.post("/rebuild-thumbnails", response_model=JobResponse)
+async def trigger_thumbnail_rebuild() -> JobResponse:
+    already_running = any(
+        job.kind == JobKind.THUMBNAIL_REBUILD and job.state in (JobState.QUEUED, JobState.RUNNING)
+        for job in job_queue.snapshot()
+    )
+    if already_running:
+        raise HTTPException(status_code=409, detail="Thumbnail-Rebuild läuft bereits")
+    status: JobStatus = await enqueue_thumbnail_rebuild()
     return JobResponse(job_id=status.id)
 
 

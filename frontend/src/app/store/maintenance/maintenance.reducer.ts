@@ -18,6 +18,7 @@ export interface MaintenanceState {
   isScanning: boolean;
   isRepairing: boolean;
   rebuildingTarget: RebuildTarget | null;
+  isThumbnailRebuilding: boolean;
   status: MaintenanceStatus | null;
   error: string | null;
 }
@@ -31,6 +32,7 @@ const initialState: MaintenanceState = {
   isScanning: false,
   isRepairing: false,
   rebuildingTarget: null,
+  isThumbnailRebuilding: false,
   status: null,
   error: null,
 };
@@ -146,6 +148,25 @@ export const maintenanceFeature = createFeature({
       ...state,
       rebuildingTarget: null,
     })),
+
+    on(maintenanceActions.triggerThumbnailRebuild, (state: MaintenanceState) => ({
+      ...state,
+      isThumbnailRebuilding: true,
+      error: null,
+    })),
+    on(maintenanceActions.triggerThumbnailRebuildSuccess, (state: MaintenanceState) => ({
+      ...state,
+    })),
+    on(maintenanceActions.triggerThumbnailRebuildFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
+      isThumbnailRebuilding: false,
+      error,
+    })),
+    on(maintenanceActions.thumbnailRebuildDone, (state: MaintenanceState) => ({
+      ...state,
+      isThumbnailRebuilding: false,
+    })),
+
     on(maintenanceActions.loadStatusSuccess, (state: MaintenanceState, { status }) => ({
       ...state,
       status,

@@ -9,6 +9,7 @@ const {
   selectIsScanning,
   selectIsRepairing,
   selectRebuildingTarget,
+  selectIsThumbnailRebuilding,
   selectStatus,
   selectError,
 } = maintenanceFeature;
@@ -22,6 +23,7 @@ export const maintenanceSelectors = {
   selectIsScanning,
   selectIsRepairing,
   selectRebuildingTarget,
+  selectIsThumbnailRebuilding,
   selectStatus,
   selectError,
 };

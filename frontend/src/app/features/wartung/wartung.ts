@@ -188,7 +188,32 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
         <div class="card">
           <div class="card-row">
             <div>
-              <div class="card-label">Thumbnails neu aufbauen</div>
+              <div class="card-label">Fehlende Thumbnails ergänzen</div>
+              <div class="card-desc">
+                Generiert fehlende Größen (256 / 512 / 1024 px) für bestehende Bilder additiv —
+                löscht nichts, überspringt bereits vorhandene Einträge. Einmaliger Lauf nach
+                dem Update auf dreifache Thumbnail-Größen.
+              </div>
+            </div>
+            <button
+              class="btn-primary"
+              [disabled]="isThumbnailRebuilding()"
+              (click)="startThumbnailRebuild()"
+            >
+              @if (isThumbnailRebuilding()) {
+                <span class="spinner"></span>
+                Läuft…
+              } @else {
+                Thumbnails neu generieren
+              }
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <div class="card-label">Thumbnails vollständig neu aufbauen</div>
               <div class="card-desc">
                 Baut <code>thumbnails.sqlite</code> vollständig aus den vorhandenen
                 Bilddateien neu auf. Gefahrlos — Originale werden nie verändert, ein
@@ -204,7 +229,7 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
                 <span class="spinner"></span>
                 Läuft…
               } @else {
-                Thumbnails rebuilden
+                Alles rebuilden
               }
             </button>
           </div>
@@ -476,6 +501,7 @@ export class Wartung {
   readonly isScanning = this.store.selectSignal(maintenanceSelectors.selectIsScanning);
   readonly isRepairing = this.store.selectSignal(maintenanceSelectors.selectIsRepairing);
   readonly rebuildingTarget = this.store.selectSignal(maintenanceSelectors.selectRebuildingTarget);
+  readonly isThumbnailRebuilding = this.store.selectSignal(maintenanceSelectors.selectIsThumbnailRebuilding);
   readonly status = this.store.selectSignal(maintenanceSelectors.selectStatus);
   readonly error = this.store.selectSignal(maintenanceSelectors.selectError);
 
@@ -501,6 +527,10 @@ export class Wartung {
 
   triggerReconcile(): void {
     this.store.dispatch(maintenanceActions.triggerReconcile());
+  }
+
+  startThumbnailRebuild(): void {
+    this.store.dispatch(maintenanceActions.triggerThumbnailRebuild());
   }
 
   rebuildThumbnails(): void {

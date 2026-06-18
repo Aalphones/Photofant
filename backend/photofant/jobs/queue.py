@@ -27,6 +27,7 @@ class JobKind(StrEnum):
     BACKUP = "backup"
     RECONCILE = "reconcile"
     REBUILD = "rebuild"
+    THUMBNAIL_REBUILD = "thumbnail_rebuild"
     DOWNLOAD = "download_model"
     TAGGING = "tagging"
     CAPTIONING = "captioning"

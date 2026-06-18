@@ -167,4 +167,41 @@ export class MaintenanceEffects {
       ),
     )
   );
+
+  readonly triggerThumbnailRebuild$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.triggerThumbnailRebuild),
+      switchMap(() =>
+        this.maintenanceService.rebuildThumbnails().pipe(
+          map((response: { job_id: string }) =>
+            maintenanceActions.triggerThumbnailRebuildSuccess({ jobId: response.job_id })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.triggerThumbnailRebuildFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly thumbnailRebuildJobDone$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'thumbnail_rebuild' && job.state === 'done'),
+      switchMap(() => [
+        maintenanceActions.thumbnailRebuildDone(),
+        maintenanceActions.loadStatus(),
+      ]),
+    )
+  );
+
+  readonly thumbnailRebuildJobFailed$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'thumbnail_rebuild' && job.state === 'error'),
+      map(({ job }: { job: Job }) =>
+        maintenanceActions.triggerThumbnailRebuildFailure({ error: job.error ?? 'Rebuild fehlgeschlagen' })
+      ),
+    )
+  );
 }
