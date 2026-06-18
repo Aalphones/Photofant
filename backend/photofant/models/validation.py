@@ -140,16 +140,11 @@ def spec_for(entry: ManifestEntry) -> ValidationSpec:
             required_globs=("*.onnx",),
         )
 
-    # Plain "onnx": single file, unless the manifest declares companions.
+    # Plain "onnx": always a folder named after the manifest_id — consistent with
+    # how scan_models_dir stores paths. Even a single-file model (rembg-u2net) lives
+    # in <models_dir>/<manifest_id>/u2net.onnx, so we always validate the folder
+    # and require the declared filenames inside it.
     declared = tuple(file_info["filename"] for file_info in entry.files)
-    if len(declared) <= 1:
-        return ValidationSpec(
-            layout=ModelLayout.SINGLE_FILE,
-            expected_format=ModelFileFormat.ONNX,
-            role=entry.role,
-        )
-
-    # e.g. WD14: model.onnx + selected_tags.csv → folder with both names required.
     return ValidationSpec(
         layout=ModelLayout.FOLDER,
         expected_format=ModelFileFormat.ONNX,
