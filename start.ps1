@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 
-# .env.local einlesen (KEY=VALUE), bevor irgendetwas startet — Kindprozesse
+# .env.local einlesen (KEY=VALUE), bevor irgendetwas startet - Kindprozesse
 # (alembic, uvicorn, npm) erben die hier gesetzten Variablen.
 $envFile = Join-Path $root '.env.local'
 if (Test-Path $envFile) {
@@ -22,7 +22,7 @@ if (Test-Path $envFile) {
 }
 
 Write-Host '=== Datenbank-Migration ===' -ForegroundColor Cyan
-Write-Host '  (Beim ersten Start baut uv die Python-Umgebung — das kann einige Minuten dauern.)' -ForegroundColor DarkGray
+Write-Host '  (Beim ersten Start baut uv die Python-Umgebung - das kann einige Minuten dauern.)' -ForegroundColor DarkGray
 Push-Location "$root\backend"
 uv run alembic upgrade head
 if ($LASTEXITCODE -ne 0) { Write-Error 'Migration fehlgeschlagen'; exit 1 }
@@ -31,7 +31,7 @@ Pop-Location
 Write-Host '=== Backend starten (http://localhost:8000) ===' -ForegroundColor Cyan
 # --reload-dir photofant: nur den Paketordner ueberwachen, NICHT den ganzen
 # backend-Baum. Sonst watcht uvicorn auch .venv (zigtausend Dateien) und tests/
-# — auf Windows reisst der File-Watcher dort reproduzierbar ab und nimmt uvicorn
+# - auf Windows reisst der File-Watcher dort reproduzierbar ab und nimmt uvicorn
 # mit, was den Watchdog unten alles abschiessen laesst.
 $backend = Start-Process `
     -FilePath 'uv' `
@@ -41,7 +41,7 @@ $backend = Start-Process `
 
 # --host 0.0.0.0: Dev-Server lauscht auf allen Netzwerk-Adressen (nicht nur
 # localhost), damit andere Geraete im LAN das Frontend erreichen. Das Backend
-# bleibt auf localhost — der Dev-Proxy (proxy.conf.json) reicht /api intern weiter.
+# bleibt auf localhost - der Dev-Proxy (proxy.conf.json) reicht /api intern weiter.
 Write-Host '=== Frontend starten (http://localhost:4200, LAN-weit) ===' -ForegroundColor Cyan
 $frontend = Start-Process `
     -FilePath 'npm.cmd' `
@@ -81,7 +81,7 @@ while ((Get-Date) -lt $deadline -and !$frontend.HasExited) {
 }
 if (!$browserOpened) {
     Write-Host ''  # Heartbeat-Zeile sauber abschliessen
-    Write-Host "Frontend nicht erreichbar — $frontendUrl manuell oeffnen." -ForegroundColor Yellow
+    Write-Host "Frontend nicht erreichbar - $frontendUrl manuell oeffnen." -ForegroundColor Yellow
 }
 
 Write-Host ''
@@ -91,17 +91,17 @@ try {
     while (!$backend.HasExited -and !$frontend.HasExited) {
         Start-Sleep -Milliseconds 500
     }
-    # Wer ist gekippt? Festhalten, statt stumm alles abzuschiessen — damit ein
+    # Wer ist gekippt? Festhalten, statt stumm alles abzuschiessen - damit ein
     # unerwarteter Abbruch nachvollziehbar ist und nicht geraten werden muss.
     if ($backend.HasExited) {
-        Write-Host "Backend ist beendet (ExitCode $($backend.ExitCode)) — fahre Frontend mit herunter." -ForegroundColor Red
+        Write-Host "Backend ist beendet (ExitCode $($backend.ExitCode)) - fahre Frontend mit herunter." -ForegroundColor Red
     } else {
-        Write-Host "Frontend ist beendet (ExitCode $($frontend.ExitCode)) — fahre Backend mit herunter." -ForegroundColor Red
+        Write-Host "Frontend ist beendet (ExitCode $($frontend.ExitCode)) - fahre Backend mit herunter." -ForegroundColor Red
     }
 } finally {
     Write-Host ''
     Write-Host 'Beende Photofant...' -ForegroundColor Yellow
-    # /T kills the entire process tree — needed for uvicorn --reload which spawns a child watcher
+    # /T kills the entire process tree - needed for uvicorn --reload which spawns a child watcher
     if (!$backend.HasExited) { $null = taskkill /T /F /PID $backend.Id }
     if (!$frontend.HasExited) { $null = taskkill /T /F /PID $frontend.Id }
 }
