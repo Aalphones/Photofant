@@ -26,7 +26,7 @@ $backend = Start-Process `
 # --host 0.0.0.0: Dev-Server lauscht auf allen Netzwerk-Adressen (nicht nur
 # localhost), damit andere Geraete im LAN das Frontend erreichen. Das Backend
 # bleibt auf localhost - der Dev-Proxy (proxy.conf.json) reicht /api intern weiter.
-Write-Host '=== Frontend starten (http://localhost:4200, LAN-weit) ===' -ForegroundColor Cyan
+Write-Host '=== Frontend starten (http://127.0.0.1:4200, LAN-weit) ===' -ForegroundColor Cyan
 $frontend = Start-Process `
     -FilePath 'npm.cmd' `
     -ArgumentList 'start', '--', '--host', '0.0.0.0' `
@@ -36,12 +36,12 @@ $frontend = Start-Process `
 Write-Host ''
 Write-Host 'Photofant laeuft:' -ForegroundColor Green
 Write-Host '  Backend:  http://localhost:8000'
-Write-Host '  Frontend: http://localhost:4200'
+Write-Host '  Frontend: http://127.0.0.1:4200'
 Write-Host '  Im LAN:   http://192.168.178.51:4200' -ForegroundColor Green
 Write-Host ''
 
 # Warte auf Frontend, dann Browser oeffnen
-$frontendUrl = 'http://localhost:4200'
+$frontendUrl = 'http://127.0.0.1:4200'
 Write-Host 'Warte auf Frontend (Angular kompiliert beim ersten Mal ~30-60s)...' -ForegroundColor Cyan
 $deadline = (Get-Date).AddSeconds(90)
 $startedAt = Get-Date
