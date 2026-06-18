@@ -1,7 +1,7 @@
+@if (isNavOpen()) {
+  <div class="shell__nav-scrim" (click)="isNavOpen.set(false)"></div>
+}
 <div class="shell__nav" [class.shell__nav--open]="isNavOpen()">
-  @if (isNavOpen()) {
-    <div class="shell__nav-scrim" (click)="isNavOpen.set(false)"></div>
-  }
   <pf-nav-rail (close)="isNavOpen.set(false)" />
 </div>
 
