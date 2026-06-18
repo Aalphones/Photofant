@@ -2,24 +2,8 @@
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 
-# .env.local einlesen (KEY=VALUE), bevor irgendetwas startet - Kindprozesse
-# (alembic, uvicorn, npm) erben die hier gesetzten Variablen.
-$envFile = Join-Path $root '.env.local'
-if (Test-Path $envFile) {
-    Write-Host '=== Lade .env.local ===' -ForegroundColor Cyan
-    foreach ($line in Get-Content $envFile) {
-        $trimmed = $line.Trim()
-        if ($trimmed -eq '' -or $trimmed.StartsWith('#')) { continue }
-        $pair = $trimmed -split '=', 2
-        if ($pair.Count -ne 2) { continue }
-        $key = $pair[0].Trim()
-        $value = $pair[1].Trim().Trim('"').Trim("'")
-        if ($key) {
-            Set-Item -Path "env:$key" -Value $value
-            Write-Host "  $key=$value"
-        }
-    }
-}
+# Alle Konfiguration lebt in backend\.photofant\settings.json (siehe settings.example.json).
+# Keine Env-Vars mehr; einziger Override-Hebel waere PHOTOFANT_SETTINGS_PATH (CI/Docker).
 
 Write-Host '=== Datenbank-Migration ===' -ForegroundColor Cyan
 Write-Host '  (Beim ersten Start baut uv die Python-Umgebung - das kann einige Minuten dauern.)' -ForegroundColor DarkGray

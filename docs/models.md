@@ -6,6 +6,8 @@
 
 ## Tables (main DB — `.photofant/db.sqlite`)
 
+> DB-Pfad konfigurierbar via `db_path` in `settings.json` (default `null` → `<data_root>/.photofant/db.sqlite`). Sowohl das Backend als auch die Alembic-Migrationen lesen ihn von dort.
+
 ### `reconcile_report` (migration 0013)
 
 Singleton table (exactly one row, `id = 1`) holding the latest reconcile scan as a
@@ -266,4 +268,4 @@ Separate SQLite file; no Alembic — schema created via `CREATE TABLE IF NOT EXI
 
 PK: `(target_kind, target_id, size)`.
 
-Path overridable via `PHOTOFANT_CACHE_DB_PATH` env var (mirrors the pattern of `PHOTOFANT_DB_PATH`).
+Path configurable via `cache_db_path` in `settings.json` (default `null` → `<data_root>/.photofant/thumbnails.sqlite`); mirrors `db_path` for the main DB.

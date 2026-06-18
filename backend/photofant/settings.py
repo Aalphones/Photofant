@@ -19,6 +19,8 @@ class DisplaySettings(TypedDict):
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
+    db_path: str | None
+    cache_db_path: str | None
     models_dir: str | None
     thumbnail_quality: str
     auto_tag: bool
@@ -34,6 +36,8 @@ class AppSettings(TypedDict):
 SETTINGS_DEFAULTS: AppSettings = {
     "_schema_version": 1,
     "data_root": None,
+    "db_path": None,
+    "cache_db_path": None,
     "models_dir": None,
     "thumbnail_quality": "md",
     "auto_tag": True,
@@ -53,6 +57,8 @@ SETTINGS_DEFAULTS: AppSettings = {
 # bool must come before int in tuples (bool is a subclass of int).
 _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "data_root": (str, type(None)),
+    "db_path": (str, type(None)),
+    "cache_db_path": (str, type(None)),
     "models_dir": (str, type(None)),
     "thumbnail_quality": str,
     "auto_tag": bool,

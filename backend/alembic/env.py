@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from logging.config import fileConfig
 from pathlib import Path
 
@@ -8,6 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from photofant.config import get_data_root_base
+from photofant.settings import load_settings
 
 config = context.config
 
@@ -18,7 +18,7 @@ target_metadata = None
 
 
 def _build_db_url() -> str:
-    raw = os.environ.get("PHOTOFANT_DB_PATH")
+    raw = load_settings()["db_path"]
     path = Path(raw) if raw else get_data_root_base() / ".photofant" / "db.sqlite"
     path.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{path}"

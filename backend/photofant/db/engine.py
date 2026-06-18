@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -9,10 +8,11 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 
 from photofant.config import get_data_root_base
+from photofant.settings import load_settings
 
 
 def _resolve_db_path() -> Path:
-    raw = os.environ.get("PHOTOFANT_DB_PATH")
+    raw = load_settings()["db_path"]
     path = Path(raw) if raw else get_data_root_base() / ".photofant" / "db.sqlite"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
