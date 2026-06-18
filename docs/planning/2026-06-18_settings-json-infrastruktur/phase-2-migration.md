@@ -1,6 +1,6 @@
 # Settings-JSON-Infrastruktur · Phase 2 — Migration: app_config → settings.json, Drop
 
-> Rating: **heikel** · Status: pending · Voraussetzung: Phase 1 abgeschlossen
+> Rating: **heikel** · Status: complete · Voraussetzung: Phase 1 abgeschlossen
 
 ## Kontext (vorher lesen)
 
@@ -32,14 +32,14 @@
 
 ### Callers auf settings.py umstellen
 
-- [ ] **`jobs/tagging_job.py`**: `_get_threshold()` ersetzt DB-Query durch `load_settings().tagging_threshold`
-- [ ] **`jobs/heuristics_job.py`**: `_REFERENCE_SHARPNESS` → `load_settings().blur_threshold` (Vorbereitung für Verarbeitungs-Plan)
-- [ ] **`jobs/import_job.py`**: `_pipeline_flags()` liest `auto_tag`/`auto_caption`/`auto_embed` aus `load_settings()` (Vorbereitung für Verarbeitungs-Plan)
-- [ ] Alle anderen Stellen via `grep -r "app_config" backend/photofant --include="*.py"` — keine direkten SQL-Zugriffe auf `app_config` mehr nach dieser Phase
+- [x] **`jobs/tagging_job.py`**: `_get_threshold()` durch inline `load_settings()["tagging_threshold"]` ersetzt (SQL + Fallback-Konstanten raus)
+- [x] **`jobs/heuristics_job.py`**: `_REFERENCE_SHARPNESS`-Konstante raus → `load_settings()["blur_threshold"]` als Parameter an `_compute_quality`
+- [x] **`jobs/import_job.py`**: neuer `_enqueue_pipeline()`-Helper liest `auto_tag`/`auto_caption`/`auto_embed` aus `load_settings()` und gated Tagging/Caption/Embedding (Thumbnails+Heuristiken laufen immer); konsolidiert die zwei identischen Enqueue-Blöcke aus Import + Scan
+- [x] Alle anderen Stellen via `grep -r "app_config" backend/photofant` — keine direkten SQL-Zugriffe mehr (verifiziert: 0 Treffer im Source)
 
 ### Reconcile-Report umziehen
 
-- [ ] **Neue DB-Tabelle** `reconcile_report` — Alembic-Migration:
+- [x] **Neue DB-Tabelle** `reconcile_report` — Alembic-Migration:
   ```sql
   CREATE TABLE reconcile_report (
       id      INTEGER PRIMARY KEY CHECK (id = 1),  -- max. 1 Zeile
@@ -47,24 +47,20 @@
       created_at DATETIME NOT NULL
   );
   ```
-- [ ] **`maintenance/store.py`** umschreiben: `persist_report()` und `load_report()` nutzen neue Tabelle statt `app_config`
-- [ ] SQLAlchemy-Model `ReconcileReportRow` hinzufügen (oder raw SQL wie bisher, konsistent halten)
+- [x] **`maintenance/store.py`** umschreiben: `persist_report()` + `load_report()` nutzen `reconcile_report` (raw SQL wie bisher, konsistent gehalten)
+- [x] Kein SQLAlchemy-Model — raw SQL beibehalten (wie zuvor bei `app_config`)
 
 ### Alembic Data-Migration
 
-- [ ] Neue Revision `xxxx_drop_app_config_migrate_to_settings_json.py`:
-  - `upgrade()`:
-    1. Bestehende `app_config`-Rows auslesen (mit `op.get_bind()`)
-    2. Werte `models_dir`, `tagging_threshold`, `data_root` (falls vorhanden) in `settings.json` mergen (nur schreiben wenn Key nicht bereits in Datei vorhanden)
-    3. `reconcile_report`-Row aus `app_config` in neue `reconcile_report`-Tabelle transferieren
-    4. `DROP TABLE app_config`
-  - `downgrade()`: `CREATE TABLE app_config ...` + alle Werte zurückschreiben aus settings.json + reconcile_report — sollte funktionieren aber ist optionales Best-Effort
-- [ ] Migration in `alembic/versions/` committen
+- [x] Neue Revision `0013_drop_app_config_to_settings_json.py`:
+  - `upgrade()`: app_config-Rows lesen → bekannte Keys (`data_root`/`models_dir`/`tagging_threshold`) in settings.json mergen (nur fehlende Keys) → `reconcile_report`-Tabelle anlegen → Reconcile-Blob transferieren → `DROP TABLE app_config`
+  - `downgrade()`: `CREATE TABLE app_config` + Reconcile-Blob zurückschreiben (Best-Effort; settings.json bleibt unangetastet)
+- [x] Migration angewendet + Round-Trip (upgrade→downgrade→upgrade) verifiziert; DB auf rev 0013
 
 ### Cleanup
 
-- [ ] `backend/photofant/db/models.py`: `AppConfig`-SQLAlchemy-Model entfernen (falls vorhanden)
-- [ ] `ruff check` + `mypy` sauber
+- [x] Kein `AppConfig`-SQLAlchemy-Model vorhanden (grep `AppConfig` → 0 Treffer) — nichts zu entfernen
+- [x] `ruff check` + `mypy` sauber auf allen berührten Dateien
 
 ## Heikel: Was schiefgehen kann
 
@@ -75,3 +71,8 @@
 | Migrate + Drop in einer Transaktion | SQLite erlaubt DDL in Transaktionen; aber: `DROP TABLE` ist autocommit → Data-Migration in eigener Transaktion BEFORE Drop |
 
 ## Report-Back
+
+- **Datenlage real:** `app_config` war beim Lauf **leer** (0 Rows), DB stand auf 0012 → Data-Migration ein No-op für die echte DB; trotzdem korrekt für den Allgemeinfall + Round-Trip getestet.
+- **Reihenfolge geklärt (war das Heikle):** `ensure_settings_file()` läuft im Server-Lifespan, **nicht** beim `alembic upgrade` — die Migration läuft also vor dem ersten Server-Start sauber, solange keine settings.json existiert. Existiert sie schon mit Default-Keys, greift „nur fehlende Keys mergen" → bestehende settings.json gewinnt (gewollt).
+- **Verhaltensänderung (Chesterton's Fence):** `import_job` enqueute Tagging/Caption/Embedding bisher **bedingungslos**. Neu gated über `auto_tag`/`auto_caption`/`auto_embed`. Defaults sind alle `true` → Default-Verhalten unverändert; nur wer ein Flag auf `false` setzt, überspringt den Schritt. Das war als „Vorbereitung Verarbeitungs-Plan" im Plan vorgesehen.
+- **Deviation:** Plan nannte `_pipeline_flags()`; implementiert als `_enqueue_pipeline()` — bündelt das Settings-Lesen **und** das bedingte Enqueuen und ersetzt die zwei identischen Blöcke in `run_import_job` + `run_scan_job` (weniger Duplikation).

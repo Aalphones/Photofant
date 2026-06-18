@@ -38,7 +38,7 @@ Bootstrap-Reihenfolge:
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
 | 1 | [Schema + Infrastruktur (Reader, Writer, Defaults)](phase-1-schema-infrastruktur.md) | standard | complete |
-| 2 | [Migration: app_config → settings.json, app_config Drop](phase-2-migration.md) | heikel | pending |
+| 2 | [Migration: app_config → settings.json, app_config Drop](phase-2-migration.md) | heikel | complete |
 
 ## settings.json Schema
 
@@ -88,12 +88,28 @@ Bootstrap-Reihenfolge:
 
 ## Summary
 
+`app_config`-DB-Tabelle vollständig abgeschafft. Alle User-Settings leben jetzt einzig in `settings.json` (Phase 1: Reader/Writer/Defaults + `GET`/`PATCH /api/config`; Phase 2: alle Backend-Caller umgestellt, Alembic-Migration droppt die Tabelle). Der Reconcile-Report (vorher als JSON-Blob in `app_config`) wohnt in der neuen Singleton-Tabelle `reconcile_report`. `import_job` gated jetzt Tagging/Caption/Embedding über die `auto_*`-Flags.
+
 ## Files touched
+
+- `backend/photofant/jobs/tagging_job.py` — Threshold aus `load_settings()` statt SQL
+- `backend/photofant/jobs/heuristics_job.py` — `blur_threshold` aus settings, Konstante raus
+- `backend/photofant/jobs/import_job.py` — `_enqueue_pipeline()`-Helper mit `auto_*`-Gating
+- `backend/photofant/maintenance/store.py` — Reconcile-Report in `reconcile_report`-Tabelle
+- `backend/alembic/versions/0013_drop_app_config_to_settings_json.py` — Data-Migration + Drop
+- (Phase 1) `backend/photofant/settings.py`, `backend/photofant/config.py`, `backend/photofant/api/config.py`
 
 ## Commits
 
+- Phase 1: `94d3115` feat(settings): replace app_config DB table with settings.json
+- Phase 2: siehe Git-Log (`feat(settings): drop app_config table, migrate callers to settings.json`)
+
 ## Deviations from plan
+
+- Plan nannte `_pipeline_flags()`; implementiert als `_enqueue_pipeline()` (bündelt Settings-Lesen + bedingtes Enqueuen, ersetzt die duplizierten Blöcke in Import + Scan).
+- Kein `AppConfig`-SQLAlchemy-Model existierte → Cleanup-Task entfiel.
 
 ## Follow-ups
 
 - `PHOTOFANT_SETTINGS_PATH` Env-Var kann später durch einen Settings-Path-Parameter im Startup-Command ersetzt werden (CLI-Arg), falls gewünscht.
+- Abhängige Pläne sind jetzt entsperrt: `2026-06-18_einstellungen-thumbnail-qualitaet`, `2026-06-18_einstellungen-fehlende-sektionen`.

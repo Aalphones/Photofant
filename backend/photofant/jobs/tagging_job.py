@@ -14,33 +14,15 @@ from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
 log = logging.getLogger(__name__)
 
-_DEFAULT_THRESHOLD_KEY = "tagging_threshold"
-_FALLBACK_THRESHOLD: float = 0.35
-
-
-def _get_threshold() -> float:
-    from sqlalchemy import text
-
-    with SessionLocal() as session:
-        row = session.execute(
-            text("SELECT value FROM app_config WHERE key = :key"),
-            {"key": _DEFAULT_THRESHOLD_KEY},
-        ).fetchone()
-        if row and row[0]:
-            try:
-                return float(row[0])
-            except (ValueError, TypeError):
-                pass
-    return _FALLBACK_THRESHOLD
-
 
 def _run_tagging(asset_id: int, asset_path: str) -> None:
     """Blocking: run WD14 inference + persist tags for one asset."""
     from PIL import Image as PILImage
 
     from photofant.inference.adapters.wd14 import resolve_wd14_tagger
+    from photofant.settings import load_settings
 
-    threshold = _get_threshold()
+    threshold = load_settings()["tagging_threshold"]
     tagger = resolve_wd14_tagger(threshold=threshold)
     if tagger is None:
         log.info("WD14 not enabled — skipping tagging for asset %d", asset_id)

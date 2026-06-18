@@ -5,7 +5,7 @@ in normal import flow; ledger flag reset by rerun endpoint for selective re-comp
 
 quality_score ∈ [0, 1]:
   - resolution_score = min(1.0, (W * H) / _REFERENCE_PIXELS)   (FHD = 1.0)
-  - sharpness_score  = min(1.0, laplacian_variance / _REFERENCE_SHARPNESS)
+  - sharpness_score  = min(1.0, laplacian_variance / blur_threshold)   (blur_threshold from settings)
   - quality_score    = 0.5 * resolution_score + 0.5 * sharpness_score
 
 Laplacian variance is computed via numpy finite-differences (no OpenCV dependency).
@@ -23,7 +23,6 @@ from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 log = logging.getLogger(__name__)
 
 _REFERENCE_PIXELS: int = 1920 * 1080
-_REFERENCE_SHARPNESS: float = 200.0
 
 
 def _laplacian_variance(gray: np.ndarray) -> float:
@@ -34,22 +33,26 @@ def _laplacian_variance(gray: np.ndarray) -> float:
     return float(np.var(lap))
 
 
-def _compute_quality(image: np.ndarray) -> float:
+def _compute_quality(image: np.ndarray, blur_threshold: float) -> float:
     height, width = image.shape[:2]
     resolution_score = min(1.0, (width * height) / _REFERENCE_PIXELS)
 
     gray = np.mean(image, axis=2) if image.ndim == 3 else image.astype(np.float32)
-    sharpness_score = min(1.0, _laplacian_variance(gray) / _REFERENCE_SHARPNESS)
+    sharpness_score = min(1.0, _laplacian_variance(gray) / blur_threshold)
 
-    return round(0.5 * resolution_score + 0.5 * sharpness_score, 4)
+    quality: float = round(0.5 * resolution_score + 0.5 * sharpness_score, 4)
+    return quality
 
 
 def _run_heuristics(asset_id: int, asset_path: str) -> None:
     """Blocking: compute quality_score and persist it for one asset."""
     from PIL import Image as PILImage
 
+    from photofant.settings import load_settings
+
+    blur_threshold = load_settings()["blur_threshold"]
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
-    quality = _compute_quality(image)
+    quality = _compute_quality(image, blur_threshold)
 
     with SessionLocal() as session:
         asset = session.get(Asset, asset_id)

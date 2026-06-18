@@ -1,13 +1,14 @@
-"""Persistence of the latest reconcile report in `app_config`.
+"""Persistence of the latest reconcile report in the `reconcile_report` table.
 
 The report is a throwaway snapshot, not relational data, so it lives as a single
-JSON blob under one `app_config` key rather than in its own table. It stays
-readable until the next scan overwrites it.
+JSON blob in a singleton table (one row, id = 1). It stays readable until the next
+scan overwrites it.
 """
 
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
@@ -15,26 +16,27 @@ from sqlalchemy.orm import Session
 
 from photofant.maintenance.reconcile import ReconcileReport
 
-_REPORT_KEY = "reconcile_report"
-
 
 def persist_report(session: Session, report: ReconcileReport) -> None:
     payload = json.dumps(report.to_dict())
+    created_at = datetime.now(UTC).replace(tzinfo=None)
     session.execute(
         text(
-            "INSERT INTO app_config (key, value) VALUES (:key, :value) "
-            "ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+            "INSERT INTO reconcile_report (id, payload, created_at) "
+            "VALUES (1, :payload, :created_at) "
+            "ON CONFLICT(id) DO UPDATE SET "
+            "payload = excluded.payload, created_at = excluded.created_at"
         ),
-        {"key": _REPORT_KEY, "value": payload},
+        {"payload": payload, "created_at": created_at},
     )
     session.commit()
 
 
 def load_report(session: Session) -> dict[str, Any] | None:
     row = session.execute(
-        text("SELECT value FROM app_config WHERE key = :key"),
-        {"key": _REPORT_KEY},
+        text("SELECT payload FROM reconcile_report WHERE id = 1")
     ).fetchone()
     if row is None or row[0] is None:
         return None
-    return json.loads(row[0])
+    payload: dict[str, Any] = json.loads(row[0])
+    return payload

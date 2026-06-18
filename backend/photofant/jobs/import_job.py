@@ -123,8 +123,6 @@ def _expand_paths(raw_paths: list[str]) -> list[Path]:
 
 
 async def run_import_job(status: JobStatus, paths: list[str]) -> None:
-    from photofant.jobs.thumbnail_job import enqueue_thumbnails
-
     files = _expand_paths(paths)
     total = len(files)
     imported = 0
@@ -159,17 +157,11 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
     log.info("Import done: %s", ", ".join(label_parts))
 
     if imported_items:
-        await enqueue_thumbnails(imported_items)
-        await _enqueue_heuristics_batch(imported_items)
-        await _enqueue_tagging_batch(imported_items)
-        await _enqueue_caption_batch(imported_items)
-        await _enqueue_embedding_batch(imported_items)
+        await _enqueue_pipeline(imported_items)
 
 
 async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     """Find image files under scan_root that are not yet in the DB, then import them."""
-    from photofant.jobs.thumbnail_job import enqueue_thumbnails
-
     with SessionLocal() as session:
         known_paths: set[str] = {
             str(row[0]) for row in session.execute(select(AssetInstance.path)).all()
@@ -195,11 +187,7 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
 
     if imported_items:
-        await enqueue_thumbnails(imported_items)
-        await _enqueue_heuristics_batch(imported_items)
-        await _enqueue_tagging_batch(imported_items)
-        await _enqueue_caption_batch(imported_items)
-        await _enqueue_embedding_batch(imported_items)
+        await _enqueue_pipeline(imported_items)
 
 
 async def enqueue_import(paths: list[str]) -> JobStatus:
@@ -216,6 +204,27 @@ async def enqueue_scan(scan_root: Path) -> JobStatus:
         label=f"Scan: {scan_root}",
         coro_factory=lambda job_status: run_scan_job(job_status, scan_root),
     )
+
+
+async def _enqueue_pipeline(items: list[tuple[int, str]]) -> None:
+    """Enqueue the post-import processing pipeline for freshly imported assets.
+
+    Thumbnails and heuristics always run; tagging, captioning and embedding are
+    gated on the auto_* settings flags so a user can disable expensive ML steps.
+    """
+    from photofant.jobs.thumbnail_job import enqueue_thumbnails
+    from photofant.settings import load_settings
+
+    settings = load_settings()
+
+    await enqueue_thumbnails(items)
+    await _enqueue_heuristics_batch(items)
+    if settings["auto_tag"]:
+        await _enqueue_tagging_batch(items)
+    if settings["auto_caption"]:
+        await _enqueue_caption_batch(items)
+    if settings["auto_embed"]:
+        await _enqueue_embedding_batch(items)
 
 
 async def _enqueue_heuristics_batch(items: list[tuple[int, str]]) -> None:

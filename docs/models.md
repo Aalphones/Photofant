@@ -6,12 +6,19 @@
 
 ## Tables (main DB — `.photofant/db.sqlite`)
 
-### `app_config` (migration 0001)
+### `reconcile_report` (migration 0013)
+
+Singleton table (exactly one row, `id = 1`) holding the latest reconcile scan as a
+JSON blob. Replaces the former `app_config`-blob storage.
 
 | Column | Type | Notes |
 |---|---|---|
-| `key` | TEXT PK | e.g. `data_root`, `models_dir` |
-| `value` | TEXT | nullable |
+| `id` | INTEGER PK | `CHECK (id = 1)` — singleton |
+| `payload` | TEXT | JSON-serialized `ReconcileReport`, not null |
+| `created_at` | DATETIME | when the report was persisted, not null |
+
+> **`app_config` (migration 0001) was dropped in migration 0013.** All user settings now
+> live in `.photofant/settings.json` (see `photofant/settings.py`), not the DB.
 
 ### `person` (migration 0002)
 
