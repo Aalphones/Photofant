@@ -68,7 +68,6 @@ def upgrade() -> None:
         sa.Column("faces_done", sa.Boolean(), nullable=False, server_default="0"),
         sa.Column("tags_done", sa.Boolean(), nullable=False, server_default="0"),
         sa.Column("caption_done", sa.Boolean(), nullable=False, server_default="0"),
-        sa.Column("classified", sa.Boolean(), nullable=False, server_default="0"),
     )
 
     op.execute("INSERT INTO person (name, is_unknown) VALUES ('_unknown', 1)")

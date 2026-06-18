@@ -100,11 +100,21 @@
       "variant": "default",
       "format": "onnx_folder",
       "hf_repo": "Xenova/clip-vit-large-patch14",
+      "hf_allow_patterns": [
+        "onnx/vision_model.onnx",
+        "onnx/text_model.onnx",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json",
+        "merges.txt",
+        "config.json",
+        "preprocessor_config.json"
+      ],
       "files": [],
       "size_bytes": 1750000000,
       "license_note": "MIT",
       "tier": "core",
-      "_download_note": "Multi-file HuggingFace repo — snapshot_download fetches onnx/vision_model.onnx, onnx/text_model.onnx and tokenizer.json (separate image/text encoders for the embedding + query paths)"
+      "_download_note": "Multi-file HuggingFace repo — hf_allow_patterns begrenzt den Download auf fp32-ONNX + Tokenizer (~1.75 GB); ohne allow_patterns würde snapshot_download alle Quantisierungsvarianten (~8.7 GB) ziehen"
     },
     {
       "id": "rembg-u2net",

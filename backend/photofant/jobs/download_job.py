@@ -54,15 +54,25 @@ def _extract_zip(zip_path: Path, target_dir: Path) -> None:
     log.info("Extracted %s → %s", zip_path.name, target_dir)
 
 
-def _hf_snapshot_sync(hf_repo: str, local_dir: Path) -> None:
-    """Download a HuggingFace repo snapshot to local_dir (blocking)."""
+def _hf_snapshot_sync(
+    hf_repo: str,
+    local_dir: Path,
+    allow_patterns: list[str] | None = None,
+) -> None:
+    """Download a HuggingFace repo snapshot to local_dir (blocking).
+
+    If allow_patterns is given (from the manifest), only those files are fetched.
+    Otherwise a coarse ignore list strips non-ONNX weight formats.
+    """
     from huggingface_hub import snapshot_download
 
     local_dir.mkdir(parents=True, exist_ok=True)
-    snapshot_download(
-        repo_id=hf_repo,
-        local_dir=str(local_dir),
-        ignore_patterns=[
+    kwargs: dict[str, object] = {"repo_id": hf_repo, "local_dir": str(local_dir)}
+    if allow_patterns:
+        kwargs["allow_patterns"] = allow_patterns
+        log.info("HuggingFace snapshot (allow_patterns=%s): %s → %s", allow_patterns, hf_repo, local_dir)
+    else:
+        kwargs["ignore_patterns"] = [
             "*.bin",
             "*.safetensors",
             "*.msgpack",
@@ -70,9 +80,10 @@ def _hf_snapshot_sync(hf_repo: str, local_dir: Path) -> None:
             "flax_model*",
             "tf_model*",
             "rust_model*",
-        ],
-    )
-    log.info("HuggingFace snapshot: %s → %s", hf_repo, local_dir)
+        ]
+        log.info("HuggingFace snapshot: %s → %s", hf_repo, local_dir)
+    snapshot_download(**kwargs)  # type: ignore[arg-type]
+    log.info("HuggingFace snapshot complete: %s → %s", hf_repo, local_dir)
 
 
 def _upsert_registry_row(
@@ -270,7 +281,7 @@ async def run_download_job(status: JobStatus, manifest_id: str, models_dir: Path
     if entry.hf_repo:
         log.info("HuggingFace download: %s → %s", entry.hf_repo, model_dir)
         job_queue.update(status, progress=0.05, state=JobState.RUNNING)
-        await asyncio.to_thread(_hf_snapshot_sync, entry.hf_repo, model_dir)
+        await asyncio.to_thread(_hf_snapshot_sync, entry.hf_repo, model_dir, entry.hf_allow_patterns)
         job_queue.update(status, progress=0.95, state=JobState.RUNNING)
         registry_path = str(model_dir)
 
