@@ -1,6 +1,6 @@
 # Thumbnails · Phase 2 — Frontend: Cell fragt Größe nach Density an
 
-> Rating: **standard** · Status: pending · Voraussetzung: Phase 1 abgeschlossen
+> Rating: **standard** · Status: complete · Voraussetzung: Phase 1 abgeschlossen
 
 ## Kontext (vorher lesen)
 
@@ -26,10 +26,10 @@
 
 ## Checkliste
 
-- [ ] **`asset.model.ts`**: Konstante `DENSITY_THUMB_SIZE: Record<Density, 256 | 512 | 1024>` ergänzen (`sm→256, md→512, lg→1024`)
-- [ ] **`cell.ts`**: `density` als `input.required<Density>()` hinzufügen; `thumbnailSrc` nutzt `DENSITY_THUMB_SIZE[this.density()]` statt hartkodierter `256`; Typsignatur `thumbnailUrl(id, size: 256 | 512 | 1024)` prüfen
-- [ ] **`grid.ts`**: `density` bereits als Input vorhanden → an `pf-galerie-cell` als `[density]` weitergeben; Template aktualisieren
-- [ ] **`cell.html`**: kein Eingriff erwartet (src-Binding bleibt `thumbnailSrc`)
-- [ ] Doc-Update: keine (rein internes Binding, keine API-Änderung)
+- [x] **`asset.model.ts`**: Konstante `DENSITY_THUMB_SIZE: Record<Density, 256 | 512 | 1024>` ergänzen (`sm→256, md→512, lg→1024`)
+- [x] **`cell.ts`**: `density` als `input.required<Density>()` hinzufügen; `thumbnailSrc` nutzt `DENSITY_THUMB_SIZE[this.density()]` statt hartkodierter `256`; Typsignatur `thumbnailUrl(id, size: 256 | 512 | 1024)` prüfen
+- [x] **`grid.ts`**: `density` bereits als Input vorhanden → an `pf-galerie-cell` als `[density]` weitergeben; Template aktualisieren
+- [x] **`cell.html`**: kein Eingriff erwartet (src-Binding bleibt `thumbnailSrc`)
+- [x] Doc-Update: keine (rein internes Binding, keine API-Änderung)
 
 ## Report-Back

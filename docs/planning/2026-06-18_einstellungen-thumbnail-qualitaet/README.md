@@ -24,7 +24,7 @@ Immer alle drei Thumbnail-Größen generieren und cachen. Keine konfigurierbare 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
 | 1 | [Backend: THUMBNAIL_SIZES erweitern, thumbnail_quality entfernen](phase-1-backend-config.md) | standard | complete |
-| 2 | [Frontend: Cell fragt Größe nach Density an](phase-2-frontend-wiring.md) | standard | pending |
+| 2 | [Frontend: Cell fragt Größe nach Density an](phase-2-frontend-wiring.md) | standard | complete |
 | 3 | [Rebuild-Job: 1024-px-Lücke bei bestehenden Assets füllen](phase-3-rebuild-cache.md) | heikel | pending |
 
 ## Kontrakt (Backend ↔ Frontend)

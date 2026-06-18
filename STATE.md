@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-18_einstellungen-thumbnail-qualitaet/`
-**Phase:** 2/3 — Frontend: Cell fragt Größe nach Density an (pending)
-**Nächster Schritt:** `GalleryCell` (Angular) auf Density-basierte Thumbnail-Size umstellen — sm→256, md→512, lg→1024
+**Phase:** 3/3 — Rebuild-Job: 1024-px-Lücke bei bestehenden Assets füllen (pending)
+**Nächster Schritt:** Backend: `POST /api/maintenance/rebuild-thumbnails` implementieren (skip-if-exists, SSE-Job-Stream)
 
 **Archiviert:** `docs/archive/2026-06/2026-06-18_settings-json-infrastruktur/` (app_config abgeschafft, settings.json ist einzige Konfig-Quelle, DB auf Alembic-Rev 0013)
 
