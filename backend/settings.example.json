@@ -8,8 +8,6 @@
   "cache_db_path": null,
   "_comment_models_dir": "Absoluter Pfad zum Modell-Verzeichnis. null = <data_root>/.photofant/models/",
   "models_dir": null,
-  "_comment_thumbnail_quality": "Thumbnail-Qualitaetsstufe: 'sm' | 'md' | 'lg'",
-  "thumbnail_quality": "md",
   "auto_tag": true,
   "auto_caption": true,
   "auto_embed": true,

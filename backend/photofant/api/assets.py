@@ -32,7 +32,7 @@ router = APIRouter(prefix="/assets")
 
 DbSession = Annotated[Session, Depends(get_session)]
 
-_VALID_THUMB_SIZES = frozenset({256, 512})
+_VALID_THUMB_SIZES = frozenset({256, 512, 1024})
 
 
 class SortField(StrEnum):
@@ -324,7 +324,7 @@ async def get_asset_thumbnail(
     if_none_match: Annotated[str | None, Header(alias="If-None-Match")] = None,
 ) -> Response:
     if size not in _VALID_THUMB_SIZES:
-        raise HTTPException(status_code=422, detail="size must be 256 or 512")
+        raise HTTPException(status_code=422, detail="size must be 256, 512 or 1024")
 
     row = _active_row(session, asset_id)
     if row is None:

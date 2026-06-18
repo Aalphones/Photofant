@@ -3,7 +3,7 @@
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
 | `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable), `collection_id` (Mitglied einer Sammlung), `q` (Suchtext), `q_mode` (`tags\|caption\|semantic`) | `AssetsPage { items, total, page, page_size, facets }` |
-| `/galerie` (cell thumbnail) | `GET` | `/api/assets/{id}/thumbnail` | `size` (256\|512) | JPEG blob — `ETag: "{hash}-{size}"`, `Cache-Control: immutable` |
+| `/galerie` (cell thumbnail) | `GET` | `/api/assets/{id}/thumbnail` | `size` (256\|512\|1024) | JPEG blob — `ETag: "{hash}-{size}"`, `Cache-Control: immutable` |
 | `/galerie` (lightbox) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
 | `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`) |
 | `/galerie` (import — Serverpfade) | `POST` | `/api/assets/import` | `{ paths: string[] }` | `{ job_id }` |
@@ -120,7 +120,6 @@ interface AppSettings {
   _schema_version: number;
   data_root: string | null;
   models_dir: string | null;
-  thumbnail_quality: 'sm' | 'md' | 'lg';
   auto_tag: boolean;
   auto_caption: boolean;
   auto_embed: boolean;

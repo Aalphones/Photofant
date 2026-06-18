@@ -1,30 +1,29 @@
-# Einstellungen Thumbnail-Qualität · Phase 1 — Backend: thumbnail_quality config-Key
+# Thumbnails · Phase 1 — Backend: THUMBNAIL_SIZES erweitern, thumbnail_quality entfernen
 
-> Rating: **standard** · Status: pending
+> Rating: **standard** · Status: complete
 
 ## Kontext (vorher lesen)
 
 - [README.md](README.md) — Kontrakt, Größen-Mapping, Akzeptanzkriterien
-- `backend/photofant/api/config.py` — `_read_config()`, `patch_config()`
 - `backend/photofant/db/cache.py` — `THUMBNAIL_SIZES`
 - `backend/photofant/api/assets.py` — `_VALID_THUMB_SIZES`, `get_asset_thumbnail()`
-- `backend/photofant/jobs/thumbnail_job.py` — `generate_thumbnails()`, `enqueue_thumbnails()`
+- `backend/photofant/jobs/thumbnail_job.py` — `generate_thumbnails()`
+- `backend/photofant/settings.py` — `AppSettings`, `SETTINGS_DEFAULTS`
+- `backend/.photofant/settings.json` — enthält noch toten `thumbnail_quality`-Key
 
 ## Akzeptanzkriterien
 
-- `GET /api/config` liefert `thumbnail_quality: "sm" | "md" | "lg"` (Default: `"md"` wenn nicht in settings.json).
-- `PATCH /api/config` mit `{ "data": { "thumbnail_quality": "lg" } }` schreibt in `settings.json` (via `patch_settings()` aus Infrastruktur-Plan).
-- `GET /api/assets/{id}/thumbnail?size=1024` wird akzeptiert und liefert JPEG (generiert on-demand wenn nicht gecacht).
-- `thumbnail_job.py` generiert beim Import die der `thumbnail_quality` entsprechenden Größen statt der hardkodierten `(256, 512)`.
-- Rückwärtskompatibel: bestehende Caches mit 256 + 512 bleiben gültig; keine Zwangsmigration.
+- Import generiert immer 256 + 512 + 1024 px.
+- `GET /api/assets/{id}/thumbnail?size=1024` wird akzeptiert und liefert JPEG (on-demand-Fallback wenn nicht gecacht).
+- `thumbnail_quality` ist aus `AppSettings`, `SETTINGS_DEFAULTS` und `settings.json` entfernt.
 
 ## Checkliste
 
-- [ ] **`settings.py` `AppSettings`** (aus Infrastruktur-Plan): `thumbnail_quality`-Key mit Default `"md"` ergänzen (in `AppSettings`-Dataclass + `SETTINGS_DEFAULTS`)
-- [ ] **`cache.py`**: Hilfsfunktion `thumbnail_sizes_for_quality(quality: str) -> tuple[int, ...]` — Mapping sm/md/lg → Pixel-Tupel; `THUMBNAIL_SIZES` Konstante bleibt für Rückwärtskompatibilität als `md`-Default
-- [ ] **`assets.py`**: `_VALID_THUMB_SIZES` von `frozenset({256, 512})` auf `frozenset({256, 512, 1024})` erweitern — Endpoint akzeptiert alle drei, generiert on-demand wenn nicht gecacht
-- [ ] **`thumbnail_job.py`**: `generate_thumbnails()` und `run_thumbnail_job()` nehmen optionalen `sizes`-Parameter; Callers (Import-Pipeline) lesen `thumbnail_quality` aus Config und übergeben die entsprechenden Sizes — `THUMBNAIL_SIZES` als Fallback beibehalten
-- [ ] Caller identifizieren: `grep -r "enqueue_thumbnails\|run_thumbnail_job"` im Backend — alle Aufrufstellen auf Config-Größen umstellen
-- [ ] Doc-Update: `docs/routes.md` — `thumbnail_quality`-Key in der Config-Tabelle ergänzen
+- [x] **`cache.py`**: `THUMBNAIL_SIZES` von `(256, 512)` auf `(256, 512, 1024)` erweitern
+- [x] **`assets.py`**: `_VALID_THUMB_SIZES` von `frozenset({256, 512})` auf `frozenset({256, 512, 1024})` erweitern
+- [x] **`thumbnail_job.py`**: keine Änderung nötig — iteriert bereits über `THUMBNAIL_SIZES`; kurz verifizieren (Docstring auf "all THUMBNAIL_SIZES" aktualisiert)
+- [x] **`settings.py`**: `thumbnail_quality`-Key aus `AppSettings` (TypedDict) und `SETTINGS_DEFAULTS` entfernen; aus `_EXPECTED_TYPES` entfernen
+- [x] **`backend/.photofant/settings.json`**: toten `thumbnail_quality`-Key löschen
+- [x] Doc-Update: `docs/routes.md` — `GET /api/assets/{id}/thumbnail` auf `size=256|512|1024` aktualisieren
 
 ## Report-Back

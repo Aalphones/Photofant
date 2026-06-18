@@ -9,7 +9,7 @@ from photofant.settings import load_settings
 
 log = logging.getLogger(__name__)
 
-THUMBNAIL_SIZES: tuple[int, ...] = (256, 512)
+THUMBNAIL_SIZES: tuple[int, ...] = (256, 512, 1024)
 
 
 def get_cache_db_path() -> Path:

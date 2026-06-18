@@ -23,7 +23,7 @@ def _process_one(db_path: Path, asset_id: int, source_path: Path, size: int) -> 
 
 
 async def generate_thumbnails(status: JobStatus, db_path: Path, items: list[tuple[int, str]]) -> None:
-    """Generate 256+512 thumbnails for a list of (asset_id, source_path) pairs, reporting progress.
+    """Generate thumbnails (all THUMBNAIL_SIZES) for a list of (asset_id, source_path) pairs.
 
     Skips sizes that already exist in the cache DB — callers wanting a full
     regeneration must clear the cache first (see the rebuild job).

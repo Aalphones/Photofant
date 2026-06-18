@@ -1,32 +1,35 @@
-# Einstellungen Thumbnail-Qualität · Phase 2 — Frontend: Config-Store + Einstellungen-Verdrahtung
+# Thumbnails · Phase 2 — Frontend: Cell fragt Größe nach Density an
 
 > Rating: **standard** · Status: pending · Voraussetzung: Phase 1 abgeschlossen
 
 ## Kontext (vorher lesen)
 
-- [README.md](README.md) — Kontrakt, Konvention
-- `frontend/src/app/store/models/` — bestehender Config-Slice (`loadConfig`, `loadConfigSuccess`, `modelsDir`)
-- `frontend/src/app/features/einstellungen/einstellungen.ts` — aktueller Stand Darstellung-Tab
-- `frontend/src/app/services/settings.service.ts` — localStorage-Ansatz (wird für `density` durch Backend-Store abgelöst)
+- [README.md](README.md) — Density → Thumbnail-Mapping
+- `frontend/src/app/features/galerie/cell/cell.ts` — `thumbnailSrc` hardkodiert auf 256
+- `frontend/src/app/features/galerie/grid/grid.ts` — kennt `density`, übergibt `baseHeight` an Cell
+- `frontend/src/app/models/asset.model.ts` — `BASE_HEIGHTS`, `Density`
+- `frontend/src/app/services/asset.service.ts` — `thumbnailUrl(id, size)`
+
+## Mapping
+
+| Density | Thumbnail-Größe |
+|---|---|
+| `sm` | 256 |
+| `md` | 512 |
+| `lg` | 1024 |
 
 ## Akzeptanzkriterien
 
-- App-Start: `thumbnail_quality` wird aus `GET /api/config` geladen und im Store gehalten.
-- Einstellungen-UI zeigt den aktuell im Backend konfigurierten Wert (kein localStorage-Stale).
-- Änderung in der UI → `PATCH /api/config { thumbnail_quality }` → Store-Update → Einstellung bleibt nach Browser-Reload erhalten.
-- `density` im Filters-Store wird beim App-Start aus `thumbnail_quality` initialisiert (einmalige Übernahme, überschreibbar per Gallery-Toolbar).
-- 🟡 `SettingsService.setShowMeta/setReducedMotion/setLocale/setDateFormat` bleiben in localStorage (keine Backend-Relevanz).
+- Bei `lg`-Dichte fragt die Cell `?size=1024` an — im Browser-DevTools Network-Tab sichtbar.
+- Bei `sm`-Dichte wird `?size=256` angefragt (kein unnötiger Traffic).
+- Density-Wechsel in der Toolbar → sofortiger Wechsel der angefragten Thumbnail-Größe.
 
 ## Checkliste
 
-- [ ] **`models.actions.ts`**: neue Action-Gruppe oder neue Events — `loadThumbnailQualitySuccess({ quality })`, `updateThumbnailQuality({ quality })`, `updateThumbnailQualitySuccess({ quality })`, `updateThumbnailQualityFailure({ error })`
-- [ ] **`models.reducer.ts`**: `thumbnailQuality: 'sm' | 'md' | 'lg' | null` zu `ModelsState` hinzufügen; `loadConfigSuccess` extrahiert `thumbnail_quality` aus Response; neue `on()`-Handler für die Quality-Actions
-- [ ] **`models.effects.ts`**: `loadConfigSuccess` dispatcht nach erfolgreichem Laden zusätzlich `filtersActions.setDensity({ density: quality })` (Initialisierung des Session-Density); neuer Effect für `updateThumbnailQuality` → PATCH `/api/config` → Success/Failure
-- [ ] **`models.selectors.ts`**: `selectThumbnailQuality` exportieren
-- [ ] **`models/index.ts`** (Store-Barrel): neue Exports ergänzen
-- [ ] **`model.service.ts`** (oder separater `config.service.ts`): Methode `updateThumbnailQuality(quality: string)` → `PATCH /api/config`
-- [ ] **`einstellungen.ts`**: "Thumbnail-Größe"-Select liest aus `store.selectSignal(modelsSelectors.selectThumbnailQuality)` statt `filtersSelectors.density`; `(change)` dispatcht `modelsActions.updateThumbnailQuality({ quality })`; `SettingsService`-Density-Logik entfernen (war temporär)
-- [ ] **`einstellungen.ts`**: Info-Hinweis wenn `thumbnailQuality` auf `lg` gesetzt wird: `"Für 1024-px-Thumbnails ist ein Rebuild empfohlen (Phase 3)"` — `Note`-Stil, kein Blocker
-- [ ] Doc-Update: keine (interne Store-Änderung, routes.md schon in Phase 1 erledigt)
+- [ ] **`asset.model.ts`**: Konstante `DENSITY_THUMB_SIZE: Record<Density, 256 | 512 | 1024>` ergänzen (`sm→256, md→512, lg→1024`)
+- [ ] **`cell.ts`**: `density` als `input.required<Density>()` hinzufügen; `thumbnailSrc` nutzt `DENSITY_THUMB_SIZE[this.density()]` statt hartkodierter `256`; Typsignatur `thumbnailUrl(id, size: 256 | 512 | 1024)` prüfen
+- [ ] **`grid.ts`**: `density` bereits als Input vorhanden → an `pf-galerie-cell` als `[density]` weitergeben; Template aktualisieren
+- [ ] **`cell.html`**: kein Eingriff erwartet (src-Binding bleibt `thumbnailSrc`)
+- [ ] Doc-Update: keine (rein internes Binding, keine API-Änderung)
 
 ## Report-Back
