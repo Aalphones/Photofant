@@ -198,10 +198,13 @@ class Florence2Captioner:
 
     @staticmethod
     def _reorder_present(outputs: dict[str, np.ndarray], beam_order: np.ndarray) -> dict[str, np.ndarray]:
-        """Map present.* → past_key_values.* and gather the rows for the surviving beams."""
+        """Map present.* → past_key_values.* and gather the rows for the surviving beams.
+
+        The merged decoder emits zero-sized present tensors on the non-cache branch — skip them.
+        """
         past: dict[str, np.ndarray] = {}
         for name, value in outputs.items():
-            if name.startswith("present."):
+            if name.startswith("present.") and value.shape[0] > 0:
                 past_name = name.replace("present.", "past_key_values.", 1)
                 past[past_name] = value[beam_order]
         return past
@@ -271,7 +274,7 @@ class Florence2Captioner:
             sequences = [sequences[beam[1]] + [beam[2]] for beam in next_beams]
             next_input_ids = np.array([beam[2] for beam in next_beams], dtype=np.int64)[:, None]
             past = self._reorder_present(outputs, beam_order)
-            use_cache = True
+            use_cache = bool(past)  # stay in full-decode mode if merged decoder returned no cache
 
             if len(finished) >= num_beams and max(score for score, _ in finished) >= beam_scores.max():
                 break
