@@ -22,6 +22,9 @@ dist/
 Data/
 *.sqlite
 *.sqlite-journal
+
+# Nutzerspezifische Einstellungen (settings.example.json wird committed; settings.json nicht)
+.photofant/settings.json
 *.safetensors
 *.gguf
 *.onnx

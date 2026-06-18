@@ -1,0 +1,41 @@
+{
+  "_schema_version": 1,
+  "_doc": "Kopiere diese Datei nach .photofant/settings.json und passe sie an. Alle null-Werte verwenden den App-Default.",
+
+  "data_root": null,
+  "_doc_data_root": "Pfad zur Medienbibliothek (Wurzelverzeichnis aller Person-Ordner). null = './Data/' relativ zum Backend-Start-Verzeichnis.",
+
+  "models_dir": null,
+  "_doc_models_dir": "Pfad fuer Modell-Downloads. null = '{data_root}/.photofant/models/'.",
+
+  "thumbnail_quality": "md",
+  "_doc_thumbnail_quality": "Generierte Thumbnail-Groessen. 'sm' = [256px], 'md' = [256, 512px], 'lg' = [256, 512, 1024px].",
+
+  "auto_tag": true,
+  "_doc_auto_tag": "WD14-Tagging beim Import automatisch starten.",
+
+  "auto_caption": true,
+  "_doc_auto_caption": "Florence-2-Captioning beim Import automatisch starten.",
+
+  "auto_embed": true,
+  "_doc_auto_embed": "CLIP-Embeddings (Semantische Suche) beim Import berechnen.",
+
+  "tagging_threshold": 0.35,
+  "_doc_tagging_threshold": "Mindest-Konfidenz fuer automatische Tags (WD14). 0.0-1.0.",
+
+  "blur_threshold": 200.0,
+  "_doc_blur_threshold": "Laplacian-Varianz-Schwellwert fuer Schaerfe-Qualitaets-Score. 0 = deaktiviert.",
+
+  "trash_auto_days": 30,
+  "_doc_trash_auto_days": "Papierkorb automatisch leeren nach N Tagen. 0 = nie (manuell).",
+
+  "keyboard_shortcuts": null,
+  "_doc_keyboard_shortcuts": "Tastaturkuerzel-Ueberschreibungen als Objekt {action: keys[]}. null = App-Defaults.",
+
+  "display": {
+    "locale": "de",
+    "_doc_locale": "Anzeigesprache. 'de' oder 'en'.",
+    "date_format": "dmy",
+    "_doc_date_format": "Datumsformat. 'dmy' = TT.MM.JJJJ, 'ymd' = JJJJ-MM-TT, 'mdy' = MM/DD/YYYY."
+  }
+}

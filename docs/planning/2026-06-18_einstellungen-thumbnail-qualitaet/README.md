@@ -1,6 +1,6 @@
 # Einstellungen — Thumbnail-Qualität (konfigurierbar)
 
-> Status: geparkt · Abhängigkeiten: keine (standalone) · Voraussetzung: Darstellung-Tab in Einstellungen (bereits gebaut, PR-Stand 2026-06-18)
+> Status: geparkt · **Voraussetzung: `2026-06-18_settings-json-infrastruktur` muss zuerst umgesetzt sein** · Darstellung-Tab in Einstellungen bereits gebaut (2026-06-18)
 
 Macht die Thumbnail-Generierungsgröße über die Einstellungen-UI konfigurierbar und verdrahtet sie durch Backend + Frontend. Bisher ist `THUMBNAIL_SIZES = (256, 512)` hartkodiert in `backend/photofant/db/cache.py` und `_VALID_THUMB_SIZES = {256, 512}` in `backend/photofant/api/assets.py`; der Darstellung-Tab im Frontend speichert die Dichte nur lokal (localStorage / NgRx-Session).
 
@@ -31,7 +31,7 @@ Macht die Thumbnail-Generierungsgröße über die Einstellungen-UI konfigurierba
 
 ### Konfiguration
 - **`GET /api/config`** — liefert neu `thumbnail_quality: "sm" | "md" | "lg"` (Default: `"md"`)
-- **`PATCH /api/config`** — `{ data: { thumbnail_quality: "lg" } }` speichert in `app_config`-Tabelle
+- **`PATCH /api/config`** — `{ data: { thumbnail_quality: "lg" } }` schreibt in `settings.json` (via Infrastruktur-Plan)
 
 ### Thumbnail-Endpoint (Erweiterung)
 - **`GET /api/assets/{id}/thumbnail?size=256|512|1024`** — `1024` wird neu zugelassen; wenn nicht gecacht, wird on-demand generiert (lazy fallback — immer korrekt, auch ohne vorherigen Rebuild)

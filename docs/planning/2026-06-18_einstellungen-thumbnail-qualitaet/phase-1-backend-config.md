@@ -12,15 +12,15 @@
 
 ## Akzeptanzkriterien
 
-- `GET /api/config` liefert `thumbnail_quality: "sm" | "md" | "lg"` (Default: `"md"` wenn nicht in DB).
-- `PATCH /api/config` mit `{ "data": { "thumbnail_quality": "lg" } }` schreibt in `app_config`.
+- `GET /api/config` liefert `thumbnail_quality: "sm" | "md" | "lg"` (Default: `"md"` wenn nicht in settings.json).
+- `PATCH /api/config` mit `{ "data": { "thumbnail_quality": "lg" } }` schreibt in `settings.json` (via `patch_settings()` aus Infrastruktur-Plan).
 - `GET /api/assets/{id}/thumbnail?size=1024` wird akzeptiert und liefert JPEG (generiert on-demand wenn nicht gecacht).
 - `thumbnail_job.py` generiert beim Import die der `thumbnail_quality` entsprechenden Größen statt der hardkodierten `(256, 512)`.
 - Rückwärtskompatibel: bestehende Caches mit 256 + 512 bleiben gültig; keine Zwangsmigration.
 
 ## Checkliste
 
-- [ ] **`config.py` `_read_config()`**: Default `thumbnail_quality: "md"` eintragen (analog zu `models_dir`)
+- [ ] **`settings.py` `AppSettings`** (aus Infrastruktur-Plan): `thumbnail_quality`-Key mit Default `"md"` ergänzen (in `AppSettings`-Dataclass + `SETTINGS_DEFAULTS`)
 - [ ] **`cache.py`**: Hilfsfunktion `thumbnail_sizes_for_quality(quality: str) -> tuple[int, ...]` — Mapping sm/md/lg → Pixel-Tupel; `THUMBNAIL_SIZES` Konstante bleibt für Rückwärtskompatibilität als `md`-Default
 - [ ] **`assets.py`**: `_VALID_THUMB_SIZES` von `frozenset({256, 512})` auf `frozenset({256, 512, 1024})` erweitern — Endpoint akzeptiert alle drei, generiert on-demand wenn nicht gecacht
 - [ ] **`thumbnail_job.py`**: `generate_thumbnails()` und `run_thumbnail_job()` nehmen optionalen `sizes`-Parameter; Callers (Import-Pipeline) lesen `thumbnail_quality` aus Config und übergeben die entsprechenden Sizes — `THUMBNAIL_SIZES` als Fallback beibehalten
