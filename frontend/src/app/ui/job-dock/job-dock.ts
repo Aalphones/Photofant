@@ -3,17 +3,18 @@ import type { Job } from '@photofant/models';
 import { Icon } from '../icon/icon';
 
 const ICON_MAP: Record<string, string> = {
-  tag:        'tag',
-  face:       'face',
-  caption:    'search',
-  download:   'download',
-  import:     'import',
-  thumbnail:  'gallery',
-  tagging:    'tag',
-  captioning: 'text',
-  embedding:  'layers',
-  heuristics: 'sparkle',
-  rerun:      'refresh',
+  tag:            'tag',
+  face:           'face',
+  caption:        'search',
+  download:       'download',
+  download_model: 'download',
+  import:         'import',
+  thumbnail:      'gallery',
+  tagging:        'tag',
+  captioning:     'text',
+  embedding:      'layers',
+  heuristics:     'sparkle',
+  rerun:          'refresh',
 };
 
 @Component({

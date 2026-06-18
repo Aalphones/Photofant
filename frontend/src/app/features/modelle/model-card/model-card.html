@@ -28,12 +28,29 @@
 
   <p class="md-desc">{{ model().desc }}</p>
 
-  @if (isPendingDownload()) {
+  @if (isPendingDownload() || downloadError()) {
     <div class="md-prog">
-      <div class="md-prog__top">
-        <span>Herunterladen …</span>
-        <span class="md-prog__spinner"></span>
-      </div>
+      @if (downloadError()) {
+        <div class="md-prog__error">
+          <pf-icon name="alert" [size]="12" />
+          {{ downloadError() }}
+        </div>
+      } @else if (downloadJob() !== null) {
+        <div class="md-prog__top">
+          <span>Herunterladen · {{ downloadPct() }}%</span>
+          @if (downloadPct() === 0) {
+            <span class="md-prog__spinner"></span>
+          }
+        </div>
+        <div class="md-prog__bar">
+          <div class="md-prog__fill" [style.width.%]="downloadPct()"></div>
+        </div>
+      } @else {
+        <div class="md-prog__top">
+          <span>Herunterladen …</span>
+          <span class="md-prog__spinner"></span>
+        </div>
+      }
     </div>
   }
 

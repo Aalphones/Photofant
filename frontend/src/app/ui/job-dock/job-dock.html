@@ -37,7 +37,7 @@
         <div
           class="job-bar"
           [class.done]="job.state === 'done'"
-          [class.dl]="job.kind === 'download'"
+          [class.dl]="job.kind === 'download' || job.kind === 'download_model'"
         >
           <i [style.width.%]="pct(job)"></i>
         </div>

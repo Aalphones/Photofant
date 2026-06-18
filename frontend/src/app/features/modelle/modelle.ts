@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Icon } from '@photofant/ui';
-import { modelsActions, modelsSelectors } from '@photofant/store';
+import { modelsActions, modelsSelectors, jobsFeature } from '@photofant/store';
 import { TIER_META, MODEL_TIERS } from '@photofant/models';
-import type { ModelTier, ModelView } from '@photofant/models';
+import type { ModelTier, ModelView, Job } from '@photofant/models';
 import { ModelCard } from './model-card/model-card';
 import { ModelDrawer } from './model-drawer/model-drawer';
 import { DownloadDialog } from './download-dialog/download-dialog';
@@ -28,6 +28,8 @@ export class Modelle {
   readonly missingCoreCount = this.store.selectSignal(modelsSelectors.selectMissingCoreCount);
   readonly isAllCoreInstalled = this.store.selectSignal(modelsSelectors.selectIsAllCoreInstalled);
   readonly pendingDownloads = this.store.selectSignal(modelsSelectors.selectPendingDownloads);
+  private readonly downloadJobIds = this.store.selectSignal(modelsSelectors.selectDownloadJobIds);
+  private readonly jobEntities = this.store.selectSignal(jobsFeature.selectEntities);
   readonly bindError = this.store.selectSignal(modelsSelectors.selectBindError);
 
   protected readonly drawerModel = signal<ModelView | null>(null);
@@ -104,6 +106,12 @@ export class Modelle {
 
   protected isPendingBind(modelId: string): boolean {
     return this.store.selectSignal(modelsSelectors.selectPendingBinds)().includes(modelId);
+  }
+
+  protected getDownloadJob(modelId: string): Job | null {
+    const jobId = this.downloadJobIds()[modelId];
+    if (jobId === undefined) return null;
+    return this.jobEntities()[jobId] ?? null;
   }
 
   protected getModelsForTier(tier: ModelTier): ModelView[] {

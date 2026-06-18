@@ -1,14 +1,18 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, mergeMap, switchMap } from 'rxjs';
-import { of } from 'rxjs';
+import { Store } from '@ngrx/store';
+import { concatLatestFrom } from '@ngrx/operators';
+import { catchError, EMPTY, from, map, mergeMap, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { ModelService } from '@photofant/services';
+import { jobsActions } from '../jobs/jobs.actions';
 import { modelsActions } from './models.actions';
+import { modelsSelectors } from './models.selectors';
 
 @Injectable()
 export class ModelsEffects {
   private readonly actions$ = inject(Actions);
+  private readonly store = inject(Store);
   private readonly modelService = inject(ModelService);
 
   readonly loadModels$ = createEffect(() =>
@@ -68,6 +72,35 @@ export class ModelsEffects {
           ),
         )
       ),
+    )
+  );
+
+  // Watch SSE job updates: reload models on success, surface error on failure
+  readonly watchDownloadJobUpdates$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      concatLatestFrom(() => this.store.select(modelsSelectors.selectDownloadJobIds)),
+      mergeMap(([{ job }, downloadJobIds]) => {
+        if (job.kind !== 'download_model') return EMPTY;
+        if (job.state !== 'done' && job.state !== 'error') return EMPTY;
+
+        const entry = Object.entries(downloadJobIds).find(([, jobId]) => jobId === job.id);
+        if (entry === undefined) return EMPTY;
+
+        const [manifestId] = entry;
+
+        if (job.state === 'done') {
+          return from([
+            modelsActions.downloadJobCompleted({ manifestId }),
+            modelsActions.loadModels(),
+          ]);
+        }
+
+        return of(modelsActions.downloadJobFailed({
+          manifestId,
+          error: job.error ?? 'Download fehlgeschlagen',
+        }));
+      }),
     )
   );
 

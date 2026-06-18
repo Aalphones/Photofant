@@ -67,6 +67,7 @@
             <pf-model-card
               [model]="model"
               [isPendingDownload]="isPendingDownload(model.id)"
+              [downloadJob]="getDownloadJob(model.id)"
               (open)="openDrawer($event)"
             />
           }

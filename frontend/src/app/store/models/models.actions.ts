@@ -20,6 +20,8 @@ export const modelsActions = createActionGroup({
     'Register Local Success':    props<{ model: ModelDto }>(),
     'Register Local Failure':    props<{ manifestId: string; error: string; code: string }>(),
     'Clear Bind Error':          emptyProps(),
+    'Download Job Completed':    props<{ manifestId: string }>(),
+    'Download Job Failed':       props<{ manifestId: string; error: string }>(),
     'Delete Model':              props<{ manifestId: string }>(),
     'Delete Model Success':      props<{ manifestId: string }>(),
     'Delete Model Failure':      props<{ error: string }>(),

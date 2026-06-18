@@ -142,6 +142,31 @@
   flex: none;
 }
 
+.md-prog__bar {
+  margin-top: 7px;
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.md-prog__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width .4s ease;
+  min-width: 2px;
+}
+
+.md-prog__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--warn);
+  font-family: var(--mono);
+}
+
 .md-foot {
   display: flex;
   align-items: center;

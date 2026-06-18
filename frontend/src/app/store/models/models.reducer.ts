@@ -8,6 +8,7 @@ export interface ModelsState {
   modelsDir: string | null;
   isLoading: boolean;
   pendingDownloads: string[];
+  downloadJobIds: Record<string, string>;
   pendingBinds: string[];
   bindError: ModelBindError | null;
   error: string | null;
@@ -19,6 +20,7 @@ const initialState: ModelsState = {
   modelsDir: null,
   isLoading: false,
   pendingDownloads: [],
+  downloadJobIds: {},
   pendingBinds: [],
   bindError: null,
   error: null,
@@ -47,15 +49,37 @@ export const modelsFeature = createFeature({
       ({ ...state, modelsDir })
     ),
 
-    on(modelsActions.downloadModel, (state: ModelsState, { manifestId }) => ({
+    on(modelsActions.downloadModel, (state: ModelsState, { manifestId }) => {
+      // Clear stale error job entry on retry, add to pending
+      const { [manifestId]: _, ...remainingJobs } = state.downloadJobIds;
+      return {
+        ...state,
+        pendingDownloads: [...state.pendingDownloads, manifestId],
+        downloadJobIds: _ !== undefined ? remainingJobs : state.downloadJobIds,
+      };
+    }),
+    // downloadModelSuccess: job is now running — keep in pendingDownloads, store jobId
+    on(modelsActions.downloadModelSuccess, (state: ModelsState, { jobId, manifestId }) => ({
       ...state,
-      pendingDownloads: [...state.pendingDownloads, manifestId],
+      downloadJobIds: { ...state.downloadJobIds, [manifestId]: jobId },
     })),
-    on(modelsActions.downloadModelSuccess, (state: ModelsState, { manifestId }) => ({
+    // HTTP POST failed before job was created
+    on(modelsActions.downloadModelFailure, (state: ModelsState, { manifestId }) => ({
       ...state,
       pendingDownloads: state.pendingDownloads.filter((id: string) => id !== manifestId),
     })),
-    on(modelsActions.downloadModelFailure, (state: ModelsState, { manifestId }) => ({
+
+    // Background job completed successfully
+    on(modelsActions.downloadJobCompleted, (state: ModelsState, { manifestId }) => {
+      const { [manifestId]: _, ...remainingJobs } = state.downloadJobIds;
+      return {
+        ...state,
+        pendingDownloads: state.pendingDownloads.filter((id: string) => id !== manifestId),
+        downloadJobIds: _ !== undefined ? remainingJobs : state.downloadJobIds,
+      };
+    }),
+    // Background job failed — remove from pending but keep jobId so error is visible
+    on(modelsActions.downloadJobFailed, (state: ModelsState, { manifestId }) => ({
       ...state,
       pendingDownloads: state.pendingDownloads.filter((id: string) => id !== manifestId),
     })),
