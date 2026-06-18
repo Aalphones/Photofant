@@ -1,10 +1,10 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-06-18_einstellungen-thumbnail-qualitaet/`
-**Phase:** 3/3 — Rebuild-Job: 1024-px-Lücke bei bestehenden Assets füllen (pending)
-**Nächster Schritt:** Backend: `POST /api/maintenance/rebuild-thumbnails` implementieren (skip-if-exists, SSE-Job-Stream)
+**Aktiver Plan:** (kein aktiver Plan)
 
-**Archiviert:** `docs/archive/2026-06/2026-06-18_settings-json-infrastruktur/` (app_config abgeschafft, settings.json ist einzige Konfig-Quelle, DB auf Alembic-Rev 0013)
+**Archiviert:**
+- `docs/archive/2026-06/2026-06-18_einstellungen-thumbnail-qualitaet/` (dreifache Thumbnail-Größen + additive Rebuild)
+- `docs/archive/2026-06/2026-06-18_settings-json-infrastruktur/` (app_config abgeschafft, settings.json ist einzige Konfig-Quelle, DB auf Alembic-Rev 0013)
 
 **Backlog-Pläne (größere Features):**
 - Einstellungen fehlende Sektionen: `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — 4 Phasen

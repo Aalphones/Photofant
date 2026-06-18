@@ -55,11 +55,23 @@ Immer alle drei Thumbnail-Größen generieren und cachen. Keine konfigurierbare 
 
 ## Summary
 
+Alle drei Thumbnail-Größen (256/512/1024 px) werden bei jedem Import generiert. Die Galerie-Cell fragt die passende Größe nach Density an (sm→256, md→512, lg→1024). `thumbnail_quality`-Setting entfernt. Additive Rebuild-Endpoint für Bestandsbilder ergänzt.
+
 ## Files touched
+
+Backend: `jobs/queue.py`, `jobs/thumbnail_job.py`, `jobs/rebuild_job.py`, `api/maintenance.py`, `db/cache.py`, `config.py`
+Frontend: `maintenance.{actions,reducer,selectors,effects,service}.ts`, `gallery-cell.ts`, `einstellungen.ts`, `wartung.ts`
+Docs: `routes.md`, `models.md`
 
 ## Commits
 
+- `44f6be1` feat(thumbnails): add 1024px size, drop thumbnail_quality setting
+- `95a3643` feat(thumbnails): wire density to thumbnail size in gallery cell
+- `9089217` feat(thumbnails): additive rebuild-job füllt fehlende 1024-px-Einträge
+
 ## Deviations from plan
+
+Keine.
 
 ## Follow-ups
 
