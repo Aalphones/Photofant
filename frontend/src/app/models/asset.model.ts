@@ -22,6 +22,8 @@ export type GroupKey = (typeof GROUP_KEYS)[number];
 
 export const BASE_HEIGHTS: Record<Density, number> = { sm: 150, md: 196, lg: 250 };
 
+export const DENSITY_THUMB_SIZE: Record<Density, 256 | 512 | 1024> = { sm: 256, md: 512, lg: 1024 };
+
 export interface FacetItem {
   value: string;
   count: number;

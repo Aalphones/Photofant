@@ -107,7 +107,7 @@ export class AssetService {
     return this.http.post<{ job_id: string }>('/api/assets/scan', {});
   }
 
-  thumbnailUrl(id: number, size: 256 | 512 = 256): string {
+  thumbnailUrl(id: number, size: 256 | 512 | 1024 = 256): string {
     return `/api/assets/${id}/thumbnail?size=${size}`;
   }
 

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { AssetDto } from '@photofant/models';
+import { DENSITY_THUMB_SIZE } from '@photofant/models';
+import type { AssetDto, Density } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { galleryActions } from '@photofant/store';
 import { Icon } from '@photofant/ui';
@@ -32,6 +33,7 @@ export class GalerieCell {
 
   readonly asset         = input.required<AssetDto>();
   readonly baseHeight    = input.required<number>();
+  readonly density       = input.required<Density>();
   readonly isSelected    = input<boolean>(false);
   readonly selectionMode = input<boolean>(false);
 
@@ -47,7 +49,7 @@ export class GalerieCell {
   );
 
   protected readonly thumbnailSrc = computed((): string =>
-    this.assetService.thumbnailUrl(this.asset().id, 256)
+    this.assetService.thumbnailUrl(this.asset().id, DENSITY_THUMB_SIZE[this.density()])
   );
 
   protected readonly badgeLabel = computed((): string =>

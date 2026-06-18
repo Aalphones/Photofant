@@ -11,7 +11,7 @@ export type {
 export { JOB_STATES, JOB_KINDS } from './job.model';
 
 export type { AssetDto, AssetDetailDto, AssetsPage, AssetGroup, TagDto, FacetItem, TagFacetItem, Facets, Density, SortKey, SortOrder, GroupKey, SearchMode, TagListItem } from './asset.model';
-export { DENSITIES, SORT_KEYS, SORT_ORDERS, GROUP_KEYS, BASE_HEIGHTS, SEARCH_MODES } from './asset.model';
+export { DENSITIES, DENSITY_THUMB_SIZE, SORT_KEYS, SORT_ORDERS, GROUP_KEYS, BASE_HEIGHTS, SEARCH_MODES } from './asset.model';
 
 export type {
   Collection,
