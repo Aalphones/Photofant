@@ -11,3 +11,5 @@ export { CaptionPresetService } from './caption-preset.service';
 export { TagService } from './tag.service';
 export type { MergeTagsRequest, BulkTagRequest } from './tag.service';
 export { CollectionService } from './collection.service';
+export { SettingsService } from './settings.service';
+export type { Locale, DateFormat } from './settings.service';

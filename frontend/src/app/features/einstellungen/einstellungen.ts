@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { Store } from '@ngrx/store';
 import { DatePipe } from '@angular/common';
 import {
+  filtersActions,
+  filtersSelectors,
   maintenanceActions,
   maintenanceSelectors,
   modelsActions,
@@ -9,9 +11,11 @@ import {
   presetsActions,
   presetsSelectors,
 } from '@photofant/store';
-import type { CaptionPresetDto, CapabilityDescriptor, ModelDto } from '@photofant/models';
+import type { CaptionPresetDto, CapabilityDescriptor, Density, ModelDto } from '@photofant/models';
 import { PresetDialog } from '@photofant/ui';
 import type { PresetSavePayload } from '@photofant/ui';
+import { SettingsService } from '@photofant/services';
+import type { DateFormat, Locale } from '@photofant/services';
 
 @Component({
   selector: 'pf-einstellungen',
@@ -19,6 +23,88 @@ import type { PresetSavePayload } from '@photofant/ui';
   imports: [DatePipe, PresetDialog],
   template: `
     <div class="settings-layout">
+
+      <!-- ── Darstellung ──────────────────────────────────────────── -->
+      <div class="settings-section">
+        <h2 class="settings-heading">Darstellung</h2>
+
+        <div class="settings-card">
+          <p class="settings-group-label">Galerie</p>
+
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Standardgröße Thumbnail</div>
+              <div class="card-desc">Beeinflusst die Spaltenbreite im Raster.</div>
+            </div>
+            <select
+              class="st-select"
+              [value]="density()"
+              (change)="setDensity($any($event.target).value)"
+            >
+              <option value="sm">Klein</option>
+              <option value="md">Mittel</option>
+              <option value="lg">Groß</option>
+            </select>
+          </div>
+
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Metadaten unter Bild anzeigen</div>
+              <div class="card-desc">Zeigt Quelle und Tags unter jedem Bild im Raster.</div>
+            </div>
+            <button
+              class="st-switch"
+              [class.st-switch--on]="displaySettings().showMeta"
+              role="switch"
+              [attr.aria-checked]="displaySettings().showMeta"
+              (click)="setShowMeta(!displaySettings().showMeta)"
+            ></button>
+          </div>
+
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Animations-Effekte reduzieren</div>
+              <div class="card-desc">Deaktiviert Überblend- und Slide-Animationen.</div>
+            </div>
+            <button
+              class="st-switch"
+              [class.st-switch--on]="displaySettings().reducedMotion"
+              role="switch"
+              [attr.aria-checked]="displaySettings().reducedMotion"
+              (click)="setReducedMotion(!displaySettings().reducedMotion)"
+            ></button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <p class="settings-group-label">Sprache & Region</p>
+
+          <div class="card-row card-row--top">
+            <div class="card-label">Sprache</div>
+            <select
+              class="st-select"
+              [value]="displaySettings().locale"
+              (change)="setLocale($any($event.target).value)"
+            >
+              <option value="de">Deutsch</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
+          <div class="card-row card-row--top">
+            <div class="card-label">Datumsformat</div>
+            <select
+              class="st-select"
+              [value]="displaySettings().dateFormat"
+              (change)="setDateFormat($any($event.target).value)"
+            >
+              <option value="dmy">TT.MM.JJJJ</option>
+              <option value="ymd">JJJJ-MM-TT</option>
+              <option value="mdy">MM/DD/YYYY</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
       <!-- ── Modelle ───────────────────────────────────────────────── -->
       <div class="settings-section">
@@ -392,6 +478,72 @@ import type { PresetSavePayload } from '@photofant/ui';
       flex-shrink: 0;
     }
 
+    .settings-group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin: 0 0 10px;
+    }
+
+    .card-row--top {
+      align-items: flex-start;
+      padding-top: 4px;
+    }
+
+    .st-select {
+      height: 32px;
+      padding: 0 26px 0 10px;
+      background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-s);
+      color: var(--text);
+      font-size: 13px;
+      appearance: none;
+      flex-shrink: 0;
+      cursor: pointer;
+      min-width: 130px;
+    }
+
+    .st-select:focus {
+      outline: none;
+      border-color: var(--accent-line);
+      box-shadow: 0 0 0 3px var(--accent-weak);
+    }
+
+    /* Toggle-Switch */
+    .st-switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      border-radius: 12px;
+      background: var(--line-2);
+      flex-shrink: 0;
+      transition: background .15s;
+      cursor: pointer;
+    }
+
+    .st-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--text);
+      transition: transform .15s;
+    }
+
+    .st-switch--on {
+      background: var(--accent);
+    }
+
+    .st-switch--on::after {
+      transform: translateX(18px);
+    }
+
     .dir-input {
       height: 34px;
       padding: 0 10px;
@@ -421,7 +573,33 @@ import type { PresetSavePayload } from '@photofant/ui';
 })
 export class Einstellungen {
   private readonly store = inject(Store);
+  private readonly settings = inject(SettingsService);
 
+  /* ── Darstellung ──────────────────────────────────────────────── */
+  readonly density = this.store.selectSignal(filtersSelectors.density);
+  readonly displaySettings = this.settings.snapshot;
+
+  setDensity(value: Density): void {
+    this.store.dispatch(filtersActions.setDensity({ density: value }));
+  }
+
+  setShowMeta(value: boolean): void {
+    this.settings.setShowMeta(value);
+  }
+
+  setReducedMotion(value: boolean): void {
+    this.settings.setReducedMotion(value);
+  }
+
+  setLocale(value: Locale): void {
+    this.settings.setLocale(value);
+  }
+
+  setDateFormat(value: DateFormat): void {
+    this.settings.setDateFormat(value);
+  }
+
+  /* ── Modelle ──────────────────────────────────────────────────── */
   readonly modelsDir = this.store.selectSignal(modelsSelectors.selectModelsDir);
   readonly isDirEditing = signal<boolean>(false);
   readonly pendingDir = signal<string>('');
