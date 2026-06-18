@@ -1,5 +1,6 @@
 import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import type { Density } from '@photofant/models';
 
 export type Locale = 'de' | 'en';
 export type DateFormat = 'dmy' | 'ymd' | 'mdy';
@@ -9,6 +10,7 @@ interface DisplaySettings {
   reducedMotion: boolean;
   locale: Locale;
   dateFormat: DateFormat;
+  density: Density;
 }
 
 const STORAGE_KEY = 'pf-display-settings';
@@ -18,6 +20,7 @@ const DEFAULTS: DisplaySettings = {
   reducedMotion: false,
   locale: 'de',
   dateFormat: 'dmy',
+  density: 'md',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -31,6 +34,7 @@ export class SettingsService {
   readonly reducedMotion = () => this.state().reducedMotion;
   readonly locale = () => this.state().locale;
   readonly dateFormat = () => this.state().dateFormat;
+  readonly density = () => this.state().density;
 
   readonly snapshot = this.state.asReadonly();
 
@@ -48,6 +52,10 @@ export class SettingsService {
 
   setDateFormat(value: DateFormat): void {
     this.patch({ dateFormat: value });
+  }
+
+  setDensity(value: Density): void {
+    this.patch({ density: value });
   }
 
   private patch(partial: Partial<DisplaySettings>): void {

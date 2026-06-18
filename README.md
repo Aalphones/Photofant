@@ -27,10 +27,6 @@ start.cmd
 - Backend: <http://localhost:8000> · API-Docs: <http://localhost:8000/docs>
 - Frontend: <http://localhost:4200>
 
-```cmd
-# CI lokal laufen lassen (Lint + Build + Tests)
-ci.cmd
-```
 
 ## Mitarbeit / Agenten
 

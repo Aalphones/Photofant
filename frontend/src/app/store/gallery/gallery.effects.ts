@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { Actions, createEffect, ofType, ROOT_EFFECTS_INIT } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
-import { catchError, EMPTY, filter, map, mergeMap, of, switchMap } from 'rxjs';
+import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { AssetDto, AssetsPage, Job } from '@photofant/models';
-import { AssetService } from '@photofant/services';
+import { AssetService, SettingsService } from '@photofant/services';
 import { filtersActions } from '../filters/filters.actions';
 import { searchActions } from '../search/search.actions';
 import { jobsActions } from '../jobs/jobs.actions';
@@ -17,6 +17,22 @@ export class GalleryEffects {
   private readonly actions$ = inject(Actions);
   private readonly store = inject(Store);
   private readonly assetService = inject(AssetService);
+  private readonly settingsService = inject(SettingsService);
+
+  readonly initDensity$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ROOT_EFFECTS_INIT),
+      map(() => filtersActions.setDensity({ density: this.settingsService.density() })),
+    )
+  );
+
+  readonly saveDensity$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(filtersActions.setDensity),
+      tap(({ density }) => { this.settingsService.setDensity(density); }),
+    ),
+    { dispatch: false }
+  );
 
   readonly onFiltersChange$ = createEffect(() =>
     this.actions$.pipe(
