@@ -1,10 +1,17 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** P6 abgeschlossen & archiviert (`docs/archive/2026-06/2026-06-12_p06-suche-und-alben/`). Backlog: P7 Personen, P8 Editor, P8b ComfyUI, P9 Generativ, P10 Trainingssets — nächster Kandidat laut Reihenfolge: P7 (`docs/planning/2026-06-12_p07-personen/`). Implementierung startet via `/implement`.
+**Aktiver Plan:** `docs/planning/2026-06-18_settings-json-infrastruktur/`
+**Phase:** 2/2 — Migration: app_config → settings.json, app_config Drop (pending)
+**Nächster Schritt:** Phase 2 starten — tagging_job/heuristics_job/import_job auf load_settings() umstellen, ReconcileReport-Tabelle anlegen, Alembic Data-Migration + DROP TABLE app_config. Phase ist "heikel" → `/model opusplan` empfohlen.
 
-**Geparkte Side-Quests (Reihenfolge beachten — Infrastruktur zuerst):**
-- **[1] Settings-JSON-Infrastruktur** (Voraussetzung für alle anderen Settings-Pläne): `docs/planning/2026-06-18_settings-json-infrastruktur/` — 2 Phasen; ersetzt app_config + Env-Vars durch `.photofant/settings.json`
+**Backlog-Pläne (nach Settings-Infra):**
+- P7 Personen: `docs/planning/2026-06-12_p07-personen/`
+- P8 Editor CPU: `docs/planning/2026-06-12_p08-editor-cpu/`
+- P8b ComfyUI: `docs/planning/2026-06-15_p08b-comfyui-integration/`
+- P9 Generativ: `docs/planning/2026-06-12_p09-generativ/`
+- P10 Trainingssets: `docs/planning/2026-06-12_p10-trainingssets-export/`
+
+**Geparkte Side-Quests (Reihenfolge beachten):**
+- **[1] Settings-JSON-Infrastruktur** — Phase 1 complete, Phase 2 aktiv (oben)
 - **[2] Einstellungen Thumbnail-Qualität** (benötigt [1]): `docs/planning/2026-06-18_einstellungen-thumbnail-qualitaet/` — 3 Phasen
-- **[2] Einstellungen fehlende Sektionen** (benötigt [1], Verarbeitung/Bibliothek/Tastaturkürzel/Info): `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — 4 Phasen
+- **[2] Einstellungen fehlende Sektionen** (benötigt [1]): `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — 4 Phasen

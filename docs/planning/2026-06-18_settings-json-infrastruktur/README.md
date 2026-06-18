@@ -37,7 +37,7 @@ Bootstrap-Reihenfolge:
 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
-| 1 | [Schema + Infrastruktur (Reader, Writer, Defaults)](phase-1-schema-infrastruktur.md) | standard | pending |
+| 1 | [Schema + Infrastruktur (Reader, Writer, Defaults)](phase-1-schema-infrastruktur.md) | standard | complete |
 | 2 | [Migration: app_config → settings.json, app_config Drop](phase-2-migration.md) | heikel | pending |
 
 ## settings.json Schema
