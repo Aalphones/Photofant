@@ -1,6 +1,9 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { DatePipe } from '@angular/common';
+import type { CapabilityDescriptor, CaptionPresetDto, Density, ModelDto } from '@photofant/models';
+import type { DateFormat, Locale } from '@photofant/services';
+import { SettingsService } from '@photofant/services';
 import {
   filtersActions,
   filtersSelectors,
@@ -11,11 +14,8 @@ import {
   presetsActions,
   presetsSelectors,
 } from '@photofant/store';
-import type { CaptionPresetDto, CapabilityDescriptor, Density, ModelDto } from '@photofant/models';
-import { PresetDialog } from '@photofant/ui';
 import type { PresetSavePayload } from '@photofant/ui';
-import { SettingsService } from '@photofant/services';
-import type { DateFormat, Locale } from '@photofant/services';
+import { PresetDialog } from '@photofant/ui';
 
 @Component({
   selector: 'pf-einstellungen',
@@ -30,22 +30,6 @@ import type { DateFormat, Locale } from '@photofant/services';
 
         <div class="settings-card">
           <p class="settings-group-label">Galerie</p>
-
-          <div class="card-row card-row--top">
-            <div>
-              <div class="card-label">Standardgröße Thumbnail</div>
-              <div class="card-desc">Beeinflusst die Spaltenbreite im Raster.</div>
-            </div>
-            <select
-              class="st-select"
-              [value]="density()"
-              (change)="setDensity($any($event.target).value)"
-            >
-              <option value="sm">Klein</option>
-              <option value="md">Mittel</option>
-              <option value="lg">Groß</option>
-            </select>
-          </div>
 
           <div class="card-row card-row--top">
             <div>
