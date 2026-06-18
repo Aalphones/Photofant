@@ -69,11 +69,16 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
 }
 
 
+def _default_settings_dir() -> Path:
+    # Anchored to repo root — independent of CWD so backend/ can be the uvicorn working dir
+    return Path(__file__).parent.parent.parent / "Data" / ".photofant"
+
+
 def get_settings_path() -> Path:
     env_path = os.environ.get("PHOTOFANT_SETTINGS_PATH")
     if env_path:
         return Path(env_path)
-    settings_dir = Path.cwd() / ".photofant"
+    settings_dir = _default_settings_dir()
     settings_dir.mkdir(parents=True, exist_ok=True)
     return settings_dir / "settings.json"
 

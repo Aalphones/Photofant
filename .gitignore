@@ -18,9 +18,11 @@ dist/
 Data/
 *.sqlite
 *.sqlite-journal
+*.db
 
-# Nutzerspezifische Einstellungen (settings.example.json wird committed; settings.json nicht)
-.photofant/settings.json
+# .photofant/ kann an mehreren Stellen entstehen (Legacy-CWD, CI) — nie committen
+# settings.example.json bleibt versioniert (kein echtes .photofant/-Verzeichnis)
+.photofant/
 *.safetensors
 *.gguf
 *.onnx
@@ -29,5 +31,3 @@ Data/
 Thumbs.db
 desktop.ini
 .DS_Store
-
-settings.json

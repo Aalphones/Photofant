@@ -5,7 +5,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_DEFAULT_DATA_ROOT = Path("Data")
+_DEFAULT_DATA_ROOT = Path(__file__).parent.parent.parent / "Data"
 _DEFAULT_MODELS_DIR_NAME = "models"
 _PERSON_SUBFOLDERS = ["photos", "favourites", "faces", "edits"]
 

@@ -2,8 +2,8 @@
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 
-# Alle Konfiguration lebt in backend\.photofant\settings.json (siehe settings.example.json).
-# Keine Env-Vars mehr; einziger Override-Hebel waere PHOTOFANT_SETTINGS_PATH (CI/Docker).
+# Alle Konfiguration lebt in Data\.photofant\settings.json (siehe backend\settings.example.json).
+# Einziger Override-Hebel: Env-Var PHOTOFANT_SETTINGS_PATH (CI/Docker).
 
 Write-Host '=== Datenbank-Migration ===' -ForegroundColor Cyan
 Write-Host '  (Beim ersten Start baut uv die Python-Umgebung - das kann einige Minuten dauern.)' -ForegroundColor DarkGray
