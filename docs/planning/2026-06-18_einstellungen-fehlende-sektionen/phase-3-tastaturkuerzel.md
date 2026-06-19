@@ -1,6 +1,6 @@
 # Einstellungen fehlende Sektionen · Phase 3 — Tastaturkürzel
 
-> Rating: **standard** · Status: pending
+> Rating: **standard** · Status: complete
 
 ## Kontext (vorher lesen)
 

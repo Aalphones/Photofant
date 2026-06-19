@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/`
-**Phase:** 3/4 — Tastaturkürzel Backend-Persistenz.
-**Nächster Schritt:** Phase 3 starten — `keyboard_shortcuts` als JSON-Blob in `settings.json` + Frontend-UI für Shortcut-Belegung.
+**Phase:** 4/4 — Info-Versionierung (pending)
+**Nächster Schritt:** Phase 4 starten — `/api/info`-Endpoint + Info-Tab in Einstellungen (Version aus importlib.metadata, DB-Größe, Python-Version, ONNX-Version, GPU-Info).
 
 **Danach weiter mit:**
 - `docs/planning/2026-06-19_design-angleichung/` — Design-Angleichung: Reconciliation-Sweep, Einstellungen-Shell, Tags-Seite, übrige Abweichungen. Setzt alle Einstellungs-Sektionen voraus.
