@@ -1,0 +1,8 @@
+@use '../st-shared' as *;
+.presets-list { list-style: none; margin: 0; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 1px; }
+.preset-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.preset-info { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.preset-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.preset-badge { font-size: 10px; font-weight: 600; background: var(--accent-weak); color: var(--accent); padding: 1px 6px; border-radius: 10px; flex-shrink: 0; }
+.preset-meta { font-size: 11px; color: var(--text-3); }
+.preset-actions { display: flex; gap: 4px; flex-shrink: 0; }

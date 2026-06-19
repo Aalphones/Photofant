@@ -1,0 +1,75 @@
+<div class="st-section">
+  <div class="st-section-head">
+    <h2>Darstellung</h2>
+    <p>Galerie-Raster, Metadaten-Dichte und Sprache.</p>
+  </div>
+
+  <div class="st-group-label">Galerie</div>
+  <div class="st-group">
+    <div class="st-row top">
+      <div class="st-row-body">
+        <div class="st-row-title">Metadaten unter Bild anzeigen</div>
+        <div class="st-row-sub">Zeigt Quelle und Tags unter jedem Bild im Raster.</div>
+      </div>
+      <div class="st-row-ctrl">
+        <button
+          class="st-switch"
+          [class.on]="displaySettings().showMeta"
+          role="switch"
+          [attr.aria-checked]="displaySettings().showMeta"
+          (click)="setShowMeta(!displaySettings().showMeta)"
+        ><i></i></button>
+      </div>
+    </div>
+    <div class="st-row top">
+      <div class="st-row-body">
+        <div class="st-row-title">Animations-Effekte reduzieren</div>
+        <div class="st-row-sub">Deaktiviert Überblend- und Slide-Animationen für barrierefreieres Erleben.</div>
+      </div>
+      <div class="st-row-ctrl">
+        <button
+          class="st-switch"
+          [class.on]="displaySettings().reducedMotion"
+          role="switch"
+          [attr.aria-checked]="displaySettings().reducedMotion"
+          (click)="setReducedMotion(!displaySettings().reducedMotion)"
+        ><i></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="st-group-label">Sprache & Region</div>
+  <div class="st-group">
+    <div class="st-row">
+      <div class="st-row-body">
+        <div class="st-row-title">Sprache</div>
+      </div>
+      <div class="st-row-ctrl">
+        <select
+          class="st-select"
+          [value]="displaySettings().locale"
+          (change)="setLocale($any($event.target).value)"
+        >
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
+    <div class="st-row">
+      <div class="st-row-body">
+        <div class="st-row-title">Datumsformat</div>
+      </div>
+      <div class="st-row-ctrl">
+        <select
+          class="st-select"
+          [value]="displaySettings().dateFormat"
+          (change)="setDateFormat($any($event.target).value)"
+        >
+          <option value="dmy">TT.MM.JJJJ</option>
+          <option value="ymd">JJJJ-MM-TT</option>
+          <option value="mdy">MM/DD/YYYY</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>

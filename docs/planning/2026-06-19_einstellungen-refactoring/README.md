@@ -9,7 +9,7 @@
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | [Shell-Trennung: HTML/SCSS/Types auslagern](phase-1-shell-trennung.md) | mechanisch | complete |
-| 2 | [Child-Komponenten via ng generate](phase-2-child-komponenten.md) | standard | pending |
+| 2 | [Child-Komponenten via ng generate](phase-2-child-komponenten.md) | standard | complete |
 | 3 | [BEM-Bereinigung + Parent aufräumen](phase-3-bem-bereinigung.md) | mechanisch | pending |
 
 ## Kontrakt

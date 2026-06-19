@@ -1,0 +1,5 @@
+@use '../st-shared' as *;
+.backups-list { list-style: none; margin: 0; padding: 0; }
+.backup-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--line); }
+.backup-name { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+.backup-meta { font-size: 11px; color: var(--text-3); }

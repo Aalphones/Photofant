@@ -1,0 +1,61 @@
+<div class="st-section">
+  <div class="st-section-head">
+    <h2>Backup & Wartung</h2>
+    <p>Datenbank-Snapshots erstellen und vorhandene Backups verwalten.</p>
+  </div>
+
+  <div class="st-group">
+    <div class="st-row top">
+      <div class="st-row-body">
+        <div class="st-row-title">Datenbank-Backup</div>
+        <div class="st-row-sub">Erstellt einen konsistenten Snapshot via SQLite Online Backup API. Ziel: <code>.photofant/backups/</code></div>
+      </div>
+      <div class="st-row-ctrl">
+        <button
+          class="st-btn accent"
+          [disabled]="isRunningBackup()"
+          (click)="triggerBackup()"
+        >
+          @if (isRunningBackup()) {
+            <span class="spinner"></span> Läuft…
+          } @else {
+            Backup erstellen
+          }
+        </button>
+      </div>
+    </div>
+    @if (error()) {
+      <div class="error-banner">{{ error() }}</div>
+    }
+  </div>
+
+  <div class="st-group">
+    <div class="st-row">
+      <div class="st-row-body">
+        <div class="st-row-title">Vorhandene Backups</div>
+      </div>
+      <div class="st-row-ctrl">
+        <button class="st-btn ghost" (click)="refreshBackups()">Aktualisieren</button>
+      </div>
+    </div>
+    @if (isLoadingBackups()) {
+      <div class="group-loading">
+        <span class="spinner"></span> Lade…
+      </div>
+    } @else if (backups().length === 0) {
+      <p class="group-empty">Noch kein Backup vorhanden.</p>
+    } @else {
+      <ul class="backups-list">
+        @for (backup of backups(); track backup.filename) {
+          <li class="backup-row">
+            <span class="backup-name">{{ backup.filename }}</span>
+            <span class="backup-meta">
+              {{ formatSize(backup.size) }} &nbsp;·&nbsp;
+              {{ backup.created_at | date:'dd.MM.yyyy HH:mm' }}
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

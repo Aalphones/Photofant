@@ -27,87 +27,15 @@
     </div>
 
     @switch (activeSection()) {
-
-      @case ('bibliothek') {
-        <!-- TODO Phase 2: <pf-einstellungen-bibliothek /> -->
-      }
-
-      @case ('verarbeitung') {
-        <!-- TODO Phase 2: <pf-einstellungen-verarbeitung /> -->
-      }
-
-      @case ('darstellung') {
-        <!-- TODO Phase 2: <pf-einstellungen-darstellung /> -->
-      }
-
-      @case ('bearbeitung') {
-        <!-- TODO Phase 2: <pf-einstellungen-bearbeitung /> -->
-      }
-
-      @case ('shortcuts') {
-        <!-- TODO Phase 2: <pf-einstellungen-shortcuts /> -->
-      }
-
-      @case ('backup') {
-        <!-- TODO Phase 2: <pf-einstellungen-backup /> -->
-      }
-
-      @case ('info') {
-        <!-- TODO Phase 2: <pf-einstellungen-info /> -->
-      }
-
-      @case ('tags') {
-        <!-- TODO Phase 2: <pf-einstellungen-tags /> -->
-      }
-
-    }<!-- /@switch -->
+      @case ('bibliothek')   { <pf-einstellungen-bibliothek /> }
+      @case ('verarbeitung') { <pf-einstellungen-verarbeitung /> }
+      @case ('darstellung')  { <pf-einstellungen-darstellung /> }
+      @case ('bearbeitung')  { <pf-einstellungen-bearbeitung /> }
+      @case ('tags')         { <pf-einstellungen-tags /> }
+      @case ('shortcuts')    { <pf-einstellungen-tastaturkuerzel /> }
+      @case ('backup')       { <pf-einstellungen-backup-wartung /> }
+      @case ('info')         { <pf-einstellungen-info /> }
+    }
 
   </div><!-- /st-body -->
 </div><!-- /st-page -->
-
-<!-- ── Preset-Dialog (global, ausserhalb des Layouts) ───── -->
-@if (showPresetDialog() && captionerCapabilities() != null) {
-  <pf-preset-dialog
-    [capabilities]="captionerCapabilities()!"
-    [preset]="editingPreset()"
-    (save)="onPresetSave($event)"
-    (cancel)="closePresetDialog()"
-  />
-}
-
-<!-- ── Tag-Merge-Dialog ───────────────────────────────── -->
-@if (showTagMergeDialog()) {
-  <div class="tags__dialog-scrim" (click)="cancelTagMerge()">
-    <div class="tags__dialog" (click)="$event.stopPropagation()">
-      <div class="tags__dialog-head">
-        <pf-icon name="layers" [size]="16" />
-        <span>Tags zusammenführen</span>
-        <button class="tags__dialog-close" (click)="cancelTagMerge()">
-          <pf-icon name="x" [size]="14" />
-        </button>
-      </div>
-      <p class="tags__dialog-desc">
-        Wähle den Ziel-Tag (bleibt erhalten). Alle anderen werden Aliase.
-      </p>
-      <div class="tags__merge-list">
-        @for (tag of tagMergeSelectedTags(); track tag.id) {
-          <button
-            class="tags__merge-option"
-            [class.tags__merge-option--target]="tagMergeTargetId() === tag.id"
-            (click)="setTagMergeTarget(tag.id)"
-          >
-            <span class="tags__merge-option-name">{{ tag.name.replaceAll('_', ' ') }}</span>
-            <span class="tags__merge-option-count">{{ tag.count }}×</span>
-            @if (tagMergeTargetId() === tag.id) {
-              <pf-icon name="check" [size]="13" />
-            }
-          </button>
-        }
-      </div>
-      <div class="tags__dialog-actions">
-        <button class="tags__dialog-cancel" (click)="cancelTagMerge()">Abbrechen</button>
-        <button class="tags__dialog-confirm" (click)="confirmTagMerge()">Zusammenführen</button>
-      </div>
-    </div>
-  </div>
-}

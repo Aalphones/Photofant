@@ -1,0 +1,83 @@
+<div class="st-section">
+  <div class="st-section-head">
+    <h2>Bibliothek</h2>
+    <p>Ordner und Speicherorte für Bilder, Datenbank und Modelle.</p>
+  </div>
+
+  @if (rebootRequired()) {
+    <div class="st-note warn">
+      <pf-icon name="alertTriangle" [size]="15" />
+      <span>Neustart erforderlich — die neue Bibliothek wird erst nach dem Neustart der App verwendet.</span>
+    </div>
+  }
+
+  <div class="st-group-label">Speicherorte</div>
+  <div class="st-group">
+
+    <div class="st-row top">
+      <div class="st-row-body">
+        <div class="st-row-title">Sammlungs-Ordner</div>
+        <div class="st-row-sub">Wurzelverzeichnis aller Bilddateien und der Datenbank. Bilder und DB müssen manuell in den neuen Ordner kopiert werden.</div>
+        @if (isDataRootEditing()) {
+          <div class="path-edit">
+            <input
+              class="dir-input"
+              type="text"
+              [value]="pendingDataRoot()"
+              (input)="pendingDataRoot.set($any($event.target).value)"
+              (keydown.enter)="saveDataRootEdit()"
+              (keydown.escape)="cancelDataRootEdit()"
+            />
+            <button class="st-btn accent" (click)="saveDataRootEdit()">Speichern</button>
+            <button class="st-btn ghost" (click)="cancelDataRootEdit()">Abbrechen</button>
+          </div>
+        }
+      </div>
+      @if (!isDataRootEditing()) {
+        <div class="st-row-ctrl">
+          <div class="st-path">
+            <pf-icon name="folder" [size]="14" />
+            <span class="sp-val">{{ dataRoot() ?? '–' }}</span>
+            <button class="sp-btn" (click)="startDataRootEdit()">Ändern</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="st-row top">
+      <div class="st-row-body">
+        <div class="st-row-title">Modell-Ordner</div>
+        <div class="st-row-sub">Standard-Ziel für neue Modell-Downloads. Bestehende Pfade bleiben bei Änderung erhalten.</div>
+        @if (isDirEditing()) {
+          <div class="path-edit">
+            <input
+              class="dir-input"
+              type="text"
+              [value]="pendingDir()"
+              (input)="pendingDir.set($any($event.target).value)"
+              (keydown.enter)="saveDirEdit()"
+              (keydown.escape)="cancelDirEdit()"
+            />
+            <button class="st-btn accent" (click)="saveDirEdit()">Speichern</button>
+            <button class="st-btn ghost" (click)="cancelDirEdit()">Abbrechen</button>
+          </div>
+        }
+      </div>
+      @if (!isDirEditing()) {
+        <div class="st-row-ctrl">
+          <div class="st-path">
+            <pf-icon name="folder" [size]="14" />
+            <span class="sp-val">{{ modelsDir() ?? '–' }}</span>
+            <button class="sp-btn" (click)="startDirEdit()">Ändern</button>
+          </div>
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <div class="st-note accent">
+    <pf-icon name="info" [size]="15" />
+    <span>Alle Bilddateien liegen ausschließlich im Dateisystem. Die Datenbank hält nur Metadaten — ein regelmäßiges Backup schützt vor Datenverlust.</span>
+  </div>
+</div>

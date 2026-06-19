@@ -80,20 +80,28 @@ Load-Dispatch: `maintenanceActions.loadAppInfo()` im constructor-`effect()`
 
 ### Implementation
 
-- [ ] `ng generate` Befehle ausführen (alle 7, im `frontend/`-Verzeichnis)
-- [ ] `bibliothek` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `bibliothek__*`
-- [ ] `verarbeitung` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `verarbeitung__*`
-- [ ] `darstellung` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `darstellung__*`
-- [ ] `bearbeitung` — Template + Logik + PresetDialog aus Shell übernehmen; BEM-Klassen nach `bearbeitung__*`
-- [ ] `tastaturkuerzel` — Template + Logik + keydown-Listener aus Shell übernehmen; BEM-Klassen nach `tastaturkuerzel__*`
-- [ ] `backup-wartung` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `backup-wartung__*`
-- [ ] `info` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `info__*`
-- [ ] `einstellungen.html` `@switch` auf Child-Tags umstellen
-- [ ] Child-Komponenten in `einstellungen.ts` importieren; Shell-Logik entfernen
-- [ ] `ng build` fehlerfrei
+- [x] `ng generate` Befehle ausführen (alle 8 inkl. tags, im `frontend/`-Verzeichnis)
+- [x] `bibliothek` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `bibliothek__*`
+- [x] `verarbeitung` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `verarbeitung__*`
+- [x] `darstellung` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `darstellung__*`
+- [x] `bearbeitung` — Template + Logik + PresetDialog aus Shell übernehmen; BEM-Klassen nach `bearbeitung__*`
+- [x] `tastaturkuerzel` — Template + Logik + keydown-Listener aus Shell übernehmen; BEM-Klassen nach `tastaturkuerzel__*`
+- [x] `backup-wartung` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `backup-wartung__*`
+- [x] `info` — Template + Logik aus Shell übernehmen; BEM-Klassen nach `info__*`
+- [x] `tags` — Template + Logik + TagMergeDialog aus Shell übernehmen (nicht im ursprünglichen Plan, aber SECTIONS enthält 8 Sektionen)
+- [x] `einstellungen.html` `@switch` auf Child-Tags umstellen
+- [x] Child-Komponenten in `einstellungen.ts` importieren; Shell-Logik entfernen
+- [x] `ng build` fehlerfrei
 
 ### Docs
 
-- [ ] Keine Doc-Updates nötig
+- [x] Keine Doc-Updates nötig
 
 ## Report-Back
+
+- 8 Child-Komponenten angelegt (1 mehr als geplant: `tags` war in SECTIONS vorhanden)
+- PresetDialog aus `einstellungen.html` in `bearbeitung.html` verschoben
+- TagMergeDialog aus `einstellungen.html` in `tags.html` verschoben
+- `_st-shared.scss` angelegt: gemeinsame `st-*` Utility-Styles, die alle Child-Komponenten via `@use '../st-shared' as *` einbinden (Angular ViewEncapsulation verhindert dass Parent-Styles in Child-Templates wirken)
+- `einstellungen.ts` reduziert auf Navigation: `sections`, `activeSection`, `mobileOpen`, `goSection()`, `goBack()`
+- `einstellungen.scss` auf Nav/Shell-Styles reduziert

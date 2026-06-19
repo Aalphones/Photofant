@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-19_einstellungen-refactoring/`
-**Phase:** 2/3 — Child-Komponenten via ng generate (pending)
-**Nächster Schritt:** Phase 2 starten — `ng generate` für alle 8 Sektionen, dann Section-Inhalt + Dialoge + Store-Logik in die Child-Komponenten verschieben.
+**Phase:** 3/3 — BEM-Bereinigung + Parent aufräumen (pending)
+**Nächster Schritt:** Phase 3 starten — `st-*` Klassen in Child-Templates auf BEM umbenennen, `_st-shared.scss` bereinigen, Shell aufräumen.
 
 **Abgeschlossen:**
 - `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)
