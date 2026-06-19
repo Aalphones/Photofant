@@ -4,10 +4,32 @@ import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, EMPTY, from, map, mergeMap, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
+import type { ProcessingConfig } from '@photofant/models';
+import { PROCESSING_CONFIG_DEFAULTS } from '@photofant/models';
 import { ModelService } from '@photofant/services';
 import { jobsActions } from '../jobs/jobs.actions';
 import { modelsActions } from './models.actions';
 import { modelsSelectors } from './models.selectors';
+
+const PROCESSING_CONFIG_KEY_MAP: Record<keyof ProcessingConfig, string> = {
+  autoTag:        'auto_tag',
+  autoCaption:    'auto_caption',
+  autoEmbed:      'auto_embed',
+  minProbability: 'min_probability',
+  maxTags:        'max_tags',
+  blurThreshold:  'blur_threshold',
+};
+
+function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfig {
+  return {
+    autoTag:        Boolean(data['auto_tag']        ?? PROCESSING_CONFIG_DEFAULTS.autoTag),
+    autoCaption:    Boolean(data['auto_caption']     ?? PROCESSING_CONFIG_DEFAULTS.autoCaption),
+    autoEmbed:      Boolean(data['auto_embed']       ?? PROCESSING_CONFIG_DEFAULTS.autoEmbed),
+    minProbability: Number(data['min_probability']   ?? PROCESSING_CONFIG_DEFAULTS.minProbability),
+    maxTags:        Number(data['max_tags']          ?? PROCESSING_CONFIG_DEFAULTS.maxTags),
+    blurThreshold:  Number(data['blur_threshold']    ?? PROCESSING_CONFIG_DEFAULTS.blurThreshold),
+  };
+}
 
 @Injectable()
 export class ModelsEffects {
@@ -49,13 +71,37 @@ export class ModelsEffects {
       switchMap(() =>
         this.modelService.loadConfig().pipe(
           map((response) =>
-            modelsActions.loadConfigSuccess({ modelsDir: response.data['models_dir'] ?? '' })
+            modelsActions.loadConfigSuccess({
+              modelsDir: String(response.data['models_dir'] ?? ''),
+              processingConfig: extractProcessingConfig(response.data),
+            })
           ),
           catchError((error: HttpErrorResponse) =>
             of(modelsActions.loadConfigFailure({ error: error.message }))
           ),
         )
       ),
+    )
+  );
+
+  readonly updateProcessingConfig$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(modelsActions.updateProcessingConfig),
+      switchMap(({ patch }) => {
+        const apiPatch: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(patch)) {
+          const apiKey = PROCESSING_CONFIG_KEY_MAP[key as keyof ProcessingConfig];
+          if (apiKey !== undefined) { apiPatch[apiKey] = value; }
+        }
+        return this.modelService.patchConfig(apiPatch).pipe(
+          map((response) => modelsActions.updateProcessingConfigSuccess({
+            processingConfig: extractProcessingConfig(response.data),
+          })),
+          catchError((error: HttpErrorResponse) =>
+            of(modelsActions.updateProcessingConfigFailure({ error: error.message }))
+          ),
+        );
+      }),
     )
   );
 
@@ -143,7 +189,7 @@ export class ModelsEffects {
       switchMap(({ path }) =>
         this.modelService.updateModelsDir(path).pipe(
           map((response) =>
-            modelsActions.updateModelsDirSuccess({ modelsDir: response.data['models_dir'] ?? path })
+            modelsActions.updateModelsDirSuccess({ modelsDir: String(response.data['models_dir'] ?? path) })
           ),
           catchError((error: HttpErrorResponse) =>
             of(modelsActions.updateModelsDirFailure({ error: error.message }))

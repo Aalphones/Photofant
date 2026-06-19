@@ -1,3 +1,5 @@
+export type { ProcessingConfig } from './config.model';
+export { PROCESSING_CONFIG_DEFAULTS } from './config.model';
 export type { Job, JobState, JobKind } from './job.model';
 export type {
   CaptionPresetDto,

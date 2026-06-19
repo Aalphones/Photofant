@@ -4,7 +4,7 @@ import type { Observable } from 'rxjs';
 import type { ModelDto, CapabilitiesDto } from '@photofant/models';
 
 interface ConfigResponse {
-  data: Record<string, string | null>;
+  data: Record<string, unknown>;
 }
 
 interface DownloadResponse {
@@ -30,6 +30,10 @@ export class ModelService {
 
   loadConfig(): Observable<ConfigResponse> {
     return this.http.get<ConfigResponse>('/api/config');
+  }
+
+  patchConfig(patch: Record<string, unknown>): Observable<ConfigResponse> {
+    return this.http.patch<ConfigResponse>('/api/config', { data: patch });
   }
 
   updateModelsDir(path: string): Observable<ConfigResponse> {

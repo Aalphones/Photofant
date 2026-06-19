@@ -1,11 +1,13 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { ModelDto, CapabilitiesDto, ModelBindError } from '@photofant/models';
+import type { ModelDto, CapabilitiesDto, ModelBindError, ProcessingConfig } from '@photofant/models';
+import { PROCESSING_CONFIG_DEFAULTS } from '@photofant/models';
 import { modelsActions } from './models.actions';
 
 export interface ModelsState {
   models: ModelDto[];
   capabilities: CapabilitiesDto | null;
   modelsDir: string | null;
+  processingConfig: ProcessingConfig;
   isLoading: boolean;
   pendingDownloads: string[];
   downloadJobIds: Record<string, string>;
@@ -18,6 +20,7 @@ const initialState: ModelsState = {
   models: [],
   capabilities: null,
   modelsDir: null,
+  processingConfig: PROCESSING_CONFIG_DEFAULTS,
   isLoading: false,
   pendingDownloads: [],
   downloadJobIds: {},
@@ -45,8 +48,12 @@ export const modelsFeature = createFeature({
       ({ ...state, capabilities })
     ),
 
-    on(modelsActions.loadConfigSuccess, (state: ModelsState, { modelsDir }) =>
-      ({ ...state, modelsDir })
+    on(modelsActions.loadConfigSuccess, (state: ModelsState, { modelsDir, processingConfig }) =>
+      ({ ...state, modelsDir, processingConfig })
+    ),
+
+    on(modelsActions.updateProcessingConfigSuccess, (state: ModelsState, { processingConfig }) =>
+      ({ ...state, processingConfig })
     ),
 
     on(modelsActions.downloadModel, (state: ModelsState, { manifestId }) => {

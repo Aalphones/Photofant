@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { ModelDto, CapabilitiesDto } from '@photofant/models';
+import type { ModelDto, CapabilitiesDto, ProcessingConfig } from '@photofant/models';
 
 export const modelsActions = createActionGroup({
   source: 'Models',
@@ -10,9 +10,12 @@ export const modelsActions = createActionGroup({
     'Load Capabilities':         emptyProps(),
     'Load Capabilities Success': props<{ capabilities: CapabilitiesDto }>(),
     'Load Capabilities Failure': props<{ error: string }>(),
-    'Load Config':               emptyProps(),
-    'Load Config Success':       props<{ modelsDir: string }>(),
-    'Load Config Failure':       props<{ error: string }>(),
+    'Load Config':                         emptyProps(),
+    'Load Config Success':                 props<{ modelsDir: string; processingConfig: ProcessingConfig }>(),
+    'Load Config Failure':                 props<{ error: string }>(),
+    'Update Processing Config':            props<{ patch: Partial<ProcessingConfig> }>(),
+    'Update Processing Config Success':    props<{ processingConfig: ProcessingConfig }>(),
+    'Update Processing Config Failure':    props<{ error: string }>(),
     'Download Model':            props<{ manifestId: string; licenseAck: boolean }>(),
     'Download Model Success':    props<{ jobId: string; manifestId: string }>(),
     'Download Model Failure':    props<{ manifestId: string; error: string }>(),

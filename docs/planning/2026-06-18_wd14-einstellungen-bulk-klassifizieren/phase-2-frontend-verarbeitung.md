@@ -1,6 +1,6 @@
 # Phase 2 — Frontend Verarbeitungs-Einstellungen
 
-> Rating: **standard** · Status: pending
+> Rating: **standard** · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -66,18 +66,18 @@ const PROCESSING_CONFIG_KEY_MAP: Record<keyof ProcessingConfig, string> = {
 
 ### model.service.ts
 
-- [ ] Methode `patchConfig(patch: Record<string, unknown>): Observable<ConfigResponse>` ergänzen:
+- [x] Methode `patchConfig(patch: Record<string, unknown>): Observable<ConfigResponse>` ergänzen:
   ```ts
   patchConfig(patch: Record<string, unknown>): Observable<ConfigResponse> {
     return this.http.patch<ConfigResponse>('/api/config', { data: patch });
   }
   ```
-- [ ] `ConfigResponse.data`-Typ von `Record<string, string | null>` auf `Record<string, unknown>` ändern (war zu eng)
+- [x] `ConfigResponse.data`-Typ von `Record<string, string | null>` auf `Record<string, unknown>` ändern (war zu eng)
 
 ### models.actions.ts
 
-- [ ] `'Load Config Success'` Props erweitern: `props<{ modelsDir: string; processingConfig: ProcessingConfig }>()`
-- [ ] Neue Actions:
+- [x] `'Load Config Success'` Props erweitern: `props<{ modelsDir: string; processingConfig: ProcessingConfig }>()`
+- [x] Neue Actions:
   ```ts
   'Update Processing Config':         props<{ patch: Partial<ProcessingConfig> }>(),
   'Update Processing Config Success': props<{ processingConfig: ProcessingConfig }>(),
@@ -86,87 +86,24 @@ const PROCESSING_CONFIG_KEY_MAP: Record<keyof ProcessingConfig, string> = {
 
 ### models.reducer.ts
 
-- [ ] `ProcessingConfig`-Interface + `PROCESSING_CONFIG_DEFAULTS` definieren und exportieren
-- [ ] `processingConfig: ProcessingConfig` zu `ModelsState` und `initialState` ergänzen (Defaults als Startzustand)
-- [ ] `on(modelsActions.loadConfigSuccess, ...)` um `processingConfig` erweitern:
-  ```ts
-  on(modelsActions.loadConfigSuccess, (state, { modelsDir, processingConfig }) =>
-    ({ ...state, modelsDir, processingConfig })
-  )
-  ```
-- [ ] `on(modelsActions.updateProcessingConfigSuccess, ...)` ergänzen
+- [x] `ProcessingConfig`-Interface + `PROCESSING_CONFIG_DEFAULTS` definieren und exportieren
+- [x] `processingConfig: ProcessingConfig` zu `ModelsState` und `initialState` ergänzen (Defaults als Startzustand)
+- [x] `on(modelsActions.loadConfigSuccess, ...)` um `processingConfig` erweitern
+- [x] `on(modelsActions.updateProcessingConfigSuccess, ...)` ergänzen
 
 ### models.effects.ts
 
-- [ ] `loadConfig$`: `extractProcessingConfig()`-Hilfsfunktion (lokal im File), Response-Mapping anpassen:
-  ```ts
-  map((response) => modelsActions.loadConfigSuccess({
-    modelsDir: response.data['models_dir'] as string ?? '',
-    processingConfig: extractProcessingConfig(response.data),
-  }))
-  ```
-- [ ] Neuer Effect `updateProcessingConfig$`:
-  ```ts
-  readonly updateProcessingConfig$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(modelsActions.updateProcessingConfig),
-      switchMap(({ patch }) => {
-        const apiPatch: Record<string, unknown> = {};
-        for (const [key, value] of Object.entries(patch)) {
-          const apiKey = PROCESSING_CONFIG_KEY_MAP[key as keyof ProcessingConfig];
-          if (apiKey !== undefined) { apiPatch[apiKey] = value; }
-        }
-        return this.modelService.patchConfig(apiPatch).pipe(
-          map((response) => modelsActions.updateProcessingConfigSuccess({
-            processingConfig: extractProcessingConfig(response.data),
-          })),
-          catchError((error: HttpErrorResponse) =>
-            of(modelsActions.updateProcessingConfigFailure({ error: error.message }))
-          ),
-        );
-      }),
-    )
-  );
-  ```
+- [x] `loadConfig$`: `extractProcessingConfig()`-Hilfsfunktion (lokal im File), Response-Mapping anpassen
+- [x] Neuer Effect `updateProcessingConfig$`
 
 ### models.selectors.ts
 
-- [ ] `selectProcessingConfig` aus `modelsFeature` destructuren und in `modelsSelectors` exportieren
-- [ ] `ProcessingConfig`-Type-Export in `models/index.ts` ergänzen
+- [x] `selectProcessingConfig` aus `modelsFeature` destructuren und in `modelsSelectors` exportieren
+- [x] `ProcessingConfig`-Type-Export in `models/index.ts` ergänzen
 
 ### einstellungen.ts — Sektion „Verarbeitung"
 
-Sektion nach der Modelle-Sektion einfügen. Controls:
-
-| Einstellung | Control | Wert |
-|---|---|---|
-| auto_tag | Toggle-Switch | bool |
-| auto_caption | Toggle-Switch | bool |
-| auto_embed | Toggle-Switch | bool |
-| min_probability | `<input type="number" min="0" max="1" step="0.05">` | float |
-| max_tags | `<input type="number" min="1" max="200">` | int |
-| blur_threshold | `<input type="number" min="0" max="1000" step="10">` | float |
-
-Label-Texte:
-- auto_tag: „Auto-Tagging (WD14)" / „Beim Import automatisch WD14-Tags generieren."
-- auto_caption: „Auto-Caption (Florence-2)" / „Beim Import automatisch Bildbeschreibungen generieren."
-- auto_embed: „CLIP-Embedding" / „Beim Import automatisch semantische Suchdaten berechnen."
-- min_probability: „Mindest-Konfidenz (WD14)" / „Tags unterhalb dieses Wertes werden verworfen. Default: 0.5"
-- max_tags: „Max. Tags pro Bild" / „Maximale Anzahl automatisch gesetzter Tags, nach Konfidenz sortiert. Default: 30"
-- blur_threshold: „Mindestschärfe (Laplacian-Varianz)" / „Bilder unterhalb gelten als unscharf. Default: 200"
-
-Änderungen dispatchen via:
-```ts
-this.store.dispatch(modelsActions.updateProcessingConfig({ patch: { autoTag: value } }));
-```
-
-Werte aus Store lesen:
-```ts
-readonly processingConfig = this.store.selectSignal(modelsSelectors.selectProcessingConfig);
-```
-Constructor: `this.store.dispatch(modelsActions.loadConfig())` (bereits vorhanden).
-
-🟡 **Float-Input UX:** `min_probability` sollte bei `blur` clamp auf `[0, 1]` prüfen; `max_tags` auf `[1, 200]`. Im Template via `(blur)="clampMinProbability($event)"` o.ä. — kein separates Validierungs-Framework nötig.
+[x] Sektion nach der Modelle-Sektion eingefügt — alle 6 Controls mit Clamp-Handlers (`onMinProbabilityChange`, `onMaxTagsChange`, `onBlurThresholdChange`), CSS `st-number-input`, Signal `processingConfig` aus Store.
 
 ## Akzeptanzkriterien
 

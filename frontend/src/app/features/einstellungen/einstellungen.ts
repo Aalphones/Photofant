@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { CapabilityDescriptor, CaptionPresetDto, Density, ModelDto } from '@photofant/models';
+import type { CapabilityDescriptor, CaptionPresetDto, Density, ModelDto, ProcessingConfig } from '@photofant/models';
 import type { DateFormat, Locale } from '@photofant/services';
 import { SettingsService } from '@photofant/services';
 import {
@@ -120,6 +120,102 @@ import { PresetDialog } from '@photofant/ui';
                 <button class="btn-ghost" (click)="cancelDirEdit()">Abbrechen</button>
               </div>
             }
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Verarbeitung ─────────────────────────────────────────────── -->
+      <div class="settings-section">
+        <h2 class="settings-heading">Verarbeitung</h2>
+
+        <div class="settings-card">
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Auto-Tagging (WD14)</div>
+              <div class="card-desc">Beim Import automatisch WD14-Tags generieren.</div>
+            </div>
+            <button
+              class="st-switch"
+              [class.st-switch--on]="processingConfig().autoTag"
+              role="switch"
+              [attr.aria-checked]="processingConfig().autoTag"
+              (click)="patchProcessingConfig({ autoTag: !processingConfig().autoTag })"
+            ></button>
+          </div>
+
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Auto-Caption (Florence-2)</div>
+              <div class="card-desc">Beim Import automatisch Bildbeschreibungen generieren.</div>
+            </div>
+            <button
+              class="st-switch"
+              [class.st-switch--on]="processingConfig().autoCaption"
+              role="switch"
+              [attr.aria-checked]="processingConfig().autoCaption"
+              (click)="patchProcessingConfig({ autoCaption: !processingConfig().autoCaption })"
+            ></button>
+          </div>
+
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">CLIP-Embedding</div>
+              <div class="card-desc">Beim Import automatisch semantische Suchdaten berechnen.</div>
+            </div>
+            <button
+              class="st-switch"
+              [class.st-switch--on]="processingConfig().autoEmbed"
+              role="switch"
+              [attr.aria-checked]="processingConfig().autoEmbed"
+              (click)="patchProcessingConfig({ autoEmbed: !processingConfig().autoEmbed })"
+            ></button>
+          </div>
+
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Mindest-Konfidenz (WD14)</div>
+              <div class="card-desc">Tags unterhalb dieses Wertes werden verworfen. Default: 0.5</div>
+            </div>
+            <input
+              class="st-number-input"
+              type="number"
+              min="0"
+              max="1"
+              step="0.05"
+              [value]="processingConfig().minProbability"
+              (change)="onMinProbabilityChange($any($event.target))"
+            >
+          </div>
+
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Max. Tags pro Bild</div>
+              <div class="card-desc">Maximale Anzahl automatisch gesetzter Tags, nach Konfidenz sortiert. Default: 30</div>
+            </div>
+            <input
+              class="st-number-input"
+              type="number"
+              min="1"
+              max="200"
+              [value]="processingConfig().maxTags"
+              (change)="onMaxTagsChange($any($event.target))"
+            >
+          </div>
+
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Mindestschärfe (Laplacian-Varianz)</div>
+              <div class="card-desc">Bilder unterhalb gelten als unscharf. Default: 200</div>
+            </div>
+            <input
+              class="st-number-input"
+              type="number"
+              min="0"
+              max="1000"
+              step="10"
+              [value]="processingConfig().blurThreshold"
+              (change)="onBlurThresholdChange($any($event.target))"
+            >
           </div>
         </div>
       </div>
@@ -544,6 +640,20 @@ import { PresetDialog } from '@photofant/ui';
     }
     .dir-input:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
 
+    .st-number-input {
+      height: 32px;
+      width: 90px;
+      padding: 0 8px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-s);
+      color: var(--text);
+      font-size: 13px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .st-number-input:focus { outline: none; border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+
     .spinner {
       width: 12px;
       height: 12px;
@@ -585,6 +695,7 @@ export class Einstellungen {
 
   /* ── Modelle ──────────────────────────────────────────────────── */
   readonly modelsDir = this.store.selectSignal(modelsSelectors.selectModelsDir);
+  readonly processingConfig = this.store.selectSignal(modelsSelectors.selectProcessingConfig);
   readonly isDirEditing = signal<boolean>(false);
   readonly pendingDir = signal<string>('');
 
@@ -632,6 +743,32 @@ export class Einstellungen {
       this.store.dispatch(modelsActions.updateModelsDir({ path: newDir }));
     }
     this.isDirEditing.set(false);
+  }
+
+  /* ── Verarbeitung ─────────────────────────────────────────────── */
+  patchProcessingConfig(patch: Partial<ProcessingConfig>): void {
+    this.store.dispatch(modelsActions.updateProcessingConfig({ patch }));
+  }
+
+  onMinProbabilityChange(target: HTMLInputElement): void {
+    const raw = parseFloat(target.value);
+    const clamped = Math.min(1, Math.max(0, isNaN(raw) ? 0.5 : raw));
+    target.value = String(clamped);
+    this.patchProcessingConfig({ minProbability: clamped });
+  }
+
+  onMaxTagsChange(target: HTMLInputElement): void {
+    const raw = parseInt(target.value, 10);
+    const clamped = Math.min(200, Math.max(1, isNaN(raw) ? 30 : raw));
+    target.value = String(clamped);
+    this.patchProcessingConfig({ maxTags: clamped });
+  }
+
+  onBlurThresholdChange(target: HTMLInputElement): void {
+    const raw = parseFloat(target.value);
+    const clamped = Math.min(1000, Math.max(0, isNaN(raw) ? 200 : raw));
+    target.value = String(clamped);
+    this.patchProcessingConfig({ blurThreshold: clamped });
   }
 
   triggerBackup(): void {

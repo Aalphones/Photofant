@@ -3,3 +3,4 @@ export { modelsFeature } from './models.reducer';
 export type { ModelsState } from './models.reducer';
 export { modelsSelectors } from './models.selectors';
 export { ModelsEffects } from './models.effects';
+export type { ProcessingConfig } from '@photofant/models';
