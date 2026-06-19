@@ -262,6 +262,8 @@ Offene Duplikat-Paare, die der User manuell entscheiden soll. Erweiterbar für a
 
 Unique-Constraint: `uq_review_item_pair` auf `(type, asset_a_id, asset_b_id)` — kein Doppeleintrag pro Paar.
 
+Flow: Import berechnet pHash → `find_similar` findet Treffer ≤ `dupe_threshold` → ein `review_item` pro Paar wird angelegt → User entscheidet im Review-Tab (Phase 5).
+
 ---
 
 ## Upcoming tables (planned)

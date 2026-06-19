@@ -21,25 +21,27 @@
 
 ### Backend
 
-- [ ] `backend/photofant/media/phash.py` — `find_similar(session, new_phash: int, new_asset_id: int, threshold: int) -> list[tuple[int, int]]` hinzufügen:
+- [x] `backend/photofant/media/phash.py` — `find_similar(session, new_phash: int, new_asset_id: int, threshold: int) -> list[tuple[int, int]]` hinzufügen:
   - Lädt alle `(asset.id, asset.phash)` aus DB (WHERE `phash IS NOT NULL AND id != new_asset_id`)
   - Gibt `[(other_asset_id, distance), ...]` für alle Treffer ≤ Threshold zurück
   - Reihenfolge: niedrigste Distanz zuerst
-- [ ] `backend/photofant/jobs/import_job.py` — `_import_single` erweitern:
-  - Nach `session.commit()`: `phash_val = compute_phash(source_path)`; Fehler loggen + skip wenn Exception
+- [x] `backend/photofant/jobs/import_job.py` — `_import_single` erweitern:
+  - Nach `session.commit()`: `phash_val = compute_phash(dest)`; Fehler loggen + skip wenn Exception
   - `asset.phash = phash_val`; `session.commit()` (separater Commit für pHash — Import-Erfolg nicht rückgängig machen wenn pHash schlägt fehl)
-  - `similar = find_similar(session, phash_val, asset.id, settings.dupe_threshold)`
-  - Für jeden Treffer: `ReviewItem` anlegen, `on_conflict_do_nothing` (oder try/except IntegrityError)
+  - `similar = find_similar(session, phash_val, asset.id, dupe_threshold)`
+  - Für jeden Treffer: `ReviewItem` anlegen via `sqlite_insert(...).on_conflict_do_nothing()`
   - `session.commit()`
-- [ ] pHash-Berechnung läuft **nach** dem File-Copy und **nach** dem Asset-Commit — nie davor
-- [ ] `settings = load_settings()` einmal lesen, nicht pro Iteration
+- [x] pHash-Berechnung läuft **nach** dem File-Copy und **nach** dem Asset-Commit — nie davor
+- [x] `settings = load_settings()` einmal lesen, nicht pro Iteration (in `run_import_job` + `run_scan_job`)
 
 ### Tests
 
-- [ ] `backend/tests/test_import_job.py` (falls vorhanden) — Smoke-Test: Import zweier ähnlicher Bilder → ein `review_item` in DB
+- [x] `backend/tests/test_import_job.py` (falls vorhanden) — Smoke-Test: Import zweier ähnlicher Bilder → ein `review_item` in DB *(Datei existiert nicht; private-Profil, kein Pflicht-Test)*
 
 ### Docs
 
-- [ ] `docs/models.md` `review_item` — Beispiel-Flow in einem Satz ergänzen (optional, wenn noch nicht in Phase 1)
+- [x] `docs/models.md` `review_item` — Beispiel-Flow in einem Satz ergänzt
 
 ## Report-Back
+
+Phase 2 complete. `find_similar` in `phash.py` hinzugefügt; `_import_single` liest pHash nach dem Asset-Commit und legt `review_item`-Einträge via `sqlite_insert(...).on_conflict_do_nothing()` an. `dupe_threshold` wird einmal in `run_import_job`/`run_scan_job` aus Settings gelesen und als Parameter weitergegeben. pHash-Fehler werden geloggt, der Import läuft durch.
