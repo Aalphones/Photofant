@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { Store } from '@ngrx/store';
 import type { Collection, Density, GroupKey, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
 import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, presetsSelectors } from '@photofant/store';
-import { Icon, RerunDialog } from '@photofant/ui';
+import { Icon } from '@photofant/ui';
 
 interface FilterChip {
   kind: 'source' | 'qualityMin' | 'tag' | 'collection';
@@ -15,7 +15,7 @@ interface FilterChip {
 @Component({
   selector: 'pf-sub-toolbar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, RerunDialog],
+  imports: [Icon],
   templateUrl: './sub-toolbar.html',
   styleUrl: './sub-toolbar.scss',
 })
