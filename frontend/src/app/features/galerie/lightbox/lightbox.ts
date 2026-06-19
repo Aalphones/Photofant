@@ -294,6 +294,13 @@ export class Lightbox {
       this.addingTag.set(false);
       return;
     }
+    const normalizedName = name.toLowerCase().replace(/ /g, '_');
+    const isDuplicate = this.displayTags().some((tag: TagDto) => tag.name === normalizedName);
+    if (isDuplicate) {
+      this.addingTag.set(false);
+      this.tagInputValue.set('');
+      return;
+    }
     this.assetService.patchTags(assetId, [name], []).subscribe({
       next: () => { this.reloadTrigger.update((count: number) => count + 1); },
     });

@@ -82,7 +82,7 @@ async def run_rerun_job(
         if "tags" in steps:
             await asyncio.to_thread(_run_tagging, asset_id, asset_path)
         if "caption" in steps:
-            await asyncio.to_thread(_run_caption_with_preset, asset_id, asset_path, caption_preset_id)
+            await asyncio.to_thread(_run_caption_with_preset, asset_id, asset_path, caption_preset_id, True)
         if "embedding" in steps:
             await asyncio.to_thread(_run_embedding, asset_id, asset_path)
 

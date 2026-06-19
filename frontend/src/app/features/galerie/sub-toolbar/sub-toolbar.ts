@@ -1,10 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import { Store } from '@ngrx/store';
 import type { Collection, Density, GroupKey, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
-import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
-import { ClassifyService } from '@photofant/services';
+import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, presetsSelectors } from '@photofant/store';
 import { Icon, RerunDialog } from '@photofant/ui';
-import type { RerunPayload } from '@photofant/ui';
 
 interface FilterChip {
   kind: 'source' | 'qualityMin' | 'tag' | 'collection';
@@ -22,11 +20,8 @@ interface FilterChip {
 })
 export class SubToolbar {
   private readonly store           = inject(Store);
-  private readonly classifyService = inject(ClassifyService);
 
   readonly railToggle = output<void>();
-
-  protected readonly showRerunAllDialog = signal(false);
 
   protected readonly total      = this.store.selectSignal(gallerySelectors.selectServerTotal);
   protected readonly sort       = this.store.selectSignal(filtersSelectors.sort);
@@ -130,23 +125,5 @@ export class SubToolbar {
 
   protected sortLabel(): string {
     return this.sort() === 'date' ? 'Datum' : 'Größe';
-  }
-
-  protected openRerunAllDialog(): void {
-    this.store.dispatch(presetsActions.loadPresets());
-    this.showRerunAllDialog.set(true);
-  }
-
-  protected onRerunAllConfirm(payload: RerunPayload): void {
-    this.showRerunAllDialog.set(false);
-    this.classifyService.rerun({
-      asset_ids: 'all',
-      steps: payload.steps,
-      ...(payload.captionPresetId != null ? { caption_preset_id: payload.captionPresetId } : {}),
-    }).subscribe();
-  }
-
-  protected onRerunAllCancel(): void {
-    this.showRerunAllDialog.set(false);
   }
 }

@@ -223,7 +223,13 @@ class Florence2Captioner:
         encoder_hidden_beams = np.repeat(encoder_hidden, num_beams, axis=0)
         encoder_mask_beams = np.repeat(encoder_mask, num_beams, axis=0)
 
-        past = self._empty_past(decoder_session, batch=num_beams)
+        # Encoder and decoder KV caches have different lifecycles:
+        # - encoder KV (cross-attention): constant after step 0; zero-sized dummy until the model
+        #   outputs real values (some exports never do — then we stay on non-cache branch forever)
+        # - decoder KV (self-attention): grows by one token each step
+        initial_past = self._empty_past(decoder_session, batch=num_beams)
+        encoder_past: dict[str, np.ndarray] = {k: v for k, v in initial_past.items() if ".encoder." in k}
+        decoder_past: dict[str, np.ndarray] = {k: v for k, v in initial_past.items() if ".decoder." in k}
         use_cache = False
 
         sequences: list[list[int]] = [[self._decoder_start] for _ in range(num_beams)]
@@ -241,7 +247,7 @@ class Florence2Captioner:
                 "encoder_attention_mask": encoder_mask_beams,
                 "use_cache_branch": np.array([use_cache], dtype=bool),
             }
-            feeds.update(past)
+            feeds.update({**encoder_past, **decoder_past})
             feeds = {name: value for name, value in feeds.items() if name in declared_inputs}
 
             outputs = _run(decoder_session, feeds)
@@ -273,8 +279,28 @@ class Florence2Captioner:
             beam_order = np.array([beam[1] for beam in next_beams], dtype=np.int64)
             sequences = [sequences[beam[1]] + [beam[2]] for beam in next_beams]
             next_input_ids = np.array([beam[2] for beam in next_beams], dtype=np.int64)[:, None]
-            past = self._reorder_present(outputs, beam_order)
-            use_cache = bool(past)  # stay in full-decode mode if merged decoder returned no cache
+
+            new_past = self._reorder_present(outputs, beam_order)
+            new_encoder = {k: v for k, v in new_past.items() if ".encoder." in k}
+            new_decoder = {k: v for k, v in new_past.items() if ".decoder." in k}
+
+            if new_encoder:
+                # Model produced real encoder KV (cross-attention cache) — keep them.
+                # After step 0 these never change, so we don't need to update them again;
+                # but if the model re-emits them on cache steps, accept the update anyway.
+                encoder_past = new_encoder
+            else:
+                # Model did not output encoder KV (common in some merged-decoder exports).
+                # Reorder the existing dummy tensors so batch indices stay aligned with beams.
+                encoder_past = {k: v[beam_order] for k, v in encoder_past.items()}
+
+            if new_decoder:
+                decoder_past = new_decoder
+
+            # Cache branch requires real (non-zero-length) encoder KV; stay on non-cache branch
+            # if only zero-sized dummies are available.
+            encoder_seq_len = next(iter(encoder_past.values())).shape[2] if encoder_past else 0
+            use_cache = encoder_seq_len > 0 and bool(decoder_past)
 
             if len(finished) >= num_beams and max(score for score, _ in finished) >= beam_scores.max():
                 break

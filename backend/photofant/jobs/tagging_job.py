@@ -40,6 +40,16 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
             log.warning("Asset %d not found — skipping tag persist", asset_id)
             return
 
+        # Clear stale auto-tags so rerun produces a clean result set.
+        # Manually-removed entries (manually_removed=True) are intentionally kept
+        # to prevent the tagger from re-adding explicitly rejected tags.
+        session.query(AssetTag).filter(
+            AssetTag.asset_id == asset_id,
+            AssetTag.kind == "auto",
+            AssetTag.manually_removed.is_(False),
+        ).delete(synchronize_session=False)
+        session.flush()
+
         for tag_score in tag_scores:
             normalized_name = tag_score.name.lower()
             existing_tag = session.query(Tag).filter_by(name=normalized_name).first()

@@ -58,11 +58,12 @@ def _resolve_preset_by_id(preset_id: int) -> tuple[int | None, dict]:  # type: i
 
 
 def _run_caption_with_preset(
-    asset_id: int, asset_path: str, override_preset_id: int | None = None
+    asset_id: int, asset_path: str, override_preset_id: int | None = None, force: bool = False
 ) -> None:
     """Blocking: run Florence-2 inference + persist the caption for one asset.
 
     If override_preset_id is given, that preset is used instead of the default.
+    If force is True, a manually edited caption is overwritten and caption_edited is reset.
     """
     from PIL import Image as PILImage
 
@@ -84,7 +85,7 @@ def _run_caption_with_preset(
         if asset_check is None:
             log.warning("Asset %d not found — skipping caption", asset_id)
             return
-        if asset_check.caption_edited:
+        if asset_check.caption_edited and not force:
             log.info("Asset %d has a manually edited caption — skipping captioner", asset_id)
             return
 
@@ -100,6 +101,8 @@ def _run_caption_with_preset(
         asset.caption = caption
         asset.captioner = _CAPTIONER_MANIFEST_ID
         asset.caption_preset_id = preset_id
+        if force:
+            asset.caption_edited = False
 
         ledger = session.get(ProcessingLedger, asset.content_hash)
         if ledger is not None:

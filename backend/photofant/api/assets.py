@@ -149,6 +149,7 @@ def _load_asset_tags(session: Session, asset_id: int) -> list[TagDto]:
         session.query(AssetTag, Tag)
         .join(Tag, Tag.id == AssetTag.tag_id)
         .filter(AssetTag.asset_id == asset_id)
+        .filter(AssetTag.manually_removed.is_(False))
         .order_by(AssetTag.score.desc().nulls_last())
         .all()
     )
