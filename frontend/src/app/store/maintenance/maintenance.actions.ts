@@ -1,5 +1,6 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import type {
+  AppInfo,
   BackupInfo,
   MaintenanceStatus,
   RebuildTarget,
@@ -41,5 +42,9 @@ export const maintenanceActions = createActionGroup({
     'Load Status':             emptyProps(),
     'Load Status Success':     props<{ status: MaintenanceStatus }>(),
     'Load Status Failure':     props<{ error: string }>(),
+
+    'Load App Info':         emptyProps(),
+    'Load App Info Success': props<{ appInfo: AppInfo }>(),
+    'Load App Info Failure': props<{ error: string }>(),
   },
 });

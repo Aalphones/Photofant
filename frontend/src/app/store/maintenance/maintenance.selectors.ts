@@ -11,6 +11,8 @@ const {
   selectRebuildingTarget,
   selectIsThumbnailRebuilding,
   selectStatus,
+  selectAppInfo,
+  selectIsLoadingAppInfo,
   selectError,
 } = maintenanceFeature;
 
@@ -25,5 +27,7 @@ export const maintenanceSelectors = {
   selectRebuildingTarget,
   selectIsThumbnailRebuilding,
   selectStatus,
+  selectAppInfo,
+  selectIsLoadingAppInfo,
   selectError,
 };

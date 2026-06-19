@@ -14,6 +14,7 @@ from photofant.api import (
     collections,
     config,
     health,
+    info,
     jobs,
     maintenance,
     models,
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(health.router, prefix="/api")
+    app.include_router(info.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
     app.include_router(assets.router, prefix="/api")
     app.include_router(trash.router, prefix="/api")

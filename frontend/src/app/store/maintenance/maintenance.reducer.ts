@@ -1,5 +1,6 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
 import type {
+  AppInfo,
   BackupInfo,
   MaintenanceStatus,
   RebuildTarget,
@@ -20,6 +21,8 @@ export interface MaintenanceState {
   rebuildingTarget: RebuildTarget | null;
   isThumbnailRebuilding: boolean;
   status: MaintenanceStatus | null;
+  appInfo: AppInfo | null;
+  isLoadingAppInfo: boolean;
   error: string | null;
 }
 
@@ -34,6 +37,8 @@ const initialState: MaintenanceState = {
   rebuildingTarget: null,
   isThumbnailRebuilding: false,
   status: null,
+  appInfo: null,
+  isLoadingAppInfo: false,
   error: null,
 };
 
@@ -173,6 +178,22 @@ export const maintenanceFeature = createFeature({
     })),
     on(maintenanceActions.loadStatusFailure, (state: MaintenanceState, { error }) => ({
       ...state,
+      error,
+    })),
+
+    on(maintenanceActions.loadAppInfo, (state: MaintenanceState) => ({
+      ...state,
+      isLoadingAppInfo: true,
+      error: null,
+    })),
+    on(maintenanceActions.loadAppInfoSuccess, (state: MaintenanceState, { appInfo }) => ({
+      ...state,
+      isLoadingAppInfo: false,
+      appInfo,
+    })),
+    on(maintenanceActions.loadAppInfoFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
+      isLoadingAppInfo: false,
       error,
     })),
   ),

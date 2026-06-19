@@ -1,6 +1,6 @@
 # Einstellungen fehlende Sektionen · Phase 4 — Info + Versionierung
 
-> Rating: **standard** · Status: pending
+> Rating: **standard** · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -29,7 +29,7 @@
 
 ### Backend
 
-- [ ] **`api/health.py`**: `VERSION = "0.1.0"` ersetzen durch:
+- [x] **`api/health.py`**: `VERSION = "0.1.0"` ersetzen durch:
   ```python
   from importlib.metadata import version, PackageNotFoundError
   try:
@@ -38,31 +38,19 @@
       _APP_VERSION = "dev"   # Fallback beim Direktstart ohne `uv run`/install
   ```
   `HealthResponse.version` auf `_APP_VERSION` setzen.
-- [ ] **Neuer Endpoint `GET /api/info`** (neues File `api/info.py` oder Erweiterung von `health.py`):
-  - `version` — aus `importlib.metadata`
-  - `python_version` — `sys.version`
-  - `db_path`, `db_size_bytes` — Pfad aus `get_data_root_base()`, `Path.stat().st_size`
-  - `cache_db_path`, `cache_db_size_bytes` — analog für `thumbnails.sqlite`
-  - `onnx_version` — `onnxruntime.__version__`
-  - `last_migration` — letzte Alembic-Revision aus `alembic_version`-Tabelle
-  - `gpu_name`, `vram_gb`, `cuda_version` — optional über `onnxruntime.get_device()` bzw. CUDA-Check; `null` wenn nicht vorhanden (GPU nicht Pflicht)
-  - `env_flags` — prüft `HF_HUB_OFFLINE`, `TRANSFORMERS_OFFLINE` aus `os.environ`
-- [ ] **`api/__init__.py`** (Router-Mount): neuen `/api/info`-Router registrieren
-- [ ] Doc-Update: `docs/routes.md` — neuen Endpoint dokumentieren
+- [x] **Neuer Endpoint `GET /api/info`** (`api/info.py`): version, python_version, db_path/size, cache_db_path/size, onnx_version, last_migration, gpu_name/vram_gb/cuda_version (via nvidia-smi, nullable), env_flags
+- [x] **`main.py`**: `info.router` registriert
+- [x] Doc-Update: `docs/routes.md` — neuen Endpoint dokumentiert
 
 ### Konventions-Regel
 
-- [ ] **`docs/conventions/python.md`** — neue Sektion "Versionierung":
-  - Einzige Pflege-Stelle: `pyproject.toml` `[project] version`
-  - Lesen via `importlib.metadata.version("photofant-backend")`
-  - `PackageNotFoundError`-Fallback `"dev"` für direkten `python -m`-Start
-  - Keine `VERSION = "..."` Konstante in beliebiger Python-Datei
+- [x] **`docs/conventions/python.md`** — neue Sektion "Versionierung" ergänzt
 
 ### Frontend
 
-- [ ] **Neues NgRx-Action/Effect-Paar** (oder `maintenance`-Slice nutzen): `loadAppInfo()` → `GET /api/info` → `loadAppInfoSuccess({ info })`
-- [ ] **Neues Model-Interface `AppInfo`** in `models/`
-- [ ] **`einstellungen.ts`**: Sektion "Info" mit KV-Grid analog zum Prototyp (`SectionInfo` in `settings.jsx`); Versionsnummer, DB-Pfad/-Größe, ONNX-Version, letzte Migration, GPU-Details, Env-Flags; Hinweis-Note "Kein Netzwerkverkehr"
-- [ ] Dispatch `loadAppInfo()` beim Öffnen der Info-Sektion (lazy, nicht beim App-Start)
+- [x] **`loadAppInfo` Actions/Effect** in `maintenance`-Slice (actions, reducer, effects, selectors)
+- [x] **Neues Model-Interface `AppInfo`** in `models/app-info.model.ts` + `models/index.ts`
+- [x] **`maintenance.service.ts`**: `loadAppInfo()` → `GET /api/info`
+- [x] **`einstellungen.ts`**: Sektion "Info" mit KV-Grid; Dispatch `loadAppInfo()` beim Öffnen der Einstellungen
 
 ## Report-Back

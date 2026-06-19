@@ -61,6 +61,20 @@
 - Nie still schlucken — loggen + re-raisen oder begründen
 - API-Fehler als strukturierte Codes (`MODEL_WRONG_ROLE`, `MODEL_INCOMPLETE`, …), das Frontend mappt auf Meldungen
 
+## Versionierung
+
+- **Einzige Pflege-Stelle:** `pyproject.toml` `[project] version`
+- **Lesen zur Laufzeit:** `importlib.metadata.version("photofant-backend")`
+- **Fallback für Direktstart** ohne `uv run`/install: `PackageNotFoundError` fangen, `"dev"` zurückgeben
+- **Keine `VERSION = "..."` Konstante** in irgendeiner Python-Datei — weder in `health.py` noch anderswo
+  ```python
+  from importlib.metadata import PackageNotFoundError, version
+  try:
+      _APP_VERSION = version("photofant-backend")
+  except PackageNotFoundError:
+      _APP_VERSION = "dev"
+  ```
+
 ## Critical Rules
 
 1. **Kein Netzwerkzugriff zur Laufzeit** außer dem Download-Job der Settings-UI — `HF_HUB_OFFLINE=1`/`TRANSFORMERS_OFFLINE=1` sobald torch-Modelle aktiv sind.

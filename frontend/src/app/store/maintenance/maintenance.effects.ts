@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, filter, map, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { BackupInfo, Job, MaintenanceStatus, ReconcileReport, RepairResponse } from '@photofant/models';
+import type { AppInfo, BackupInfo, Job, MaintenanceStatus, ReconcileReport, RepairResponse } from '@photofant/models';
 import { MaintenanceService } from '@photofant/services';
 import { jobsActions } from '../jobs/jobs.actions';
 import { maintenanceActions } from './maintenance.actions';
@@ -201,6 +201,20 @@ export class MaintenanceEffects {
       filter(({ job }: { job: Job }) => job.kind === 'thumbnail_rebuild' && job.state === 'error'),
       map(({ job }: { job: Job }) =>
         maintenanceActions.triggerThumbnailRebuildFailure({ error: job.error ?? 'Rebuild fehlgeschlagen' })
+      ),
+    )
+  );
+
+  readonly loadAppInfo$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.loadAppInfo),
+      switchMap(() =>
+        this.maintenanceService.loadAppInfo().pipe(
+          map((appInfo: AppInfo) => maintenanceActions.loadAppInfoSuccess({ appInfo })),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.loadAppInfoFailure({ error: error.message }))
+          ),
+        )
       ),
     )
   );

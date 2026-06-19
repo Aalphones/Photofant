@@ -1,3 +1,4 @@
+export type { AppInfo } from './app-info.model';
 export type { ProcessingConfig, ShortcutBinding, ShortcutConfig } from './config.model';
 export { PROCESSING_CONFIG_DEFAULTS, SHORTCUT_DEFAULTS } from './config.model';
 export type { Job, JobState, JobKind } from './job.model';

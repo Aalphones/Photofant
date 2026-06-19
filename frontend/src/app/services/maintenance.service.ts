@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
+  AppInfo,
   BackupInfo,
   MaintenanceStatus,
   RebuildTarget,
@@ -50,5 +51,9 @@ export class MaintenanceService {
 
   loadStatus(): Observable<MaintenanceStatus> {
     return this.http.get<MaintenanceStatus>('/api/maintenance/status');
+  }
+
+  loadAppInfo(): Observable<AppInfo> {
+    return this.http.get<AppInfo>('/api/info');
   }
 }

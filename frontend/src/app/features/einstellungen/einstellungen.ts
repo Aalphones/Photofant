@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Store } from '@ngrx/store';
-import type { CapabilityDescriptor, CaptionPresetDto, Density, ModelDto, ProcessingConfig, ShortcutConfig } from '@photofant/models';
+import type { AppInfo, CapabilityDescriptor, CaptionPresetDto, Density, ModelDto, ProcessingConfig, ShortcutConfig } from '@photofant/models';
 import type { DateFormat, Locale } from '@photofant/services';
 import { SettingsService } from '@photofant/services';
 import { ShortcutService } from '../../services/shortcut.service';
@@ -345,6 +345,70 @@ const SHORTCUT_ROWS: ShortcutRow[] = [
           <div class="shortcuts-footer">
             <button class="btn-ghost" (click)="resetShortcuts()">Auf Standard zurücksetzen</button>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Info ─────────────────────────────────────────────────── -->
+      <div class="settings-section">
+        <h2 class="settings-heading">Info</h2>
+
+        <div class="settings-card">
+          @if (isLoadingAppInfo()) {
+            <div class="info-loading"><span class="spinner"></span> Lade…</div>
+          } @else if (appInfo() != null) {
+            <div class="info-note">Keine Netzwerkverbindung — alle Daten lokal.</div>
+            <dl class="info-grid">
+              <dt>Version</dt>
+              <dd><code>{{ appInfo()!.version }}</code></dd>
+
+              <dt>Python</dt>
+              <dd><code>{{ appInfo()!.python_version.split(' ')[0] }}</code></dd>
+
+              <dt>ONNX Runtime</dt>
+              <dd><code>{{ appInfo()!.onnx_version }}</code></dd>
+
+              <dt>Letzte Migration</dt>
+              <dd><code>{{ appInfo()!.last_migration ?? '–' }}</code></dd>
+
+              <dt>Datenbank</dt>
+              <dd>
+                <code>{{ appInfo()!.db_path }}</code>
+                <span class="info-meta">{{ formatSize(appInfo()!.db_size_bytes) }}</span>
+              </dd>
+
+              <dt>Thumbnail-Cache</dt>
+              <dd>
+                <code>{{ appInfo()!.cache_db_path }}</code>
+                <span class="info-meta">{{ formatSize(appInfo()!.cache_db_size_bytes) }}</span>
+              </dd>
+
+              @if (appInfo()!.gpu_name != null) {
+                <dt>GPU</dt>
+                <dd>
+                  <code>{{ appInfo()!.gpu_name }}</code>
+                  @if (appInfo()!.vram_gb != null) {
+                    <span class="info-meta">{{ appInfo()!.vram_gb }} GB VRAM</span>
+                  }
+                </dd>
+
+                @if (appInfo()!.cuda_version != null) {
+                  <dt>CUDA</dt>
+                  <dd><code>{{ appInfo()!.cuda_version }}</code></dd>
+                }
+              }
+
+              @if (objectKeys(appInfo()!.env_flags).length > 0) {
+                <dt>Env-Flags</dt>
+                <dd>
+                  @for (key of objectKeys(appInfo()!.env_flags); track key) {
+                    <div class="info-flag"><code>{{ key }}={{ appInfo()!.env_flags[key] }}</code></div>
+                  }
+                </dd>
+              }
+            </dl>
+          } @else {
+            <p class="info-empty">Info konnte nicht geladen werden.</p>
+          }
         </div>
       </div>
 
@@ -822,6 +886,62 @@ const SHORTCUT_ROWS: ShortcutRow[] = [
       padding-top: 4px;
     }
 
+    /* Info-Sektion */
+    .info-loading, .info-empty {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .info-note {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-bottom: 8px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 8px 16px;
+      margin: 0;
+    }
+
+    .info-grid dt {
+      font-size: 12px;
+      color: var(--text-3);
+      align-self: start;
+      padding-top: 2px;
+    }
+
+    .info-grid dd {
+      font-size: 12px;
+      color: var(--text-2);
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .info-grid dd code {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+    }
+
+    .info-meta {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+
+    .info-flag {
+      font-size: 11px;
+    }
+
     .spinner {
       width: 12px;
       height: 12px;
@@ -883,6 +1003,8 @@ export class Einstellungen {
   readonly isLoadingBackups = this.store.selectSignal(maintenanceSelectors.selectIsLoadingBackups);
   readonly isRunningBackup = this.store.selectSignal(maintenanceSelectors.selectIsRunningBackup);
   readonly error = this.store.selectSignal(maintenanceSelectors.selectError);
+  readonly appInfo = this.store.selectSignal(maintenanceSelectors.selectAppInfo);
+  readonly isLoadingAppInfo = this.store.selectSignal(maintenanceSelectors.selectIsLoadingAppInfo);
 
   readonly presets = this.store.selectSignal(presetsSelectors.selectPresets);
   readonly isLoadingPresets = this.store.selectSignal(presetsSelectors.selectIsLoading);
@@ -899,9 +1021,12 @@ export class Einstellungen {
     this.captionerModel()?.capabilities ?? null
   );
 
+  readonly objectKeys = Object.keys;
+
   constructor() {
     effect(() => {
       this.store.dispatch(maintenanceActions.loadBackups());
+      this.store.dispatch(maintenanceActions.loadAppInfo());
       this.store.dispatch(modelsActions.loadConfig());
       this.store.dispatch(modelsActions.loadModels());
       this.store.dispatch(presetsActions.loadPresets());

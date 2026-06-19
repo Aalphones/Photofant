@@ -136,6 +136,29 @@ interface AppSettings {
 
 Fehlende Keys in `PATCH` werden ignoriert (fehlende Keys = kein Update). Unbekannte Keys werden gespeichert (vorwärtskompatibel). Typfehler → `422`.
 
+## System-Info
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/einstellungen` (Info-Tab) | `GET` | `/api/info` | — | `InfoResponse` |
+
+```typescript
+interface InfoResponse {
+  version: string;           // aus pyproject.toml via importlib.metadata
+  python_version: string;    // sys.version
+  db_path: string;
+  db_size_bytes: number;
+  cache_db_path: string;
+  cache_db_size_bytes: number;
+  onnx_version: string;      // onnxruntime.__version__
+  last_migration: string | null; // letzte Alembic-Revision
+  gpu_name: string | null;   // null wenn kein CUDA
+  vram_gb: number | null;
+  cuda_version: string | null;
+  env_flags: Record<string, string>; // HF_HUB_OFFLINE, TRANSFORMERS_OFFLINE (nur wenn gesetzt)
+}
+```
+
 ## Maintenance
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
