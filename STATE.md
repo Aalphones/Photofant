@@ -2,7 +2,8 @@
 
 **Aktiver Plan:** `docs/planning/2026-06-19_duplikaterkennung/` — pHash + Review-Queue Tab 2
 
-**Nächster Schritt:** Plan lesen und Phase 1 starten (nach User-Freigabe).
+**Phase:** 1/6 — pHash-Infra + Migration (complete)
+**Nächster Schritt:** Phase 2 starten — Import-Pipeline Auto-Detection (`phase-2-import-auto.md`)
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

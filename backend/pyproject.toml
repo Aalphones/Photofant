@@ -19,6 +19,7 @@ dependencies = [
     "numpy>=1.26",
     "tokenizers>=0.20",
     "sqlite-vec>=0.1.9",
+    "imagehash>=4.3",
 ]
 
 [project.optional-dependencies]

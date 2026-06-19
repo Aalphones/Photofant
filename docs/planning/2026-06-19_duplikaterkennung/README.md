@@ -14,7 +14,7 @@ Zwei Einstiegspunkte:
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | [pHash-Infra + Migration](phase-1-phash-infra.md) | heikel | pending |
+| 1 | [pHash-Infra + Migration](phase-1-phash-infra.md) | heikel | complete |
 | 2 | [Import-Pipeline Auto-Detection](phase-2-import-auto.md) | standard | pending |
 | 3 | [On-Demand-Scan-Job + Review-API](phase-3-scan-und-api.md) | standard | pending |
 | 4 | [Einstellungen: Threshold-Slider](phase-4-einstellungen.md) | mechanisch | pending |

@@ -41,6 +41,8 @@ class Asset(Base):
     generation_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     caption_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
+    phash: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    original_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("asset.id"), nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     imported_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -155,3 +157,19 @@ class CollectionItem(Base):
     asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), primary_key=True, index=True)
     source: Mapped[str] = mapped_column(Text, nullable=False, server_default="manual")  # manual | smart
     caption_override: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ReviewItem(Base):
+    __tablename__ = "review_item"
+    __table_args__ = (
+        UniqueConstraint("type", "asset_a_id", "asset_b_id", name="uq_review_item_pair"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False)  # dupe_candidate | ...
+    asset_a_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
+    asset_b_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
+    phash_distance: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    resolution: Mapped[str | None] = mapped_column(Text, nullable=True)

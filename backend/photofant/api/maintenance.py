@@ -16,8 +16,8 @@ from photofant.jobs.backup_job import enqueue_backup
 from photofant.jobs.import_job import enqueue_import
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.jobs.rebuild_job import RebuildTarget, enqueue_rebuild
-from photofant.jobs.thumbnail_job import enqueue_thumbnail_rebuild
 from photofant.jobs.reconcile_job import enqueue_reconcile
+from photofant.jobs.thumbnail_job import enqueue_thumbnail_rebuild
 from photofant.maintenance import repair
 from photofant.maintenance.store import load_report
 

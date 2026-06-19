@@ -31,6 +31,7 @@ class AppSettings(TypedDict):
     blur_threshold: float
     trash_auto_days: int
     keyboard_shortcuts: dict[str, Any] | None
+    dupe_threshold: int
     display: DisplaySettings
 
 
@@ -49,6 +50,7 @@ SETTINGS_DEFAULTS: AppSettings = {
     "blur_threshold": 200.0,
     "trash_auto_days": 30,
     "keyboard_shortcuts": None,
+    "dupe_threshold": 10,
     "display": {
         "locale": "de",
         "date_format": "dmy",
@@ -71,6 +73,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "blur_threshold": (float, int),
     "trash_auto_days": int,
     "keyboard_shortcuts": (dict, type(None)),
+    "dupe_threshold": int,
     "display": dict,
 }
 

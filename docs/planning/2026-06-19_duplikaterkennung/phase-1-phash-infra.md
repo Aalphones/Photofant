@@ -24,34 +24,23 @@
 
 ### Backend
 
-- [ ] `imagehash` zu `pyproject.toml` hinzufügen; `uv lock` ausführen
-- [ ] `backend/photofant/media/phash.py` anlegen:
+- [x] `imagehash` zu `pyproject.toml` hinzufügen; `uv lock` ausführen
+- [x] `backend/photofant/media/phash.py` anlegen:
   - `compute_phash(path: Path) -> int` — öffnet Bild mit Pillow, berechnet DHash (8x8), gibt `int` zurück
   - `hamming_distance(a: int, b: int) -> int` — `bin(a ^ b).count('1')`
-- [ ] `backend/photofant/db/models.py` — `Asset` um `phash` + `original_id` erweitern:
-  ```python
-  phash = Column(Integer, nullable=True)
-  original_id = Column(Integer, ForeignKey("asset.id"), nullable=True)
-  ```
-- [ ] `backend/photofant/db/models.py` — `ReviewItem` anlegen:
+- [x] `backend/photofant/db/models.py` — `Asset` um `phash` + `original_id` erweitern
+- [x] `backend/photofant/db/models.py` — `ReviewItem` anlegen:
   - Felder: id, type, asset_a_id FK, asset_b_id FK, phash_distance, created_at, resolved_at, resolution
   - Unique-Constraint: `(type, asset_a_id, asset_b_id)`
-- [ ] Migration `0014_phash_duplikaterkennung.py` schreiben:
-  - `op.add_column('asset', Column('phash', Integer, nullable=True))`
-  - `op.add_column('asset', Column('original_id', Integer, ForeignKey('asset.id'), nullable=True))`
-  - `CREATE TABLE review_item` mit allen Spalten + Unique-Constraint
-- [ ] `photofant/settings.py` — `dupe_threshold: int = Field(default=10, ge=0, le=20)` ergänzen
-- [ ] `settings.example.json` — `"dupe_threshold": 10` eintragen
-- [ ] `uv run alembic upgrade head` — läuft durch
-- [ ] `uv run ruff check .` — sauber
+- [x] Migration `0014_phash_duplikaterkennung.py` schreiben (idempotent — SQLite-FK-Trap umgangen)
+- [x] `photofant/settings.py` — `dupe_threshold: int` mit Default `10` ergänzen
+- [x] `settings.example.json` — `"dupe_threshold": 10` eintragen
+- [x] `uv run alembic upgrade head` — läuft durch
+- [x] `uv run ruff check .` — sauber
 
 ### Docs
 
-- [ ] ADR-006 schreiben: `docs/decisions/006-phash-duplikaterkennung.md`
-  - Kontext: was brauchen wir (ähnliche Bilder erkennen, kein ML, schnell)
-  - Optionen: aHash / pHash / DHash / CLIP-Cosine
-  - Entscheidung: **DHash** (robust gegen Helligkeitsgradienten, am wenigsten False-Positives bei Edits)
-  - Konsequenzen: 8 Byte/Asset, keine Modelabhängigkeit, Hamming-Distanz als Schwelle
-- [ ] `docs/models.md` — `asset.phash`, `asset.original_id`, `review_item`-Tabelle eintragen
+- [x] ADR-006 schreiben: `docs/decisions/006-phash-duplikaterkennung.md`
+- [x] `docs/models.md` — `asset.phash`, `asset.original_id`, `review_item`-Tabelle eintragen
 
 ## Report-Back

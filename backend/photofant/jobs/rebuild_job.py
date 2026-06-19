@@ -37,7 +37,6 @@ async def _rebuild_embeddings(status: JobStatus) -> None:
     """Rebuild the sqlite-vec vector index from asset.clip_embedding BLOBs."""
     import asyncio
 
-    from photofant.db.session import SessionLocal
     from photofant.db.vector_index import rebuild_index
 
     job_queue.update(status, progress=0.1, state=JobState.RUNNING)

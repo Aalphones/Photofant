@@ -22,6 +22,8 @@
   "_comment_trash_auto_days": "Papierkorb automatisch leeren nach N Tagen (0 = deaktiviert)",
   "trash_auto_days": 30,
   "keyboard_shortcuts": null,
+  "_comment_dupe_threshold": "Hamming-Distanz-Schwelle fuer Duplikat-Erkennung (0–20). Hoeher = toleranter gegenueber Edits.",
+  "dupe_threshold": 10,
   "display": {
     "locale": "de",
     "date_format": "dmy"

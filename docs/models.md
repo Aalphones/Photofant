@@ -55,6 +55,8 @@ One row per unique content-hash (canonical image).
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
 | `clip_embedding` | BLOB | CLIP ViT-L/14 image embedding, float32 unit-norm bytes (768-dim); source of truth for the vector index (P5 Phase 4) |
 | `caption_edited` | BOOLEAN | `1` = Caption wurde manuell editiert; Captioner überspringt den Asset beim nächsten Rerun (P6 Phase 3) |
+| `phash` | INTEGER | 64-Bit DHash-Fingerabdruck (imagehash, `hash_size=8`); NULL bis pHash-Job gelaufen (migration 0014) |
+| `original_id` | INTEGER FK → `asset.id` | gesetzt wenn dieses Asset ein Edit eines anderen ist — bei Review-Entscheidung „A/B ist Original" (migration 0014) |
 | `created_at` | DATETIME | EXIF capture date; UTC naive |
 | `imported_at` | DATETIME | import timestamp; UTC naive; indexed |
 | `processed_at` | DATETIME | last full pipeline run |
@@ -243,13 +245,32 @@ Hooks sit on: `PATCH /assets/{id}/tags`, `PATCH /assets/{id}/caption`, `POST /ta
 
 ---
 
+### `review_item` (migration 0014)
+
+Offene Duplikat-Paare, die der User manuell entscheiden soll. Erweiterbar für andere Review-Typen (z.B. Gesichts-Zuordnung in P7).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `type` | TEXT | `dupe_candidate` (erweiterbar) |
+| `asset_a_id` | INTEGER FK → `asset.id` | immer der mit der kleineren ID |
+| `asset_b_id` | INTEGER FK → `asset.id` | immer der mit der größeren ID |
+| `phash_distance` | INTEGER | Hamming-Distanz (0–63) |
+| `created_at` | DATETIME | UTC naive; nicht null |
+| `resolved_at` | DATETIME | nullable; gesetzt bei Entscheidung |
+| `resolution` | TEXT | nullable: `a_is_original` · `b_is_original` · `delete_a` · `delete_b` · `dismiss` |
+
+Unique-Constraint: `uq_review_item_pair` auf `(type, asset_a_id, asset_b_id)` — kein Doppeleintrag pro Paar.
+
+---
+
 ## Upcoming tables (planned)
 
 | Table | Migration | Plan |
 |---|---|---|
-| `version` | 0013 | P8 |
-| `face` | 0013 | P7 |
-| `prompt_template` | 0014 | P9 |
+| `version` | 0015 | P8 |
+| `face` | 0015 | P7 |
+| `prompt_template` | 0016 | P9 |
 
 ---
 
