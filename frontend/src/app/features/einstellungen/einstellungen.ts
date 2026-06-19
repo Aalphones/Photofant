@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Store } from '@ngrx/store';
-import type { CapabilityDescriptor, CaptionPresetDto, Density, ModelDto, ProcessingConfig, ShortcutConfig } from '@photofant/models';
+import type { CapabilityDescriptor, CaptionPresetDto, Density, ModelDto, ProcessingConfig, ShortcutConfig, TagListItem } from '@photofant/models';
 import type { DateFormat, Locale } from '@photofant/services';
 import { SettingsService } from '@photofant/services';
 import { ShortcutService } from '../../services/shortcut.service';
@@ -14,6 +14,8 @@ import {
   modelsSelectors,
   presetsActions,
   presetsSelectors,
+  tagsActions,
+  tagsSelectors,
 } from '@photofant/store';
 import type { PresetSavePayload } from '@photofant/ui';
 import { Icon, PresetDialog } from '@photofant/ui';
@@ -43,6 +45,7 @@ const SECTIONS: Section[] = [
   { id: 'verarbeitung', icon: 'refresh',  label: 'Verarbeitung' },
   { id: 'darstellung',  icon: 'gallery',  label: 'Darstellung' },
   { id: 'bearbeitung',  icon: 'pencil',   label: 'Bearbeitung' },
+  { id: 'tags',         icon: 'tag',      label: 'Tags' },
   { id: 'shortcuts',    icon: 'keyboard', label: 'Tastaturkürzel' },
   { id: 'backup',       icon: 'shield',   label: 'Backup & Wartung' },
   { id: 'info',         icon: 'info',     label: 'Info' },
@@ -595,6 +598,114 @@ const SECTIONS: Section[] = [
             </div>
           }
 
+          <!-- ═══ TAGS ═════════════════════════════════════ -->
+          @case ('tags') {
+            <div class="st-section">
+              <div class="st-section-head">
+                <h2>Tags</h2>
+                <p>Tags global umbenennen, zusammenführen und Alias-Beziehungen verwalten.</p>
+              </div>
+
+              <div class="tags-toolbar">
+                <div class="tags-search">
+                  <pf-icon name="search" [size]="14" />
+                  <input
+                    class="tags-search-input"
+                    [value]="tagSearchQuery()"
+                    (input)="tagSearchQuery.set($any($event.target).value)"
+                    placeholder="Tags suchen…"
+                  />
+                </div>
+                @if (tagMergeSelected().size >= 2) {
+                  <button class="st-btn accent" (click)="openTagMergeDialog()">
+                    <pf-icon name="layers" [size]="14" />
+                    {{ tagMergeSelected().size }} zusammenführen
+                  </button>
+                }
+                @if (tagMergeSelected().size > 0) {
+                  <button class="st-btn ghost" style="height:32px;width:32px;padding:0" (click)="clearTagMergeSelection()">
+                    <pf-icon name="x" [size]="14" />
+                  </button>
+                }
+              </div>
+
+              @if (isTagsLoading()) {
+                <div class="group-loading"><span class="spinner"></span> Lade Tags…</div>
+              } @else {
+                <div class="tags-list">
+                  <div class="tags-list-head">
+                    <span></span>
+                    <span>Name</span>
+                    <span style="text-align:right">Verwendungen</span>
+                    <span style="text-align:center">Alias</span>
+                    <span></span>
+                  </div>
+
+                  @for (tag of filteredTagsList(); track tag.id) {
+                    <div
+                      class="tags-row"
+                      [class.tags-row--merge-sel]="isTagMergeSelected(tag.id)"
+                      [class.tags-row--alias]="tag.alias_of != null"
+                    >
+                      <button
+                        class="tags-merge-check"
+                        [class.tags-merge-check--on]="isTagMergeSelected(tag.id)"
+                        (click)="toggleTagMergeSelect(tag.id)"
+                        [attr.aria-pressed]="isTagMergeSelected(tag.id)"
+                        [attr.aria-label]="'Tag für Merge auswählen'"
+                      >
+                        @if (isTagMergeSelected(tag.id)) {
+                          <pf-icon name="check" [size]="11" />
+                        }
+                      </button>
+
+                      <div class="tags-name-col">
+                        @if (renamingTagId() === tag.id) {
+                          <input
+                            class="tags-rename-input"
+                            [value]="renameDraftText()"
+                            (input)="renameDraftText.set($any($event.target).value)"
+                            (keydown)="onTagRenameKeyDown($event)"
+                            (blur)="confirmTagRename()"
+                            autofocus
+                          />
+                        } @else {
+                          <span class="tags-name" (dblclick)="startTagRename(tag)">
+                            {{ tag.name.replaceAll('_', ' ') }}
+                          </span>
+                          @if (tag.alias_of != null) {
+                            <span class="tags-alias-badge">alias</span>
+                          }
+                        }
+                      </div>
+
+                      <span class="tags-count">{{ tag.count }}</span>
+
+                      <span class="tags-alias">
+                        @if (tag.alias_of != null) { → #{{ tag.alias_of }} }
+                      </span>
+
+                      <div class="tags-actions">
+                        <button
+                          class="tags-action-btn"
+                          (click)="startTagRename(tag)"
+                          aria-label="Umbenennen"
+                          title="Umbenennen"
+                        >
+                          <pf-icon name="pencil" [size]="13" />
+                        </button>
+                      </div>
+                    </div>
+                  }
+
+                  @if (filteredTagsList().length === 0) {
+                    <div class="group-empty">Keine Tags gefunden.</div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
         }<!-- /@switch -->
 
       </div><!-- /st-body -->
@@ -608,6 +719,43 @@ const SECTIONS: Section[] = [
         (save)="onPresetSave($event)"
         (cancel)="closePresetDialog()"
       />
+    }
+
+    <!-- ── Tag-Merge-Dialog ───────────────────────────────── -->
+    @if (showTagMergeDialog()) {
+      <div class="tags__dialog-scrim" (click)="cancelTagMerge()">
+        <div class="tags__dialog" (click)="$event.stopPropagation()">
+          <div class="tags__dialog-head">
+            <pf-icon name="layers" [size]="16" />
+            <span>Tags zusammenführen</span>
+            <button class="tags__dialog-close" (click)="cancelTagMerge()">
+              <pf-icon name="x" [size]="14" />
+            </button>
+          </div>
+          <p class="tags__dialog-desc">
+            Wähle den Ziel-Tag (bleibt erhalten). Alle anderen werden Aliase.
+          </p>
+          <div class="tags__merge-list">
+            @for (tag of tagMergeSelectedTags(); track tag.id) {
+              <button
+                class="tags__merge-option"
+                [class.tags__merge-option--target]="tagMergeTargetId() === tag.id"
+                (click)="setTagMergeTarget(tag.id)"
+              >
+                <span class="tags__merge-option-name">{{ tag.name.replaceAll('_', ' ') }}</span>
+                <span class="tags__merge-option-count">{{ tag.count }}×</span>
+                @if (tagMergeTargetId() === tag.id) {
+                  <pf-icon name="check" [size]="13" />
+                }
+              </button>
+            }
+          </div>
+          <div class="tags__dialog-actions">
+            <button class="tags__dialog-cancel" (click)="cancelTagMerge()">Abbrechen</button>
+            <button class="tags__dialog-confirm" (click)="confirmTagMerge()">Zusammenführen</button>
+          </div>
+        </div>
+      </div>
     }
   `,
   styles: [`
@@ -696,6 +844,48 @@ const SECTIONS: Section[] = [
       .st-row { flex-wrap: wrap; gap: 8px; }
       .st-row-ctrl { width: 100%; }
     }
+    /* ── Tags-Sektion ───────────────────────────────────────────────────── */
+    .tags-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tags-search { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 5px 10px; color: var(--text-3); flex: 1; max-width: 280px; }
+    .tags-search:focus-within { border-color: var(--accent-line); color: var(--text-2); }
+    .tags-search-input { border: none; background: transparent; font-size: 13px; color: var(--text); outline: none; width: 100%; }
+    .tags-list { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+    .tags-list-head { display: grid; grid-template-columns: 1.5rem 1fr 6rem 6rem 4rem; padding: 6px 14px; background: var(--bg-2); border-bottom: 1px solid var(--line); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-3); }
+    .tags-row { display: grid; grid-template-columns: 1.5rem 1fr 6rem 6rem 4rem; align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--line); }
+    .tags-row:last-child { border-bottom: none; }
+    .tags-row:hover { background: var(--surface); }
+    .tags-row:hover .tags-action-btn { opacity: 1; }
+    .tags-row--merge-sel { background: var(--accent-weak); }
+    .tags-row--alias .tags-name { color: var(--text-3); }
+    .tags-merge-check { width: 17px; height: 17px; border-radius: 4px; border: 1.5px solid var(--line-2); background: transparent; display: grid; place-items: center; color: #fff; cursor: pointer; flex-shrink: 0; }
+    .tags-merge-check--on { background: var(--accent); border-color: var(--accent); }
+    .tags-name-col { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .tags-name { font-family: var(--mono); font-size: 12.5px; color: var(--text); cursor: default; }
+    .tags-alias-badge { font-size: 9.5px; font-family: var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+    .tags-count { font-family: var(--mono); font-size: 12.5px; color: var(--text-2); text-align: right; }
+    .tags-alias { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); text-align: center; }
+    .tags-actions { display: flex; justify-content: flex-end; }
+    .tags-action-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; color: var(--text-3); opacity: 0; cursor: pointer; }
+    .tags-action-btn:hover { background: var(--surface-hover); color: var(--text); }
+    .tags-rename-input { font-family: var(--mono); font-size: 12.5px; color: var(--text); background: var(--surface); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 6px; outline: none; width: 100%; }
+    /* Tags merge dialog */
+    .tags__dialog-scrim { position: fixed; inset: 0; background: oklch(0.08 0.005 256 / 0.7); backdrop-filter: blur(4px); z-index: 400; display: grid; place-items: center; }
+    .tags__dialog { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-l); width: 28rem; max-width: 90vw; box-shadow: var(--shadow-pop); overflow: hidden; }
+    .tags__dialog-head { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 600; }
+    .tags__dialog-close { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; color: var(--text-3); margin-left: auto; cursor: pointer; }
+    .tags__dialog-close:hover { background: var(--surface); }
+    .tags__dialog-desc { padding: 12px 18px 0; font-size: 12.5px; color: var(--text-2); margin: 0; }
+    .tags__merge-list { padding: 12px 18px; display: flex; flex-direction: column; gap: 6px; }
+    .tags__merge-option { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-s); background: transparent; cursor: pointer; text-align: left; }
+    .tags__merge-option:hover { background: var(--surface); }
+    .tags__merge-option--target { border-color: var(--accent); background: var(--accent-weak); }
+    .tags__merge-option-name { font-family: var(--mono); font-size: 12.5px; color: var(--text); flex: 1; }
+    .tags__merge-option-count { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
+    .tags__dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); }
+    .tags__dialog-cancel { padding: 7px 14px; border: 1px solid var(--line); border-radius: var(--radius-s); background: transparent; color: var(--text-2); font-size: 12.5px; cursor: pointer; }
+    .tags__dialog-cancel:hover { background: var(--surface); }
+    .tags__dialog-confirm { padding: 7px 14px; border: 1px solid var(--accent); border-radius: var(--radius-s); background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 500; cursor: pointer; }
+    .tags__dialog-confirm:hover { opacity: .88; }
   `],
 })
 export class Einstellungen {
@@ -767,6 +957,25 @@ export class Einstellungen {
   readonly appInfo = this.store.selectSignal(maintenanceSelectors.selectAppInfo);
   readonly isLoadingAppInfo = this.store.selectSignal(maintenanceSelectors.selectIsLoadingAppInfo);
 
+  /* ── Tags ─────────────────────────────────────────────── */
+  private readonly allTagsList = this.store.selectSignal(tagsSelectors.selectAll);
+  readonly isTagsLoading = this.store.selectSignal(tagsSelectors.selectIsLoading);
+  readonly tagSearchQuery = signal<string>('');
+  readonly filteredTagsList = computed((): TagListItem[] => {
+    const query = this.tagSearchQuery().toLowerCase().trim();
+    if (!query) { return this.allTagsList(); }
+    return this.allTagsList().filter((tag: TagListItem) => tag.name.includes(query));
+  });
+  readonly renamingTagId = signal<number | null>(null);
+  readonly renameDraftText = signal<string>('');
+  readonly tagMergeSelected = signal<Set<number>>(new Set());
+  readonly showTagMergeDialog = signal<boolean>(false);
+  readonly tagMergeTargetId = signal<number | null>(null);
+  readonly tagMergeSelectedTags = computed((): TagListItem[] => {
+    const ids = this.tagMergeSelected();
+    return this.allTagsList().filter((tag: TagListItem) => ids.has(tag.id));
+  });
+
   /* ── Bearbeitung (Caption-Presets) ────────────────────── */
   readonly presets = this.store.selectSignal(presetsSelectors.selectPresets);
   readonly isLoadingPresets = this.store.selectSignal(presetsSelectors.selectIsLoading);
@@ -791,6 +1000,7 @@ export class Einstellungen {
       this.store.dispatch(modelsActions.loadConfig());
       this.store.dispatch(modelsActions.loadModels());
       this.store.dispatch(presetsActions.loadPresets());
+      this.store.dispatch(tagsActions.load());
     });
 
     const onCaptureKey = (event: KeyboardEvent): void => {
@@ -959,6 +1169,71 @@ export class Einstellungen {
       '<MORE_DETAILED_CAPTION>': 'Ausführlich',
     };
     return labels[String(token)] ?? String(token);
+  }
+
+  /* ── Tag-Methoden ────────────────────────────────────── */
+  startTagRename(tag: TagListItem): void {
+    this.renamingTagId.set(tag.id);
+    this.renameDraftText.set(tag.name);
+  }
+
+  confirmTagRename(): void {
+    const id = this.renamingTagId();
+    const name = this.renameDraftText().trim();
+    if (id != null && name) {
+      this.store.dispatch(tagsActions.rename({ id, name }));
+    }
+    this.renamingTagId.set(null);
+  }
+
+  cancelTagRename(): void {
+    this.renamingTagId.set(null);
+  }
+
+  onTagRenameKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') { this.confirmTagRename(); }
+    else if (event.key === 'Escape') { this.cancelTagRename(); }
+  }
+
+  toggleTagMergeSelect(tagId: number): void {
+    this.tagMergeSelected.update((selected: Set<number>) => {
+      const next = new Set(selected);
+      if (next.has(tagId)) { next.delete(tagId); } else { next.add(tagId); }
+      return next;
+    });
+  }
+
+  isTagMergeSelected(tagId: number): boolean {
+    return this.tagMergeSelected().has(tagId);
+  }
+
+  openTagMergeDialog(): void {
+    if (this.tagMergeSelected().size < 2) { return; }
+    const ids = [...this.tagMergeSelected()];
+    this.tagMergeTargetId.set(ids[0] ?? null);
+    this.showTagMergeDialog.set(true);
+  }
+
+  setTagMergeTarget(tagId: number): void {
+    this.tagMergeTargetId.set(tagId);
+  }
+
+  confirmTagMerge(): void {
+    const intoId = this.tagMergeTargetId();
+    const selected = [...this.tagMergeSelected()];
+    if (intoId == null) { return; }
+    const fromIds = selected.filter((id: number) => id !== intoId);
+    this.store.dispatch(tagsActions.merge({ from_ids: fromIds, into_id: intoId }));
+    this.tagMergeSelected.set(new Set());
+    this.showTagMergeDialog.set(false);
+  }
+
+  cancelTagMerge(): void {
+    this.showTagMergeDialog.set(false);
+  }
+
+  clearTagMergeSelection(): void {
+    this.tagMergeSelected.set(new Set());
   }
 
   formatSize(bytes: number): string {

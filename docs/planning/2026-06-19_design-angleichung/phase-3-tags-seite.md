@@ -32,10 +32,20 @@ Welches Schicksal bekommt die Tags-Seite?
 
 ## Checkliste
 
-- [ ] 🔴 ADR-005 entscheiden + schreiben
-- [ ] Design verbindlich machen (Mockup/README-Eintrag *oder* Re-home-Doku)
-- [ ] Implementierung angleichen (Layout/Primitive) bzw. re-homen
+- [x] 🔴 ADR-005 entscheiden + schreiben → `docs/decisions/005-tags-re-home.md`
+- [x] Design verbindlich machen → Re-home-Entscheidung in ADR-005 dokumentiert
+- [x] Implementierung re-homed → Sektion `tags` in `einstellungen.ts`, `/tags`-Route + Nav-Eintrag entfernt, `features/tags/` gelöscht
 - [ ] Funktions-Smoke: Umbenennen / Merge / Bulk
-- [ ] Doc-Update: `docs/routes.md` (bei Routen-Änderung), `docs/design/README.md` (View-Liste)
+- [x] Doc-Update: `docs/routes.md` + `docs/design/README.md` aktualisiert
 
 ## Report-Back
+
+**Umsetzung 2026-06-19:** Option (B) — Re-home in Einstellungen.
+
+- `docs/decisions/005-tags-re-home.md` geschrieben.
+- `einstellungen.ts`: neue Sektion `tags` (nach Bearbeitung, vor Shortcuts) mit vollständiger Tag-Verwaltungs-UI — Suche, Liste, Inline-Rename per Doppelklick, Merge-Auswahl + Dialog. Styles inline ergänzt, `tagsActions.load()` im Constructor-Effect.
+- `nav-rail.ts`: Tags-Eintrag aus `mainItems` entfernt.
+- `app.routes.ts`: `{ path: 'tags' }` entfernt.
+- `frontend/src/app/features/tags/` gelöscht.
+- `docs/routes.md`: Tags-Sektion auf `/einstellungen` umgezeigt.
+- `docs/design/README.md`: Einstellungen auf 8 Sektionen aktualisiert.

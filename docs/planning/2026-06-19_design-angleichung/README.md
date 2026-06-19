@@ -10,7 +10,7 @@ Behebt die strukturellen Abweichungen zwischen Mockup (`docs/design/`) und der g
 |---|---|---|---|
 | 1 | [Reconciliation-Sweep (Inventar)](phase-1-reconciliation-sweep.md) | standard | complete |
 | 2 | [Einstellungen-Shell + Primitive](phase-2-einstellungen-shell.md) | heikel | complete |
-| 3 | [Tags-Seite klären & angleichen](phase-3-tags-seite.md) | heikel | pending |
+| 3 | [Tags-Seite klären & angleichen](phase-3-tags-seite.md) | heikel | complete |
 | 4 | [Übrige bestätigte Abweichungen](phase-4-uebrige-abweichungen.md) | standard | pending |
 
 **🟡 Phase 4 ist absichtlich erst nach Phase 1 voll bestimmt.** Phase 1 liefert die verbindliche Abweichungsliste; ihre GROSS/MITTEL-Punkte für die *übrigen* Views (Galerie, Lightbox, Modelle, Alben, Personen, Trainingssets, Wartung, Shell) werden als FINDINGS getaggt und in Phase 4 abgearbeitet. Bis Phase 1 läuft, ist Phase 4 ein Rahmen, kein Inhalt.

@@ -15,7 +15,7 @@ Erkenntnisse über Phasengrenzen hinweg. Append-only, jeder Eintrag mit Ziel-Tag
 
 - [x] → Phase 2: **Einstellungen-Shell fehlt `st-page`-Master-Detail** (`einstellungen.ts:41-43`). Impl ist `settings-layout` single-column (max-width 680px, vertikaler Scroll). Design ist `st-page` mit linker `st-nav` (Sektions-Nav mit Icons) + rechter `st-body`. Beide Layout-Ebenen müssen gebaut werden. Bestehende Sektions-Inhalte (Darstellung, Bibliothek, Verarbeitung, Caption-Presets, Tastaturkürzel, Info, Backup) in die neue Shell einziehen — Funktionen erhalten.
 
-- [ ] → Phase 3: **Tags kein Mockup, Design freihändig erfunden** (`tags.html`). Vollständige View vorhanden (Tabelle, Suche, Rename, Merge-Dialog) ohne Design-Referenz. Phase 3 entscheidet: eigenes Design nachziehen (Mockup `docs/design/js/tags.jsx`) oder re-home oder nur angleichen. Aktuell: funktional, visuell nicht spezifiziert.
+- [x] → Phase 3: **Tags kein Mockup, Design freihändig erfunden** (`tags.html`). ← ADR-005: Re-home in Einstellungen — `/tags`-Route + Feature entfernt, Sektion in `einstellungen.ts` eingefaltet.
 
 - [ ] → Phase 4: **Filter-Rail — Person-Facette fehlt (GROSS).** Im Design erste Facette (`gallery.jsx:38-49`), in Impl (`filter-rail.html`) gar nicht vorhanden. Benötigt: Person-Avatare als Facetten-Rows, Person-IDs als Filter-Parameter, Backend-Endpunkt für Person-Counts.
 

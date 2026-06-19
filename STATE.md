@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-19_design-angleichung/`
-**Phase:** 3/4 — Tags-Seite klären & angleichen (pending)
-**Nächster Schritt:** Phase 3 starten: Entscheidung Tags-Design (eigenes Mockup nachziehen vs. re-home vs. nur angleichen) → dann umsetzen. Details in `phase-3-tags-seite.md`.
+**Phase:** 4/4 — Übrige bestätigte Abweichungen (pending)
+**Nächster Schritt:** Phase 4 starten — GROSS/MITTEL-Findings aus FINDINGS.md abarbeiten (Filter-Rail Person/Framing-Facette, Grid-Zelle Person-Avatar, Nav-Rail Favoriten/Review-Queue, Mobile Nav Tab-Auswahl, Sub-Toolbar Auswählen-Button). Details in `phase-4-uebrige-abweichungen.md`.
 
 **Abgeschlossen:**
 - `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

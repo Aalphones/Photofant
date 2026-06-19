@@ -175,7 +175,9 @@ Zeigt kuratierte und Smart-Alben. Smart-Alben werden durch Trigger-Regeln automa
 
 ### 8. Einstellungen
 
-**6 Sektionen:** Bibliothek, Verarbeitung, Darstellung, Tastaturkürzel, Backup & Wartung, Info
+**8 Sektionen:** Bibliothek, Verarbeitung, Darstellung, Bearbeitung, Tags, Tastaturkürzel, Backup & Wartung, Info
+
+> Tags-Verwaltung wurde per ADR-005 von der eigenständigen `/tags`-Route hierher re-homed.
 
 **Komponenten:**
 - `Switch`: Toggle-Pill, 42×24px, `var(--accent)` wenn aktiv
