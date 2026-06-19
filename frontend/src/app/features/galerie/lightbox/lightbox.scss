@@ -14,6 +14,11 @@
   z-index: 201;
   display: grid;
   grid-template-columns: 1fr 372px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: 50vh 1fr;
+  }
 }
 
 // ── Stage ────────────────────────────────────────────────────────────────────
@@ -72,6 +77,11 @@ pf-zoom-stage {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+
+  @media (max-width: 640px) {
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
 }
 
 .panel-sec {
