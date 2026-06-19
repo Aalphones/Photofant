@@ -1,6 +1,6 @@
 # Einstellungen fehlende Sektionen · Phase 2 — Bibliothek
 
-> Rating: **standard** · Status: pending · (Rating-Abstufung: Henne-Ei-Problem entfällt durch settings.json-Infrastruktur)
+> Rating: **standard** · Status: complete · (Rating-Abstufung: Henne-Ei-Problem entfällt durch settings.json-Infrastruktur)
 
 ## Kontext (vorher lesen)
 
@@ -26,18 +26,18 @@ Außerdem enthält `data_root` alle Bilddateien — eine Änderung via UI **vers
 
 ### Backend
 
-- [ ] **`api/config.py` `patch_config()`**: wenn `data_root` in Body → nach Patch `reboot_required: true` in Response setzen (eigenes Response-Feld oder als Meta-Key)
-- [ ] **`api/config.py` Response-Model** `ConfigResponse` um optionales `reboot_required: bool` erweitern
-- [ ] Doc-Update: `docs/routes.md` — `data_root`-Key + `reboot_required`-Response dokumentieren
+- [x] **`api/config.py` `patch_config()`**: wenn `data_root` in Body → nach Patch `reboot_required: true` in Response setzen (eigenes Response-Feld oder als Meta-Key)
+- [x] **`api/config.py` Response-Model** `ConfigResponse` um optionales `reboot_required: bool` erweitern
+- [x] Doc-Update: `docs/routes.md` — `data_root`-Key + `reboot_required`-Response dokumentieren
 
 ### Frontend
 
-- [ ] **`models.actions.ts`**: neue Action `updateDataRoot({ path })`, `updateDataRootSuccess({ path })`, `updateDataRootFailure({ error })`
-- [ ] **`models.reducer.ts`**: `dataRoot: string | null` zu `ModelsState`; `loadConfigSuccess` extrahiert `data_root`
-- [ ] **`models.effects.ts`**: neuer Effect für `updateDataRoot` → `PATCH /api/config/data-root`; setzt Signal `rebootRequired: true` nach Erfolg
-- [ ] **`models.selectors.ts`**: `selectDataRoot`, `selectRebootRequired` exportieren
-- [ ] **`model.service.ts`**: Methode `updateDataRoot(path: string) -> Observable<...>`
-- [ ] **`einstellungen.ts`**: Sektion "Bibliothek" mit `PathRow`-Komponente für Sammlungs-Ordner (analog zu bestehendem Modell-Ordner); expliziter Warn-Hinweis "Bilder nicht automatisch verschoben"; Reboot-Banner nach Änderung (`🟡 Neustart erforderlich`); Modell-Ordner (`models_dir`) von bestehender "Modelle"-Sektion hierher verschieben
+- [x] **`models.actions.ts`**: neue Action `updateDataRoot({ path })`, `updateDataRootSuccess({ path })`, `updateDataRootFailure({ error })`
+- [x] **`models.reducer.ts`**: `dataRoot: string | null` zu `ModelsState`; `loadConfigSuccess` extrahiert `data_root`
+- [x] **`models.effects.ts`**: neuer Effect für `updateDataRoot` → `PATCH /api/config`; setzt `rebootRequired: true` im State nach Erfolg
+- [x] **`models.selectors.ts`**: `selectDataRoot`, `selectRebootRequired` exportieren
+- [x] **`model.service.ts`**: Methode `updateDataRoot(path: string) -> Observable<...>`
+- [x] **`einstellungen.ts`**: Sektion "Bibliothek" mit Sammlungs-Ordner (+ Warn-Hinweis "manuell kopieren") und Modell-Ordner; Reboot-Banner nach Änderung; "Modelle"-Sektion entfernt
 
 ## Hinweise
 

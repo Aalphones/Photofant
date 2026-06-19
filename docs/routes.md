@@ -110,6 +110,7 @@ Bulk-Tagging, Tag-Merge, Tagging-/Caption-Job (Import + Rerun) und Trigger-CRUD.
 ```typescript
 interface ConfigResponse {
   data: AppSettings;
+  reboot_required?: boolean | null;  // true wenn data_root geändert — Neustart erforderlich
 }
 
 interface ConfigPatchRequest {

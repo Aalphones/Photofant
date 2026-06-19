@@ -5,6 +5,7 @@ import type { ModelDto, CapabilitiesDto } from '@photofant/models';
 
 interface ConfigResponse {
   data: Record<string, unknown>;
+  reboot_required?: boolean | null;
 }
 
 interface DownloadResponse {
@@ -38,6 +39,10 @@ export class ModelService {
 
   updateModelsDir(path: string): Observable<ConfigResponse> {
     return this.http.patch<ConfigResponse>('/api/config', { data: { models_dir: path } });
+  }
+
+  updateDataRoot(path: string): Observable<ConfigResponse> {
+    return this.http.patch<ConfigResponse>('/api/config', { data: { data_root: path } });
   }
 
   downloadModel(manifestId: string, licenseAck: boolean): Observable<DownloadResponse> {

@@ -11,7 +11,7 @@ export const modelsActions = createActionGroup({
     'Load Capabilities Success': props<{ capabilities: CapabilitiesDto }>(),
     'Load Capabilities Failure': props<{ error: string }>(),
     'Load Config':                         emptyProps(),
-    'Load Config Success':                 props<{ modelsDir: string; processingConfig: ProcessingConfig }>(),
+    'Load Config Success':                 props<{ modelsDir: string; dataRoot: string | null; processingConfig: ProcessingConfig }>(),
     'Load Config Failure':                 props<{ error: string }>(),
     'Update Processing Config':            props<{ patch: Partial<ProcessingConfig> }>(),
     'Update Processing Config Success':    props<{ processingConfig: ProcessingConfig }>(),
@@ -31,5 +31,8 @@ export const modelsActions = createActionGroup({
     'Update Models Dir':         props<{ path: string }>(),
     'Update Models Dir Success': props<{ modelsDir: string }>(),
     'Update Models Dir Failure': props<{ error: string }>(),
+    'Update Data Root':          props<{ path: string }>(),
+    'Update Data Root Success':  props<{ dataRoot: string }>(),
+    'Update Data Root Failure':  props<{ error: string }>(),
   },
 });

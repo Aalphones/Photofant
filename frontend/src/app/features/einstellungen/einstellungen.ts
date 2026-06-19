@@ -90,9 +90,47 @@ import { PresetDialog } from '@photofant/ui';
         </div>
       </div>
 
-      <!-- ── Modelle ───────────────────────────────────────────────── -->
+      <!-- ── Bibliothek ─────────────────────────────────────────────── -->
       <div class="settings-section">
-        <h2 class="settings-heading">Modelle</h2>
+        <h2 class="settings-heading">Bibliothek</h2>
+
+        @if (rebootRequired()) {
+          <div class="reboot-banner">
+            🟡 Neustart erforderlich — die neue Bibliothek wird erst nach dem Neustart der App verwendet.
+          </div>
+        }
+
+        <div class="settings-card">
+          <div class="card-row card-row--top">
+            <div>
+              <div class="card-label">Sammlungs-Ordner</div>
+              <div class="card-desc">
+                Hauptverzeichnis für alle Bilder und die Datenbank.
+                Bilder und Datenbank müssen manuell in den neuen Ordner kopiert werden.
+              </div>
+            </div>
+            @if (!isDataRootEditing()) {
+              <div class="path-display">
+                <code>{{ dataRoot() ?? '–' }}</code>
+                <button class="btn-ghost" (click)="startDataRootEdit()">Ändern</button>
+              </div>
+            } @else {
+              <div class="path-edit">
+                <input
+                  class="dir-input"
+                  type="text"
+                  [value]="pendingDataRoot()"
+                  (input)="pendingDataRoot.set($any($event.target).value)"
+                  (keydown.enter)="saveDataRootEdit()"
+                  (keydown.escape)="cancelDataRootEdit()"
+                />
+                <button class="btn-primary" (click)="saveDataRootEdit()">Speichern</button>
+                <button class="btn-ghost" (click)="cancelDataRootEdit()">Abbrechen</button>
+              </div>
+            }
+          </div>
+        </div>
+
         <div class="settings-card">
           <div class="card-row">
             <div>
@@ -102,12 +140,12 @@ import { PresetDialog } from '@photofant/ui';
               </div>
             </div>
             @if (!isDirEditing()) {
-              <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="path-display">
                 <code>{{ modelsDir() ?? '–' }}</code>
                 <button class="btn-ghost" (click)="startDirEdit()">Ändern</button>
               </div>
             } @else {
-              <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; justify-content: flex-end;">
+              <div class="path-edit">
                 <input
                   class="dir-input"
                   type="text"
@@ -624,6 +662,30 @@ import { PresetDialog } from '@photofant/ui';
       transform: translateX(18px);
     }
 
+    .reboot-banner {
+      font-size: 13px;
+      color: var(--text-2);
+      background: var(--warning-weak, color-mix(in srgb, var(--accent) 10%, transparent));
+      border: 1px solid var(--warning-line, var(--line));
+      border-radius: var(--radius-s);
+      padding: 10px 14px;
+    }
+
+    .path-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .path-edit {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
     .dir-input {
       height: 34px;
       padding: 0 10px;
@@ -693,9 +755,13 @@ export class Einstellungen {
     this.settings.setDateFormat(value);
   }
 
-  /* ── Modelle ──────────────────────────────────────────────────── */
+  /* ── Bibliothek ───────────────────────────────────────────────── */
+  readonly dataRoot = this.store.selectSignal(modelsSelectors.selectDataRoot);
+  readonly rebootRequired = this.store.selectSignal(modelsSelectors.selectRebootRequired);
   readonly modelsDir = this.store.selectSignal(modelsSelectors.selectModelsDir);
   readonly processingConfig = this.store.selectSignal(modelsSelectors.selectProcessingConfig);
+  readonly isDataRootEditing = signal<boolean>(false);
+  readonly pendingDataRoot = signal<string>('');
   readonly isDirEditing = signal<boolean>(false);
   readonly pendingDir = signal<string>('');
 
@@ -726,6 +792,23 @@ export class Einstellungen {
       this.store.dispatch(modelsActions.loadModels());
       this.store.dispatch(presetsActions.loadPresets());
     });
+  }
+
+  startDataRootEdit(): void {
+    this.pendingDataRoot.set(this.dataRoot() ?? '');
+    this.isDataRootEditing.set(true);
+  }
+
+  cancelDataRootEdit(): void {
+    this.isDataRootEditing.set(false);
+  }
+
+  saveDataRootEdit(): void {
+    const newPath = this.pendingDataRoot().trim();
+    if (newPath.length > 0) {
+      this.store.dispatch(modelsActions.updateDataRoot({ path: newPath }));
+    }
+    this.isDataRootEditing.set(false);
   }
 
   startDirEdit(): void {

@@ -73,6 +73,7 @@ export class ModelsEffects {
           map((response) =>
             modelsActions.loadConfigSuccess({
               modelsDir: String(response.data['models_dir'] ?? ''),
+              dataRoot: response.data['data_root'] != null ? String(response.data['data_root']) : null,
               processingConfig: extractProcessingConfig(response.data),
             })
           ),
@@ -193,6 +194,22 @@ export class ModelsEffects {
           ),
           catchError((error: HttpErrorResponse) =>
             of(modelsActions.updateModelsDirFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly updateDataRoot$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(modelsActions.updateDataRoot),
+      switchMap(({ path }) =>
+        this.modelService.updateDataRoot(path).pipe(
+          map((response) =>
+            modelsActions.updateDataRootSuccess({ dataRoot: String(response.data['data_root'] ?? path) })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(modelsActions.updateDataRootFailure({ error: error.message }))
           ),
         )
       ),

@@ -7,6 +7,8 @@ export interface ModelsState {
   models: ModelDto[];
   capabilities: CapabilitiesDto | null;
   modelsDir: string | null;
+  dataRoot: string | null;
+  rebootRequired: boolean;
   processingConfig: ProcessingConfig;
   isLoading: boolean;
   pendingDownloads: string[];
@@ -20,6 +22,8 @@ const initialState: ModelsState = {
   models: [],
   capabilities: null,
   modelsDir: null,
+  dataRoot: null,
+  rebootRequired: false,
   processingConfig: PROCESSING_CONFIG_DEFAULTS,
   isLoading: false,
   pendingDownloads: [],
@@ -48,8 +52,8 @@ export const modelsFeature = createFeature({
       ({ ...state, capabilities })
     ),
 
-    on(modelsActions.loadConfigSuccess, (state: ModelsState, { modelsDir, processingConfig }) =>
-      ({ ...state, modelsDir, processingConfig })
+    on(modelsActions.loadConfigSuccess, (state: ModelsState, { modelsDir, dataRoot, processingConfig }) =>
+      ({ ...state, modelsDir, dataRoot, processingConfig })
     ),
 
     on(modelsActions.updateProcessingConfigSuccess, (state: ModelsState, { processingConfig }) =>
@@ -124,6 +128,10 @@ export const modelsFeature = createFeature({
 
     on(modelsActions.updateModelsDirSuccess, (state: ModelsState, { modelsDir }) =>
       ({ ...state, modelsDir })
+    ),
+
+    on(modelsActions.updateDataRootSuccess, (state: ModelsState, { dataRoot }) =>
+      ({ ...state, dataRoot, rebootRequired: true })
     ),
   ),
 });

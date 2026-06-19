@@ -17,6 +17,7 @@ router = APIRouter(prefix="/config")
 
 class ConfigResponse(BaseModel):
     data: dict[str, Any]
+    reboot_required: bool | None = None
 
 
 class ConfigPatchRequest(BaseModel):
@@ -43,5 +44,6 @@ def patch_config(body: ConfigPatchRequest) -> ConfigResponse:
             Path(models_dir_raw).mkdir(parents=True, exist_ok=True)
             log.info("models_dir set to %s — directory ensured", models_dir_raw)
 
+    reboot_required = "data_root" in body.data or None
     log.info("config patched: %s", list(body.data.keys()))
-    return ConfigResponse(data=dict(updated))
+    return ConfigResponse(data=dict(updated), reboot_required=reboot_required)

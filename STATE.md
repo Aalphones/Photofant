@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/`
-**Phase:** 2/4 — Phase 1 (Verarbeitung) erledigt via wd14-Plan; weiter mit Phase 2 (Bibliothek).
-**Nächster Schritt:** Phase 2 starten — `data_root` Startup-Config + `PATCH /api/config/data-root`-Endpoint.
+**Phase:** 3/4 — Tastaturkürzel Backend-Persistenz.
+**Nächster Schritt:** Phase 3 starten — `keyboard_shortcuts` als JSON-Blob in `settings.json` + Frontend-UI für Shortcut-Belegung.
 
 **Danach weiter mit:**
 - `docs/planning/2026-06-19_design-angleichung/` — Design-Angleichung: Reconciliation-Sweep, Einstellungen-Shell, Tags-Seite, übrige Abweichungen. Setzt alle Einstellungs-Sektionen voraus.
