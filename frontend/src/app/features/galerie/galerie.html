@@ -1,4 +1,8 @@
-<pf-sub-toolbar (railToggle)="railOpen.set(!railOpen())" />
+<pf-sub-toolbar
+  [selectionMode]="selectionMode()"
+  (railToggle)="railOpen.set(!railOpen())"
+  (selToggle)="toggleSelectionMode()"
+/>
 
 <div class="galerie__body">
   @if (railOpen()) {
@@ -6,19 +10,6 @@
   }
 
   <div class="galerie__main">
-    <!-- Selection mode toggle -->
-    <div class="galerie__sel-bar">
-      <button
-        class="galerie__sel-btn"
-        [class.galerie__sel-btn--on]="selectionMode()"
-        (click)="toggleSelectionMode()"
-        [attr.aria-pressed]="selectionMode()"
-      >
-        <pf-icon name="select" [size]="15" />
-        <span>{{ selectionMode() ? 'Auswählen beenden' : 'Auswählen' }}</span>
-      </button>
-    </div>
-
     @if (isEmpty()) {
       <div class="galerie-empty">
         <div class="empty-icon">

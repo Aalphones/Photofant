@@ -11,7 +11,7 @@ Behebt die strukturellen Abweichungen zwischen Mockup (`docs/design/`) und der g
 | 1 | [Reconciliation-Sweep (Inventar)](phase-1-reconciliation-sweep.md) | standard | complete |
 | 2 | [Einstellungen-Shell + Primitive](phase-2-einstellungen-shell.md) | heikel | complete |
 | 3 | [Tags-Seite klären & angleichen](phase-3-tags-seite.md) | heikel | complete |
-| 4 | [Übrige bestätigte Abweichungen](phase-4-uebrige-abweichungen.md) | standard | pending |
+| 4 | [Übrige bestätigte Abweichungen](phase-4-uebrige-abweichungen.md) | standard | complete |
 
 **🟡 Phase 4 ist absichtlich erst nach Phase 1 voll bestimmt.** Phase 1 liefert die verbindliche Abweichungsliste; ihre GROSS/MITTEL-Punkte für die *übrigen* Views (Galerie, Lightbox, Modelle, Alben, Personen, Trainingssets, Wartung, Shell) werden als FINDINGS getaggt und in Phase 4 abgearbeitet. Bis Phase 1 läuft, ist Phase 4 ein Rahmen, kein Inhalt.
 
@@ -49,11 +49,28 @@ Deckt Phase 1 einen echten Backend-Bedarf auf (Kandidat: Speichernutzungs-Werte 
 
 ## Summary
 
+Alle 4 Phasen abgeschlossen (2026-06-19). Inventar vollständig in `docs/design-reconciliation.md`. Einstellungen-Shell (P2), Tags-Re-home (P3) und übrige Abweichungen (P4) behoben. 3 GROSS/MITTEL-Punkte sauber nach P7 verschoben (Person-Facette, Framing-Facette, Person-Avatar).
+
 ## Files touched
+
+- `docs/design-reconciliation.md` — Inventar aller Views
+- `frontend/src/app/features/einstellungen/` — Phase 2 Shell + Primitive
+- `frontend/src/app/features/galerie/sub-toolbar/sub-toolbar.ts/html/scss` — Auswählen-Button + Chip-Key
+- `frontend/src/app/features/galerie/galerie.html/scss` — sel-bar entfernt
+- `frontend/src/app/shell/nav-rail/nav-rail.ts` — Favoriten + Review-Queue + Tags entfernt
+- `frontend/src/app/shell/shell.html/ts` — Mobile Nav + Route-Titel
+- `frontend/src/app/app.routes.ts` — /favoriten + /review Routen
+- `frontend/src/app/features/favoriten/favoriten.ts` — neu
+- `frontend/src/app/features/review/review.ts` — neu
 
 ## Commits
 
+Werden im abschließenden Commit erfasst.
+
 ## Deviations from plan
+
+- Mobile Nav "Mehr": öffnet Nav-Rail statt Bottom-Sheet-Overlay (Design-Intent erfüllt, simpler als voller Overlay-Bau)
+- Review-Queue: Nav-Item + Stub-Route hinzugefügt, obwohl reconciliation "sauber-verschoben" sagt — da das Design den Eintrag unter Verwaltung zeigt, ist ein Stub die sauberste Lösung ohne leere Nav-Gaps
 
 ## Follow-ups
 

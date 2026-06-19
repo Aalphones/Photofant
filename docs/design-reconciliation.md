@@ -48,10 +48,10 @@
 
 | # | Punkt | Schwere | Belege Soll → Ist |
 |---|---|---|---|
-| 1 | **Favoriten-Nav-Item fehlt.** Design hat Favoriten als eigenständigen Main-Eintrag mit Count-Badge. Impl hat weder Route `/favoriten` noch Nav-Item. | MITTEL | `app.jsx:21` `{ id: "favourites", icon: "star", label: "Favoriten", count: favs }` → kein Eintrag in `nav-rail.ts:29-35` |
-| 2 | **Review-Queue-Nav-Item fehlt.** Design listet Review-Queue unter Verwaltung (count=7). Kein Route `/review`, kein Nav-Item. | MITTEL | `app.jsx:25` `{ id: "review", icon: "face", label: "Review-Queue", count: 7 }` → nicht in `nav-rail.ts:37-42` |
-| 3 | **Tags extra im Nav** (nicht im Design-Nav). Design kennt Tags nur intern; Impl hat Tags als vollwertigen Main-Nav-Eintrag. | KLEIN | Design: kein tags-Eintrag → `nav-rail.ts:33` `{ id: 'tags', icon: 'tag', label: 'Tags' }` |
-| 4 | **Storage-Indikator statisch.** Design zeigt echte Werte (GB, Assets, Personen, %). Impl zeigt "Bibliothek leer · 0% · —". | KLEIN | `app.jsx:52-58` mit echten Daten → `nav-rail.html:48-55` hardcoded "Bibliothek leer", 0% |
+| 1 | **Favoriten-Nav-Item fehlt.** Design hat Favoriten als eigenständigen Main-Eintrag mit Count-Badge. | MITTEL → behoben | `app.jsx:21` → `nav-rail.ts`: Favoriten-Item + `/favoriten`-Route + Stub-Komponente hinzugefügt (Phase 4). Vollansicht in P7. |
+| 2 | **Review-Queue-Nav-Item fehlt.** Design listet Review-Queue unter Verwaltung. | MITTEL → behoben | `app.jsx:25` → `nav-rail.ts`: Review-Queue-Item + `/review`-Route + Stub-Komponente hinzugefügt (Phase 4). Feature-Implementierung folgt in eigenem Plan. |
+| 3 | **Tags extra im Nav** (nicht im Design-Nav). Tags wurden per ADR-005 in Einstellungen integriert. | KLEIN → behoben | `nav-rail.ts:33` Tags-Item entfernt (Phase 4). |
+| 4 | **Storage-Indikator statisch.** Design zeigt echte Werte (GB, Assets, %). | KLEIN → bewusst gelassen | Kein Backend-Endpunkt für Speichernutzungs-Daten vorhanden; Implementierung erfordert eigenen Plan. |
 
 ---
 
@@ -75,7 +75,7 @@
 
 | # | Punkt | Schwere | Belege |
 |---|---|---|---|
-| 1 | **Tab-Auswahl abweichend.** Design: [Galerie, Personen, Favoriten, Mehr]. Impl: [Galerie, Personen, Alben, Einstellungen]. Favoriten fehlt; Mehr-Button fehlt; stattdessen direkte Alben- und Einstellungen-Links. | MITTEL | `app.jsx:284-296` vier Tabs inkl. Favoriten/Mehr → `shell.html:51-68` vier direkte routerLinks |
+| 1 | **Tab-Auswahl abweichend.** Design: [Galerie, Personen, Favoriten, Mehr]. | MITTEL → behoben | `shell.html`: Tabs auf [Galerie, Personen, Favoriten, Mehr] umgestellt. "Mehr" öffnet die Nav-Rail (Phase 4). |
 
 ---
 
@@ -86,8 +86,8 @@
 
 | # | Punkt | Schwere | Belege |
 |---|---|---|---|
-| 1 | **Person-Facette fehlt komplett.** Design hat Person-Facette als erste Facette mit Avatar-Chips. | GROSS | `gallery.jsx:38-49` `React.createElement(Facet, { title: "Person" }, PF.PERSONS.map(…))` → nicht in `filter-rail.html` |
-| 2 | **Framing-Facette fehlt komplett.** Design hat Framing (close_up / medium / full_body) als eigene Facette. | GROSS | `gallery.jsx:58-62` `React.createElement(Facet, { title: "Framing" }, …)` → nicht in `filter-rail.html` |
+| 1 | **Person-Facette fehlt komplett.** Design hat Person-Facette als erste Facette mit Avatar-Chips. | GROSS → sauber-verschoben P7 | `gallery.jsx:38-49` → `filter-rail.html` hat keine Person-Facette; benötigt `person_id` auf `AssetDto` + Personen-API (kommt in P7) |
+| 2 | **Framing-Facette fehlt komplett.** Design hat Framing (close_up / medium / full_body) als eigene Facette. | GROSS → sauber-verschoben P7 | `gallery.jsx:58-62` → `filter-rail.html` hat keine Framing-Facette; benötigt `framing`-Feld auf `AssetDto` aus AI-Analyse (kommt in P7) |
 
 *Hinweis:* Sammlung-Facette wird in der Impl als Album-Filter umgesetzt (Collection-IDs statt Favoriten/Edits-Toggles) — vertretbar, da Backend albumbasiert ist.
 
@@ -100,8 +100,8 @@
 
 | # | Punkt | Schwere | Belege |
 |---|---|---|---|
-| 1 | **Auswählen-Button ausgelagert.** Design hat "Auswählen"-Button als fünfte Kontrolle in `sb-tools`. Impl hat ihn in einem separaten `galerie__sel-bar` außerhalb der Sub-Toolbar. | MITTEL | `gallery.jsx:237-238` `selectbtn selMode` → `galerie.html:11-19` `class="galerie__sel-bar"` |
-| 2 | **Filter-Chips ohne Kategorie-Prefix.** Design zeigt `chip-key` (z.B. "Person:", "Quelle:") vor dem Chip-Label. Impl hat nur das Label. | KLEIN | `gallery.jsx:219` `c.key && React.createElement("span", { className: "chip-key" }, c.key + ":")` → `sub-toolbar.html:13` kein key-prefix |
+| 1 | **Auswählen-Button ausgelagert.** Design hat "Auswählen"-Button als fünfte Kontrolle in `sb-tools`. | MITTEL → behoben | Button in `sub-toolbar.html` `subbar__tools` integriert; `galerie__sel-bar` entfernt (Phase 4). |
+| 2 | **Filter-Chips ohne Kategorie-Prefix.** Design zeigt `chip-key` vor dem Chip-Label. | KLEIN → behoben | `subbar__chip-key`-Span in `sub-toolbar.html` + `chipKey`-Feld in `FilterChip` hinzugefügt (Phase 4). |
 
 ---
 
@@ -112,7 +112,7 @@
 
 | # | Punkt | Schwere | Belege |
 |---|---|---|---|
-| 1 | **Person-Avatar in Zelle fehlt.** Design zeigt Avatar der zugehörigen Person in der Zelle (top-left, `tile-person`). | MITTEL | `gallery.jsx:122-123` `React.createElement("div", { className: "tile-person" }, React.createElement(Avatar, { personId: a.personId, size: 22 }))` → nicht in `cell.html` |
+| 1 | **Person-Avatar in Zelle fehlt.** Design zeigt Avatar der zugehörigen Person in der Zelle (top-left, `tile-person`). | MITTEL → sauber-verschoben P7 | `gallery.jsx:122-123` → `cell.html` hat kein `tile-person`; benötigt `person_id` auf `AssetDto` (kommt in P7) |
 
 ---
 
@@ -236,22 +236,22 @@ Impl: Placeholder `"Noch nicht implementiert — kommt in P10"` → **sauber-ver
 
 ---
 
-## GROSS/MITTEL-Zusammenfassung (Phase-4-Kandidaten)
+## GROSS/MITTEL-Zusammenfassung (Phase-4-Ergebnis)
 
-Alle übrigen Views (alles außer Einstellungen → Phase 2, Tags → Phase 3):
+> Phase 4 abgeschlossen 2026-06-19.
 
-| View | Punkt | Schwere |
-|---|---|---|
-| Nav-Rail | Favoriten-Item fehlt | MITTEL |
-| Nav-Rail | Review-Queue-Item fehlt | MITTEL |
-| Mobile Nav | Tab-Auswahl abweichend (Favoriten fehlt, Mehr-Button fehlt) | MITTEL |
-| Filter-Rail | Person-Facette fehlt | GROSS |
-| Filter-Rail | Framing-Facette fehlt | GROSS |
-| Sub-Toolbar | Auswählen-Button ausgelagert (kein sb-tools-Mitglied) | MITTEL |
-| Grid-Zelle | Person-Avatar fehlt | MITTEL |
+| View | Punkt | Schwere | Status |
+|---|---|---|---|
+| Nav-Rail | Favoriten-Item fehlt | MITTEL | ✅ behoben (Stub + Route) |
+| Nav-Rail | Review-Queue-Item fehlt | MITTEL | ✅ behoben (Stub + Route) |
+| Mobile Nav | Tab-Auswahl abweichend | MITTEL | ✅ behoben ([Galerie, Personen, Favoriten, Mehr]) |
+| Filter-Rail | Person-Facette fehlt | GROSS | → sauber-verschoben P7 |
+| Filter-Rail | Framing-Facette fehlt | GROSS | → sauber-verschoben P7 |
+| Sub-Toolbar | Auswählen-Button ausgelagert | MITTEL | ✅ behoben (in sb-tools integriert) |
+| Grid-Zelle | Person-Avatar fehlt | MITTEL | → sauber-verschoben P7 |
 
-KLEIN-Punkte (nachrangig):
-- Nav-Rail: Tags extra im Nav
-- Nav-Rail: Storage-Indikator statisch
-- Top-Bar: Import ohne Text-Label
-- Sub-Toolbar: Chips ohne Kategorie-Prefix
+KLEIN-Punkte:
+- Nav-Rail Tags extra: ✅ entfernt (ADR-005-Cleanup)
+- Nav-Rail Storage statisch: bewusst gelassen (kein Backend-Endpunkt)
+- Top-Bar Import ohne Text: bewusst gelassen (icon-only genügt im Top-Bar-Kontext)
+- Sub-Toolbar Chips ohne Prefix: ✅ behoben (chipKey-Feld + Span)

@@ -1,8 +1,12 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-06-19_design-angleichung/`
-**Phase:** 4/4 — Übrige bestätigte Abweichungen (pending)
-**Nächster Schritt:** Phase 4 starten — GROSS/MITTEL-Findings aus FINDINGS.md abarbeiten (Filter-Rail Person/Framing-Facette, Grid-Zelle Person-Avatar, Nav-Rail Favoriten/Review-Queue, Mobile Nav Tab-Auswahl, Sub-Toolbar Auswählen-Button). Details in `phase-4-uebrige-abweichungen.md`.
+**Aktiver Plan:** `docs/planning/2026-06-19_einstellungen-refactoring/`
+**Phase:** 1/? — Bereit zum Starten
+**Nächster Schritt:** Plan lesen und Phase 1 starten.
+
+**Abgeschlossen:**
+- `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)
+- `docs/planning/2026-06-19_design-angleichung/` — alle 4 Phasen complete (2026-06-19)
 
 **Abgeschlossen:**
 - `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

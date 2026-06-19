@@ -18,6 +18,11 @@ export const routes: Routes = [
           import('./features/personen/personen').then((m) => m.Personen),
       },
       {
+        path: 'favoriten',
+        loadComponent: () =>
+          import('./features/favoriten/favoriten').then((m) => m.Favoriten),
+      },
+      {
         path: 'alben',
         loadComponent: () =>
           import('./features/alben/alben').then((m) => m.Alben),
@@ -28,6 +33,11 @@ export const routes: Routes = [
           import('./features/trainingssets/trainingssets').then(
             (m) => m.Trainingssets
           ),
+      },
+      {
+        path: 'review',
+        loadComponent: () =>
+          import('./features/review/review').then((m) => m.Review),
       },
       {
         path: 'modelle',

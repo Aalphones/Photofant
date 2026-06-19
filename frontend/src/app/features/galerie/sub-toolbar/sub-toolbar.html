@@ -11,6 +11,7 @@
     <span class="subbar__div"></span>
     @for (chip of chips(); track chip.label) {
       <span class="subbar__chip">
+        <span class="subbar__chip-key">{{ chip.chipKey }}:</span>
         <span class="subbar__chip-label">{{ chip.label }}</span>
         <button class="subbar__chip-x" (click)="removeChip(chip)" [attr.aria-label]="'Filter entfernen: ' + chip.label">
           <pf-icon name="x" [size]="11" />
@@ -55,4 +56,15 @@
       </button>
     }
   </div>
+
+  <!-- Auswählen -->
+  <button
+    class="subbar__btn subbar__btn--sel"
+    [class.subbar__btn--sel-on]="selectionMode()"
+    (click)="selToggle.emit()"
+    [attr.aria-pressed]="selectionMode()"
+  >
+    <pf-icon name="select" [size]="14" />
+    <span>{{ selectionMode() ? 'Beenden' : 'Auswählen' }}</span>
+  </button>
 </div>

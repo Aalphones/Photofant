@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
 import type { Collection, Density, GroupKey, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
 import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, presetsSelectors } from '@photofant/store';
@@ -6,6 +6,7 @@ import { Icon, RerunDialog } from '@photofant/ui';
 
 interface FilterChip {
   kind: 'source' | 'qualityMin' | 'tag' | 'collection';
+  chipKey: string;
   label: string;
   id?: number;
   value?: string;
@@ -21,7 +22,10 @@ interface FilterChip {
 export class SubToolbar {
   private readonly store           = inject(Store);
 
-  readonly railToggle = output<void>();
+  readonly railToggle    = output<void>();
+  readonly selToggle     = output<void>();
+
+  readonly selectionMode = input<boolean>(false);
 
   protected readonly total      = this.store.selectSignal(gallerySelectors.selectServerTotal);
   protected readonly sort       = this.store.selectSignal(filtersSelectors.sort);
@@ -45,20 +49,20 @@ export class SubToolbar {
   protected readonly chips = computed((): FilterChip[] => {
     const result: FilterChip[] = [];
     for (const source of this.sources()) {
-      result.push({ kind: 'source', label: this.SOURCE_LABELS[source] ?? source, value: source });
+      result.push({ kind: 'source', chipKey: 'Quelle', label: this.SOURCE_LABELS[source] ?? source, value: source });
     }
     if (this.qualityMin() > 0) {
-      result.push({ kind: 'qualityMin', label: `Qualität ≥ ${Math.round(this.qualityMin() * 100)}` });
+      result.push({ kind: 'qualityMin', chipKey: 'Qualität', label: `≥ ${Math.round(this.qualityMin() * 100)}` });
     }
     const tags = this.facets()?.tags_top ?? [];
     for (const tagId of this.tagIds()) {
       const tag = tags.find((t: TagFacetItem) => t.id === tagId);
-      result.push({ kind: 'tag', label: tag?.name ?? `Tag ${tagId}`, id: tagId });
+      result.push({ kind: 'tag', chipKey: 'Tag', label: tag?.name ?? `${tagId}`, id: tagId });
     }
     const collectionId = this.collectionId();
     if (collectionId != null) {
       const collection = this.collections().find((c: Collection) => c.id === collectionId);
-      result.push({ kind: 'collection', label: collection?.name ?? `Album ${collectionId}`, id: collectionId });
+      result.push({ kind: 'collection', chipKey: 'Album', label: collection?.name ?? `${collectionId}`, id: collectionId });
     }
     return result;
   });

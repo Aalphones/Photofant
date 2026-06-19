@@ -25,15 +25,17 @@ export class NavRail {
 
   private readonly galerieCount = this.store.selectSignal(gallerySelectors.selectServerTotal);
 
-  // Personen/Alben/Trainingssets have no backend yet (P6/P7) — no count chip until they do.
+  // Personen/Alben/Favoriten/Trainingssets have no backend yet (P7/P10) — no count chip until they do.
   protected readonly mainItems = computed<readonly NavItem[]>(() => [
     { id: 'galerie',      icon: 'gallery',  label: 'Galerie', count: this.galerieCount() },
     { id: 'personen',     icon: 'people',   label: 'Personen'      },
+    { id: 'favoriten',    icon: 'star',     label: 'Favoriten'     },
     { id: 'alben',        icon: 'album',    label: 'Alben'         },
     { id: 'trainingssets',icon: 'training', label: 'Trainingssets' },
   ]);
 
   protected readonly toolItems: readonly NavItem[] = [
+    { id: 'review',        icon: 'face',     label: 'Review-Queue' },
     { id: 'modelle',       icon: 'model',    label: 'Modelle'      },
     { id: 'papierkorb',    icon: 'trash',    label: 'Papierkorb'   },
     { id: 'wartung',       icon: 'wrench',   label: 'Wartung'      },

@@ -23,8 +23,10 @@ import { ShortcutLegend } from '../ui/shortcut-legend/shortcut-legend';
 const ROUTE_TITLES: Record<string, string> = {
   galerie:       'Galerie',
   personen:      'Personen',
+  favoriten:     'Favoriten',
   alben:         'Alben',
   trainingssets: 'Trainingssets',
+  review:        'Review-Queue',
   modelle:       'Modelle',
   einstellungen: 'Einstellungen',
 };

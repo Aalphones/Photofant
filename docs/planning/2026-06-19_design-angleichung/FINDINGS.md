@@ -17,20 +17,20 @@ Erkenntnisse über Phasengrenzen hinweg. Append-only, jeder Eintrag mit Ziel-Tag
 
 - [x] → Phase 3: **Tags kein Mockup, Design freihändig erfunden** (`tags.html`). ← ADR-005: Re-home in Einstellungen — `/tags`-Route + Feature entfernt, Sektion in `einstellungen.ts` eingefaltet.
 
-- [ ] → Phase 4: **Filter-Rail — Person-Facette fehlt (GROSS).** Im Design erste Facette (`gallery.jsx:38-49`), in Impl (`filter-rail.html`) gar nicht vorhanden. Benötigt: Person-Avatare als Facetten-Rows, Person-IDs als Filter-Parameter, Backend-Endpunkt für Person-Counts.
+- [x] → Phase 4: **Filter-Rail — Person-Facette fehlt (GROSS).** → sauber-verschoben P7 (benötigt `person_id` auf AssetDto + Personen-API).
 
-- [ ] → Phase 4: **Filter-Rail — Framing-Facette fehlt (GROSS).** Design: `gallery.jsx:58-62` (close_up / medium / full_body). In `filter-rail.html` nicht vorhanden.
+- [x] → Phase 4: **Filter-Rail — Framing-Facette fehlt (GROSS).** → sauber-verschoben P7 (benötigt `framing`-Feld aus AI-Analyse).
 
-- [ ] → Phase 4: **Grid-Zelle — Person-Avatar fehlt (MITTEL).** Design hat `tile-person` Avatar (22 px) oben-links in jeder Zelle (`gallery.jsx:122-123`). `cell.html` zeigt keinen Avatar.
+- [x] → Phase 4: **Grid-Zelle — Person-Avatar fehlt (MITTEL).** → sauber-verschoben P7 (benötigt `person_id` auf AssetDto).
 
-- [ ] → Phase 4: **Nav-Rail — Favoriten-Item fehlt (MITTEL).** Design: `app.jsx:21` — eigenständiger Nav-Eintrag `id="favourites"` mit Fav-Count-Badge. Impl (`nav-rail.ts:29-35`) hat keinen solchen Eintrag und keine `/favoriten`-Route.
+- [x] → Phase 4: **Nav-Rail — Favoriten-Item fehlt (MITTEL).** → behoben: `nav-rail.ts` + `/favoriten`-Route + Stub `favoriten.ts`.
 
-- [ ] → Phase 4: **Nav-Rail — Review-Queue-Item fehlt (MITTEL).** Design: `app.jsx:25` — `id="review"` unter Verwaltung. Keine Route, kein Nav-Item, keine Feature-Komponente.
+- [x] → Phase 4: **Nav-Rail — Review-Queue-Item fehlt (MITTEL).** → behoben: `nav-rail.ts` + `/review`-Route + Stub `review.ts`.
 
-- [ ] → Phase 4: **Mobile Nav — Tab-Auswahl abweichend (MITTEL).** Design: [Galerie, Personen, Favoriten, Mehr]. Impl (`shell.html:51-68`): [Galerie, Personen, Alben, Einstellungen]. Favoriten-Tab fehlt; Mehr-Overlay-Pattern fehlt (stattdessen direkte Links zu Alben/Einstellungen).
+- [x] → Phase 4: **Mobile Nav — Tab-Auswahl abweichend (MITTEL).** → behoben: `shell.html` auf [Galerie, Personen, Favoriten, Mehr] umgestellt; Mehr öffnet Nav-Rail.
 
-- [ ] → Phase 4: **Sub-Toolbar — Auswählen-Button ausgelagert (MITTEL).** Design: Teil von `sb-tools` im Subbar (`gallery.jsx:237-238`). Impl: separater `galerie__sel-bar` außerhalb der Sub-Toolbar (`galerie.html:11-19`).
+- [x] → Phase 4: **Sub-Toolbar — Auswählen-Button ausgelagert (MITTEL).** → behoben: Button in `sub-toolbar.html` `subbar__tools` integriert; `galerie__sel-bar` + Styles entfernt.
 
-- [ ] → Phase 4: **Nav-Rail — Storage-Indikator statisch (KLEIN).** Impl zeigt "Bibliothek leer · 0%" hardcoded (`nav-rail.html:44-54`). Design zeigt echte Werte (GB, Asset-Count, %).
+- [x] → Phase 4: **Nav-Rail — Storage-Indikator statisch (KLEIN).** → bewusst gelassen (kein Backend-Endpunkt).
 
-- [ ] → Phase 4: **Sub-Toolbar — Chips ohne Kategorie-Prefix (KLEIN).** Design zeigt "Person:", "Quelle:" als `chip-key` vor Label (`gallery.jsx:219`). Impl (`sub-toolbar.html:13`) zeigt nur Label.
+- [x] → Phase 4: **Sub-Toolbar — Chips ohne Kategorie-Prefix (KLEIN).** → behoben: `chipKey` in `FilterChip` + `subbar__chip-key`-Span.

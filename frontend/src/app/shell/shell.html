@@ -57,12 +57,12 @@
     <pf-icon name="people" [size]="22" />
     <span>Personen</span>
   </a>
-  <a class="shell__mobnav-btn" routerLink="/alben" routerLinkActive="on">
-    <pf-icon name="album" [size]="22" />
-    <span>Alben</span>
+  <a class="shell__mobnav-btn" routerLink="/favoriten" routerLinkActive="on">
+    <pf-icon name="star" [size]="22" />
+    <span>Favoriten</span>
   </a>
-  <a class="shell__mobnav-btn" routerLink="/einstellungen" routerLinkActive="on">
-    <pf-icon name="settings" [size]="22" />
+  <button class="shell__mobnav-btn" (click)="toggleNav()" [class.on]="isNavOpen()">
+    <pf-icon name="menu" [size]="22" />
     <span>Mehr</span>
-  </a>
+  </button>
 </nav>

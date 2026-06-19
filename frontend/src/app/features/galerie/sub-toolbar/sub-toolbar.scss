@@ -52,6 +52,7 @@
   flex-shrink: 0;
 }
 
+.subbar__chip-key   { color: var(--text-3); }
 .subbar__chip-label { color: var(--text-2); }
 
 .subbar__chip-x {
@@ -81,6 +82,14 @@
 }
 
 .subbar__btn--filter { flex-shrink: 0; }
+
+.subbar__btn--sel {
+  &--on {
+    background: var(--accent-weak);
+    border-color: var(--accent-line);
+    color: var(--accent);
+  }
+}
 
 .subbar__tools {
   display: flex;
