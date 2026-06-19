@@ -123,7 +123,9 @@ interface AppSettings {
   auto_tag: boolean;
   auto_caption: boolean;
   auto_embed: boolean;
-  tagging_threshold: number;   // 0.0–1.0
+  min_probability: number;     // 0.0–1.0, default 0.5 — ersetzt tagging_threshold
+  max_tags: number;            // default 30
+  tagging_threshold: number;   // deprecated — wird ignoriert, nur backward-compat
   blur_threshold: number;
   trash_auto_days: number;     // 0 = deaktiviert
   keyboard_shortcuts: Record<string, string> | null;

@@ -25,7 +25,9 @@ class AppSettings(TypedDict):
     auto_tag: bool
     auto_caption: bool
     auto_embed: bool
-    tagging_threshold: float
+    min_probability: float
+    max_tags: int
+    tagging_threshold: float  # deprecated — kept for backward-compatible loading
     blur_threshold: float
     trash_auto_days: int
     keyboard_shortcuts: dict[str, Any] | None
@@ -41,6 +43,8 @@ SETTINGS_DEFAULTS: AppSettings = {
     "auto_tag": True,
     "auto_caption": True,
     "auto_embed": True,
+    "min_probability": 0.5,
+    "max_tags": 30,
     "tagging_threshold": 0.35,
     "blur_threshold": 200.0,
     "trash_auto_days": 30,
@@ -61,6 +65,8 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "auto_tag": bool,
     "auto_caption": bool,
     "auto_embed": bool,
+    "min_probability": (float, int),
+    "max_tags": int,
     "tagging_threshold": (float, int),
     "blur_threshold": (float, int),
     "trash_auto_days": int,

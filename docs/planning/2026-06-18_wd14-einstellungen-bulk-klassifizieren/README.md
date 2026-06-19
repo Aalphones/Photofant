@@ -1,12 +1,12 @@
 # WD14-Einstellungen + Bulk-Klassifizieren
 
-> Status: pending
+> Status: in progress
 
 ## Übersicht
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | [Backend WD14-Einstellungen](phase-1-backend-einstellungen.md) | mechanisch | pending |
+| 1 | [Backend WD14-Einstellungen](phase-1-backend-einstellungen.md) | mechanisch | complete |
 | 2 | [Frontend Verarbeitungs-Einstellungen](phase-2-frontend-verarbeitung.md) | standard | pending |
 | 3 | [Gallery Bulk-Klassifizieren](phase-3-bulk-klassifizieren.md) | standard | pending |
 

@@ -1,6 +1,6 @@
 # Phase 1 — Backend WD14-Einstellungen
 
-> Rating: **mechanisch** · Status: pending
+> Rating: **mechanisch** · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -68,12 +68,12 @@ tag_scores = tag_scores[:max_tags]  # tagger sortiert bereits nach Score desc
 
 ### Backend
 
-- [ ] `settings.py`: `min_probability: float` und `max_tags: int` in `AppSettings`, `SETTINGS_DEFAULTS`, `_EXPECTED_TYPES`
-- [ ] `settings.example.json`: neue `_comment_*`-Einträge + Werte; `tagging_threshold` als deprecated kommentieren
-- [ ] `tagging_job.py`: `settings["min_probability"]` + `settings["max_tags"]` lesen; `tag_scores[:max_tags]`-Slice nach `tagger.tag()`
+- [x] `settings.py`: `min_probability: float` und `max_tags: int` in `AppSettings`, `SETTINGS_DEFAULTS`, `_EXPECTED_TYPES`
+- [x] `settings.example.json`: neue `_comment_*`-Einträge + Werte; `tagging_threshold` als deprecated kommentieren
+- [x] `tagging_job.py`: `settings["min_probability"]` + `settings["max_tags"]` lesen; `tag_scores[:max_tags]`-Slice nach `tagger.tag()`
 
 ### Docs
 
-- [ ] `docs/routes.md` aktualisieren: neue Config-Keys `min_probability`, `max_tags` dokumentieren
+- [x] `docs/routes.md` aktualisieren: neue Config-Keys `min_probability`, `max_tags` dokumentieren
 
 ## Report-Back

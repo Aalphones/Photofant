@@ -22,7 +22,9 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
     from photofant.inference.adapters.wd14 import resolve_wd14_tagger
     from photofant.settings import load_settings
 
-    threshold = load_settings()["tagging_threshold"]
+    settings = load_settings()
+    threshold = settings["min_probability"]
+    max_tags = settings["max_tags"]
     tagger = resolve_wd14_tagger(threshold=threshold)
     if tagger is None:
         log.info("WD14 not enabled — skipping tagging for asset %d", asset_id)
@@ -30,6 +32,7 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
     tag_scores = tagger.tag(image)
+    tag_scores = tag_scores[:max_tags]  # tagger already sorts by score desc
 
     with SessionLocal() as session:
         asset = session.get(Asset, asset_id)

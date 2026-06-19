@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-18_wd14-einstellungen-bulk-klassifizieren/`
-**Phase:** 1/3 — Backend WD14-Einstellungen (pending)
-**Nächster Schritt:** Phase 1 starten — settings.py, settings.example.json, tagging_job.py.
+**Phase:** 2/3 — Frontend Verarbeitungs-Einstellungen (pending)
+**Nächster Schritt:** Phase 2 starten — NgRx-Store (processingConfig), Settings-Sektion im Frontend.
 
 **Danach weiter mit:**
 - `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — Phase 1 Frontend wird durch obigen Plan erledigt; danach Phasen 2–4 (Bibliothek, Tastaturkürzel, Info).
