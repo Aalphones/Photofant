@@ -2,8 +2,8 @@
 
 **Aktiver Plan:** `docs/planning/2026-06-19_duplikaterkennung/` — pHash + Review-Queue Tab 2
 
-**Phase:** 3/6 — On-Demand-Scan-Job + Review-API (complete)
-**Nächster Schritt:** Phase 4 starten — Einstellungen: Threshold-Slider (`phase-4-einstellungen.md`)
+**Phase:** 4/6 — Einstellungen: Threshold-Slider (complete)
+**Nächster Schritt:** Phase 5 starten — Frontend: Review-Tab Duplikate (`phase-5-review-tab.md`) — **heikel → `/model opusplan` empfohlen**
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

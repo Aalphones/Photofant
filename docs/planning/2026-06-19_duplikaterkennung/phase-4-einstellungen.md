@@ -22,14 +22,16 @@
 
 ### Frontend
 
-- [ ] Verarbeitung-Child-Komponente öffnen (nach Refactoring: `verarbeitung.ts` o.ä.)
-- [ ] Slider-Control für `dupe_threshold` hinzufügen (HTML range input oder vorhandene Setting-Primitive)
-- [ ] Signal/Store verdrahten: Wert laden (`GET /api/settings`), speichern (`PATCH /api/settings`)
-- [ ] Helper-Text: "0 = nur identische Bilder · 20 = sehr ähnliche Bilder einschließen"
-- [ ] Numerische Anzeige neben Slider (gebunden an Slider-Wert, kein Blur nötig)
+- [x] Verarbeitung-Child-Komponente öffnen (nach Refactoring: `verarbeitung.ts` o.ä.)
+- [x] Slider-Control für `dupe_threshold` hinzufügen (HTML range input oder vorhandene Setting-Primitive)
+- [x] Signal/Store verdrahten: Wert laden (`GET /api/settings`), speichern (`PATCH /api/settings`)
+- [x] Helper-Text: "0 = nur identische Bilder · 20 = sehr ähnliche Bilder einschließen"
+- [x] Numerische Anzeige neben Slider (gebunden an Slider-Wert, kein Blur nötig)
 
 ### Docs
 
-- [ ] `docs/conventions/angular.md` — falls neue Setting-Primitive eingeführt wird, Pattern dokumentieren (optional)
+- [x] Keine neue Setting-Primitive — bestehendes Pattern weiterverwendet (kein Docs-Update nötig)
 
 ## Report-Back
+
+`linkedSignal` für die Live-Anzeige während des Ziehens genutzt (Angular 19) — fällt automatisch auf den Store-Wert zurück wenn die PATCH-Response eintrifft. Label computed: "0–4 = nur fast identisch / 5–9 = geringe Toleranz / 10–14 = mittlere Empfindlichkeit / 15–20 = hohe Toleranz".
