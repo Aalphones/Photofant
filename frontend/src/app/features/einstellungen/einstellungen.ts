@@ -764,7 +764,9 @@ const SECTIONS: Section[] = [
     .st-nav { width: 220px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; padding: 16px 10px 24px; }
     .st-nav-title { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 2px 8px 10px; }
     .st-nav-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 10px; border-radius: var(--radius); font-size: 13.5px; font-weight: 500; color: var(--text-2); }
+    .st-nav-item:hover { background: var(--surface); color: var(--text); }
     .st-nav-item.on { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+    .st-nav-item.on:hover { background: var(--accent-weak); color: var(--accent); }
     .st-nav-ico { width: 30px; height: 30px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--surface); color: var(--text-3); }
     .st-nav-item.on .st-nav-ico { background: var(--accent); color: #fff; }
     .st-nav-back { display: none; }
@@ -803,7 +805,7 @@ const SECTIONS: Section[] = [
     .st-switch.on { background: var(--accent); border-color: var(--accent); }
     .st-switch > i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .16s; }
     .st-switch.on > i { transform: translateX(18px); }
-    .st-select { appearance: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s); color: var(--text); font-size: 13px; padding: 7px 28px 7px 11px; outline: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6' fill='%23888'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; cursor: pointer; min-width: 130px; }
+    .st-select { appearance: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s); color: var(--text); font-size: 13px; padding: 7px 28px 7px 11px; outline: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6' fill='%23888'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; background-size: 10px 6px; cursor: pointer; min-width: 130px; }
     .st-num { height: 32px; width: 90px; padding: 0 8px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-s); color: var(--text); font-size: 13px; text-align: right; outline: none; }
     .dir-input:focus,.st-select:focus,.st-num:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
     code { font-family: var(--mono); font-size: 11px; background: var(--bg); padding: 1px 5px; border-radius: 4px; color: var(--accent); }
