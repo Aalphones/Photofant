@@ -45,6 +45,12 @@
   </div>
 
   <div class="bulkbar__divider"></div>
+  <button class="bulkbar__action" (click)="openRerunDialog()">
+    <pf-icon name="refresh" [size]="15" />
+    Klassifizieren
+  </button>
+
+  <div class="bulkbar__divider"></div>
   <button class="bulkbar__close" (click)="onClose()" aria-label="Auswahl aufheben">
     <pf-icon name="x" [size]="16" />
   </button>

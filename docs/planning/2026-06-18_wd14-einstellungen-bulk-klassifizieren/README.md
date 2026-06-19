@@ -1,6 +1,6 @@
 # WD14-Einstellungen + Bulk-Klassifizieren
 
-> Status: in progress
+> Status: complete
 
 ## Übersicht
 
@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 1 | [Backend WD14-Einstellungen](phase-1-backend-einstellungen.md) | mechanisch | complete |
 | 2 | [Frontend Verarbeitungs-Einstellungen](phase-2-frontend-verarbeitung.md) | standard | complete |
-| 3 | [Gallery Bulk-Klassifizieren](phase-3-bulk-klassifizieren.md) | standard | pending |
+| 3 | [Gallery Bulk-Klassifizieren](phase-3-bulk-klassifizieren.md) | standard | complete |
 
 ## Kontext & Abgrenzung
 

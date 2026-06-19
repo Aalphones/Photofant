@@ -1,6 +1,6 @@
 # Phase 3 — Gallery Bulk-Klassifizieren
 
-> Rating: **standard** · Status: pending
+> Rating: **standard** · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -27,12 +27,12 @@
 
 ### bulk-bar.ts
 
-- [ ] Output hinzufügen: `readonly rerunAction = output<void>()`
-- [ ] Methode: `protected openRerunDialog(): void { this.rerunAction.emit(); }`
+- [x] Output hinzufügen: `readonly rerunAction = output<void>()`
+- [x] Methode: `protected openRerunDialog(): void { this.rerunAction.emit(); }`
 
 ### bulk-bar.html
 
-- [ ] Neuen Divider + Button nach dem Album-Block einfügen:
+- [x] Neuen Divider + Button nach dem Album-Block einfügen:
   ```html
   <div class="bulkbar__divider"></div>
   <button class="bulkbar__action" (click)="openRerunDialog()">
@@ -43,58 +43,24 @@
 
 ### galerie.ts
 
-- [ ] `ClassifyService` aus `@photofant/services` importieren und injizieren: `private readonly classifyService = inject(ClassifyService)`
-- [ ] `presetsSelectors` aus `@photofant/store` importieren
-- [ ] `presetsActions` aus `@photofant/store` (bereits importiert, prüfen)
-- [ ] `RerunDialog` + `RerunPayload` aus `@photofant/ui` importieren; `RerunDialog` in `imports`-Array
-- [ ] Signal: `protected readonly showBulkRerunDialog = signal(false)`
-- [ ] Presets aus Store: `protected readonly bulkRerunPresets = this.store.selectSignal(presetsSelectors.selectPresets)`
-- [ ] Handler `onBulkRerunOpen()`:
-  ```ts
-  protected onBulkRerunOpen(): void {
-    this.store.dispatch(presetsActions.loadPresets());
-    this.showBulkRerunDialog.set(true);
-  }
-  ```
-- [ ] Handler `onBulkRerunConfirm(payload: RerunPayload)`:
-  ```ts
-  protected onBulkRerunConfirm(payload: RerunPayload): void {
-    this.showBulkRerunDialog.set(false);
-    const ids = this.selectedIds();
-    if (!ids.length) { return; }
-    this.classifyService.rerun({
-      asset_ids: ids,
-      steps: payload.steps,
-      ...(payload.captionPresetId != null ? { caption_preset_id: payload.captionPresetId } : {}),
-    }).subscribe();
-    this.store.dispatch(galleryActions.clearSelection());
-  }
-  ```
-- [ ] Handler `onBulkRerunCancel()`:
-  ```ts
-  protected onBulkRerunCancel(): void {
-    this.showBulkRerunDialog.set(false);
-  }
-  ```
+- [x] `ClassifyService` aus `@photofant/services` importieren und injizieren: `private readonly classifyService = inject(ClassifyService)`
+- [x] `presetsSelectors` aus `@photofant/store` importieren
+- [x] `presetsActions` aus `@photofant/store` (war noch nicht importiert, ergänzt)
+- [x] `RerunDialog` + `RerunPayload` aus `@photofant/ui` importieren; `RerunDialog` in `imports`-Array
+- [x] Signal: `protected readonly showBulkRerunDialog = signal(false)`
+- [x] Presets aus Store: `protected readonly bulkRerunPresets = this.store.selectSignal(presetsSelectors.selectPresets)`
+- [x] Handler `onBulkRerunOpen()` implementiert
+- [x] Handler `onBulkRerunConfirm(payload: RerunPayload)` implementiert
+- [x] Handler `onBulkRerunCancel()` implementiert
 
 ### galerie.html
 
-- [ ] `(rerunAction)="onBulkRerunOpen()"` an `<pf-bulk-bar>` verdrahten
-- [ ] RerunDialog nach dem BulkBar-Block:
-  ```html
-  @if (showBulkRerunDialog()) {
-    <pf-rerun-dialog
-      [scopeLabel]="selectedCount() + ' Bilder'"
-      [presets]="bulkRerunPresets()"
-      (confirm)="onBulkRerunConfirm($event)"
-      (cancel)="onBulkRerunCancel()"
-    />
-  }
-  ```
+- [x] `(rerunAction)="onBulkRerunOpen()"` an `<pf-bulk-bar>` verdrahtet
+- [x] RerunDialog nach dem BulkBar-Block eingefügt
 
 ### ui/index.ts
 
-- [ ] Prüfen ob `RerunPayload` bereits aus `@photofant/ui` exportiert wird — falls nicht, ergänzen
+- [x] `RerunPayload` war bereits exportiert — kein Änderungsbedarf
 
 ## Akzeptanzkriterien
 

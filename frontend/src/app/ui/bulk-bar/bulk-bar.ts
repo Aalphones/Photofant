@@ -27,6 +27,7 @@ export class BulkBar {
   readonly close = output<void>();
   readonly tagAction = output<{ add: string[]; remove: number[] }>();
   readonly addToAlbum = output<number>();
+  readonly rerunAction = output<void>();
 
   protected readonly showTagInput = signal(false);
   protected readonly tagInput = signal('');
@@ -67,6 +68,10 @@ export class BulkBar {
   protected pickAlbum(collectionId: number): void {
     this.addToAlbum.emit(collectionId);
     this.showAlbumMenu.set(false);
+  }
+
+  protected openRerunDialog(): void {
+    this.rerunAction.emit();
   }
 
   protected onClose(): void {

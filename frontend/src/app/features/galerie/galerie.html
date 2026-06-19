@@ -53,5 +53,15 @@
     (close)="onBulkClose()"
     (tagAction)="onBulkTag($event)"
     (addToAlbum)="onAddToAlbum($event)"
+    (rerunAction)="onBulkRerunOpen()"
+  />
+}
+
+@if (showBulkRerunDialog()) {
+  <pf-rerun-dialog
+    [scopeLabel]="selectedCount() + ' Bilder'"
+    [presets]="bulkRerunPresets()"
+    (confirm)="onBulkRerunConfirm($event)"
+    (cancel)="onBulkRerunCancel()"
   />
 }

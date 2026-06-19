@@ -1,24 +1,27 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { collectionsActions, collectionsSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, tagsActions } from '@photofant/store';
+import { collectionsActions, collectionsSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors, tagsActions } from '@photofant/store';
+import { ClassifyService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
 import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
-import { BulkBar, Icon } from '@photofant/ui';
+import { BulkBar, Icon, RerunDialog } from '@photofant/ui';
+import type { RerunPayload } from '@photofant/ui';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon, BulkBar],
+  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon, BulkBar, RerunDialog],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
 })
 export class Galerie {
-  private readonly store  = inject(Store);
-  private readonly router = inject(Router);
-  private readonly route  = inject(ActivatedRoute);
+  private readonly store           = inject(Store);
+  private readonly router          = inject(Router);
+  private readonly route           = inject(ActivatedRoute);
+  private readonly classifyService = inject(ClassifyService);
 
   protected readonly groups        = this.store.selectSignal(gallerySelectors.selectGroups);
   protected readonly density       = this.store.selectSignal(filtersSelectors.density);
@@ -38,6 +41,8 @@ export class Galerie {
   protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAll);
 
   protected readonly railOpen = signal(false);
+  protected readonly showBulkRerunDialog = signal(false);
+  protected readonly bulkRerunPresets = this.store.selectSignal(presetsSelectors.selectPresets);
 
   protected readonly isEmpty = computed((): boolean =>
     !this.isLoading() && this.groups().length === 0
@@ -128,5 +133,26 @@ export class Galerie {
     if (!ids.length) { return; }
     this.store.dispatch(collectionsActions.addItems({ collectionId, assetIds: ids }));
     this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onBulkRerunOpen(): void {
+    this.store.dispatch(presetsActions.loadPresets());
+    this.showBulkRerunDialog.set(true);
+  }
+
+  protected onBulkRerunConfirm(payload: RerunPayload): void {
+    this.showBulkRerunDialog.set(false);
+    const ids = this.selectedIds();
+    if (!ids.length) { return; }
+    this.classifyService.rerun({
+      asset_ids: ids,
+      steps: payload.steps,
+      ...(payload.captionPresetId != null ? { caption_preset_id: payload.captionPresetId } : {}),
+    }).subscribe();
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onBulkRerunCancel(): void {
+    this.showBulkRerunDialog.set(false);
   }
 }
