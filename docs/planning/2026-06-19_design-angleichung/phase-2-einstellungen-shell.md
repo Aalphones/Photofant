@@ -1,6 +1,6 @@
 # Phase 2 — Einstellungen-Shell + Primitive
 
-> Rating: heikel · Status: pending
+> Rating: heikel · Status: complete (2026-06-19)
 
 Ersetzt die flache Einspalten-Hülle der Einstellungen durch das Master-Detail-Layout des Mockups und zieht **alle** Sektionen in wiederverwendbare Primitive um. Architektur-Entscheidung → **ADR-004**.
 
@@ -28,11 +28,13 @@ Die heutige `einstellungen.ts` ist **funktional korrekt verdrahtet**: Signals + 
 
 ## Checkliste
 
-- [ ] Primitive anlegen (`features/einstellungen/components/` oder `ui/`) nach `settings.css`-Maßen
-- [ ] `st-page`-Shell mit Sektions-Nav + aktivem-Sektion-Signal + Mobile-Drawer
-- [ ] Bestehende Sektionen in Primitive + Taxonomie umbauen, Verdrahtung 1:1 erhalten
-- [ ] Modell-Ordner → Sektion „Bibliothek"; Backup → „Backup & Wartung" (mit ggf. vorhandener Wartungs-View-Verlinkung)
-- [ ] ADR-004 schreiben
-- [ ] Doc-Update: ggf. `docs/routes.md` (keine Routen-Änderung erwartet — nur prüfen)
+- [x] Primitive anlegen — als CSS-Klassen in Component-Styles nach `settings.css`-Maßen (kein separates Components-Subdir, da alle in `einstellungen.ts` scoped)
+- [x] `st-page`-Shell mit Sektions-Nav + aktivem-Sektion-Signal + Mobile-Drawer (`section-open`/`section-closed`)
+- [x] Bestehende Sektionen in Primitive + Taxonomie umbauen, Verdrahtung 1:1 erhalten
+- [x] Modell-Ordner + Sammlungs-Ordner → Sektion „Bibliothek"; Backup → „Backup & Wartung"
+- [x] ADR-004 schreiben (`docs/decisions/004-einstellungen-shell.md`)
+- [x] Doc-Update: `docs/routes.md` geprüft — keine Routen-Änderung
 
 ## Report-Back
+
+Umgebaut in einem Zug: `einstellungen.ts` von flachem `settings-layout` auf `st-page` Master-Detail mit 7-Sektionen-Nav. CSS-Budget 8 kB eingehalten (kompakte Single-File-Styles, ~7,7 kB compiled). Mobile-Responsive via `:class.section-open`/`section-closed`. Alle Signals + Store-Dispatches unverändert erhalten.

@@ -9,7 +9,7 @@ Behebt die strukturellen Abweichungen zwischen Mockup (`docs/design/`) und der g
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | [Reconciliation-Sweep (Inventar)](phase-1-reconciliation-sweep.md) | standard | complete |
-| 2 | [Einstellungen-Shell + Primitive](phase-2-einstellungen-shell.md) | heikel | pending |
+| 2 | [Einstellungen-Shell + Primitive](phase-2-einstellungen-shell.md) | heikel | complete |
 | 3 | [Tags-Seite klären & angleichen](phase-3-tags-seite.md) | heikel | pending |
 | 4 | [Übrige bestätigte Abweichungen](phase-4-uebrige-abweichungen.md) | standard | pending |
 
