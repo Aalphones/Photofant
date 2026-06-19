@@ -1,109 +1,107 @@
-<div class="st-section">
-  <div class="st-section-head">
-    <h2>Verarbeitung</h2>
-    <p>Pipeline-Parameter für Import, Tagging und Caption-Erstellung.</p>
-  </div>
+<div class="verarbeitung__kopf">
+  <h2>Verarbeitung</h2>
+  <p>Pipeline-Parameter für Import, Tagging und Caption-Erstellung.</p>
+</div>
 
-  <div class="st-group-label">Auto-Pipeline</div>
-  <div class="st-group">
-    <div class="st-row top">
-      <div class="st-row-body">
-        <div class="st-row-title">Auto-Tagging (WD14)</div>
-        <div class="st-row-sub">Beim Import automatisch WD14-Tags generieren.</div>
-      </div>
-      <div class="st-row-ctrl">
-        <button
-          class="st-switch"
-          [class.on]="processingConfig().autoTag"
-          role="switch"
-          [attr.aria-checked]="processingConfig().autoTag"
-          (click)="patchProcessingConfig({ autoTag: !processingConfig().autoTag })"
-        ><i></i></button>
-      </div>
+<div class="verarbeitung__gruppen-label">Auto-Pipeline</div>
+<div class="verarbeitung__gruppe">
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Auto-Tagging (WD14)</div>
+      <div class="verarbeitung__zeile-sub">Beim Import automatisch WD14-Tags generieren.</div>
     </div>
-    <div class="st-row top">
-      <div class="st-row-body">
-        <div class="st-row-title">Auto-Caption (Florence-2)</div>
-        <div class="st-row-sub">Beim Import automatisch Bildbeschreibungen generieren.</div>
-      </div>
-      <div class="st-row-ctrl">
-        <button
-          class="st-switch"
-          [class.on]="processingConfig().autoCaption"
-          role="switch"
-          [attr.aria-checked]="processingConfig().autoCaption"
-          (click)="patchProcessingConfig({ autoCaption: !processingConfig().autoCaption })"
-        ><i></i></button>
-      </div>
-    </div>
-    <div class="st-row top">
-      <div class="st-row-body">
-        <div class="st-row-title">CLIP-Embedding</div>
-        <div class="st-row-sub">Beim Import automatisch semantische Suchdaten berechnen.</div>
-      </div>
-      <div class="st-row-ctrl">
-        <button
-          class="st-switch"
-          [class.on]="processingConfig().autoEmbed"
-          role="switch"
-          [attr.aria-checked]="processingConfig().autoEmbed"
-          (click)="patchProcessingConfig({ autoEmbed: !processingConfig().autoEmbed })"
-        ><i></i></button>
-      </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <button
+        class="verarbeitung__schalter"
+        [class.verarbeitung__schalter--an]="processingConfig().autoTag"
+        role="switch"
+        [attr.aria-checked]="processingConfig().autoTag"
+        (click)="patchProcessingConfig({ autoTag: !processingConfig().autoTag })"
+      ><i></i></button>
     </div>
   </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Auto-Caption (Florence-2)</div>
+      <div class="verarbeitung__zeile-sub">Beim Import automatisch Bildbeschreibungen generieren.</div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <button
+        class="verarbeitung__schalter"
+        [class.verarbeitung__schalter--an]="processingConfig().autoCaption"
+        role="switch"
+        [attr.aria-checked]="processingConfig().autoCaption"
+        (click)="patchProcessingConfig({ autoCaption: !processingConfig().autoCaption })"
+      ><i></i></button>
+    </div>
+  </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">CLIP-Embedding</div>
+      <div class="verarbeitung__zeile-sub">Beim Import automatisch semantische Suchdaten berechnen.</div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <button
+        class="verarbeitung__schalter"
+        [class.verarbeitung__schalter--an]="processingConfig().autoEmbed"
+        role="switch"
+        [attr.aria-checked]="processingConfig().autoEmbed"
+        (click)="patchProcessingConfig({ autoEmbed: !processingConfig().autoEmbed })"
+      ><i></i></button>
+    </div>
+  </div>
+</div>
 
-  <div class="st-group-label">Qualitätsfilter</div>
-  <div class="st-group">
-    <div class="st-row top">
-      <div class="st-row-body">
-        <div class="st-row-title">Mindest-Konfidenz (WD14)</div>
-        <div class="st-row-sub">Tags unterhalb dieses Wertes werden verworfen. Default: 0.5</div>
-      </div>
-      <div class="st-row-ctrl">
-        <input
-          class="st-num"
-          type="number"
-          min="0"
-          max="1"
-          step="0.05"
-          [value]="processingConfig().minProbability"
-          (change)="onMinProbabilityChange($any($event.target))"
-        >
-      </div>
+<div class="verarbeitung__gruppen-label">Qualitätsfilter</div>
+<div class="verarbeitung__gruppe">
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Mindest-Konfidenz (WD14)</div>
+      <div class="verarbeitung__zeile-sub">Tags unterhalb dieses Wertes werden verworfen. Default: 0.5</div>
     </div>
-    <div class="st-row top">
-      <div class="st-row-body">
-        <div class="st-row-title">Max. Tags pro Bild</div>
-        <div class="st-row-sub">Maximale Anzahl automatisch gesetzter Tags, nach Konfidenz sortiert. Default: 30</div>
-      </div>
-      <div class="st-row-ctrl">
-        <input
-          class="st-num"
-          type="number"
-          min="1"
-          max="200"
-          [value]="processingConfig().maxTags"
-          (change)="onMaxTagsChange($any($event.target))"
-        >
-      </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <input
+        class="verarbeitung__zahleneingabe"
+        type="number"
+        min="0"
+        max="1"
+        step="0.05"
+        [value]="processingConfig().minProbability"
+        (change)="onMinProbabilityChange($any($event.target))"
+      >
     </div>
-    <div class="st-row top">
-      <div class="st-row-body">
-        <div class="st-row-title">Mindestschärfe (Laplacian-Varianz)</div>
-        <div class="st-row-sub">Bilder unterhalb gelten als unscharf. Default: 200</div>
-      </div>
-      <div class="st-row-ctrl">
-        <input
-          class="st-num"
-          type="number"
-          min="0"
-          max="1000"
-          step="10"
-          [value]="processingConfig().blurThreshold"
-          (change)="onBlurThresholdChange($any($event.target))"
-        >
-      </div>
+  </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Max. Tags pro Bild</div>
+      <div class="verarbeitung__zeile-sub">Maximale Anzahl automatisch gesetzter Tags, nach Konfidenz sortiert. Default: 30</div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <input
+        class="verarbeitung__zahleneingabe"
+        type="number"
+        min="1"
+        max="200"
+        [value]="processingConfig().maxTags"
+        (change)="onMaxTagsChange($any($event.target))"
+      >
+    </div>
+  </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Mindestschärfe (Laplacian-Varianz)</div>
+      <div class="verarbeitung__zeile-sub">Bilder unterhalb gelten als unscharf. Default: 200</div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <input
+        class="verarbeitung__zahleneingabe"
+        type="number"
+        min="0"
+        max="1000"
+        step="10"
+        [value]="processingConfig().blurThreshold"
+        (change)="onBlurThresholdChange($any($event.target))"
+      >
     </div>
   </div>
 </div>

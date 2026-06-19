@@ -1,10 +1,19 @@
 @use '../st-shared' as *;
+:host { display: block; max-width: 660px; }
+.tags__kopf { margin-bottom: 22px; }
+.tags__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.tags__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+.tags__schaltfläche { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 9px; font-size: 13px; font-weight: 600; }
+.tags__schaltfläche--akzent { background: var(--accent); color: #fff; }
+.tags__schaltfläche--klären { background: var(--surface); border: 1px solid var(--line); color: var(--text); height: 32px; width: 32px; padding: 0; }
 .tags-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .tags-search { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 5px 10px; color: var(--text-3); flex: 1; max-width: 280px; }
 .tags-search:focus-within { border-color: var(--accent-line); color: var(--text-2); }
 .tags-search-input { border: none; background: transparent; font-size: 13px; color: var(--text); outline: none; width: 100%; }
 .tags-list { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
 .tags-list-head { display: grid; grid-template-columns: 1.5rem 1fr 6rem 6rem 4rem; padding: 6px 14px; background: var(--bg-2); border-bottom: 1px solid var(--line); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-3); }
+.tags-list-head__anzahl { text-align: right; }
+.tags-list-head__alias { text-align: center; }
 .tags-row { display: grid; grid-template-columns: 1.5rem 1fr 6rem 6rem 4rem; align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--line); }
 .tags-row:last-child { border-bottom: none; }
 .tags-row:hover { background: var(--surface); }

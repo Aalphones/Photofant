@@ -1,15 +1,15 @@
-<div class="st-page">
+<div class="einstellungen__wrapper">
 
   <!-- ── linke Sektions-Nav ──────────────────────────────── -->
-  <aside class="st-nav" [class.section-open]="mobileOpen()">
-    <div class="st-nav-title">Einstellungen</div>
+  <aside class="einstellungen__nav" [class.einstellungen__nav--offen]="mobileOpen()">
+    <div class="einstellungen__nav-title">Einstellungen</div>
     @for (sect of sections; track sect.id) {
       <button
-        class="st-nav-item"
-        [class.on]="activeSection() === sect.id"
+        class="einstellungen__nav-item"
+        [class.einstellungen__nav-item--aktiv]="activeSection() === sect.id"
         (click)="goSection(sect.id)"
       >
-        <div class="st-nav-ico">
+        <div class="einstellungen__nav-icon">
           <pf-icon [name]="sect.icon" [size]="16" />
         </div>
         {{ sect.label }}
@@ -18,10 +18,10 @@
   </aside>
 
   <!-- ── rechter Inhaltsbereich ──────────────────────────── -->
-  <div class="st-body" [class.section-closed]="!mobileOpen()">
+  <div class="einstellungen__body" [class.einstellungen__body--verborgen]="!mobileOpen()">
 
     <!-- Mobile: Zurück-Button -->
-    <div class="st-nav-back" (click)="goBack()">
+    <div class="einstellungen__nav-back" (click)="goBack()">
       <pf-icon name="arrowLeft" [size]="16" />
       Einstellungen
     </div>
@@ -37,5 +37,5 @@
       @case ('info')         { <pf-einstellungen-info /> }
     }
 
-  </div><!-- /st-body -->
-</div><!-- /st-page -->
+  </div><!-- /einstellungen__body -->
+</div><!-- /einstellungen__wrapper -->

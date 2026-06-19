@@ -1,107 +1,105 @@
-<div class="st-section">
-  <div class="st-section-head">
-    <h2>Tags</h2>
-    <p>Tags global umbenennen, zusammenführen und Alias-Beziehungen verwalten.</p>
+<div class="tags__kopf">
+  <h2>Tags</h2>
+  <p>Tags global umbenennen, zusammenführen und Alias-Beziehungen verwalten.</p>
+</div>
+
+<div class="tags-toolbar">
+  <div class="tags-search">
+    <pf-icon name="search" [size]="14" />
+    <input
+      class="tags-search-input"
+      [value]="tagSearchQuery()"
+      (input)="tagSearchQuery.set($any($event.target).value)"
+      placeholder="Tags suchen…"
+    />
   </div>
-
-  <div class="tags-toolbar">
-    <div class="tags-search">
-      <pf-icon name="search" [size]="14" />
-      <input
-        class="tags-search-input"
-        [value]="tagSearchQuery()"
-        (input)="tagSearchQuery.set($any($event.target).value)"
-        placeholder="Tags suchen…"
-      />
-    </div>
-    @if (tagMergeSelected().size >= 2) {
-      <button class="st-btn accent" (click)="openTagMergeDialog()">
-        <pf-icon name="layers" [size]="14" />
-        {{ tagMergeSelected().size }} zusammenführen
-      </button>
-    }
-    @if (tagMergeSelected().size > 0) {
-      <button class="st-btn ghost" style="height:32px;width:32px;padding:0" (click)="clearTagMergeSelection()">
-        <pf-icon name="x" [size]="14" />
-      </button>
-    }
-  </div>
-
-  @if (isTagsLoading()) {
-    <div class="group-loading"><span class="spinner"></span> Lade Tags…</div>
-  } @else {
-    <div class="tags-list">
-      <div class="tags-list-head">
-        <span></span>
-        <span>Name</span>
-        <span style="text-align:right">Verwendungen</span>
-        <span style="text-align:center">Alias</span>
-        <span></span>
-      </div>
-
-      @for (tag of filteredTagsList(); track tag.id) {
-        <div
-          class="tags-row"
-          [class.tags-row--merge-sel]="isTagMergeSelected(tag.id)"
-          [class.tags-row--alias]="tag.alias_of != null"
-        >
-          <button
-            class="tags-merge-check"
-            [class.tags-merge-check--on]="isTagMergeSelected(tag.id)"
-            (click)="toggleTagMergeSelect(tag.id)"
-            [attr.aria-pressed]="isTagMergeSelected(tag.id)"
-            [attr.aria-label]="'Tag für Merge auswählen'"
-          >
-            @if (isTagMergeSelected(tag.id)) {
-              <pf-icon name="check" [size]="11" />
-            }
-          </button>
-
-          <div class="tags-name-col">
-            @if (renamingTagId() === tag.id) {
-              <input
-                class="tags-rename-input"
-                [value]="renameDraftText()"
-                (input)="renameDraftText.set($any($event.target).value)"
-                (keydown)="onTagRenameKeyDown($event)"
-                (blur)="confirmTagRename()"
-                autofocus
-              />
-            } @else {
-              <span class="tags-name" (dblclick)="startTagRename(tag)">
-                {{ tag.name.replaceAll('_', ' ') }}
-              </span>
-              @if (tag.alias_of != null) {
-                <span class="tags-alias-badge">alias</span>
-              }
-            }
-          </div>
-
-          <span class="tags-count">{{ tag.count }}</span>
-
-          <span class="tags-alias">
-            @if (tag.alias_of != null) { → #{{ tag.alias_of }} }
-          </span>
-
-          <div class="tags-actions">
-            <button
-              class="tags-action-btn"
-              (click)="startTagRename(tag)"
-              aria-label="Umbenennen"
-              title="Umbenennen"
-            >
-              <pf-icon name="pencil" [size]="13" />
-            </button>
-          </div>
-        </div>
-      }
-
-      @if (filteredTagsList().length === 0) {
-        <div class="group-empty">Keine Tags gefunden.</div>
-      }
-    </div>
+  @if (tagMergeSelected().size >= 2) {
+    <button class="tags__schaltfläche tags__schaltfläche--akzent" (click)="openTagMergeDialog()">
+      <pf-icon name="layers" [size]="14" />
+      {{ tagMergeSelected().size }} zusammenführen
+    </button>
+  }
+  @if (tagMergeSelected().size > 0) {
+    <button class="tags__schaltfläche tags__schaltfläche--klären" (click)="clearTagMergeSelection()">
+      <pf-icon name="x" [size]="14" />
+    </button>
   }
 </div>
+
+@if (isTagsLoading()) {
+  <div class="group-loading"><span class="spinner"></span> Lade Tags…</div>
+} @else {
+  <div class="tags-list">
+    <div class="tags-list-head">
+      <span></span>
+      <span>Name</span>
+      <span class="tags-list-head__anzahl">Verwendungen</span>
+      <span class="tags-list-head__alias">Alias</span>
+      <span></span>
+    </div>
+
+    @for (tag of filteredTagsList(); track tag.id) {
+      <div
+        class="tags-row"
+        [class.tags-row--merge-sel]="isTagMergeSelected(tag.id)"
+        [class.tags-row--alias]="tag.alias_of != null"
+      >
+        <button
+          class="tags-merge-check"
+          [class.tags-merge-check--on]="isTagMergeSelected(tag.id)"
+          (click)="toggleTagMergeSelect(tag.id)"
+          [attr.aria-pressed]="isTagMergeSelected(tag.id)"
+          [attr.aria-label]="'Tag für Merge auswählen'"
+        >
+          @if (isTagMergeSelected(tag.id)) {
+            <pf-icon name="check" [size]="11" />
+          }
+        </button>
+
+        <div class="tags-name-col">
+          @if (renamingTagId() === tag.id) {
+            <input
+              class="tags-rename-input"
+              [value]="renameDraftText()"
+              (input)="renameDraftText.set($any($event.target).value)"
+              (keydown)="onTagRenameKeyDown($event)"
+              (blur)="confirmTagRename()"
+              autofocus
+            />
+          } @else {
+            <span class="tags-name" (dblclick)="startTagRename(tag)">
+              {{ tag.name.replaceAll('_', ' ') }}
+            </span>
+            @if (tag.alias_of != null) {
+              <span class="tags-alias-badge">alias</span>
+            }
+          }
+        </div>
+
+        <span class="tags-count">{{ tag.count }}</span>
+
+        <span class="tags-alias">
+          @if (tag.alias_of != null) { → #{{ tag.alias_of }} }
+        </span>
+
+        <div class="tags-actions">
+          <button
+            class="tags-action-btn"
+            (click)="startTagRename(tag)"
+            aria-label="Umbenennen"
+            title="Umbenennen"
+          >
+            <pf-icon name="pencil" [size]="13" />
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (filteredTagsList().length === 0) {
+      <div class="group-empty">Keine Tags gefunden.</div>
+    }
+  </div>
+}
 
 @if (showTagMergeDialog()) {
   <div class="tags__dialog-scrim" (click)="cancelTagMerge()">

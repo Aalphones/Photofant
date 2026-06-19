@@ -71,19 +71,27 @@ Diese Klassen werden innerhalb der Child-Komponenten verwendet. Jede Child-Kompo
 
 ### Implementation
 
-- [ ] Shell (`einstellungen.html` / `einstellungen.scss`) — alle Klassen nach Mapping umbenennen
-- [ ] `bibliothek` — Klassen umbenennen, SCSS anpassen
-- [ ] `verarbeitung` — Klassen umbenennen, SCSS anpassen
-- [ ] `darstellung` — Klassen umbenennen, SCSS anpassen
-- [ ] `bearbeitung` — Klassen umbenennen, SCSS anpassen
-- [ ] `tastaturkuerzel` — Klassen umbenennen, SCSS anpassen
-- [ ] `backup-wartung` — Klassen umbenennen, SCSS anpassen
-- [ ] `info` — Klassen umbenennen, SCSS anpassen
-- [ ] Grep auf `st-`, `sp-val`, `sp-btn`, `sc-` — kein Treffer mehr in `features/einstellungen/`
-- [ ] `ng build` fehlerfrei
+- [x] Shell (`einstellungen.html` / `einstellungen.scss`) — alle Klassen nach Mapping umbenennen
+- [x] `bibliothek` — Klassen umbenennen, SCSS anpassen
+- [x] `verarbeitung` — Klassen umbenennen, SCSS anpassen
+- [x] `darstellung` — Klassen umbenennen, SCSS anpassen
+- [x] `bearbeitung` — Klassen umbenennen, SCSS anpassen
+- [x] `tastaturkuerzel` — Klassen umbenennen, SCSS anpassen
+- [x] `backup-wartung` — Klassen umbenennen, SCSS anpassen
+- [x] `info` — Klassen umbenennen, SCSS anpassen
+- [x] Grep auf `st-`, `sp-val`, `sp-btn`, `sc-` — kein Treffer mehr in `features/einstellungen/`
+- [x] `ng build` fehlerfrei
 
 ### Docs
 
-- [ ] Keine Doc-Updates nötig
+- [x] Keine Doc-Updates nötig
 
 ## Report-Back
+
+Phase 3 complete (2026-06-19).
+
+- Shell: `st-*` → `einstellungen__*`; `.on`/`.section-open`/`.section-closed` → BEM-Modifier
+- 8 Child-Komponenten: outer `<div class="st-section">` entfernt (`:host` übernimmt), alle `st-*`/`sp-*`/`sc-*` → komponentenspezifisches BEM (`bibliothek__*`, `verarbeitung__*`, …)
+- `_st-shared.scss`: auf Utilities ohne `st-`-Präfix getrimmt (`code`, `.spinner`, `.group-loading`, `.group-empty`, `.error-banner`)
+- Inline-Styles entfernt: `bearbeitung` (Preset-Buttons → `--klein`-Modifier), `tags` (Listenheader → `tags-list-head__anzahl`/`__alias`)
+- `ng build` grün; Budget-Warning in `tags.scss` (5.6 KB > 4 KB) war vorher schon da — kein Regression

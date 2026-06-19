@@ -1,19 +1,19 @@
 :host { display: block; height: 100%; overflow: hidden; }
-.st-page { display: flex; height: 100%; overflow: hidden; }
-.st-nav { width: 220px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; padding: 16px 10px 24px; }
-.st-nav-title { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 2px 8px 10px; }
-.st-nav-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 10px; border-radius: var(--radius); font-size: 13.5px; font-weight: 500; color: var(--text-2); }
-.st-nav-item:hover { background: var(--surface); color: var(--text); }
-.st-nav-item.on { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
-.st-nav-item.on:hover { background: var(--accent-weak); color: var(--accent); }
-.st-nav-ico { width: 30px; height: 30px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--surface); color: var(--text-3); }
-.st-nav-item.on .st-nav-ico { background: var(--accent); color: #fff; }
-.st-nav-back { display: none; }
-.st-body { flex: 1; min-width: 0; overflow-y: auto; padding: 28px 32px 60px; }
+.einstellungen__wrapper { display: flex; height: 100%; overflow: hidden; }
+.einstellungen__nav { width: 220px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; padding: 16px 10px 24px; }
+.einstellungen__nav-title { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 2px 8px 10px; }
+.einstellungen__nav-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 10px; border-radius: var(--radius); font-size: 13.5px; font-weight: 500; color: var(--text-2); }
+.einstellungen__nav-item:hover { background: var(--surface); color: var(--text); }
+.einstellungen__nav-item--aktiv { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+.einstellungen__nav-item--aktiv:hover { background: var(--accent-weak); color: var(--accent); }
+.einstellungen__nav-icon { width: 30px; height: 30px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--surface); color: var(--text-3); }
+.einstellungen__nav-item--aktiv .einstellungen__nav-icon { background: var(--accent); color: #fff; }
+.einstellungen__nav-back { display: none; }
+.einstellungen__body { flex: 1; min-width: 0; overflow-y: auto; padding: 28px 32px 60px; }
 @media (max-width: 860px) {
-  .st-page { flex-direction: column; }
-  .st-nav { width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
-  .st-nav.section-open { display: none; }
-  .st-body.section-closed { display: none; }
-  .st-nav-back { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent); padding: 0 0 14px; cursor: pointer; }
+  .einstellungen__wrapper { flex-direction: column; }
+  .einstellungen__nav { width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
+  .einstellungen__nav--offen { display: none; }
+  .einstellungen__body--verborgen { display: none; }
+  .einstellungen__nav-back { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent); padding: 0 0 14px; cursor: pointer; }
 }

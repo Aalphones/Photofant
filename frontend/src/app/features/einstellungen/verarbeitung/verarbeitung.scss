@@ -1,1 +1,24 @@
 @use '../st-shared' as *;
+:host { display: block; max-width: 660px; }
+.verarbeitung__kopf { margin-bottom: 22px; }
+.verarbeitung__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.verarbeitung__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+.verarbeitung__gruppen-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 0 2px 8px; }
+.verarbeitung__gruppe { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+.verarbeitung__zeile { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.verarbeitung__zeile:last-child { border-bottom: none; }
+.verarbeitung__zeile--oben { align-items: flex-start; }
+.verarbeitung__zeile-inhalt { flex: 1; min-width: 0; }
+.verarbeitung__zeile-titel { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.verarbeitung__zeile-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.45; }
+.verarbeitung__zeile-steuerung { flex: none; display: flex; align-items: center; gap: 10px; }
+.verarbeitung__schalter { position: relative; width: 42px; height: 24px; border-radius: 999px; flex: none; cursor: pointer; background: var(--line-2); border: 1px solid var(--line-2); }
+.verarbeitung__schalter--an { background: var(--accent); border-color: var(--accent); }
+.verarbeitung__schalter > i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .16s; }
+.verarbeitung__schalter--an > i { transform: translateX(18px); }
+.verarbeitung__zahleneingabe { height: 32px; width: 90px; padding: 0 8px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-s); color: var(--text); font-size: 13px; text-align: right; outline: none; }
+.verarbeitung__zahleneingabe:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+@media (max-width: 860px) {
+  .verarbeitung__zeile { flex-wrap: wrap; gap: 8px; }
+  .verarbeitung__zeile-steuerung { width: 100%; }
+}

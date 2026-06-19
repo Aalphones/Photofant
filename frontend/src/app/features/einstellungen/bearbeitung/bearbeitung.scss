@@ -1,4 +1,25 @@
 @use '../st-shared' as *;
+:host { display: block; max-width: 660px; }
+.bearbeitung__kopf { margin-bottom: 22px; }
+.bearbeitung__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.bearbeitung__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+.bearbeitung__gruppe { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+.bearbeitung__zeile { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.bearbeitung__zeile:last-child { border-bottom: none; }
+.bearbeitung__zeile-inhalt { flex: 1; min-width: 0; }
+.bearbeitung__zeile-titel { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.bearbeitung__zeile-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.45; }
+.bearbeitung__zeile-steuerung { flex: none; display: flex; align-items: center; gap: 10px; }
+.bearbeitung__schaltfläche { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 9px; font-size: 13px; font-weight: 600; }
+.bearbeitung__schaltfläche--akzent { background: var(--accent); color: #fff; }
+.bearbeitung__schaltfläche--rahmen { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+.bearbeitung__schaltfläche--rahmen:hover { background: var(--surface-hover); }
+.bearbeitung__schaltfläche--gefahr { background: var(--surface); border: 1px solid var(--line); color: var(--danger); }
+.bearbeitung__schaltfläche--gefahr:hover { background: var(--danger-weak); border-color: var(--danger); }
+.bearbeitung__schaltfläche--klein { height: 28px; padding: 0 10px; font-size: 12px; }
+.bearbeitung__schaltfläche:disabled { opacity: .45; }
+.bearbeitung__hinweis { display: flex; gap: 9px; padding: 11px 13px; border-radius: var(--radius); font-size: 12px; color: var(--text-2); line-height: 1.5; margin-bottom: 20px; }
+.bearbeitung__hinweis--info { background: var(--bg-2); border: 1px solid var(--line); }
 .presets-list { list-style: none; margin: 0; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 1px; }
 .preset-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
 .preset-info { display: flex; align-items: center; gap: 8px; min-width: 0; }

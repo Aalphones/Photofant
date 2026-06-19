@@ -1,1 +1,24 @@
 @use '../st-shared' as *;
+:host { display: block; max-width: 660px; }
+.darstellung__kopf { margin-bottom: 22px; }
+.darstellung__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.darstellung__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+.darstellung__gruppen-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 0 2px 8px; }
+.darstellung__gruppe { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+.darstellung__zeile { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.darstellung__zeile:last-child { border-bottom: none; }
+.darstellung__zeile--oben { align-items: flex-start; }
+.darstellung__zeile-inhalt { flex: 1; min-width: 0; }
+.darstellung__zeile-titel { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.darstellung__zeile-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.45; }
+.darstellung__zeile-steuerung { flex: none; display: flex; align-items: center; gap: 10px; }
+.darstellung__schalter { position: relative; width: 42px; height: 24px; border-radius: 999px; flex: none; cursor: pointer; background: var(--line-2); border: 1px solid var(--line-2); }
+.darstellung__schalter--an { background: var(--accent); border-color: var(--accent); }
+.darstellung__schalter > i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .16s; }
+.darstellung__schalter--an > i { transform: translateX(18px); }
+.darstellung__auswahl { appearance: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s); color: var(--text); font-size: 13px; padding: 7px 28px 7px 11px; outline: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6' fill='%23888'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; background-size: 10px 6px; cursor: pointer; min-width: 130px; }
+.darstellung__auswahl:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+@media (max-width: 860px) {
+  .darstellung__zeile { flex-wrap: wrap; gap: 8px; }
+  .darstellung__zeile-steuerung { width: 100%; }
+}

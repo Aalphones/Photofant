@@ -1,57 +1,55 @@
-<div class="st-section">
-  <div class="st-section-head">
-    <h2>Bearbeitung</h2>
-    <p>Benannte, wiederverwendbare Captioner-Presets verwalten.</p>
-  </div>
-
-  @if (captionerModel() != null) {
-    <div class="st-group">
-      <div class="st-row">
-        <div class="st-row-body">
-          <div class="st-row-title">Presets für {{ captionerModel()!.name }}</div>
-          <div class="st-row-sub">Beim Caption-Lauf wählst du Modell + Preset.</div>
-        </div>
-        <div class="st-row-ctrl">
-          <button class="st-btn accent" (click)="openCreateDialog()">Neu</button>
-        </div>
-      </div>
-
-      @if (isLoadingPresets()) {
-        <div class="group-loading">
-          <span class="spinner"></span> Lade…
-        </div>
-      } @else if (presets().length === 0) {
-        <p class="group-empty">Noch keine Presets vorhanden.</p>
-      } @else {
-        <ul class="presets-list">
-          @for (preset of presets(); track preset.id) {
-            <li class="preset-row">
-              <div class="preset-info">
-                <span class="preset-name">{{ preset.name }}</span>
-                @if (preset.is_default) {
-                  <span class="preset-badge">Standard</span>
-                }
-                <span class="preset-meta">{{ presetSummary(preset) }}</span>
-              </div>
-              <div class="preset-actions">
-                @if (!preset.is_default) {
-                  <button class="st-btn ghost" style="height:28px;padding:0 10px;font-size:12px" (click)="setDefault(preset)">Standard</button>
-                }
-                <button class="st-btn ghost" style="height:28px;padding:0 10px;font-size:12px" (click)="openEditDialog(preset)">Bearbeiten</button>
-                <button class="st-btn danger" style="height:28px;padding:0 10px;font-size:12px" (click)="deletePreset(preset)">Löschen</button>
-              </div>
-            </li>
-          }
-        </ul>
-      }
-    </div>
-  } @else {
-    <div class="st-note info">
-      <pf-icon name="info" [size]="15" />
-      <span>Kein Captioner-Modell aktiv. Lade ein Florence-2-Modell in der Modell-Verwaltung, um Presets anzulegen.</span>
-    </div>
-  }
+<div class="bearbeitung__kopf">
+  <h2>Bearbeitung</h2>
+  <p>Benannte, wiederverwendbare Captioner-Presets verwalten.</p>
 </div>
+
+@if (captionerModel() != null) {
+  <div class="bearbeitung__gruppe">
+    <div class="bearbeitung__zeile">
+      <div class="bearbeitung__zeile-inhalt">
+        <div class="bearbeitung__zeile-titel">Presets für {{ captionerModel()!.name }}</div>
+        <div class="bearbeitung__zeile-sub">Beim Caption-Lauf wählst du Modell + Preset.</div>
+      </div>
+      <div class="bearbeitung__zeile-steuerung">
+        <button class="bearbeitung__schaltfläche bearbeitung__schaltfläche--akzent" (click)="openCreateDialog()">Neu</button>
+      </div>
+    </div>
+
+    @if (isLoadingPresets()) {
+      <div class="group-loading">
+        <span class="spinner"></span> Lade…
+      </div>
+    } @else if (presets().length === 0) {
+      <p class="group-empty">Noch keine Presets vorhanden.</p>
+    } @else {
+      <ul class="presets-list">
+        @for (preset of presets(); track preset.id) {
+          <li class="preset-row">
+            <div class="preset-info">
+              <span class="preset-name">{{ preset.name }}</span>
+              @if (preset.is_default) {
+                <span class="preset-badge">Standard</span>
+              }
+              <span class="preset-meta">{{ presetSummary(preset) }}</span>
+            </div>
+            <div class="preset-actions">
+              @if (!preset.is_default) {
+                <button class="bearbeitung__schaltfläche bearbeitung__schaltfläche--rahmen bearbeitung__schaltfläche--klein" (click)="setDefault(preset)">Standard</button>
+              }
+              <button class="bearbeitung__schaltfläche bearbeitung__schaltfläche--rahmen bearbeitung__schaltfläche--klein" (click)="openEditDialog(preset)">Bearbeiten</button>
+              <button class="bearbeitung__schaltfläche bearbeitung__schaltfläche--gefahr bearbeitung__schaltfläche--klein" (click)="deletePreset(preset)">Löschen</button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+} @else {
+  <div class="bearbeitung__hinweis bearbeitung__hinweis--info">
+    <pf-icon name="info" [size]="15" />
+    <span>Kein Captioner-Modell aktiv. Lade ein Florence-2-Modell in der Modell-Verwaltung, um Presets anzulegen.</span>
+  </div>
+}
 
 @if (showPresetDialog() && captionerCapabilities() != null) {
   <pf-preset-dialog

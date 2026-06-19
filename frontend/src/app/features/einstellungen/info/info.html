@@ -1,71 +1,69 @@
-<div class="st-section">
-  <div class="st-section-head">
-    <h2>Info</h2>
-    <p>Version, Laufzeitumgebung und Systemdetails.</p>
-  </div>
+<div class="info__kopf">
+  <h2>Info</h2>
+  <p>Version, Laufzeitumgebung und Systemdetails.</p>
+</div>
 
-  <div class="st-group">
-    @if (isLoadingAppInfo()) {
-      <div class="group-loading">
-        <span class="spinner"></span> Lade…
-      </div>
-    } @else if (appInfo() != null) {
-      <div class="info-note">Keine Netzwerkverbindung — alle Daten lokal.</div>
-      <dl class="info-grid">
-        <dt>Version</dt>
-        <dd><code>{{ appInfo()!.version }}</code></dd>
+<div class="info__gruppe">
+  @if (isLoadingAppInfo()) {
+    <div class="group-loading">
+      <span class="spinner"></span> Lade…
+    </div>
+  } @else if (appInfo() != null) {
+    <div class="info-note">Keine Netzwerkverbindung — alle Daten lokal.</div>
+    <dl class="info-grid">
+      <dt>Version</dt>
+      <dd><code>{{ appInfo()!.version }}</code></dd>
 
-        <dt>Python</dt>
-        <dd><code>{{ appInfo()!.python_version.split(' ')[0] }}</code></dd>
+      <dt>Python</dt>
+      <dd><code>{{ appInfo()!.python_version.split(' ')[0] }}</code></dd>
 
-        <dt>ONNX Runtime</dt>
-        <dd><code>{{ appInfo()!.onnx_version }}</code></dd>
+      <dt>ONNX Runtime</dt>
+      <dd><code>{{ appInfo()!.onnx_version }}</code></dd>
 
-        <dt>Letzte Migration</dt>
-        <dd><code>{{ appInfo()!.last_migration ?? '–' }}</code></dd>
+      <dt>Letzte Migration</dt>
+      <dd><code>{{ appInfo()!.last_migration ?? '–' }}</code></dd>
 
-        <dt>Datenbank</dt>
+      <dt>Datenbank</dt>
+      <dd>
+        <code>{{ appInfo()!.db_path }}</code>
+        <span class="info-meta">{{ formatSize(appInfo()!.db_size_bytes) }}</span>
+      </dd>
+
+      <dt>Thumbnail-Cache</dt>
+      <dd>
+        <code>{{ appInfo()!.cache_db_path }}</code>
+        <span class="info-meta">{{ formatSize(appInfo()!.cache_db_size_bytes) }}</span>
+      </dd>
+
+      @if (appInfo()!.gpu_name != null) {
+        <dt>GPU</dt>
         <dd>
-          <code>{{ appInfo()!.db_path }}</code>
-          <span class="info-meta">{{ formatSize(appInfo()!.db_size_bytes) }}</span>
-        </dd>
-
-        <dt>Thumbnail-Cache</dt>
-        <dd>
-          <code>{{ appInfo()!.cache_db_path }}</code>
-          <span class="info-meta">{{ formatSize(appInfo()!.cache_db_size_bytes) }}</span>
-        </dd>
-
-        @if (appInfo()!.gpu_name != null) {
-          <dt>GPU</dt>
-          <dd>
-            <code>{{ appInfo()!.gpu_name }}</code>
-            @if (appInfo()!.vram_gb != null) {
-              <span class="info-meta">{{ appInfo()!.vram_gb }} GB VRAM</span>
-            }
-          </dd>
-          @if (appInfo()!.cuda_version != null) {
-            <dt>CUDA</dt>
-            <dd><code>{{ appInfo()!.cuda_version }}</code></dd>
+          <code>{{ appInfo()!.gpu_name }}</code>
+          @if (appInfo()!.vram_gb != null) {
+            <span class="info-meta">{{ appInfo()!.vram_gb }} GB VRAM</span>
           }
+        </dd>
+        @if (appInfo()!.cuda_version != null) {
+          <dt>CUDA</dt>
+          <dd><code>{{ appInfo()!.cuda_version }}</code></dd>
         }
+      }
 
-        @if (objectKeys(appInfo()!.env_flags).length > 0) {
-          <dt>Env-Flags</dt>
-          <dd>
-            @for (key of objectKeys(appInfo()!.env_flags); track key) {
-              <div class="info-flag"><code>{{ key }}={{ appInfo()!.env_flags[key] }}</code></div>
-            }
-          </dd>
-        }
-      </dl>
-    } @else {
-      <p class="group-empty">Info konnte nicht geladen werden.</p>
-    }
-  </div>
+      @if (objectKeys(appInfo()!.env_flags).length > 0) {
+        <dt>Env-Flags</dt>
+        <dd>
+          @for (key of objectKeys(appInfo()!.env_flags); track key) {
+            <div class="info-flag"><code>{{ key }}={{ appInfo()!.env_flags[key] }}</code></div>
+          }
+        </dd>
+      }
+    </dl>
+  } @else {
+    <p class="group-empty">Info konnte nicht geladen werden.</p>
+  }
+</div>
 
-  <div class="st-note accent">
-    <pf-icon name="shield" [size]="15" />
-    <span>Kein Netzwerkverkehr zur Laufzeit. Alle Daten bleiben lokal. Keine Authentifizierung, kein Account, keine Telemetrie.</span>
-  </div>
+<div class="info__hinweis info__hinweis--akzent">
+  <pf-icon name="shield" [size]="15" />
+  <span>Kein Netzwerkverkehr zur Laufzeit. Alle Daten bleiben lokal. Keine Authentifizierung, kein Account, keine Telemetrie.</span>
 </div>

@@ -1,4 +1,11 @@
 @use '../st-shared' as *;
+:host { display: block; max-width: 660px; }
+.info__kopf { margin-bottom: 22px; }
+.info__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.info__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+.info__gruppe { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+.info__hinweis { display: flex; gap: 9px; padding: 11px 13px; border-radius: var(--radius); font-size: 12px; color: var(--text-2); line-height: 1.5; margin-bottom: 20px; }
+.info__hinweis--akzent { background: var(--accent-weak); border: 1px solid var(--accent-line); }
 .info-note { font-size: 11px; color: var(--text-3); padding: 12px 16px 0; }
 .info-grid { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; margin: 0; padding: 12px 16px; }
 .info-grid dt { font-size: 12px; color: var(--text-3); align-self: start; padding-top: 2px; }

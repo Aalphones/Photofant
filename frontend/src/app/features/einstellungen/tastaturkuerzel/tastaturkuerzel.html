@@ -1,29 +1,27 @@
-<div class="st-section">
-  <div class="st-section-head">
-    <h2>Tastaturkürzel</h2>
-    <p>Klicke auf einen Eintrag, um ihn neu zu belegen. Dann die gewünschte Taste drücken.</p>
-  </div>
+<div class="tastaturkuerzel__kopf">
+  <h2>Tastaturkürzel</h2>
+  <p>Klicke auf einen Eintrag, um ihn neu zu belegen. Dann die gewünschte Taste drücken.</p>
+</div>
 
-  <div class="st-group">
-    @for (row of shortcutRows; track row.action) {
-      <div class="st-sc-row" [class.editing]="listeningAction() === row.action">
-        <div class="st-sc-action">{{ row.label }}</div>
-        <div class="st-sc-keys">
-          @if (listeningAction() === row.action) {
-            <span class="st-sc-listening">Taste drücken …</span>
-          } @else {
-            <button
-              class="st-key"
-              title="Klicken um Taste zu ändern"
-              (click)="startListening(row.action)"
-            >{{ formatKeys(resolvedShortcuts().get(row.action)) }}</button>
-          }
-        </div>
+<div class="tastaturkuerzel__gruppe">
+  @for (row of shortcutRows; track row.action) {
+    <div class="tastaturkuerzel__zeile" [class.tastaturkuerzel__zeile--aktiv]="listeningAction() === row.action">
+      <div class="tastaturkuerzel__aktion">{{ row.label }}</div>
+      <div class="tastaturkuerzel__tasten">
+        @if (listeningAction() === row.action) {
+          <span class="tastaturkuerzel__warte-hinweis">Taste drücken …</span>
+        } @else {
+          <button
+            class="tastaturkuerzel__taste"
+            title="Klicken um Taste zu ändern"
+            (click)="startListening(row.action)"
+          >{{ formatKeys(resolvedShortcuts().get(row.action)) }}</button>
+        }
       </div>
-    }
-  </div>
+    </div>
+  }
+</div>
 
-  <div class="shortcuts-footer">
-    <button class="st-btn ghost" (click)="resetShortcuts()">Auf Standard zurücksetzen</button>
-  </div>
+<div class="tastaturkuerzel__fusszeile">
+  <button class="tastaturkuerzel__schaltfläche tastaturkuerzel__schaltfläche--rahmen" (click)="resetShortcuts()">Auf Standard zurücksetzen</button>
 </div>
