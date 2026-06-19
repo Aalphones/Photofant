@@ -7,6 +7,9 @@
 **Abgeschlossen:**
 - `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)
 
+**Nächster Plan (nach Abschluss design-angleichung):**
+- Einstellungen-Refactoring: `docs/planning/2026-06-19_einstellungen-refactoring/` — Monolith → Shell + 7 Child-Komponenten, BEM
+
 **Backlog-Pläne (größere Features):**
 - P7 Personen: `docs/planning/2026-06-12_p07-personen/`
 - P8 Editor CPU: `docs/planning/2026-06-12_p08-editor-cpu/`
