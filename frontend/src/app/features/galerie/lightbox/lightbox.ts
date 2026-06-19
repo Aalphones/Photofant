@@ -194,14 +194,12 @@ export class Lightbox {
     const onKeyDown = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-      switch (event.key) {
-        case 'Escape':     this.close(); break;
-        case 'ArrowLeft':  this.prev(); break;
-        case 'ArrowRight': this.next(); break;
-        case 'f':
-        case 'F':          this.toggleFavourite(); break;
-        case 'Delete':     this.deleteAsset(); break;
-      }
+      const shortcuts = this.shortcutService.resolvedShortcuts();
+      if (shortcuts.get('lightbox.close')?.includes(event.key))  { this.close(); }
+      else if (shortcuts.get('lightbox.prev')?.includes(event.key))   { this.prev(); }
+      else if (shortcuts.get('lightbox.next')?.includes(event.key))   { this.next(); }
+      else if (shortcuts.get('asset.favourite')?.includes(event.key)) { this.toggleFavourite(); }
+      else if (shortcuts.get('asset.delete')?.includes(event.key))    { this.deleteAsset(); }
     };
     this.document.addEventListener('keydown', onKeyDown);
     this.destroyRef.onDestroy(() => this.document.removeEventListener('keydown', onKeyDown));

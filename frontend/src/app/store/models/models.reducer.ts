@@ -1,5 +1,5 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { ModelDto, CapabilitiesDto, ModelBindError, ProcessingConfig } from '@photofant/models';
+import type { ModelDto, CapabilitiesDto, ModelBindError, ProcessingConfig, ShortcutConfig } from '@photofant/models';
 import { PROCESSING_CONFIG_DEFAULTS } from '@photofant/models';
 import { modelsActions } from './models.actions';
 
@@ -10,6 +10,7 @@ export interface ModelsState {
   dataRoot: string | null;
   rebootRequired: boolean;
   processingConfig: ProcessingConfig;
+  keyboardShortcuts: ShortcutConfig | null;
   isLoading: boolean;
   pendingDownloads: string[];
   downloadJobIds: Record<string, string>;
@@ -25,6 +26,7 @@ const initialState: ModelsState = {
   dataRoot: null,
   rebootRequired: false,
   processingConfig: PROCESSING_CONFIG_DEFAULTS,
+  keyboardShortcuts: null,
   isLoading: false,
   pendingDownloads: [],
   downloadJobIds: {},
@@ -52,12 +54,16 @@ export const modelsFeature = createFeature({
       ({ ...state, capabilities })
     ),
 
-    on(modelsActions.loadConfigSuccess, (state: ModelsState, { modelsDir, dataRoot, processingConfig }) =>
-      ({ ...state, modelsDir, dataRoot, processingConfig })
+    on(modelsActions.loadConfigSuccess, (state: ModelsState, { modelsDir, dataRoot, processingConfig, keyboardShortcuts }) =>
+      ({ ...state, modelsDir, dataRoot, processingConfig, keyboardShortcuts })
     ),
 
     on(modelsActions.updateProcessingConfigSuccess, (state: ModelsState, { processingConfig }) =>
       ({ ...state, processingConfig })
+    ),
+
+    on(modelsActions.updateShortcutsSuccess, (state: ModelsState, { config }) =>
+      ({ ...state, keyboardShortcuts: config })
     ),
 
     on(modelsActions.downloadModel, (state: ModelsState, { manifestId }) => {

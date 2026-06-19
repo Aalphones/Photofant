@@ -4,7 +4,7 @@ import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, EMPTY, from, map, mergeMap, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { ProcessingConfig } from '@photofant/models';
+import type { ProcessingConfig, ShortcutConfig } from '@photofant/models';
 import { PROCESSING_CONFIG_DEFAULTS } from '@photofant/models';
 import { ModelService } from '@photofant/services';
 import { jobsActions } from '../jobs/jobs.actions';
@@ -29,6 +29,14 @@ function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfi
     maxTags:        Number(data['max_tags']          ?? PROCESSING_CONFIG_DEFAULTS.maxTags),
     blurThreshold:  Number(data['blur_threshold']    ?? PROCESSING_CONFIG_DEFAULTS.blurThreshold),
   };
+}
+
+function extractShortcutConfig(data: Record<string, unknown>): ShortcutConfig | null {
+  const raw = data['keyboard_shortcuts'];
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) { return null; }
+  const obj = raw as Record<string, unknown>;
+  if (!Array.isArray(obj['shortcuts'])) { return null; }
+  return raw as ShortcutConfig;
 }
 
 @Injectable()
@@ -75,10 +83,29 @@ export class ModelsEffects {
               modelsDir: String(response.data['models_dir'] ?? ''),
               dataRoot: response.data['data_root'] != null ? String(response.data['data_root']) : null,
               processingConfig: extractProcessingConfig(response.data),
+              keyboardShortcuts: extractShortcutConfig(response.data),
             })
           ),
           catchError((error: HttpErrorResponse) =>
             of(modelsActions.loadConfigFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly updateShortcuts$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(modelsActions.updateShortcuts),
+      switchMap(({ config }) =>
+        this.modelService.patchConfig({ keyboard_shortcuts: config }).pipe(
+          map((response) =>
+            modelsActions.updateShortcutsSuccess({
+              config: extractShortcutConfig(response.data),
+            })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(modelsActions.updateShortcutsFailure({ error: error.message }))
           ),
         )
       ),

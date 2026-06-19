@@ -1,9 +1,11 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Store } from '@ngrx/store';
-import type { CapabilityDescriptor, CaptionPresetDto, Density, ModelDto, ProcessingConfig } from '@photofant/models';
+import type { CapabilityDescriptor, CaptionPresetDto, Density, ModelDto, ProcessingConfig, ShortcutConfig } from '@photofant/models';
 import type { DateFormat, Locale } from '@photofant/services';
 import { SettingsService } from '@photofant/services';
+import { ShortcutService } from '../../services/shortcut.service';
 import {
   filtersActions,
   filtersSelectors,
@@ -16,6 +18,20 @@ import {
 } from '@photofant/store';
 import type { PresetSavePayload } from '@photofant/ui';
 import { PresetDialog } from '@photofant/ui';
+
+interface ShortcutRow {
+  action: string;
+  label: string;
+  group: string;
+}
+
+const SHORTCUT_ROWS: ShortcutRow[] = [
+  { action: 'lightbox.close',  label: 'Lightbox schließen',    group: 'Lightbox' },
+  { action: 'lightbox.prev',   label: 'Vorheriges Bild',       group: 'Lightbox' },
+  { action: 'lightbox.next',   label: 'Nächstes Bild',         group: 'Lightbox' },
+  { action: 'asset.favourite', label: 'Favorit umschalten',    group: 'Lightbox' },
+  { action: 'asset.delete',    label: 'In Papierkorb legen',   group: 'Lightbox' },
+];
 
 @Component({
   selector: 'pf-einstellungen',
@@ -303,6 +319,34 @@ import { PresetDialog } from '@photofant/ui';
           </div>
         </div>
       }
+
+      <!-- ── Tastaturkürzel ─────────────────────────────────────────── -->
+      <div class="settings-section">
+        <h2 class="settings-heading">Tastaturkürzel</h2>
+
+        <div class="settings-card">
+          <ul class="shortcuts-list">
+            @for (row of shortcutRows; track row.action) {
+              <li class="shortcut-row" [class.shortcut-row--listening]="listeningAction() === row.action">
+                <span class="shortcut-label">{{ row.label }}</span>
+                @if (listeningAction() === row.action) {
+                  <span class="shortcut-listening">Taste drücken…</span>
+                } @else {
+                  <button
+                    class="shortcut-key"
+                    title="Klicken um Taste zu ändern"
+                    (click)="startListening(row.action)"
+                  >{{ formatKeys(resolvedShortcuts().get(row.action)) }}</button>
+                }
+              </li>
+            }
+          </ul>
+
+          <div class="shortcuts-footer">
+            <button class="btn-ghost" (click)="resetShortcuts()">Auf Standard zurücksetzen</button>
+          </div>
+        </div>
+      </div>
 
       <!-- ── Backup ────────────────────────────────────────────────── -->
       <div class="settings-section">
@@ -716,6 +760,68 @@ import { PresetDialog } from '@photofant/ui';
     }
     .st-number-input:focus { outline: none; border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
 
+    /* Tastaturkürzel */
+    .shortcuts-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .shortcut-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 10px;
+      border-radius: var(--radius-s);
+      background: var(--bg-2);
+      transition: background .12s;
+    }
+
+    .shortcut-row--listening {
+      background: var(--accent-dim, color-mix(in srgb, var(--accent) 12%, transparent));
+      outline: 1px solid var(--accent-line);
+    }
+
+    .shortcut-label {
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .shortcut-key {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 8px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-s);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: background .12s, border-color .12s;
+      flex-shrink: 0;
+    }
+
+    .shortcut-key:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent-line);
+    }
+
+    .shortcut-listening {
+      font-size: 12px;
+      color: var(--accent);
+      font-style: italic;
+      flex-shrink: 0;
+    }
+
+    .shortcuts-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 4px;
+    }
+
     .spinner {
       width: 12px;
       height: 12px;
@@ -730,6 +836,14 @@ import { PresetDialog } from '@photofant/ui';
 export class Einstellungen {
   private readonly store = inject(Store);
   private readonly settings = inject(SettingsService);
+  private readonly shortcutService = inject(ShortcutService);
+  private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /* ── Tastaturkürzel ───────────────────────────────────────────── */
+  readonly shortcutRows = SHORTCUT_ROWS;
+  readonly resolvedShortcuts = this.shortcutService.resolvedShortcuts;
+  readonly listeningAction = signal<string | null>(null);
 
   /* ── Darstellung ──────────────────────────────────────────────── */
   readonly density = this.store.selectSignal(filtersSelectors.density);
@@ -792,6 +906,53 @@ export class Einstellungen {
       this.store.dispatch(modelsActions.loadModels());
       this.store.dispatch(presetsActions.loadPresets());
     });
+
+    const onCaptureKey = (event: KeyboardEvent): void => {
+      const action = this.listeningAction();
+      if (action == null) { return; }
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') { return; }
+      event.preventDefault();
+      event.stopPropagation();
+      this.applyCapture(action, event.key);
+    };
+    this.document.addEventListener('keydown', onCaptureKey, { capture: true });
+    this.destroyRef.onDestroy(() =>
+      this.document.removeEventListener('keydown', onCaptureKey, { capture: true })
+    );
+  }
+
+  startListening(action: string): void {
+    this.listeningAction.set(action);
+  }
+
+  private applyCapture(action: string, key: string): void {
+    const current = this.resolvedShortcuts();
+    const shortcuts = SHORTCUT_ROWS.map((row): { action: string; keys: string[] } => ({
+      action: row.action,
+      keys: row.action === action ? [key] : (current.get(row.action) ?? []),
+    }));
+    const config: ShortcutConfig = { version: 1, shortcuts };
+    this.shortcutService.saveShortcuts(config);
+    this.listeningAction.set(null);
+  }
+
+  resetShortcuts(): void {
+    this.shortcutService.resetShortcuts();
+  }
+
+  formatKeys(keys: string[] | undefined): string {
+    if (keys == null || keys.length === 0) { return '–'; }
+    return keys
+      .map((key: string) => {
+        const labels: Record<string, string> = {
+          ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
+          Escape: 'Esc', Delete: 'Entf', Backspace: '⌫', Enter: '↵',
+          ' ': 'Leertaste',
+        };
+        return labels[key] ?? key;
+      })
+      .join(' / ');
   }
 
   startDataRootEdit(): void {
