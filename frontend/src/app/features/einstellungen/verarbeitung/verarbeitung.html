@@ -52,6 +52,31 @@
   </div>
 </div>
 
+<div class="verarbeitung__gruppen-label">Duplikaterkennung</div>
+<div class="verarbeitung__gruppe">
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Ähnlichkeitsschwelle</div>
+      <div class="verarbeitung__zeile-sub">0 = nur identische Bilder · 20 = sehr ähnliche Bilder einschließen</div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ dupeThresholdLabel() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="0"
+          max="20"
+          step="1"
+          [value]="processingConfig().dupeThreshold"
+          (input)="onDupeThresholdInput($any($event.target))"
+          (change)="onDupeThresholdChange($any($event.target))"
+        >
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="verarbeitung__gruppen-label">Qualitätsfilter</div>
 <div class="verarbeitung__gruppe">
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">

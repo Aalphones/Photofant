@@ -5,6 +5,7 @@ export interface ProcessingConfig {
   minProbability: number;
   maxTags: number;
   blurThreshold: number;
+  dupeThreshold: number;
 }
 
 export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
@@ -14,6 +15,7 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   minProbability: 0.5,
   maxTags: 30,
   blurThreshold: 200.0,
+  dupeThreshold: 10,
 };
 
 export interface ShortcutBinding {

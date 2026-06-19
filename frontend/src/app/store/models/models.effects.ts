@@ -18,6 +18,7 @@ const PROCESSING_CONFIG_KEY_MAP: Record<keyof ProcessingConfig, string> = {
   minProbability: 'min_probability',
   maxTags:        'max_tags',
   blurThreshold:  'blur_threshold',
+  dupeThreshold:  'dupe_threshold',
 };
 
 function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfig {
@@ -28,6 +29,7 @@ function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfi
     minProbability: Number(data['min_probability']   ?? PROCESSING_CONFIG_DEFAULTS.minProbability),
     maxTags:        Number(data['max_tags']          ?? PROCESSING_CONFIG_DEFAULTS.maxTags),
     blurThreshold:  Number(data['blur_threshold']    ?? PROCESSING_CONFIG_DEFAULTS.blurThreshold),
+    dupeThreshold:  Number(data['dupe_threshold']    ?? PROCESSING_CONFIG_DEFAULTS.dupeThreshold),
   };
 }
 

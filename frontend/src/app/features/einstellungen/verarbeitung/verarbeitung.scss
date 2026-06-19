@@ -18,7 +18,12 @@
 .verarbeitung__schalter--an > i { transform: translateX(18px); }
 .verarbeitung__zahleneingabe { height: 32px; width: 90px; padding: 0 8px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-s); color: var(--text); font-size: 13px; text-align: right; outline: none; }
 .verarbeitung__zahleneingabe:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+.verarbeitung__slider-gruppe { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; width: 200px; }
+.verarbeitung__slider-wert { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.verarbeitung__slider { width: 200px; accent-color: var(--accent); cursor: pointer; }
 @media (max-width: 860px) {
   .verarbeitung__zeile { flex-wrap: wrap; gap: 8px; }
   .verarbeitung__zeile-steuerung { width: 100%; }
+  .verarbeitung__slider-gruppe { width: 100%; }
+  .verarbeitung__slider { width: 100%; }
 }
