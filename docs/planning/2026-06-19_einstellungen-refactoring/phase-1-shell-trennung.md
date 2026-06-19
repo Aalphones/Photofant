@@ -21,14 +21,20 @@ Die Shell `einstellungen.ts` existiert bereits — `ng generate` kann sie nicht 
 
 ### Implementation
 
-- [ ] `einstellungen.types.ts` schreiben: `Section` Interface + `ShortcutRow` Interface exportieren; `SECTIONS` und `SHORTCUT_ROWS` const-Arrays ebenfalls exportieren
-- [ ] `einstellungen.html` anlegen: Inhalt aus `template: \`…\`` übernehmen; `@switch`-Cases mit `<!-- TODO Phase 2: <pf-xxx /> -->` Kommentar versehen statt vollständigem Inhalt (der kommt in Phase 2 in die Child-Komponenten)
-- [ ] `einstellungen.scss` anlegen: Shell-CSS aus `styles: [\`…\`]` übernehmen — nur die Klassen die zur Shell-Hülle gehören: `:host`, `.st-nav*`, `.st-body`, `.st-nav-back`, `.path-edit`, `.dir-input`, `.st-path`, `.sp-val`, `.sp-btn`, sowie `@media`-Query; Section-interne Klassen wie `.presets-list`, `.backup-row`, `.info-grid`, `.st-sc-*` etc. bleiben vorerst hier (werden in Phase 3 in Child-SCSS verschoben)
-- [ ] `einstellungen.ts` anpassen: `template: \`…\`` → `templateUrl: './einstellungen.html'`; `styles: [\`…\`]` → `styleUrl: './einstellungen.scss'`; Interface-Inline-Deklarationen entfernen; Import aus `./einstellungen.types` ergänzen
-- [ ] `ng build` / `ng serve` — fehlerfrei
+- [x] `einstellungen.types.ts` schreiben: `Section` Interface + `ShortcutRow` Interface exportieren; `SECTIONS` und `SHORTCUT_ROWS` const-Arrays ebenfalls exportieren
+- [x] `einstellungen.html` anlegen: Inhalt aus `template: \`…\`` übernehmen; `@switch`-Cases mit `<!-- TODO Phase 2: <pf-xxx /> -->` Kommentar versehen statt vollständigem Inhalt (der kommt in Phase 2 in die Child-Komponenten)
+- [x] `einstellungen.scss` anlegen: Shell-CSS aus `styles: [\`…\`]` übernehmen — nur die Klassen die zur Shell-Hülle gehören: `:host`, `.st-nav*`, `.st-body`, `.st-nav-back`, `.path-edit`, `.dir-input`, `.st-path`, `.sp-val`, `.sp-btn`, sowie `@media`-Query; Section-interne Klassen wie `.presets-list`, `.backup-row`, `.info-grid`, `.st-sc-*` etc. bleiben vorerst hier (werden in Phase 3 in Child-SCSS verschoben)
+- [x] `einstellungen.ts` anpassen: `template: \`…\`` → `templateUrl: './einstellungen.html'`; `styles: [\`…\`]` → `styleUrl: './einstellungen.scss'`; Interface-Inline-Deklarationen entfernen; Import aus `./einstellungen.types` ergänzen
+- [x] `ng build` / `ng serve` — fehlerfrei (Build grün, kein Compilerfehler)
 
 ### Docs
 
-- [ ] Keine Doc-Updates nötig (rein internes Refactoring)
+- [x] Keine Doc-Updates nötig (rein internes Refactoring)
 
 ## Report-Back
+
+Phase 1 complete (2026-06-19). Datei `einstellungen.ts` von 1247 auf ~270 Zeilen reduziert.
+Neue Dateien: `einstellungen.types.ts` (Interfaces + Consts), `einstellungen.html` (Shell-Template mit @switch-Platzhaltern), `einstellungen.scss` (alle CSS — Section-internes wird Phase 3 aufräumen).
+`DatePipe` aus Shell-Imports entfernt (nicht mehr im Shell-Template verwendet).
+Beide Shell-Dialoge (Preset-Dialog, Tag-Merge-Dialog) bleiben vorerst im Shell-Template — wandern in Phase 2 in die Child-Komponenten.
+Build: grün.
