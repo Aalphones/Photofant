@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-19_design-angleichung/`
-**Phase:** — (noch nicht gestartet)
-**Nächster Schritt:** Plan öffnen und Phase 1 starten.
+**Phase:** 2/4 — Einstellungen-Shell + Primitive (pending)
+**Nächster Schritt:** Phase 2 starten: `st-page`-Master-Detail-Layout bauen, bestehende Einstellungs-Sektionen einziehen (`einstellungen.ts`). Detailbefunde in `FINDINGS.md → Phase 2` lesen.
 
 **Abgeschlossen:**
 - `docs/planning/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

@@ -1,6 +1,6 @@
 # Phase 1 — Reconciliation-Sweep (Inventar)
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 Erzeugt die **verbindliche Abweichungsliste** über alle gebauten Views. Repariert nichts — liefert nur das Inventar, das Phase 2–4 steuert. Ohne diese Phase plant Phase 4 blind.
 
@@ -25,10 +25,10 @@ Erzeugt die **verbindliche Abweichungsliste** über alle gebauten Views. Reparie
 
 ## Checkliste
 
-- [ ] Sweep durchführen (Mockup + Konzept gegen Impl), View für View
-- [ ] `docs/design-reconciliation.md` schreiben (Tabelle + pro View ein kurzer Abschnitt mit den konkreten Punkten)
-- [ ] GROSS/MITTEL der übrigen Views als `→ Phase 4`-Findings taggen
-- [ ] Einstellungen-Detailbefunde als `→ Phase 2`-Finding, Tags-Detailbefunde als `→ Phase 3`-Finding taggen
-- [ ] Doc-Update: in `AGENTS.md` unter „Planung" einen Verweis auf `docs/design-reconciliation.md` setzen (Lebensdauer: bis Plan archiviert)
+- [x] Sweep durchführen (Mockup + Konzept gegen Impl), View für View
+- [x] `docs/design-reconciliation.md` schreiben (Tabelle + pro View ein kurzer Abschnitt mit den konkreten Punkten)
+- [x] GROSS/MITTEL der übrigen Views als `→ Phase 4`-Findings taggen
+- [x] Einstellungen-Detailbefunde als `→ Phase 2`-Finding, Tags-Detailbefunde als `→ Phase 3`-Finding taggen
+- [x] Doc-Update: in `AGENTS.md` unter „Planung" einen Verweis auf `docs/design-reconciliation.md` setzen (Lebensdauer: bis Plan archiviert)
 
 ## Report-Back

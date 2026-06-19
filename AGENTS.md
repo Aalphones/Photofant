@@ -37,6 +37,7 @@ Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, 
 - Aktive Pläne: `docs/planning/` (Meilensteine aus PROJECT.md sind die Phasen-Kandidaten)
 - Entscheidungen (ADRs): `docs/decisions/`
 - Archiv: `docs/archive/`
+- [Design-Reconciliation](docs/design-reconciliation.md) — View-für-View-Abgleich Mockup vs. Impl (aktiv bis Plan `2026-06-19_design-angleichung` archiviert)
 
 ## CI
 
