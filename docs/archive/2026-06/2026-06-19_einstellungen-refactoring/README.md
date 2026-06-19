@@ -44,10 +44,25 @@ Keine offenen ADRs — alle Entscheidungen sind durch bestehende Angular-Konvent
 
 ## Summary
 
+Monolith `einstellungen.ts` (970 Zeilen, Inline-Template, Inline-Styles) in eine saubere Shell + 8 eigenständige Child-Komponenten zerlegt. Alle CSS-Klassen von kryptischen Präfixen (`st-`, `sp-`, `sc-`) auf vollständige BEM-Namen umgestellt. Plan komplett in 3 Phasen abgeschlossen.
+
 ## Files touched
+
+- `frontend/src/app/features/einstellungen/` — Shell + alle 8 Child-Komponenten
+- `frontend/src/app/features/einstellungen/_st-shared.scss` — auf Utilities getrimmt
+- `frontend/src/app/features/einstellungen/einstellungen.types.ts` — neu (Phase 1)
 
 ## Commits
 
+- Phase 1: `refactor(einstellungen): phase 1 — extract template, styles and types into separate files`
+- Phase 2: `refactor(einstellungen): phase 2 — split monolith into 8 child components`
+- Phase 3: `refactor(einstellungen): phase 3 — BEM-Bereinigung aller st-/sp-/sc-Klassen`
+
 ## Deviations from plan
 
+- `tags`-Komponente war nicht im ursprünglichen 7-Komponenten-Plan: SECTIONS hat 8 Einträge. In Phase 2 hinzugefügt, BEM in Phase 3 eingebaut.
+- `_st-shared.scss` gelöscht nicht leer gemacht: Datei bleibt als Import-Ankerpunkt für Utilities (`code`, `.spinner`, `.group-loading`, `.group-empty`, `.error-banner`).
+
 ## Follow-ups
+
+- Budget-Warning `tags.scss` (5.6 KB > 4 KB Budget): Dialog-Styles könnten in eigene Komponente extrahiert werden — kein Blocker.
