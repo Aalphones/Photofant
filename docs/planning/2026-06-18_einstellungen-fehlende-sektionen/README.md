@@ -20,7 +20,7 @@ Pfad: `.photofant/settings.json` relativ zum Backend-CWD. Kein `app_config`-Tabl
 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
-| 1 | [Verarbeitung — Pipeline-Toggles + Schwellwerte](phase-1-verarbeitung.md) | standard | pending |
+| 1 | [Verarbeitung — Pipeline-Toggles + Schwellwerte](phase-1-verarbeitung.md) | standard | complete (via wd14-einstellungen-bulk-klassifizieren Phase 2) |
 | 2 | [Bibliothek — data_root Startup-Config](phase-2-bibliothek.md) | heikel | pending |
 | 3 | [Tastaturkürzel — Backend-Persistenz](phase-3-tastaturkuerzel.md) | standard | pending |
 | 4 | [Info — Versionierung + System-Details](phase-4-info-versionierung.md) | standard | pending |
