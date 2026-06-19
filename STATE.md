@@ -2,8 +2,8 @@
 
 **Aktiver Plan:** `docs/planning/2026-06-19_duplikaterkennung/` — pHash + Review-Queue Tab 2
 
-**Phase:** 2/6 — Import-Pipeline Auto-Detection (complete)
-**Nächster Schritt:** Phase 3 starten — On-Demand-Scan-Job + Review-API (`phase-3-scan-und-api.md`)
+**Phase:** 3/6 — On-Demand-Scan-Job + Review-API (complete)
+**Nächster Schritt:** Phase 4 starten — Einstellungen: Threshold-Slider (`phase-4-einstellungen.md`)
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

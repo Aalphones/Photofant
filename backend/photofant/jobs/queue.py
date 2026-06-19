@@ -35,6 +35,7 @@ class JobKind(StrEnum):
     HEURISTICS = "heuristics"
     RERUN = "rerun"
     REEVALUATE = "reevaluate"
+    DUPE_SCAN = "dupe_scan"
 
 
 @dataclass

@@ -350,6 +350,50 @@ Fehler-Codes (strukturiert im `detail`-Feld):
 - `409 { code: "SEMANTIC_SEARCH_UNAVAILABLE" }` — CLIP-Modell nicht aktiv (Textsuche nicht möglich)
 - `409 { code: "NO_EMBEDDING" }` — `like_asset_id` hat noch kein Embedding
 
+## Duplikaterkennung — Review-API (Phase 3, Plan `2026-06-19_duplikaterkennung`)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| Review-Tab (Duplikate) | `GET` | `/api/review/dupes` | — | `DupePairDto[]` (nur unresolved) |
+| Review-Tab (Auflösen) | `PATCH` | `/api/review/dupes/{id}` | `{ resolution: DupeResolution }` | `DupePairDto` |
+| Review-Tab / Action-Bar | `POST` | `/api/jobs/dupe-scan` | `{ scope: 'all' \| 'selection', asset_ids?: number[] }` | `{ job_id: string }` |
+| Lightbox (Ähnliche Bilder) | `GET` | `/api/assets/{id}/similar` | — | `SimilarAssetDto[]` |
+
+```typescript
+interface AssetSummaryDto {
+  id: number;
+  width: number | null;
+  height: number | null;
+  format: string | null;
+  source: string | null;
+  file_size: number | null;
+  created_at: string | null;
+  imported_at: string | null;
+}
+
+interface DupePairDto {
+  id: number;
+  asset_a: AssetSummaryDto;
+  asset_b: AssetSummaryDto;
+  phash_distance: number;
+  created_at: string;
+}
+
+interface SimilarAssetDto extends AssetSummaryDto {
+  phash_distance: number;
+}
+
+type DupeResolution = 'a_is_original' | 'b_is_original' | 'delete_a' | 'delete_b' | 'dismiss';
+```
+
+Aktions-Semantik (`PATCH /api/review/dupes/{id}`):
+- `a_is_original`: setzt `asset_b.original_id = asset_a.id`
+- `b_is_original`: setzt `asset_a.original_id = asset_b.id`
+- `delete_a` / `delete_b`: Soft-Delete des jeweiligen Assets (Datei → Papierkorb)
+- `dismiss`: keine Asset-Änderung, Paar als erledigt markiert
+
+`POST /api/jobs/dupe-scan` mit `scope='selection'` erfordert `asset_ids` (sonst `422`).
+
 ## Job-Stream
 
 | Trigger | Endpoint | Protokoll |

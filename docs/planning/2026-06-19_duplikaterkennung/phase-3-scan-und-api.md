@@ -29,31 +29,36 @@
 
 ### Backend — Scan-Job
 
-- [ ] `backend/photofant/jobs/queue.py` — `DUPE_SCAN` zu `JobKind` hinzufügen
-- [ ] `backend/photofant/jobs/dupe_scan_job.py` anlegen:
+- [x] `backend/photofant/jobs/queue.py` — `DUPE_SCAN` zu `JobKind` hinzufügen
+- [x] `backend/photofant/jobs/dupe_scan_job.py` anlegen:
   - `run_dupe_scan_job(status, scope, asset_ids)` — Coroutine
   - scope=all: alle Assets mit pHash aus DB laden; scope=selection: gefiltert auf `asset_ids`
-  - Alle-gegen-alle Hamming-Vergleich in Python (nested loop, normiertes Paar a<b)
-  - Unique-Constraint-konforme Einträge anlegen (IntegrityError = skip)
+  - Alle-gegen-alle Hamming-Vergleich in Python (nested loop, normiertes Paar a<b), chunked mit asyncio.to_thread
+  - Unique-Constraint-konforme Einträge anlegen (on_conflict_do_nothing)
   - Progress-Updates via `job_queue.update()`
   - `enqueue_dupe_scan(scope, asset_ids)` Hilfsfunktion
-- [ ] `backend/photofant/api/jobs.py` (oder bestehender Jobs-Router) — `POST /api/jobs/dupe-scan` ergänzen
+- [x] `backend/photofant/api/jobs.py` — `POST /api/jobs/dupe-scan` ergänzt
 
 ### Backend — Review-API
 
-- [ ] `backend/photofant/api/review.py` anlegen (neuer Router):
-  - `GET /api/review/dupes` — joined Query: `review_item` + beide Assets + Thumbnails
-  - `PATCH /api/review/dupes/{id}` — Resolution-Handler mit allen 5 Aktionen
-  - `GET /api/assets/{id}/similar` — ad-hoc pHash-Suche
-- [ ] Router in `backend/photofant/api/main.py` einbinden
-- [ ] Bestehende Delete-Logik importieren und wiederverwenden (nicht neu bauen)
+- [x] `backend/photofant/api/review.py` anlegen (neuer Router):
+  - `GET /api/review/dupes` — JOIN auf ReviewItem + asset_a; asset_b via session.get
+  - `PATCH /api/review/dupes/{id}` — Resolution-Handler mit allen 5 Aktionen (inkl. moves.soft_delete)
+  - `GET /api/assets/{id}/similar` — ad-hoc pHash-Suche via find_similar
+- [x] Router in `backend/photofant/main.py` eingebunden
+- [x] Bestehende Delete-Logik (`moves.soft_delete`) wiederverwendet
 
 ### Docs
 
-- [ ] `docs/routes.md` — neue Endpunkte eintragen
+- [x] `docs/routes.md` — neue Endpunkte eingetragen
 
 ## 🟡 Risiko: N²-Performance
 
 Scope=all mit N=10.000 Assets → ~50M Vergleiche, ca. 10-20 Sekunden. Läuft als Hintergrund-Job → kein Problem. Fortschritt per `job_queue.update()` sichtbar machen, damit der User nicht denkt, der Job hängt.
 
 ## Report-Back
+
+Phase 3 complete (2026-06-19). Alle 3 Backend-Checkboxen und Docs erledigt. Ruff lint grün.
+
+Implementierungs-Detail: Die Vergleichsschleife läuft in `asyncio.to_thread`-Chunks à 200 äußere
+Iterationen — gibt Event-Loop-Breaks für Progress-Updates ohne Overhead für kleine Bestände.

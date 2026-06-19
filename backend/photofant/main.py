@@ -18,6 +18,7 @@ from photofant.api import (
     jobs,
     maintenance,
     models,
+    review,
     search,
     tags,
     trash,
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     app.include_router(tags.router, prefix="/api")
     app.include_router(classify.router, prefix="/api")
     app.include_router(collections.router, prefix="/api")
+    app.include_router(review.router, prefix="/api")
     return app
 
 

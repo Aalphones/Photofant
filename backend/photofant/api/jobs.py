@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import AsyncGenerator
+from typing import Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -71,4 +72,23 @@ async def run_demo_job() -> RunDemoResponse:
         label="Demo-Job",
         coro_factory=_demo_coro,
     )
+    return RunDemoResponse(job_id=status.id)
+
+
+DupeScanScope = Literal["all", "selection"]
+
+
+class DupeScanRequest(BaseModel):
+    scope: DupeScanScope
+    asset_ids: list[int] | None = None
+
+
+@router.post("/dupe-scan", response_model=RunDemoResponse)
+async def start_dupe_scan(body: DupeScanRequest) -> RunDemoResponse:
+    from photofant.jobs.dupe_scan_job import enqueue_dupe_scan
+
+    if body.scope == "selection" and not body.asset_ids:
+        raise HTTPException(status_code=422, detail="asset_ids required when scope is 'selection'")
+
+    status = await enqueue_dupe_scan(scope=body.scope, asset_ids=body.asset_ids)
     return RunDemoResponse(job_id=status.id)
