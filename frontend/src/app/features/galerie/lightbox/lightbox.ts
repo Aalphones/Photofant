@@ -11,6 +11,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import type { AssetDto, AssetSummary, DupePair, DupeResolution, FaceDto, FaceMatch, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
 import { AssetService, ClassifyService, PersonService, TagService } from '@photofant/services';
@@ -68,6 +69,7 @@ function formatDate(dateStr: string | null): string {
 })
 export class Lightbox {
   private readonly store            = inject(Store);
+  private readonly router           = inject(Router);
   private readonly assetService     = inject(AssetService);
   private readonly tagService       = inject(TagService);
   private readonly classifyService  = inject(ClassifyService);
@@ -307,6 +309,13 @@ export class Lightbox {
   }
 
   // ── Similar assets overlay ────────────────────────────────────────────────
+
+  protected openEditor(): void {
+    const asset: AssetDto | null = this.asset();
+    if (asset == null) { return; }
+    this.store.dispatch(galleryActions.closeLightbox());
+    this.router.navigate(['/editor/instance', asset.id]);
+  }
 
   protected similarityPercent(distance: number): number {
     return Math.max(0, Math.round((1 - distance / 64) * 100));

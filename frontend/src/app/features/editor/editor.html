@@ -1,0 +1,91 @@
+<div class="ed-page">
+
+  <!-- ── Top Bar ── -->
+  <div class="ed-topbar">
+    <button class="ed-back" (click)="goBack()">
+      <pf-icon name="chevronDown" [size]="16" style="transform: rotate(90deg)" />
+      Galerie
+    </button>
+
+    <div class="ed-info">
+      @if (sessionKey(); as key) {
+        <span class="ed-session-id">{{ key.slice(0, 8) }}</span>
+      } @else {
+        <span class="ed-loading">Verbinde…</span>
+      }
+    </div>
+
+    <div class="ed-topbar-right">
+      <div class="ed-top-sep"></div>
+
+      <button
+        class="ed-hist-toggle"
+        [class.on]="histOpen()"
+        (click)="toggleHist()"
+      >
+        <pf-icon name="layers" [size]="15" />
+        <span>Verlauf</span>
+        @if (steps().length > 0) {
+          <span class="ed-hist-count">{{ steps().length }}</span>
+        }
+      </button>
+
+      <button class="ed-save-btn" [disabled]="!hasUnsavedSteps()" (click)="showSaveModal.set(true)">
+        <pf-icon name="download" [size]="16" /> Speichern
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Body ── -->
+  <div class="ed-body">
+
+    <!-- Left: Tool panel -->
+    <div class="ed-left">
+      <div class="ed-tool-tabs">
+        <div class="ed-tool-tab on">
+          <pf-icon name="crop" [size]="18" /> Basis
+        </div>
+      </div>
+
+      <pf-basis-panel (applyOp)="onApplyOp($event)" />
+    </div>
+
+    <!-- Center: Canvas -->
+    <div class="ed-canvas-wrap">
+      @if (applying()) {
+        <div class="ed-applying-overlay">
+          <div class="ed-spinner"></div>
+        </div>
+      }
+      @if (displayImageUrl()) {
+        <pf-zoom-stage [imageUrl]="displayImageUrl()" />
+      } @else {
+        <div class="ed-canvas-placeholder">
+          <div class="ed-spinner"></div>
+        </div>
+      }
+    </div>
+
+    <!-- Right: History -->
+    @if (histOpen()) {
+      <pf-step-bar
+        [steps]="steps()"
+        [currentSeq]="currentSeq()"
+        [originalPreviewUrl]="originalPreviewUrl()"
+        [applying]="applying()"
+        (rollback)="onRollback($event)"
+      />
+    }
+
+  </div>
+
+  <!-- Save modal -->
+  @if (showSaveModal()) {
+    <pf-save-modal
+      [stepCount]="steps().length"
+      (cancel)="showSaveModal.set(false)"
+      (save)="onSave($event)"
+    />
+  }
+
+</div>

@@ -1,0 +1,38 @@
+<div class="ed-save-scrim" (click)="onCancel()">
+  <div class="ed-save-modal" (click)="$event.stopPropagation()">
+
+    <div class="ed-save-head">
+      <div class="sh-ico"><pf-icon name="download" [size]="18" /></div>
+      <div>
+        <h3>Bearbeitung speichern</h3>
+        <p>{{ stepCount() }} Step{{ stepCount() === 1 ? '' : 's' }}</p>
+      </div>
+    </div>
+
+    <div class="ed-save-opts">
+      <div class="ed-save-opt" [class.on]="saveMode() === 'overwrite'" (click)="setSaveMode('overwrite')">
+        <span class="ed-save-radio"></span>
+        <div>
+          <div class="ed-save-opt-t">Überschreiben</div>
+          <div class="ed-save-opt-s">Ersetzt den aktuellen Edit in personX/edits/. Der Vorschritt bleibt in der History der Cache-DB erhalten.</div>
+        </div>
+      </div>
+      <div class="ed-save-opt" [class.on]="saveMode() === 'new_copy'" (click)="setSaveMode('new_copy')">
+        <span class="ed-save-radio"></span>
+        <div>
+          <div class="ed-save-opt-t">Als neue Kopie</div>
+          <div class="ed-save-opt-s">Legt eine neue Version in personX/edits/ an — der bestehende Edit bleibt unberührt.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ed-save-foot">
+      <button class="ed-save-cancel" (click)="onCancel()">Abbrechen</button>
+      <button class="ed-save-ok" (click)="onSave()">
+        <pf-icon name="download" [size]="15" />
+        {{ saveMode() === 'overwrite' ? 'Überschreiben' : 'Als Kopie speichern' }}
+      </button>
+    </div>
+
+  </div>
+</div>

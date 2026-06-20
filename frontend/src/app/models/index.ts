@@ -44,6 +44,8 @@ export {
   formatModelSize,
 } from './model.model';
 
+export type { EditorTargetKind, EditorStep, CreateSessionResponse, ApplyStepResponse, RollbackResponse } from './edit-session.model';
+
 export type {
   BackupInfo,
   IssueKind,

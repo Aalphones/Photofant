@@ -15,3 +15,4 @@ export { SettingsService } from './settings.service';
 export type { Locale, DateFormat } from './settings.service';
 export { ReviewService } from './review.service';
 export { PersonService } from './person.service';
+export { EditSessionService } from './edit-session.service';

@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { routes } from './app.routes';
-import { jobsFeature, JobsEffects, filtersFeature, searchFeature, galleryFeature, GalleryEffects, trashFeature, TrashEffects, maintenanceFeature, MaintenanceEffects, modelsFeature, ModelsEffects, presetsFeature, PresetsEffects, tagsFeature, TagsEffects, collectionsFeature, CollectionsEffects, reviewFeature, ReviewEffects, personsFeature, PersonsEffects } from './store';
+import { jobsFeature, JobsEffects, filtersFeature, searchFeature, galleryFeature, GalleryEffects, trashFeature, TrashEffects, maintenanceFeature, MaintenanceEffects, modelsFeature, ModelsEffects, presetsFeature, PresetsEffects, tagsFeature, TagsEffects, collectionsFeature, CollectionsEffects, reviewFeature, ReviewEffects, personsFeature, PersonsEffects, editorFeature, EditorEffects } from './store';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,7 +24,8 @@ export const appConfig: ApplicationConfig = {
       [collectionsFeature.name]: collectionsFeature.reducer,
       [reviewFeature.name]:      reviewFeature.reducer,
       [personsFeature.name]:     personsFeature.reducer,
+      [editorFeature.name]:      editorFeature.reducer,
     }),
-    provideEffects([JobsEffects, GalleryEffects, TrashEffects, MaintenanceEffects, ModelsEffects, PresetsEffects, TagsEffects, CollectionsEffects, ReviewEffects, PersonsEffects]),
+    provideEffects([JobsEffects, GalleryEffects, TrashEffects, MaintenanceEffects, ModelsEffects, PresetsEffects, TagsEffects, CollectionsEffects, ReviewEffects, PersonsEffects, EditorEffects]),
   ],
 };

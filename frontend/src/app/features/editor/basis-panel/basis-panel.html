@@ -1,0 +1,90 @@
+<div class="ed-tool-content">
+
+  <!-- Zuschneiden -->
+  <div class="ed-ts">
+    <div class="ed-ts-lbl">Zuschneiden</div>
+    <div class="ed-seg" style="margin-bottom: 10px">
+      @for (ratio of ratios; track ratio.id) {
+        <button [class.on]="cropRatio() === ratio.id" (click)="setCropRatio(ratio.id)">{{ ratio.label }}</button>
+      }
+    </div>
+    <div class="ed-note info">
+      <pf-icon name="info" [size]="14" />
+      <span>Crop-Rahmen direkt auf dem Canvas verschieben oder Verhältnis wählen.</span>
+    </div>
+    <div class="ed-act-row">
+      <button class="ed-act primary" (click)="applyCrop()">
+        <pf-icon name="crop" [size]="15" /> Zuschnitt anwenden
+      </button>
+      <button class="ed-act ghost" title="Smart-Crop auf Gesicht" (click)="applySmartCrop()">
+        <pf-icon name="face" [size]="15" />
+      </button>
+    </div>
+  </div>
+
+  <!-- Drehen & Spiegeln -->
+  <div class="ed-ts">
+    <div class="ed-ts-lbl">Drehen &amp; Spiegeln</div>
+    <div class="ed-icon-seg" style="margin-bottom: 8px">
+      <button (click)="applyRotate('ccw')">
+        <pf-icon name="rotateCw" [size]="18" style="transform: scaleX(-1)" /> −90°
+      </button>
+      <button (click)="applyRotate('cw')">
+        <pf-icon name="rotateCw" [size]="18" /> +90°
+      </button>
+      <button (click)="applyRotate('180')">
+        <pf-icon name="refresh" [size]="18" /> 180°
+      </button>
+    </div>
+    <div class="ed-icon-seg">
+      <button (click)="applyMirror('h')">
+        <pf-icon name="flipH" [size]="18" /> Horizontal
+      </button>
+      <button (click)="applyMirror('v')">
+        <pf-icon name="flipH" [size]="18" style="transform: rotate(90deg)" /> Vertikal
+      </button>
+    </div>
+  </div>
+
+  <!-- Pad to Square -->
+  <div class="ed-ts">
+    <div class="ed-ts-lbl">Pad to Square</div>
+    <div class="ed-note info">
+      <pf-icon name="info" [size]="14" />
+      <span>Füllt das Bild auf 1:1 auf — ohne Beschnitt.</span>
+    </div>
+    <button class="ed-act ghost" (click)="applyPad()">
+      <pf-icon name="expand2" [size]="15" /> Auf Quadrat auffüllen
+    </button>
+  </div>
+
+  <!-- Format-Konvertierung -->
+  <div class="ed-ts">
+    <div class="ed-ts-lbl">Format-Konvertierung</div>
+    <div class="ed-seg" style="margin-bottom: 12px">
+      @for (opt of [['keep', 'Behalten'], ['png', 'PNG'], ['jpeg', 'JPEG']]; track opt[0]) {
+        <button [class.on]="convertFormat() === opt[0]" (click)="setConvertFormat($any(opt[0]))">{{ opt[1] }}</button>
+      }
+    </div>
+    @if (convertFormat() === 'jpeg') {
+      <div class="ed-ctrl" style="margin-bottom: 12px">
+        <div class="ed-ctrl-row">
+          <span class="ed-ctrl-lbl">Qualität</span>
+          <span class="ed-ctrl-val">{{ jpegQuality() }}</span>
+        </div>
+        <input type="range" min="10" max="100" step="1" [value]="jpegQuality()"
+          (input)="setJpegQuality(+$any($event.target).value)" />
+      </div>
+    }
+    @if (convertFormat() === 'jpeg') {
+      <div class="ed-note warn">
+        <pf-icon name="alertTriangle" [size]="14" />
+        <span>PNG mit Transparenz verliert Alpha-Kanal.</span>
+      </div>
+    }
+    <button class="ed-act ghost" [disabled]="convertFormat() === 'keep'" (click)="applyConvert()">
+      <pf-icon name="refresh" [size]="15" /> Konvertierung anwenden
+    </button>
+  </div>
+
+</div>

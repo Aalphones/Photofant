@@ -1,0 +1,48 @@
+<div class="ed-right">
+  <div class="ed-hist-head">
+    <h4>Verlauf</h4>
+    <span class="ed-hist-count">{{ steps().length + 1 }}</span>
+  </div>
+
+  <div class="ed-steps">
+
+    <!-- Steps in reverse (newest on top) -->
+    @for (step of steps().slice().reverse(); track step.seq) {
+      <div class="ed-step" [class.on]="isStepCurrent(step)" (click)="onRollback(step.seq)">
+        <div class="ed-step-thumb">
+          <img [src]="step.previewUrl" alt="" loading="lazy" />
+        </div>
+        <div class="ed-step-meta-col">
+          <div class="ed-step-op">{{ stepLabel(step) }}</div>
+          <div class="ed-step-meta">Step {{ step.seq }}</div>
+          <span class="ed-step-badge basis">basis</span>
+        </div>
+        @if (!isStepCurrent(step)) {
+          <button class="ed-rollback" (click)="$event.stopPropagation(); onRollback(step.seq)">
+            Rollback
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Original (always last in reversed list, i.e. bottom) -->
+    <div class="ed-step" [class.on]="isOriginalCurrent()" (click)="onRollback(0)">
+      <div class="ed-step-thumb">
+        @if (originalPreviewUrl()) {
+          <img [src]="originalPreviewUrl()" alt="" loading="lazy" />
+        }
+      </div>
+      <div class="ed-step-meta-col">
+        <div class="ed-step-op">Original</div>
+        <div class="ed-step-meta">Step 0</div>
+        <span class="ed-step-badge orig">original</span>
+      </div>
+      @if (!isOriginalCurrent()) {
+        <button class="ed-rollback" (click)="$event.stopPropagation(); onRollback(0)">
+          Rollback
+        </button>
+      }
+    </div>
+
+  </div>
+</div>

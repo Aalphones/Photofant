@@ -1,0 +1,211 @@
+:host {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.ed-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+// ── Top Bar ──────────────────────────────────────────────────────────────────
+
+.ed-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.ed-back {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  &:hover { background: var(--surface-3); }
+}
+
+.ed-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ed-session-id {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.ed-loading {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ed-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ed-top-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+.ed-hist-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+
+  &.on {
+    background: color-mix(in oklch, var(--accent) 10%, transparent);
+    color: var(--accent);
+    border-color: color-mix(in oklch, var(--accent) 30%, transparent);
+  }
+  &:hover:not(.on) { background: var(--surface-3); }
+}
+
+.ed-hist-count {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9px;
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.ed-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover { opacity: .9; }
+  &:disabled { opacity: .4; cursor: default; }
+}
+
+// ── Body ─────────────────────────────────────────────────────────────────────
+
+.ed-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+// ── Left Tool Panel ───────────────────────────────────────────────────────────
+
+.ed-left {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ed-tool-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  padding: 0 8px;
+}
+
+.ed-tool-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 10px 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+
+  &.on {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  &:hover:not(.on) { color: var(--text); }
+}
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+
+.ed-canvas-wrap {
+  flex: 1;
+  position: relative;
+  background: var(--bg);
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+
+  pf-zoom-stage {
+    flex: 1;
+    display: block;
+  }
+}
+
+.ed-canvas-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ed-applying-overlay {
+  position: absolute;
+  inset: 0;
+  background: oklch(0.08 0.005 256 / .4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+// Spinner
+.ed-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid color-mix(in oklch, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ed-spin .7s linear infinite;
+}
+
+@keyframes ed-spin {
+  to { transform: rotate(360deg); }
+}

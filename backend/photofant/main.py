@@ -14,6 +14,7 @@ from photofant.api import (
     collections,
     config,
     duplicates,
+    edit_sessions,
     faces,
     health,
     info,
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(faces.router, prefix="/api")
     app.include_router(persons.router, prefix="/api")
     app.include_router(duplicates.router, prefix="/api")
+    app.include_router(edit_sessions.router, prefix="/api")
     return app
 
 

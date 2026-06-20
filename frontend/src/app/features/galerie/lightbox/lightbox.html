@@ -76,6 +76,10 @@
           </button>
         </div>
         <div class="pbtn-row">
+          <button class="pbtn pbtn--ghost" (click)="openEditor()">
+            <pf-icon name="crop" [size]="15" />
+            Bearbeiten
+          </button>
           <button
             class="pbtn pbtn--ghost"
             [class.pbtn--disabled]="!hasPHash()"

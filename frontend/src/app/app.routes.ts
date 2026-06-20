@@ -3,6 +3,11 @@ import { Shell } from './shell/shell';
 
 export const routes: Routes = [
   {
+    path: 'editor/:kind/:id',
+    loadComponent: () =>
+      import('./features/editor/editor').then((m) => m.Editor),
+  },
+  {
     path: '',
     component: Shell,
     children: [
