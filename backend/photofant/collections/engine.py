@@ -14,7 +14,7 @@ Trigger semantics mirror the prototype (`docs/design/js/data.js` matchTriggers/e
 Trigger types:
 - `tag`     — asset carries the trigger's tag (aliases resolved, `manually_removed` excluded).
 - `caption` — asset caption contains the phrase (case-insensitive substring).
-- `person`  — inactive until P7 (no face data yet) → matches nothing.
+- `person`  — asset has an instance for the trigger's person (P7).
 """
 from __future__ import annotations
 
@@ -73,7 +73,17 @@ def _trigger_match_ids(session: Session, trigger: SmartTrigger, active_ids: set[
         rows = session.query(Asset.id).filter(Asset.caption.ilike(f"%{phrase}%")).all()
         return {row[0] for row in rows} & active_ids
 
-    # person trigger — inactive until P7 (no face matches yet)
+    if trigger.type == "person" and trigger.person_id is not None:
+        rows = (
+            session.query(AssetInstance.asset_id)
+            .filter(
+                AssetInstance.person_id == trigger.person_id,
+                AssetInstance.deleted_at.is_(None),
+            )
+            .all()
+        )
+        return {row[0] for row in rows} & active_ids
+
     return set()
 
 

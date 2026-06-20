@@ -197,8 +197,143 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
         await _enqueue_pipeline(imported_items)
 
 
+def _is_scannable(file_path: Path, data_root: Path) -> bool:
+    """Filter out paths inside .photofant/, faces/, and edits/ directories."""
+    try:
+        relative = file_path.resolve().relative_to(data_root.resolve())
+    except ValueError:
+        return True
+    parts = relative.parts
+    if not parts:
+        return False
+    if parts[0] == ".photofant":
+        return False
+    if len(parts) >= 2 and parts[1] in ("faces", "edits"):
+        return False
+    return True
+
+
+def _import_to_person(
+    source_path: Path,
+    person_id: int,
+    dupe_threshold: int,
+) -> tuple[int, str] | None:
+    """Import a file dropped into a person folder (FS-Drop, §6.1a).
+
+    If the asset already exists (same hash), creates a new instance for the
+    person. Otherwise creates a full new asset. In both cases the file stays
+    in place and fixed_person is set.
+    """
+    meta = read_meta(source_path)
+
+    with SessionLocal() as session:
+        person = session.get(Person, person_id)
+        if person is None:
+            log.warning("FS-Drop: person %d not found — skipping %s", person_id, source_path.name)
+            return None
+
+        existing_asset = session.scalar(select(Asset).where(Asset.content_hash == meta.content_hash))
+
+        if existing_asset is not None:
+            existing_instance = session.scalar(
+                select(AssetInstance).where(
+                    AssetInstance.asset_id == existing_asset.id,
+                    AssetInstance.person_id == person_id,
+                    AssetInstance.deleted_at.is_(None),
+                )
+            )
+            if existing_instance is not None:
+                log.info(
+                    "FS-Drop: instance exists for asset %d + person %d — skipping",
+                    existing_asset.id, person_id,
+                )
+                return None
+
+            instance = AssetInstance(
+                asset_id=existing_asset.id,
+                person_id=person_id,
+                path=str(source_path.resolve()),
+                fixed_person=True,
+            )
+            session.add(instance)
+            try:
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                return None
+
+            log.info(
+                "FS-Drop: new instance for existing asset %d → person %d",
+                existing_asset.id, person_id,
+            )
+            return existing_asset.id, str(source_path.resolve())
+
+        asset = Asset(
+            content_hash=meta.content_hash,
+            source=meta.source,
+            width=meta.width,
+            height=meta.height,
+            file_size=meta.file_size,
+            format=meta.format,
+            generation_meta=meta.generation_meta,
+            created_at=meta.created_at,
+            imported_at=_now_utc(),
+        )
+        session.add(asset)
+        session.flush()
+
+        instance = AssetInstance(
+            asset_id=asset.id,
+            person_id=person_id,
+            path=str(source_path.resolve()),
+            fixed_person=True,
+        )
+        session.add(instance)
+
+        ledger_entry = ProcessingLedger(content_hash=meta.content_hash)
+        session.add(ledger_entry)
+
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            log.info("FS-Drop: duplicate on commit for %s — skipped", source_path.name)
+            return None
+
+        try:
+            phash_val = compute_phash(source_path)
+            asset.phash = phash_val
+            session.commit()
+
+            similar = find_similar(session, phash_val, asset.id, dupe_threshold)
+            for other_id, distance in similar:
+                asset_a_id = min(asset.id, other_id)
+                asset_b_id = max(asset.id, other_id)
+                stmt = sqlite_insert(ReviewItem).values(
+                    type="dupe_candidate",
+                    asset_a_id=asset_a_id,
+                    asset_b_id=asset_b_id,
+                    phash_distance=distance,
+                    created_at=_now_utc(),
+                ).on_conflict_do_nothing()
+                session.execute(stmt)
+            if similar:
+                session.commit()
+        except Exception:
+            log.exception("pHash/dupe-detection failed for FS-Drop %s", source_path.name)
+            session.rollback()
+
+        log.info("FS-Drop: new asset %d from %s → person %d", asset.id, source_path.name, person_id)
+        return asset.id, str(source_path.resolve())
+
+
 async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
-    """Find image files under scan_root that are not yet in the DB, then import them."""
+    """Find image files under scan_root that are not yet in the DB, then import them.
+
+    Person-folder awareness (FS-Drop, §6.1a): files found in person_{id}/photos/
+    or person_{id}/favourites/ are imported with fixed_person=True for that person.
+    """
+    from photofant.media.person_folders import is_importable_person_subfolder, person_id_from_path
     from photofant.settings import load_settings
 
     settings = load_settings()
@@ -214,7 +349,10 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
         candidates.extend(scan_root.rglob(f"*{extension}"))
         candidates.extend(scan_root.rglob(f"*{extension.upper()}"))
 
-    new_paths = [path for path in candidates if str(path.resolve()) not in known_paths]
+    new_paths = [
+        path for path in candidates
+        if str(path.resolve()) not in known_paths and _is_scannable(path, scan_root)
+    ]
     log.info("Scan found %d new files under %s", len(new_paths), scan_root)
 
     if not new_paths:
@@ -223,7 +361,11 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     imported_items: list[tuple[int, str]] = []
     total = len(new_paths)
     for index, file_path in enumerate(new_paths):
-        result = await asyncio.to_thread(_import_single, file_path, dupe_threshold)
+        pid = person_id_from_path(file_path, scan_root)
+        if pid is not None and is_importable_person_subfolder(file_path, scan_root):
+            result = await asyncio.to_thread(_import_to_person, file_path, pid, dupe_threshold)
+        else:
+            result = await asyncio.to_thread(_import_single, file_path, dupe_threshold)
         if result is not None:
             imported_items.append(result)
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)

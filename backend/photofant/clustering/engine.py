@@ -1,0 +1,201 @@
+"""Face-Clustering engine — initial HDBSCAN + incremental cosine matching.
+
+Initial clustering: HDBSCAN over all face embeddings creates person candidates.
+Incremental matching: a single new face is matched against existing persons via
+cosine similarity with score-band logic (auto / review / unknown).
+"""
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+
+import numpy as np
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from photofant.db.models import Face, Person
+
+log = logging.getLogger(__name__)
+
+
+@dataclass
+class MatchResult:
+    person_id: int | None
+    score: float
+    band: str  # "auto" | "review" | "unknown"
+
+
+def _load_thresholds() -> tuple[float, float, int]:
+    from photofant.settings import load_settings
+
+    settings = load_settings()
+    auto_threshold: float = float(settings.get("face_auto_threshold", 0.6))
+    review_threshold: float = float(settings.get("face_review_threshold", 0.45))
+    min_cluster_size: int = int(settings.get("face_min_cluster_size", 3))
+    return auto_threshold, review_threshold, min_cluster_size
+
+
+def match_face_incremental(session: Session, face_id: int) -> MatchResult:
+    """Match a single face against existing persons via cosine similarity.
+
+    Score bands (configurable in settings):
+      - auto  (≥ auto_threshold):  assign to best-matching person
+      - review (review..auto):     suggestion for review queue
+      - unknown (below review):    stays in _unknown
+    """
+    from photofant.db.face_vector_index import search_disjoint_persons
+
+    face = session.get(Face, face_id)
+    if face is None or face.embedding is None:
+        return MatchResult(person_id=None, score=0.0, band="unknown")
+
+    embedding = np.frombuffer(face.embedding, dtype=np.float32).copy()
+    auto_threshold, review_threshold, _ = _load_thresholds()
+
+    unknown_person = session.scalar(select(Person).where(Person.is_unknown.is_(True)))
+    unknown_person_id = unknown_person.id if unknown_person else None
+
+    matches = search_disjoint_persons(
+        session, embedding, exclude_face_id=face_id, limit=1,
+    )
+
+    if not matches:
+        return MatchResult(person_id=unknown_person_id, score=0.0, band="unknown")
+
+    best = matches[0]
+    best_score = float(best["score"])
+    best_person_id = int(best["person_id"])
+
+    if best_person_id == unknown_person_id:
+        return MatchResult(person_id=unknown_person_id, score=best_score, band="unknown")
+
+    if best_score >= auto_threshold:
+        return MatchResult(person_id=best_person_id, score=best_score, band="auto")
+
+    if best_score >= review_threshold:
+        return MatchResult(person_id=best_person_id, score=best_score, band="review")
+
+    return MatchResult(person_id=unknown_person_id, score=best_score, band="unknown")
+
+
+def run_initial_clustering(session: Session) -> dict[str, int]:
+    """Run HDBSCAN over all face embeddings and create person candidates.
+
+    Returns stats: {persons_created, faces_assigned, noise_count}.
+    Faces with ``fixed_person`` instances are excluded from redistribution.
+    """
+    from photofant.db.models import AssetInstance
+
+    auto_threshold, review_threshold, min_cluster_size = _load_thresholds()
+
+    rows = session.execute(
+        select(Face.id, Face.embedding).where(Face.embedding.isnot(None))
+    ).fetchall()
+
+    if not rows:
+        log.info("No face embeddings found — nothing to cluster")
+        return {"persons_created": 0, "faces_assigned": 0, "noise_count": 0}
+
+    face_ids = [int(row[0]) for row in rows]
+    embeddings = np.array(
+        [np.frombuffer(row[1], dtype=np.float32) for row in rows],
+        dtype=np.float32,
+    )
+
+    log.info("Clustering %d face embeddings (min_cluster_size=%d)", len(face_ids), min_cluster_size)
+
+    try:
+        from sklearn.cluster import HDBSCAN as SklearnHDBSCAN
+
+        clusterer = SklearnHDBSCAN(
+            min_cluster_size=min_cluster_size,
+            metric="cosine",
+            store_centers="centroid",
+        )
+        labels = clusterer.fit_predict(embeddings)
+    except ImportError:
+        log.warning("scikit-learn HDBSCAN not available — falling back to DBSCAN")
+        from sklearn.cluster import DBSCAN
+
+        clusterer = DBSCAN(eps=1 - auto_threshold, min_samples=min_cluster_size, metric="cosine")
+        labels = clusterer.fit_predict(embeddings)
+
+    unique_labels = set(labels)
+    unique_labels.discard(-1)
+
+    unknown_person = session.scalar(select(Person).where(Person.is_unknown.is_(True)))
+    unknown_person_id = unknown_person.id if unknown_person else 1
+
+    fixed_face_ids: set[int] = set()
+    fixed_rows = session.execute(
+        select(AssetInstance.asset_id)
+        .where(AssetInstance.fixed_person.is_(True))
+    ).fetchall()
+    fixed_asset_ids = {int(row[0]) for row in fixed_rows}
+
+    if fixed_asset_ids:
+        fixed_faces = session.execute(
+            select(Face.id).where(Face.asset_id.in_(fixed_asset_ids))
+        ).fetchall()
+        fixed_face_ids = {int(row[0]) for row in fixed_faces}
+
+    persons_created = 0
+    faces_assigned = 0
+    noise_count = 0
+
+    for label in sorted(unique_labels):
+        cluster_indices = [index for index, cluster_label in enumerate(labels) if cluster_label == label]
+        cluster_face_ids = [face_ids[index] for index in cluster_indices]
+
+        assignable_face_ids = [fid for fid in cluster_face_ids if fid not in fixed_face_ids]
+        if not assignable_face_ids:
+            continue
+
+        person = Person(name=None, is_unknown=False)
+        session.add(person)
+        session.flush()
+        persons_created += 1
+
+        for fid in assignable_face_ids:
+            session.execute(
+                select(Face).where(Face.id == fid).with_for_update()
+            )
+            face = session.get(Face, fid)
+            if face is not None and face.person_id == unknown_person_id:
+                face.person_id = person.id
+                faces_assigned += 1
+
+    noise_indices = [index for index, cluster_label in enumerate(labels) if cluster_label == -1]
+    noise_count = len(noise_indices)
+
+    session.commit()
+    log.info(
+        "Clustering done: %d persons created, %d faces assigned, %d noise",
+        persons_created, faces_assigned, noise_count,
+    )
+    return {
+        "persons_created": persons_created,
+        "faces_assigned": faces_assigned,
+        "noise_count": noise_count,
+    }
+
+
+def compute_person_centroid(session: Session, person_id: int) -> np.ndarray | None:
+    """Compute the mean embedding (centroid) for all faces of a person."""
+    rows = session.execute(
+        select(Face.embedding)
+        .where(Face.person_id == person_id, Face.embedding.isnot(None))
+    ).fetchall()
+
+    if not rows:
+        return None
+
+    embeddings = np.array(
+        [np.frombuffer(row[0], dtype=np.float32) for row in rows],
+        dtype=np.float32,
+    )
+    centroid = embeddings.mean(axis=0)
+    norm = np.linalg.norm(centroid)
+    if norm > 0:
+        centroid /= norm
+    return centroid

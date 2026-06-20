@@ -37,6 +37,7 @@ class JobKind(StrEnum):
     REEVALUATE = "reevaluate"
     DUPE_SCAN = "dupe_scan"
     FACE = "face"
+    CLUSTERING = "clustering"
 
 
 @dataclass

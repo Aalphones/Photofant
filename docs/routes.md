@@ -394,11 +394,55 @@ Aktions-Semantik (`PATCH /api/review/dupes/{id}`):
 
 `POST /api/jobs/dupe-scan` mit `scope='selection'` erfordert `asset_ids` (sonst `422`).
 
+## Faces — Matching, Clustering & Assignment (P7 Phase 2 + Phase 3)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| Lightbox (Face-Matches) | `GET` | `/api/faces/{face_id}/matches` | — | `FaceMatchDto[]` |
+| Lightbox (Face-Thumbnail) | `GET` | `/api/faces/{face_id}/thumbnail` | — | JPEG blob (256 px) |
+| `/einstellungen` / manuell | `POST` | `/api/faces/cluster` | — | `{ job_id: string }` |
+| Lightbox / Review | `PATCH` | `/api/faces/{face_id}/assign` | `{ person_id: number }` | `AssignResultDto` |
+
+```typescript
+interface FaceMatchDto {
+  person_id: number;
+  person_name: string | null;
+  best_face_id: number;
+  score: number;            // Cosine-Ähnlichkeit (0–1)
+}
+
+interface AssignResultDto {
+  face_id: number;
+  old_person_id: number | null;
+  new_person_id: number;
+  asset_id: number | null;
+}
+```
+
+**Score-Bänder** (konfigurierbar in `settings.json`):
+- `face_auto_threshold` (default `0.6`): automatische Zuordnung
+- `face_review_threshold` (default `0.45`): Vorschlag für Review-Queue
+- darunter: `_unknown`
+
+**`face_min_cluster_size`** (default `3`): HDBSCAN-Mindestclustergröße für Initial-Clustering.
+
+**Inkrementelles Matching:** Läuft automatisch nach jedem Face-Job im Import-Fluss. Faces mit `fixed_person`-Instanzen werden nie automatisch umverteilt. Auto-Assignment materialisiert den Person-Ordner (Move/Copy) und verschiebt Face-Crops.
+
+**Manuelle Zuordnung (`PATCH /faces/{id}/assign`):** Setzt `fixed_person=true` auf der Ziel-Instanz. Physischer Move: Bilddatei + Face-Crop wandern in den Ziel-Ordner. Hat die Quell-Person keine Faces mehr für das Asset, wird deren Instanz aufgeräumt. Feuert Smart-Album-Re-Evaluation.
+
+**FS-Drop (§6.1a, Scan-Job):** Dateien in `person_{id}/photos/` oder `person_{id}/favourites/` ohne DB-Eintrag werden beim Scan erkannt und mit `fixed_person=true` importiert. Weitere erkannte Personen erhalten Kopien; die fixe Zuordnung bleibt unangetastet.
+
+**Person-Ordner-Konvention:** `_unknown/` für den Auffang, `person_{id}/` für benannte Personen. Jeder mit Subordnern: `photos/`, `favourites/`, `faces/`, `edits/`.
+
+Fehler-Codes:
+- `404` — Face oder Ziel-Person nicht gefunden
+- `409 { code: "NO_EMBEDDING" }` — Face hat noch kein Embedding
+
 ## Job-Stream
 
 | Trigger | Endpoint | Protokoll |
 |---|---|---|
-| Job-Fortschritt (import, scan, thumbnail, backup, reconcile, rebuild, tagging, captioning, embedding) | `/api/jobs/stream` | SSE — jede Zeile ist ein `Job`-JSON |
+| Job-Fortschritt (import, scan, thumbnail, backup, reconcile, rebuild, tagging, captioning, embedding, face, clustering) | `/api/jobs/stream` | SSE — jede Zeile ist ein `Job`-JSON |
 
 ## AssetDto (Frontend-Typ)
 

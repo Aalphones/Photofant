@@ -86,6 +86,20 @@ def _embedding_to_bytes(embedding: np.ndarray | None) -> bytes | None:
     return embedding.astype(np.float32).tobytes()
 
 
+def _upsert_face_vector(face_id: int, embedding: np.ndarray) -> None:
+    from photofant.db.face_vector_index import upsert_embedding
+
+    with SessionLocal() as session:
+        upsert_embedding(session, face_id, embedding)
+        session.commit()
+
+
+def _run_incremental_match(face_id: int) -> None:
+    from photofant.jobs.clustering_job import run_incremental_match
+
+    run_incremental_match(face_id)
+
+
 def _run_face_job(asset_id: int, asset_path: str) -> None:
     from photofant.config import get_data_root
     from photofant.inference.adapters.buffalo_l import resolve_buffalo_l
@@ -172,6 +186,17 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
             _store_face_thumbnail(face_id, thumb_data)
         except Exception:
             log.exception("Face thumbnail failed for face %d", face_id)
+
+        # Vector index + incremental matching
+        if embedding is not None:
+            try:
+                _upsert_face_vector(face_id, embedding)
+            except Exception:
+                log.exception("Face vector index upsert failed for face %d", face_id)
+            try:
+                _run_incremental_match(face_id)
+            except Exception:
+                log.exception("Incremental match failed for face %d", face_id)
 
         log.info(
             "Face %d saved: asset=%d idx=%d score=%.3f age=%s",

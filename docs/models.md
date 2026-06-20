@@ -65,7 +65,17 @@ Indexes: `ix_asset_content_hash` (unique), `ix_asset_created_at`.
 
 ### `asset_instance` (migration 0002)
 
-Physical copy per person. Stage 1: one instance per asset (`person = _unknown`).
+Physical copy per person. After clustering/assignment, one asset can have multiple
+instances (one per person). Folder convention: `_unknown/` for the catch-all person,
+`person_{id}/` for named persons; each with subfolders `photos/`, `favourites/`,
+`faces/`, `edits/`.
+
+**Multi-instance semantics (P7 Phase 3):** When clustering assigns an asset's faces to
+real persons, the `_unknown` instance is **moved** to the first person (row reused,
+file moved), and additional persons get **copies** (new rows, files copied). A manually
+dropped file (`fixed_person=true`) stays put; only copies are created for other persons.
+Manual face reassignment (`PATCH /faces/{id}/assign`) sets `fixed_person=true` on the
+target instance and cleans up the source person's instance if no faces remain.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -193,6 +203,21 @@ degrades gracefully when the table is absent (e.g. throw-away test DBs).
 
 > Requires the sqlite-vec loadable extension, loaded per connection via the SQLAlchemy
 > `connect` event (`photofant/db/engine.py`) and inside migration 0007 (`op.get_bind()`).
+
+### `vec_face_embedding` (migration 0016)
+
+sqlite-vec `vec0` virtual table — the searchable ArcFace vector index for face clustering
+and matching. Rowid = `face.id`; one row per face with an embedding. The canonical embedding
+lives on `face.embedding` (BLOB); this table is a **rebuildable** index over those BLOBs
+(`photofant/db/face_vector_index.py:rebuild_index`). Same pattern as `vec_asset_embedding`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `rowid` | INTEGER | = `face.id` |
+| `embedding` | `float[512]` | `distance_metric=cosine`; cosine similarity = `1 − distance` |
+
+> Maintained on face creation (face_job) and deletion; populated from existing BLOBs
+> during migration 0016. Used by `GET /api/faces/{id}/matches` and incremental matching.
 
 ### `collection` (migration 0012)
 

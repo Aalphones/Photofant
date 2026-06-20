@@ -33,6 +33,9 @@ class AppSettings(TypedDict):
     trash_auto_days: int
     keyboard_shortcuts: dict[str, Any] | None
     dupe_threshold: int
+    face_auto_threshold: float
+    face_review_threshold: float
+    face_min_cluster_size: int
     display: DisplaySettings
 
 
@@ -53,6 +56,9 @@ SETTINGS_DEFAULTS: AppSettings = {
     "trash_auto_days": 30,
     "keyboard_shortcuts": None,
     "dupe_threshold": 10,
+    "face_auto_threshold": 0.6,
+    "face_review_threshold": 0.45,
+    "face_min_cluster_size": 3,
     "display": {
         "locale": "de",
         "date_format": "dmy",
@@ -77,6 +83,9 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "trash_auto_days": int,
     "keyboard_shortcuts": (dict, type(None)),
     "dupe_threshold": int,
+    "face_auto_threshold": (float, int),
+    "face_review_threshold": (float, int),
+    "face_min_cluster_size": int,
     "display": dict,
 }
 
