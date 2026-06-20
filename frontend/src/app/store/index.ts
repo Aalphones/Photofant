@@ -1,5 +1,6 @@
 export * from './jobs/index';
 export * from './filters/index';
+export * from './persons/index';
 export * from './search/index';
 export * from './gallery/index';
 export * from './trash/index';

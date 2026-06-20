@@ -12,6 +12,8 @@ export const filtersActions = createActionGroup({
     'Set Quality Min':  props<{ qualityMin: number }>(),
     'Set Tag Ids':      props<{ tagIds: number[] }>(),
     'Set Collection Id': props<{ collectionId: number | null }>(),
+    'Set Person Id':     props<{ personId: number | null }>(),
+    'Set Framings':      props<{ framings: string[] }>(),
     'Clear All Filters': emptyProps(),
   },
 });

@@ -1,0 +1,21 @@
+@if (isLoading()) {
+  <div class="personen__loading">
+    <span class="personen__loading-text">Lade Personen…</span>
+  </div>
+} @else if (persons().length === 0) {
+  <div class="personen__empty">
+    <p class="personen__empty-text">Noch keine Personen erkannt.</p>
+    <p class="personen__empty-hint">Starte die Gesichtserkennung in den Einstellungen.</p>
+  </div>
+} @else {
+  <div class="personen__grid">
+    @for (person of persons(); track person.id) {
+      <pf-person-card
+        [person]="person"
+        (select)="onSelect(person)"
+        (rename)="onRename($event)"
+        (importFiles)="onImportFiles($event)"
+      />
+    }
+  </div>
+}

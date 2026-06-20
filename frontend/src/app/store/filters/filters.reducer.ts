@@ -12,6 +12,8 @@ interface FiltersState {
   qualityMin: number;
   tagIds: number[];
   collectionId: number | null;
+  personId: number | null;
+  framings: string[];
 }
 
 const initialState: FiltersState = {
@@ -24,6 +26,8 @@ const initialState: FiltersState = {
   qualityMin: 0,
   tagIds: [],
   collectionId: null,
+  personId: null,
+  framings: [],
 };
 
 export const filtersFeature = createFeature({
@@ -63,6 +67,14 @@ export const filtersFeature = createFeature({
       ...state,
       collectionId,
     })),
+    on(filtersActions.setPersonId, (state: FiltersState, { personId }) => ({
+      ...state,
+      personId,
+    })),
+    on(filtersActions.setFramings, (state: FiltersState, { framings }) => ({
+      ...state,
+      framings,
+    })),
     on(filtersActions.clearAllFilters, (state: FiltersState) => ({
       ...state,
       favourite: null,
@@ -70,6 +82,8 @@ export const filtersFeature = createFeature({
       qualityMin: 0,
       tagIds: [],
       collectionId: null,
+      personId: null,
+      framings: [],
     })),
   ),
 });

@@ -394,6 +394,35 @@ Aktions-Semantik (`PATCH /api/review/dupes/{id}`):
 
 `POST /api/jobs/dupe-scan` mit `scope='selection'` erfordert `asset_ids` (sonst `422`).
 
+## Personen (P7 Phase 4)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/personen` (Liste) | `GET` | `/api/persons` | — | `PersonDto[]` (sortiert: benannt nach Count desc, Unbekannt zuletzt) |
+| `/personen` (Umbenennen) | `PATCH` | `/api/persons/{id}` | `{ name: string }` | `PersonDto` (400 bei `is_unknown`, 422 bei leerem Namen) |
+| `/galerie` (Person-Filter) | `GET` | `/api/assets` | `person_id` (int, optional) | `AssetsPage` — filtert auf `AssetInstance.person_id` |
+| `/galerie` (Framing-Filter) | `GET` | `/api/assets` | `framing[]` (repeatable) | `AssetsPage` — filtert auf `Asset.framing` |
+
+```typescript
+interface PersonDto {
+  id: number;
+  name: string | null;
+  is_unknown: boolean;
+  count: number;           // nicht-gelöschte AssetInstances für diese Person
+  fav_count: number;       // davon Favoriten
+  portrait_face_id: number | null;  // bestes Face (höchster Score), Thumbnail via /api/faces/{id}/thumbnail
+}
+```
+
+**Framing-Facette:** `GET /api/assets` liefert jetzt `facets.framings: FacetItem[]` — Liste der vorhandenen Framing-Werte (`close_up`, `medium`, `full_body`) mit Zählern. Framing wird in `heuristics_job` und `face_job` berechnet (BBox-Fläche / Bildfläche).
+
+**Framing-Heuristik:** Nach Gesichtserkennung setzt der `face_job` `asset.framing` anhand der größten Face-BBox relativ zur Bildfläche:
+- `close_up`: Verhältnis > 15 %
+- `medium`: 4–15 %
+- `full_body`: < 4 %
+
+Der Rerun-Step `heuristics` liest vorhandene Face-Zeilen und aktualisiert `asset.framing` entsprechend.
+
 ## Faces — Matching, Clustering & Assignment (P7 Phase 2 + Phase 3)
 
 | Angular Route | Method | Backend Endpoint | Request | Response |

@@ -1,6 +1,7 @@
 import { createSelector } from '@ngrx/store';
 import type { AssetDto, AssetGroup, GroupKey } from '@photofant/models';
 import { filtersFeature } from '../filters/filters.reducer';
+import { personsFeature } from '../persons/persons.reducer';
 import { searchFeature } from '../search/search.reducer';
 import { galleryFeature } from './gallery.reducer';
 
@@ -24,7 +25,11 @@ function formatMonthLabel(dateStr: string | null): string {
   return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(date);
 }
 
-function buildGroups(assets: AssetDto[], group: GroupKey): AssetGroup[] {
+function buildGroups(
+  assets: AssetDto[],
+  group: GroupKey,
+  personNames: Map<number, string>,
+): AssetGroup[] {
   const map = new Map<string, AssetDto[]>();
 
   for (const asset of assets) {
@@ -32,7 +37,8 @@ function buildGroups(assets: AssetDto[], group: GroupKey): AssetGroup[] {
     if (group === 'source') {
       key = asset.source ?? 'Unbekannt';
     } else if (group === 'person') {
-      key = 'Unbekannt';
+      const personId = (asset as AssetDto & { person_id?: number }).person_id;
+      key = personId != null ? (personNames.get(personId) ?? 'Unbekannt') : 'Unbekannt';
     } else {
       key = formatMonthLabel(asset.created_at ?? asset.imported_at);
     }
@@ -59,19 +65,31 @@ const selectHasMore = createSelector(
   (total: number, page: number, pageSize: number) => total > page * pageSize
 );
 
+const selectPersonNameMap = createSelector(
+  personsFeature.selectAll,
+  (persons) => {
+    const map = new Map<number, string>();
+    for (const person of persons) {
+      map.set(person.id, person.name ?? 'Unbekannt');
+    }
+    return map;
+  },
+);
+
 const selectGroups = createSelector(
-  selectAll, filtersFeature.selectGroup,
-  (assets: AssetDto[], group: GroupKey) => buildGroups(assets, group)
+  selectAll, filtersFeature.selectGroup, selectPersonNameMap,
+  (assets: AssetDto[], group: GroupKey, personNames: Map<number, string>) =>
+    buildGroups(assets, group, personNames)
 );
 
 const selectFetchParams = createSelector(
   selectPage, selectPageSize,
   filtersFeature.selectSort, filtersFeature.selectOrder, filtersFeature.selectFavourite,
   filtersFeature.selectSources, filtersFeature.selectQualityMin, filtersFeature.selectTagIds,
-  filtersFeature.selectCollectionId,
+  filtersFeature.selectCollectionId, filtersFeature.selectPersonId, filtersFeature.selectFramings,
   searchFeature.selectQ, searchFeature.selectMode,
-  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, q, qMode) =>
-    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, q, qMode })
+  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, q, qMode) =>
+    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, q, qMode })
 );
 
 const selectLightboxAsset = createSelector(
@@ -128,4 +146,5 @@ export const gallerySelectors = {
   selectLightboxNavContext,
   selectSelectionMode,
   selectSelectedIds,
+  selectPersonNameMap,
 };

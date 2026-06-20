@@ -110,6 +110,7 @@ class TagFacetItem(BaseModel):
 class Facets(BaseModel):
     sources: list[FacetItem]
     tags_top: list[TagFacetItem]
+    framings: list[FacetItem] = []
 
 
 class AssetsPage(BaseModel):
@@ -226,7 +227,19 @@ def _compute_facets(session: Session, filtered: OrmQuery[Any]) -> Facets:
     )
     tags_top = [TagFacetItem(id=row.id, name=row.name, count=row.cnt) for row in tag_rows]
 
-    return Facets(sources=sources, tags_top=tags_top)
+    framing_rows = (
+        filtered
+        .with_entities(Asset.framing, func.count(Asset.id).label("cnt"))
+        .group_by(Asset.framing)
+        .all()
+    )
+    framings = [
+        FacetItem(value=row.framing, count=row.cnt)
+        for row in framing_rows
+        if row.framing is not None
+    ]
+
+    return Facets(sources=sources, tags_top=tags_top, framings=framings)
 
 
 @router.get("", response_model=AssetsPage)
@@ -241,6 +254,8 @@ async def list_assets(
     quality_min: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
     tags: Annotated[list[int] | None, Query()] = None,
     collection_id: int | None = None,
+    person_id: int | None = None,
+    framing: Annotated[list[str] | None, Query()] = None,
     q: str | None = None,
     q_mode: SearchMode = SearchMode.TAGS,
 ) -> AssetsPage:
@@ -250,6 +265,10 @@ async def list_assets(
         query = query.filter(AssetInstance.favourite.is_(favourite))
     if source:
         query = query.filter(Asset.source.in_(source))
+    if person_id is not None:
+        query = query.filter(AssetInstance.person_id == person_id)
+    if framing:
+        query = query.filter(Asset.framing.in_(framing))
     if collection_id is not None:
         collection_sub = (
             session.query(CollectionItem.asset_id)

@@ -10,6 +10,8 @@ const {
   selectQualityMin,
   selectTagIds,
   selectCollectionId,
+  selectPersonId,
+  selectFramings,
 } = filtersFeature;
 
 export const filtersSelectors = {
@@ -22,4 +24,6 @@ export const filtersSelectors = {
   qualityMin:   selectQualityMin,
   tagIds:       selectTagIds,
   collectionId: selectCollectionId,
+  personId:     selectPersonId,
+  framings:     selectFramings,
 };

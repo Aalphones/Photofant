@@ -2,8 +2,8 @@
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p07-personen/`
 
-**Phase:** 4/6 — Personen-View (pending)
-**Nächster Schritt:** Phase 4 starten — Personen-Übersicht im Frontend (Galerie-Facette, Personen-Seite mit Porträt-Grid)
+**Phase:** 5/6 — Review-Queue, Merge & Split (pending)
+**Nächster Schritt:** Phase 5 starten — Backend: `GET /api/review-queue`, `POST /api/review-queue/{face_id}`, `POST /api/persons/merge`, `POST /api/persons/{id}/split`; Frontend: Review-Queue-UI + Merge/Split-Dialog. Rating: heikel → `/model opusplan` empfohlen.
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

@@ -92,6 +92,33 @@
   </div>
 </div>
 
+<!-- Framing -->
+@if (framingFacets.length > 0) {
+  <div class="rail__facet" [class.rail__facet--closed]="!openFraming()">
+    <button class="rail__facet-head" (click)="openFraming.set(!openFraming())">
+      <span class="rail__facet-title">Bildausschnitt</span>
+      <span class="rail__chev"><pf-icon name="chevronDown" [size]="14" /></span>
+    </button>
+    <div class="rail__facet-body">
+      @for (facet of framingFacets; track facet.value) {
+        <div
+          class="rail__row"
+          [class.rail__row--on]="framings().includes(facet.value)"
+          (click)="toggleFraming(facet.value)"
+        >
+          <div class="rail__cbox" [class.rail__cbox--on]="framings().includes(facet.value)">
+            @if (framings().includes(facet.value)) {
+              <pf-icon name="check" [size]="10" />
+            }
+          </div>
+          <span class="rail__row-label">{{ FRAMING_LABELS[facet.value] ?? facet.value }}</span>
+          <span class="rail__count">{{ facet.count }}</span>
+        </div>
+      }
+    </div>
+  </div>
+}
+
 <!-- Sammlung -->
 <div class="rail__facet" [class.rail__facet--closed]="!openSammlung()">
   <button class="rail__facet-head" (click)="openSammlung.set(!openSammlung())">

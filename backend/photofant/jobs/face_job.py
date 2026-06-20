@@ -203,7 +203,24 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
             face_id, asset_id, face_index, score or 0.0, age,
         )
 
+    _update_framing(asset_id, image.shape[1], image.shape[0])
     _mark_done(asset_id)
+
+
+def _update_framing(asset_id: int, image_width: int, image_height: int) -> None:
+    """Recompute asset.framing from detected faces (runs after all faces are saved)."""
+    from photofant.jobs.heuristics_job import _compute_framing
+
+    framing = _compute_framing(asset_id, image_width, image_height)
+    if framing is None:
+        return
+    with SessionLocal() as session:
+        from photofant.db.models import Asset as AssetModel
+        asset = session.get(AssetModel, asset_id)
+        if asset is not None:
+            asset.framing = framing
+            session.commit()
+    log.info("Framing updated for asset %d: %s", asset_id, framing)
 
 
 def _mark_done(asset_id: int) -> None:

@@ -1,0 +1,64 @@
+<div
+  class="person-card"
+  [class.person-card--drag-over]="isDragOver()"
+  (click)="onCardClick($event)"
+  (dblclick)="onDoubleClick($event)"
+  (pointerdown)="onPointerDown()"
+  (pointerup)="onPointerUp()"
+  (pointerleave)="onPointerUp()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)"
+  role="button"
+  tabindex="0"
+>
+  <!-- Import-Button (hover) -->
+  @if (!person().is_unknown) {
+    <button
+      class="person-card__import"
+      (click)="onImportClick($event)"
+      aria-label="Bilder importieren"
+      title="Bilder in diesen Ordner importieren"
+    >
+      <pf-icon name="upload" [size]="14" />
+    </button>
+  }
+
+  <!-- Avatar -->
+  <div class="person-card__avatar-wrap">
+    @if (avatarUrl) {
+      <img class="person-card__avatar" [src]="avatarUrl" alt="" loading="lazy" />
+    } @else {
+      <div class="person-card__avatar person-card__avatar--placeholder">
+        <pf-icon name="user" [size]="40" />
+      </div>
+    }
+  </div>
+
+  <!-- Name / Inline-Editor -->
+  <div class="person-card__meta">
+    @if (isEditing()) {
+      <div class="person-card__editor" (click)="$event.stopPropagation()">
+        <input
+          #nameInput
+          class="person-card__name-input"
+          [value]="editName()"
+          (input)="editName.set($any($event.target).value)"
+          (keydown)="onEditKeydown($event)"
+          maxlength="80"
+        />
+        <div class="person-card__editor-actions">
+          <button class="person-card__editor-btn" (click)="confirmEdit()" aria-label="Bestätigen">
+            <pf-icon name="check" [size]="12" />
+          </button>
+          <button class="person-card__editor-btn" (click)="cancelEdit()" aria-label="Abbrechen">
+            <pf-icon name="x" [size]="12" />
+          </button>
+        </div>
+      </div>
+    } @else {
+      <span class="person-card__name">{{ displayName }}</span>
+      <span class="person-card__count">{{ person().count }}</span>
+    }
+  </div>
+</div>

@@ -13,6 +13,8 @@ export interface ListAssetsParams {
   qualityMin?: number;
   tagIds?: number[];
   collectionId?: number | null;
+  personId?: number | null;
+  framings?: string[];
   q?: string;
   qMode?: SearchMode;
 }
@@ -45,6 +47,14 @@ export class AssetService {
     }
     if (params.collectionId != null) {
       httpParams = httpParams.set('collection_id', String(params.collectionId));
+    }
+    if (params.personId != null) {
+      httpParams = httpParams.set('person_id', String(params.personId));
+    }
+    if (params.framings?.length) {
+      for (const framing of params.framings) {
+        httpParams = httpParams.append('framing', framing);
+      }
     }
     if (params.q) {
       httpParams = httpParams.set('q', params.q);

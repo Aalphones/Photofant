@@ -16,7 +16,7 @@ import logging
 
 import numpy as np
 
-from photofant.db.models import Asset, ProcessingLedger
+from photofant.db.models import Asset, Face, ProcessingLedger
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
@@ -44,8 +44,47 @@ def _compute_quality(image: np.ndarray, blur_threshold: float) -> float:
     return quality
 
 
+def _compute_framing(asset_id: int, image_width: int, image_height: int) -> str | None:
+    """Determine framing from largest face BBox relative to image area.
+
+    close_up  : face area > 15 % of image
+    medium    : face area 4–15 %
+    full_body : face area < 4 % (or no detected faces → left as None)
+    """
+    if image_width <= 0 or image_height <= 0:
+        return None
+
+    image_area = image_width * image_height
+
+    with SessionLocal() as session:
+        faces = session.query(Face).filter(Face.asset_id == asset_id).all()
+
+    if not faces:
+        return None
+
+    max_ratio = 0.0
+    for face in faces:
+        bbox = face.bbox
+        if not bbox:
+            continue
+        x1 = float(bbox.get("x1", 0))
+        y1 = float(bbox.get("y1", 0))
+        x2 = float(bbox.get("x2", 0))
+        y2 = float(bbox.get("y2", 0))
+        face_area = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+        ratio = face_area / image_area
+        if ratio > max_ratio:
+            max_ratio = ratio
+
+    if max_ratio > 0.15:
+        return "close_up"
+    if max_ratio > 0.04:
+        return "medium"
+    return "full_body"
+
+
 def _run_heuristics(asset_id: int, asset_path: str) -> None:
-    """Blocking: compute quality_score and persist it for one asset."""
+    """Blocking: compute quality_score + framing and persist them for one asset."""
     from PIL import Image as PILImage
 
     from photofant.settings import load_settings
@@ -54,6 +93,9 @@ def _run_heuristics(asset_id: int, asset_path: str) -> None:
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
     quality = _compute_quality(image, blur_threshold)
 
+    height, width = image.shape[:2]
+    framing = _compute_framing(asset_id, width, height)
+
     with SessionLocal() as session:
         asset = session.get(Asset, asset_id)
         if asset is None:
@@ -61,6 +103,8 @@ def _run_heuristics(asset_id: int, asset_path: str) -> None:
             return
 
         asset.quality_score = quality
+        if framing is not None:
+            asset.framing = framing
 
         ledger = session.get(ProcessingLedger, asset.content_hash)
         if ledger is not None:
@@ -68,7 +112,7 @@ def _run_heuristics(asset_id: int, asset_path: str) -> None:
 
         session.commit()
 
-    log.info("Heuristics done for asset %d: quality_score=%.4f", asset_id, quality)
+    log.info("Heuristics done for asset %d: quality_score=%.4f framing=%s", asset_id, quality, framing)
 
 
 async def run_heuristics_job(status: JobStatus, asset_id: int, asset_path: str) -> None:

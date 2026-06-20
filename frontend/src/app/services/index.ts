@@ -14,3 +14,4 @@ export { CollectionService } from './collection.service';
 export { SettingsService } from './settings.service';
 export type { Locale, DateFormat } from './settings.service';
 export { ReviewService } from './review.service';
+export { PersonService } from './person.service';

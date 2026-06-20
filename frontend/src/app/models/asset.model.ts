@@ -38,6 +38,7 @@ export interface TagFacetItem {
 export interface Facets {
   sources: FacetItem[];
   tags_top: TagFacetItem[];
+  framings?: FacetItem[];
 }
 
 export interface AssetDto {

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Store } from '@ngrx/store';
-import type { TagFacetItem } from '@photofant/models';
+import type { FacetItem, TagFacetItem } from '@photofant/models';
 import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
@@ -32,6 +32,7 @@ export class FilterRail {
   protected readonly tagIds       = this.store.selectSignal(filtersSelectors.tagIds);
   protected readonly collections  = this.store.selectSignal(collectionsSelectors.selectAll);
   protected readonly collectionId = this.store.selectSignal(filtersSelectors.collectionId);
+  protected readonly framings     = this.store.selectSignal(filtersSelectors.framings);
 
   protected readonly tagQuery = signal('');
 
@@ -48,6 +49,7 @@ export class FilterRail {
   protected readonly openQualitaet = signal(true);
   protected readonly openTags      = signal(true);
   protected readonly openSammlung  = signal(true);
+  protected readonly openFraming   = signal(true);
 
   // Slider drag
   private readonly sliderTrackRef = viewChild<ElementRef<HTMLDivElement>>('sliderTrack');
@@ -57,6 +59,16 @@ export class FilterRail {
     flux: 'Flux',
     sdxl: 'SDXL',
   };
+
+  protected readonly FRAMING_LABELS: Record<string, string> = {
+    close_up:  'Nahaufnahme',
+    medium:    'Halbkörper',
+    full_body: 'Ganzkörper',
+  };
+
+  protected get framingFacets(): FacetItem[] {
+    return this.facets()?.framings ?? [];
+  }
 
   protected toggleSource(source: string): void {
     const current = this.sources();
@@ -81,6 +93,14 @@ export class FilterRail {
   protected toggleCollection(collectionId: number): void {
     const next = this.collectionId() === collectionId ? null : collectionId;
     this.store.dispatch(filtersActions.setCollectionId({ collectionId: next }));
+  }
+
+  protected toggleFraming(framing: string): void {
+    const current = this.framings();
+    const next = current.includes(framing)
+      ? current.filter((f: string) => f !== framing)
+      : [...current, framing];
+    this.store.dispatch(filtersActions.setFramings({ framings: next }));
   }
 
   protected sourceFacetCount(source: string): number {
