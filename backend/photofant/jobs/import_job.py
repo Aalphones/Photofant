@@ -251,8 +251,8 @@ async def enqueue_scan(scan_root: Path) -> JobStatus:
 async def _enqueue_pipeline(items: list[tuple[int, str]]) -> None:
     """Enqueue the post-import processing pipeline for freshly imported assets.
 
-    Thumbnails and heuristics always run; tagging, captioning and embedding are
-    gated on the auto_* settings flags so a user can disable expensive ML steps.
+    Thumbnails and heuristics always run; tagging, captioning, embedding and
+    face detection are gated on auto_* settings flags.
     """
     from photofant.jobs.thumbnail_job import enqueue_thumbnails
     from photofant.settings import load_settings
@@ -267,6 +267,8 @@ async def _enqueue_pipeline(items: list[tuple[int, str]]) -> None:
         await _enqueue_caption_batch(items)
     if settings["auto_embed"]:
         await _enqueue_embedding_batch(items)
+    if settings.get("auto_face", True):
+        await _enqueue_face_batch(items)
 
 
 async def _enqueue_heuristics_batch(items: list[tuple[int, str]]) -> None:
@@ -295,3 +297,10 @@ async def _enqueue_embedding_batch(items: list[tuple[int, str]]) -> None:
 
     for asset_id, asset_path in items:
         await enqueue_embedding(asset_id, asset_path)
+
+
+async def _enqueue_face_batch(items: list[tuple[int, str]]) -> None:
+    from photofant.jobs.face_job import enqueue_face
+
+    for asset_id, asset_path in items:
+        await enqueue_face(asset_id, asset_path)

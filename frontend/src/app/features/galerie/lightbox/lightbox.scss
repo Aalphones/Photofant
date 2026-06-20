@@ -527,3 +527,46 @@ pf-zoom-stage {
   color: var(--text-2);
   word-break: break-all;
 }
+
+// ── Face strip (P7) ──────────────────────────────────────────────────────────
+
+.face-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.face-thumb {
+  position: relative;
+  border-radius: var(--radius-s);
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  transition: border-color 0.12s;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+.face-thumb__img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+}
+
+.face-thumb__badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  padding: 2px 0;
+  font-family: var(--mono);
+}

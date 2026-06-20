@@ -8,7 +8,7 @@ Google-Fotos-Kern: Face-Detection und -Recognition, Auto-Clustering in Person-Or
 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
-| 1 | [Face-Engine](phase-1-face-engine.md) | standard | pending |
+| 1 | [Face-Engine](phase-1-face-engine.md) | standard | complete |
 | 2 | [Clustering & Auto-Zuordnung](phase-2-clustering.md) | heikel | pending |
 | 3 | [Person-Ordner & Kopien](phase-3-person-ordner.md) | heikel | pending |
 | 4 | [Personen-View](phase-4-personen-view.md) | standard | pending |

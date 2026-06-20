@@ -75,6 +75,18 @@ export interface TagDto {
   score: number | null;
 }
 
+export interface FaceDto {
+  id: number;
+  asset_id: number | null;
+  person_id: number | null;
+  crop_url: string;
+  score: number | null;
+  age: number | null;
+  bbox: Record<string, number> | null;
+  origin: string | null;
+  is_upscaled: boolean;
+}
+
 export interface AssetDetailDto extends AssetDto {
   path: string | null;
   tags: TagDto[];
@@ -82,6 +94,7 @@ export interface AssetDetailDto extends AssetDto {
   caption: string | null;
   captioner: string | null;
   caption_preset_id: number | null;
+  faces: FaceDto[];
 }
 
 export interface AssetsPage {

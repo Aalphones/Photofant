@@ -212,8 +212,28 @@
         </div>
       </div>
 
-      <!-- Stub-Sektionen: ausgeblendet bis P7/P8 -->
-      <!-- Gesichter, Versionen -->
+      <!-- Gesichter -->
+      @if (faces().length > 0) {
+        <div class="panel-sec">
+          <div class="psec-title">Gesichter ({{ faces().length }})</div>
+          <div class="face-strip">
+            @for (face of faces(); track face.id) {
+              <div class="face-thumb" [title]="faceLabel(face)">
+                <img
+                  class="face-thumb__img"
+                  [src]="'/api' + face.crop_url"
+                  [alt]="'Gesicht #' + face.id"
+                />
+                <span class="face-thumb__badge">
+                  {{ faceScore(face) }}
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Stub: Versionen (P8) -->
 
     }
   </div>

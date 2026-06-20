@@ -12,7 +12,7 @@ import { DOCUMENT } from '@angular/common';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetSummary, DupePair, DupeResolution, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
+import type { AssetDto, AssetSummary, DupePair, DupeResolution, FaceDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
 import { AssetService, ClassifyService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { Icon, RerunDialog } from '@photofant/ui';
@@ -173,6 +173,23 @@ export class Lightbox {
   protected readonly hasPHash = computed((): boolean =>
     this.asset()?.has_phash ?? false
   );
+
+  protected readonly faces = computed((): FaceDto[] => this.detail()?.faces ?? []);
+
+  protected faceLabel(face: FaceDto): string {
+    const parts: string[] = [];
+    if (face.age != null) {
+      parts.push(`~${face.age} J.`);
+    }
+    if (face.score != null) {
+      parts.push(`${Math.round(face.score * 100)}% sicher`);
+    }
+    return parts.join(' · ') || 'Gesicht';
+  }
+
+  protected faceScore(face: FaceDto): string {
+    return face.score != null ? `${Math.round(face.score * 100)}%` : '';
+  }
 
   protected readonly sourceLabel = computed((): string => {
     const source = this.asset()?.source;

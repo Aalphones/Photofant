@@ -159,6 +159,27 @@ class CollectionItem(Base):
     caption_override: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class Face(Base):
+    __tablename__ = "face"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    asset_id: Mapped[int | None] = mapped_column(ForeignKey("asset.id"), nullable=True, index=True)
+    person_id: Mapped[int | None] = mapped_column(ForeignKey("person.id"), nullable=True, index=True)
+    source_version_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    crop_path: Mapped[str] = mapped_column(Text, nullable=False)
+    bbox: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
+    padding: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    phash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    origin: Mapped[str | None] = mapped_column(Text, nullable=True)   # derived | manual_original
+    origin_type: Mapped[str | None] = mapped_column(Text, nullable=True)  # original | upscale | flux_edit
+    is_upscaled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    resolution: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class ReviewItem(Base):
     __tablename__ = "review_item"
     __table_args__ = (

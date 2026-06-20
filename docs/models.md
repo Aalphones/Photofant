@@ -266,13 +266,39 @@ Flow: Import berechnet pHash → `find_similar` findet Treffer ≤ `dupe_thresho
 
 ---
 
+### `face` (migration 0015)
+
+Erkannte Gesichter mit Crop-Pfad, Embedding und Provenienz. Ein Face gehört immer zu einer Person (initial `_unknown`).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `asset_id` | INTEGER FK → `asset.id` | `NULL` = eigenständiges Face ohne Original (P7 Phase 6) |
+| `person_id` | INTEGER FK → `person.id` | initial `_unknown.id`, nach Clustering gesetzt |
+| `source_version_id` | INTEGER | nullable; FK → `version.id` (P8) |
+| `crop_path` | TEXT | Pfad zu `personX/faces/<asset_id>_<idx>.jpg` |
+| `bbox` | JSON | `{x1, y1, x2, y2}` in Original-Bildkoordinaten |
+| `padding` | INTEGER | px Padding um BBox beim Crop |
+| `embedding` | BLOB | ArcFace 512-d float32, L2-normiert |
+| `phash` | TEXT | DHash des Crops (für Crop-Dedupe) |
+| `score` | REAL | Detection-Confidence (0–1) von buffalo_l |
+| `age` | INTEGER | Altersschätzung aus buffalo_l genderage |
+| `origin` | TEXT | `derived` (aus Import) \| `manual_original` (direkt importiert) |
+| `origin_type` | TEXT | `original` \| `upscale` \| `flux_edit` |
+| `is_upscaled` | BOOLEAN | `0` default |
+| `resolution` | INTEGER | Crop-Pixel (height × width) |
+| `created_at` | DATETIME | UTC naive |
+
+Indizes: `ix_face_asset_id`, `ix_face_person_id`.
+
+---
+
 ## Upcoming tables (planned)
 
 | Table | Migration | Plan |
 |---|---|---|
-| `version` | 0015 | P8 |
-| `face` | 0015 | P7 |
-| `prompt_template` | 0016 | P9 |
+| `version` | 0016 | P8 |
+| `prompt_template` | 0017 | P9 |
 
 ---
 

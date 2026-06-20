@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from photofant.config import get_data_root
 from photofant.db import vector_index
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
-from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Tag
+from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Face, Tag
 from photofant.db.session import get_session
 from photofant.jobs.collections_job import enqueue_reevaluate_assets
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
@@ -74,6 +74,18 @@ class TagDto(BaseModel):
     score: float | None
 
 
+class FaceDto(BaseModel):
+    id: int
+    asset_id: int | None
+    person_id: int | None
+    crop_url: str
+    score: float | None
+    age: int | None
+    bbox: dict | None  # type: ignore[type-arg]
+    origin: str | None
+    is_upscaled: bool
+
+
 class AssetDetailDto(AssetDto):
     path: str | None
     tags: list[TagDto]
@@ -81,6 +93,7 @@ class AssetDetailDto(AssetDto):
     caption: str | None
     captioner: str | None
     caption_preset_id: int | None
+    faces: list[FaceDto]
 
 
 class FacetItem(BaseModel):
@@ -377,6 +390,24 @@ async def get_asset_file(asset_id: int, session: DbSession) -> FileResponse:
     )
 
 
+def _load_asset_faces(session: Session, asset_id: int) -> list[FaceDto]:
+    rows = session.query(Face).filter(Face.asset_id == asset_id).all()
+    return [
+        FaceDto(
+            id=face.id,
+            asset_id=face.asset_id,
+            person_id=face.person_id,
+            crop_url=f"/api/faces/{face.id}/thumbnail",
+            score=face.score,
+            age=face.age,
+            bbox=face.bbox,
+            origin=face.origin,
+            is_upscaled=face.is_upscaled,
+        )
+        for face in rows
+    ]
+
+
 @router.get("/{asset_id}", response_model=AssetDetailDto)
 async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
     row = _active_row(session, asset_id)
@@ -386,6 +417,7 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
     asset, instance = row
     base = build_asset_dto(asset, instance)
     tags = _load_asset_tags(session, asset.id)
+    faces = _load_asset_faces(session, asset.id)
     return AssetDetailDto(
         **base.model_dump(),
         path=instance.path,
@@ -394,6 +426,7 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
         caption=asset.caption,
         captioner=asset.captioner,
         caption_preset_id=asset.caption_preset_id,
+        faces=faces,
     )
 
 

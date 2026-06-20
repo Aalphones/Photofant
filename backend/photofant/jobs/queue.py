@@ -36,6 +36,7 @@ class JobKind(StrEnum):
     RERUN = "rerun"
     REEVALUATE = "reevaluate"
     DUPE_SCAN = "dupe_scan"
+    FACE = "face"
 
 
 @dataclass

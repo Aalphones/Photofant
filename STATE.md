@@ -1,9 +1,9 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan — Backlog wählen)
+**Aktiver Plan:** `docs/planning/2026-06-12_p07-personen/`
 
-**Phase:** —
-**Nächster Schritt:** Nächsten Plan aus dem Backlog auswählen
+**Phase:** 2 — Clustering & Auto-Zuordnung (heikel)
+**Nächster Schritt:** Phase 2 starten — HDBSCAN-Clustering, Cosine-Matching gegen bestehende Personen-Cluster, `_unknown`-Handling
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)
