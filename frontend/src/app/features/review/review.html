@@ -1,0 +1,28 @@
+<div class="review__tabs">
+  <button
+    class="review__tab"
+    [class.review__tab--active]="activeTab() === 'gesichter'"
+    (click)="goTab('gesichter')"
+  >
+    Gesichter
+  </button>
+  <button
+    class="review__tab"
+    [class.review__tab--active]="activeTab() === 'duplikate'"
+    (click)="goTab('duplikate')"
+  >
+    Duplikate
+  </button>
+</div>
+
+@switch (activeTab()) {
+  @case ('duplikate') {
+    <pf-review-dupes />
+  }
+  @case ('gesichter') {
+    <div class="review__placeholder">
+      <h3>Gesichter-Review</h3>
+      <p>Wird mit der Personen-Erkennung (P7) implementiert.</p>
+    </div>
+  }
+}

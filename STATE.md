@@ -2,8 +2,8 @@
 
 **Aktiver Plan:** `docs/planning/2026-06-19_duplikaterkennung/` — pHash + Review-Queue Tab 2
 
-**Phase:** 4/6 — Einstellungen: Threshold-Slider (complete)
-**Nächster Schritt:** Phase 5 starten — Frontend: Review-Tab Duplikate (`phase-5-review-tab.md`) — **heikel → `/model opusplan` empfohlen**
+**Phase:** 5/6 — Frontend: Review-Tab Duplikate (complete)
+**Nächster Schritt:** Phase 6 starten — Frontend: Lightbox + Action-Bar (`phase-6-lightbox-actionbar.md`) — **standard → `/model sonnet` empfohlen**
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

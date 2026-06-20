@@ -1,14 +1,19 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ReviewDupes } from './review-dupes/review-dupes';
+
+type ReviewTab = 'gesichter' | 'duplikate';
 
 @Component({
   selector: 'pf-review',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="placeholder-view">
-      <h3>Review-Queue</h3>
-      <p>Noch nicht implementiert — kein aktiver Backlog-Plan.</p>
-    </div>
-  `,
-  styles: [':host { display: block; height: 100%; }'],
+  imports: [ReviewDupes],
+  templateUrl: './review.html',
+  styleUrl: './review.scss',
 })
-export class Review {}
+export class Review {
+  readonly activeTab = signal<ReviewTab>('duplikate');
+
+  goTab(tab: ReviewTab): void {
+    this.activeTab.set(tab);
+  }
+}

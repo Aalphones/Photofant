@@ -32,25 +32,40 @@
 
 ### NgRx / State
 
-- [ ] `DupePair`-Typ in `frontend/src/app/features/review/` definieren
-- [ ] Review-Feature-State erweitern: `dupePairs: DupePair[]`, `dupesLoading: boolean`
-- [ ] Actions: `loadDupePairs`, `loadDupePairsSuccess`, `resolveDupePair`, `resolveDupePairSuccess`, `triggerDupeScan`
-- [ ] Effect: `loadDupePairs` → `GET /api/review/dupes`; `resolveDupePair` → `PATCH …`; `triggerDupeScan` → `POST /api/jobs/dupe-scan`
-- [ ] Selector: `selectPendingDupePairs`, `selectDupePairsCount`
+- [x] `DupePair`-Typ in `frontend/src/app/models/review.model.ts` definiert (+ `AssetSummary`, `DupeResolution`)
+- [x] Review-Feature-State: `EntityState<DupePair>`, `isLoading`, `error` — via `createEntityAdapter`
+- [x] Actions: `loadDupePairs`, `loadDupePairsSuccess/Failure`, `resolveDupePair`, `resolveDupePairSuccess/Failure`, `triggerDupeScan`, `triggerDupeScanSuccess/Failure`
+- [x] Effects: load → `GET /api/review/dupes`; resolve → `PATCH`; scan → `POST /api/jobs/dupe-scan`; Init-Effect → lädt Paare beim App-Start (Badge)
+- [x] Selectors: `selectAll`, `selectTotal`, `selectIsLoading`, `selectError`
 
 ### Komponenten (ng generate)
 
-- [ ] `pf-review` — Hauptkomponente: Tab-Switcher + Router zu den beiden Tab-Inhalten
-- [ ] `pf-review-dupes` — Duplikate-Tab: Liste + Header + leerer Zustand
-- [ ] `pf-dupe-pair-row` — einzelne Zeile in der Liste
-- [ ] `pf-dupe-compare` — Compare-Modal (ggf. als `pf-dupe-compare-dialog`)
+- [x] `pf-review` — Shell: Tab-Switcher (Gesichter | Duplikate), Duplikate als Default
+- [x] `pf-review-dupes` — Duplikate-Tab: Header mit Badge + Scan-Button, Liste, leerer Zustand, Lade-Zustand
+- [x] `pf-dupe-pair-row` — Zeile: zwei Thumbnails, Similarity-Bar, IDs, 4 Action-Buttons
+- [x] `pf-dupe-compare` — Compare-Modal: Side-by-Side, 5 Resolve-Aktionen im Footer
 
 ### CSS (BEM)
 
-- Block `review-dupes`, `dupe-pair`, `dupe-compare` — kein `rq-`-Prefix aus dem Design übernehmen, Angular-BEM-Konvention nutzen
+- [x] Blöcke `review-dupes`, `dupe-pair`, `dupe-compare` — BEM-Konvention, keine `rq-`/`dc-`-Prefixe aus dem Design
+
+### Registrierung
+
+- [x] `reviewFeature` + `ReviewEffects` in `app.config.ts`
+- [x] Barrel-Einträge: `store/review/index.ts` → `store/index.ts`; `ReviewService` → `services/index.ts`; Models → `models/index.ts`
+- [x] Icons `compare` + `link` zur `Icon`-Komponente hinzugefügt
+- [x] Nav-Rail: `toolItems` zu computed Signal, Review-Badge zeigt `reviewSelectors.selectTotal`
 
 ### Docs
 
-- [ ] `docs/conventions/angular.md` — falls neue Pattern (Tab-Switcher, Review-Modal) dokumentieren
+- [x] Kein neues Pattern nötig — Tab-Switcher folgt dem Einstellungen-Shell-Muster
 
 ## Report-Back
+
+Phase 5 complete (2026-06-20). Alle AK erfüllt:
+- Review-Tab mit Tab-Switcher (Gesichter-Placeholder | Duplikate-Default)
+- Duplikate-Liste mit Score-Bar, Thumbnails, 4+1 Aktionen pro Paar
+- Compare-Modal Side-by-Side mit 5 Resolve-Buttons
+- Scan-Button triggert `POST /api/jobs/dupe-scan`
+- Empty-State + Loading-State
+- Nav-Rail-Badge zeigt offene Duplikat-Paare (Init-Effect)

@@ -1,0 +1,48 @@
+<div class="dupe-pair__thumbs">
+  <div class="dupe-pair__thumb">
+    <img [src]="thumbnailUrl(pair().asset_a.id)" [alt]="'Asset #' + pair().asset_a.id" loading="lazy" />
+  </div>
+  <div class="dupe-pair__thumb">
+    <img [src]="thumbnailUrl(pair().asset_b.id)" [alt]="'Asset #' + pair().asset_b.id" loading="lazy" />
+  </div>
+</div>
+
+<div class="dupe-pair__info">
+  <div class="dupe-pair__score">
+    <div class="dupe-pair__bar-bg">
+      <div
+        class="dupe-pair__bar-fill"
+        [class.dupe-pair__bar-fill--high]="similarityClass() === 'high'"
+        [class.dupe-pair__bar-fill--mid]="similarityClass() === 'mid'"
+        [class.dupe-pair__bar-fill--low]="similarityClass() === 'low'"
+        [style.width.%]="similarity()"
+      ></div>
+    </div>
+    <span
+      class="dupe-pair__pct"
+      [class.dupe-pair__pct--high]="similarityClass() === 'high'"
+      [class.dupe-pair__pct--mid]="similarityClass() === 'mid'"
+      [class.dupe-pair__pct--low]="similarityClass() === 'low'"
+    >{{ similarity() }}%</span>
+  </div>
+  <div class="dupe-pair__ids">
+    <span>#{{ pair().asset_a.id }} · {{ pair().asset_a.width }}×{{ pair().asset_a.height }}</span>
+    <span class="dupe-pair__sep">·</span>
+    <span>#{{ pair().asset_b.id }} · {{ pair().asset_b.width }}×{{ pair().asset_b.height }}</span>
+  </div>
+</div>
+
+<div class="dupe-pair__actions">
+  <button class="iconbtn dupe-pair__action" title="Vergleichen" (click)="onCompare()">
+    <pf-icon name="compare" [size]="15" />
+  </button>
+  <button class="iconbtn dupe-pair__action" title="A ist Original" (click)="onResolve('a_is_original')">
+    <pf-icon name="link" [size]="15" />
+  </button>
+  <button class="iconbtn dupe-pair__action dupe-pair__action--warn" title="B löschen" (click)="onResolve('delete_b')">
+    <pf-icon name="trash" [size]="15" />
+  </button>
+  <button class="iconbtn dupe-pair__action dupe-pair__action--ok" title="Beide behalten" (click)="onResolve('dismiss')">
+    <pf-icon name="check" [size]="15" />
+  </button>
+</div>

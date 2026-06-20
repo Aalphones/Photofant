@@ -1,6 +1,6 @@
 # Duplikaterkennung — pHash + Review-Queue Tab 2
 
-> Status: in progress (Phase 4/6 complete) · Eigentümer: Backend + Frontend
+> Status: in progress (Phase 5/6 complete) · Eigentümer: Backend + Frontend
 > **Reihenfolge: NACH `2026-06-19_einstellungen-refactoring`** — Phase 4 legt einen neuen Settings-Child
 > an; besser auf dem refactorierten Fundament bauen als im Monolith.
 
@@ -18,7 +18,7 @@ Zwei Einstiegspunkte:
 | 2 | [Import-Pipeline Auto-Detection](phase-2-import-auto.md) | standard | complete |
 | 3 | [On-Demand-Scan-Job + Review-API](phase-3-scan-und-api.md) | standard | complete |
 | 4 | [Einstellungen: Threshold-Slider](phase-4-einstellungen.md) | mechanisch | complete |
-| 5 | [Frontend: Review-Tab Duplikate](phase-5-review-tab.md) | heikel | pending |
+| 5 | [Frontend: Review-Tab Duplikate](phase-5-review-tab.md) | heikel | complete |
 | 6 | [Frontend: Lightbox + Action-Bar](phase-6-lightbox-actionbar.md) | standard | pending |
 
 ## Kontrakt

@@ -30,6 +30,9 @@ export type {
 export { COLLECTION_KINDS, MATCH_MODES, TRIGGER_TYPES } from './collection.model';
 
 export type { ModelDto, ModelView, ModelStatus, ModelTier, CapabilitiesDto, ModelBindError } from './model.model';
+
+export type { AssetSummary, DupePair, DupeResolution } from './review.model';
+export { DUPE_RESOLUTIONS } from './review.model';
 export {
   MODEL_ENRICHMENT,
   ROLE_META,

@@ -1,0 +1,70 @@
+<div class="dupe-compare__scrim" (click)="onScrimClick()">
+  <div class="dupe-compare__modal" (click)="onModalClick($event)">
+
+    <div class="dupe-compare__head">
+      <span class="dupe-compare__title">Vergleich · {{ similarity() }}% ähnlich</span>
+      <div class="dupe-compare__head-actions">
+        <button class="iconbtn" title="A ist Original" (click)="onResolve('a_is_original')">
+          <pf-icon name="link" [size]="14" />
+        </button>
+        <button class="iconbtn" title="B ist Original" (click)="onResolve('b_is_original')">
+          <pf-icon name="link" [size]="14" />
+        </button>
+        <button class="iconbtn dupe-compare__action--warn" title="A löschen" (click)="onResolve('delete_a')">
+          <pf-icon name="trash" [size]="14" />
+        </button>
+        <button class="iconbtn dupe-compare__action--warn" title="B löschen" (click)="onResolve('delete_b')">
+          <pf-icon name="trash" [size]="14" />
+        </button>
+        <button class="iconbtn" (click)="onClose()" title="Schließen">
+          <pf-icon name="x" [size]="14" />
+        </button>
+      </div>
+    </div>
+
+    <div class="dupe-compare__panels">
+      <div class="dupe-compare__panel">
+        <div class="dupe-compare__img">
+          <img [src]="fileUrl(pair().asset_a.id)" [alt]="'Asset #' + pair().asset_a.id" />
+        </div>
+        <div class="dupe-compare__foot">
+          <span class="dupe-compare__foot-id">#{{ pair().asset_a.id }}</span>
+          <span>{{ pair().asset_a.width }}×{{ pair().asset_a.height }}</span>
+        </div>
+      </div>
+
+      <div class="dupe-compare__panel">
+        <div class="dupe-compare__img">
+          <img [src]="fileUrl(pair().asset_b.id)" [alt]="'Asset #' + pair().asset_b.id" />
+        </div>
+        <div class="dupe-compare__foot">
+          <span class="dupe-compare__foot-id">#{{ pair().asset_b.id }}</span>
+          <span>{{ pair().asset_b.width }}×{{ pair().asset_b.height }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dupe-compare__footer">
+      <button class="dupe-compare__btn dupe-compare__btn--primary" (click)="onResolve('a_is_original')">
+        <pf-icon name="check" [size]="14" />
+        A ist Original
+      </button>
+      <button class="dupe-compare__btn dupe-compare__btn--primary" (click)="onResolve('b_is_original')">
+        <pf-icon name="check" [size]="14" />
+        B ist Original
+      </button>
+      <button class="dupe-compare__btn dupe-compare__btn--danger" (click)="onResolve('delete_a')">
+        <pf-icon name="trash" [size]="14" />
+        A löschen
+      </button>
+      <button class="dupe-compare__btn dupe-compare__btn--danger" (click)="onResolve('delete_b')">
+        <pf-icon name="trash" [size]="14" />
+        B löschen
+      </button>
+      <button class="dupe-compare__btn" (click)="onResolve('dismiss')">
+        Beide behalten
+      </button>
+    </div>
+
+  </div>
+</div>

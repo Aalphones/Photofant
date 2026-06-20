@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { gallerySelectors } from '@photofant/store';
+import { gallerySelectors, reviewSelectors } from '@photofant/store';
 import { Icon } from '../../ui/icon/icon';
 
 interface NavItem {
@@ -24,6 +24,7 @@ export class NavRail {
   private readonly store = inject(Store);
 
   private readonly galerieCount = this.store.selectSignal(gallerySelectors.selectServerTotal);
+  private readonly reviewCount = this.store.selectSignal(reviewSelectors.selectTotal);
 
   // Personen/Alben/Favoriten/Trainingssets have no backend yet (P7/P10) — no count chip until they do.
   protected readonly mainItems = computed<readonly NavItem[]>(() => [
@@ -34,11 +35,14 @@ export class NavRail {
     { id: 'trainingssets',icon: 'training', label: 'Trainingssets' },
   ]);
 
-  protected readonly toolItems: readonly NavItem[] = [
-    { id: 'review',        icon: 'face',     label: 'Review-Queue' },
-    { id: 'modelle',       icon: 'model',    label: 'Modelle'      },
-    { id: 'papierkorb',    icon: 'trash',    label: 'Papierkorb'   },
-    { id: 'wartung',       icon: 'wrench',   label: 'Wartung'      },
-    { id: 'einstellungen', icon: 'settings', label: 'Einstellungen'},
-  ];
+  protected readonly toolItems = computed<readonly NavItem[]>(() => {
+    const dupeCount = this.reviewCount();
+    return [
+      { id: 'review',        icon: 'face',     label: 'Review-Queue', ...(dupeCount > 0 ? { count: dupeCount } : {}) },
+      { id: 'modelle',       icon: 'model',    label: 'Modelle'      },
+      { id: 'papierkorb',    icon: 'trash',    label: 'Papierkorb'   },
+      { id: 'wartung',       icon: 'wrench',   label: 'Wartung'      },
+      { id: 'einstellungen', icon: 'settings', label: 'Einstellungen'},
+    ];
+  });
 }

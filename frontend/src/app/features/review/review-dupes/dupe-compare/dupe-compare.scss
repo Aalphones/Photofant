@@ -1,0 +1,150 @@
+:host {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.dupe-compare__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.dupe-compare__modal {
+  background: var(--bg);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-pop);
+  max-width: 960px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dupe-compare__head {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.dupe-compare__title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.dupe-compare__head-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.dupe-compare__action--warn {
+  color: var(--text-3);
+
+  &:hover {
+    color: var(--danger);
+  }
+}
+
+.dupe-compare__panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dupe-compare__panel {
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.dupe-compare__img {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow: hidden;
+
+  img {
+    max-width: 100%;
+    max-height: 50vh;
+    object-fit: contain;
+    border-radius: var(--radius-s);
+  }
+}
+
+.dupe-compare__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-family: var(--mono);
+  border-top: 1px solid var(--line);
+}
+
+.dupe-compare__foot-id {
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.dupe-compare__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.dupe-compare__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-s);
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--text-2);
+  transition: background 0.12s, color 0.12s;
+
+  &:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  &--primary {
+    background: var(--accent);
+    color: #fff;
+
+    &:hover {
+      background: var(--accent-press);
+      color: #fff;
+    }
+  }
+
+  &--danger {
+    background: var(--danger-weak);
+    color: var(--danger);
+
+    &:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+  }
+}

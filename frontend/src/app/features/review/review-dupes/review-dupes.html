@@ -1,0 +1,42 @@
+<div class="review-dupes__header">
+  <div class="review-dupes__header-left">
+    <span class="review-dupes__badge">{{ pairCount() }}</span>
+    <span class="review-dupes__title">Offene Duplikat-Paare</span>
+  </div>
+  <button class="review-dupes__scan-btn" (click)="onScan()">
+    <pf-icon name="refresh" [size]="14" />
+    Bibliothek durchsuchen
+  </button>
+</div>
+
+@if (isLoading()) {
+  <div class="review-dupes__loading">
+    <span>Lade Duplikate…</span>
+  </div>
+} @else if (pairCount() === 0) {
+  <div class="review-dupes__empty">
+    <pf-icon name="compare" [size]="40" />
+    <div class="review-dupes__empty-title">Keine Duplikate in der Queue</div>
+    <div class="review-dupes__empty-hint">
+      Scan starten um die bestehende Bibliothek auf ähnliche Bilder zu prüfen.
+    </div>
+  </div>
+} @else {
+  <div class="review-dupes__list">
+    @for (pair of pairs(); track pair.id) {
+      <pf-dupe-pair-row
+        [pair]="pair"
+        (compare)="onCompare($event)"
+        (resolve)="onResolve($event)"
+      />
+    }
+  </div>
+}
+
+@if (comparePair(); as activePair) {
+  <pf-dupe-compare
+    [pair]="activePair"
+    (close)="onCloseCompare()"
+    (resolve)="onResolve($event)"
+  />
+}
