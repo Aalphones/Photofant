@@ -200,8 +200,8 @@ interface BackupInfo {
   created_at: string;  // ISO-8601
 }
 
-// RebuildTarget ist bewusst erweiterbar — P7 hängt 'faces' an.
-type RebuildTarget = 'thumbnails';
+type RebuildTarget = 'thumbnails' | 'embeddings' | 'faces';
+// faces: re-extrahiert abgeleitete Face-Crops (origin != manual_original) aus Quell-Bildern
 
 interface MaintenanceStatus {
   db_size: number;          // db.sqlite Größe in Bytes
@@ -525,6 +525,37 @@ interface PersonFaceDto {
 **Merge:** Alle Faces und AssetInstances von `from_person` wandern physisch zu `into_person`. Quell-Person wird gelöscht, Ordner aufgeräumt. Duplikate (selbes Asset in beiden Personen) werden aufgelöst.
 
 **Split:** Ausgewählte Faces werden in eine neue Person verschoben. Wenn die Quell-Person kein Face mehr für ein Asset hat, wird die Instanz verschoben statt kopiert.
+
+## Face-Import & Duplikat-Suche (P7 Phase 6)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/personen` (Bilder importieren) | `POST` | `/api/persons/{id}/import` | `multipart/form-data; files[]` | `{ job_id: string }` — IMPORT-Job mit `fixed_person=True` |
+| `/personen` (Face-Import) | `POST` | `/api/faces/import` | `multipart/form-data; files[], person_id? (Form-Feld)` | `FaceImportResult[]` |
+| `/personen` (Duplikate suchen) | `POST` | `/api/duplicates/search` | `{ person_id, threshold? }` | `PersonDupePair[]` |
+
+```typescript
+interface FaceImportResult {
+  face_id: number;
+  person_id: number | null;
+  has_embedding: boolean;
+}
+
+interface PersonDupePair {
+  asset_a_id: number;
+  asset_b_id: number;
+  phash_distance: number;
+  similarity_pct: number;  // 0–100, berechnet aus Hamming-Distanz (64 Bit)
+}
+```
+
+**`POST /api/persons/{id}/import`:** Speichert Dateien in `person_{id}/photos/` und startet einen Import-Job mit `fixed_person=True` für alle importierten Instanzen.
+
+**`POST /api/faces/import`:** Das Bild IST der Face-Crop (`origin = manual_original`, `asset_id = NULL`). ArcFace berechnet das Embedding direkt (kein Detection-Schritt). Vollständig matchbar und nie durch Face-Rebuild überschreibbar.
+
+**`POST /api/duplicates/search`:** pHash-Hamming-Vergleich aller Instanzen einer Person. `threshold` (default 10, max 20) = maximale Hamming-Distanz (64 Bit). `similarity_pct = round((1 - distance/64) * 100)`.
+
+**Rebuild-Target `faces`:** `POST /api/maintenance/rebuild` mit `{ target: "faces" }` re-extrahiert alle abgeleiteten Face-Crops aus den Quell-Bildern (BBox + Padding). Faces mit `origin = manual_original` bleiben unberührt.
 
 ## Job-Stream
 

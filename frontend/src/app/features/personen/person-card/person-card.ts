@@ -29,6 +29,7 @@ export class PersonCard {
   readonly rename = output<{ id: number; name: string }>();
   readonly importFiles = output<{ personId: number; files: File[] }>();
   readonly splitClick = output<void>();
+  readonly dupeCheck = output<void>();
 
   protected readonly isEditing = signal(false);
   protected readonly editName = signal('');
@@ -100,6 +101,11 @@ export class PersonCard {
   protected onSplitClick(event: MouseEvent): void {
     event.stopPropagation();
     this.splitClick.emit();
+  }
+
+  protected onDupeCheckClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.dupeCheck.emit();
   }
 
   protected onImportClick(event: MouseEvent): void {

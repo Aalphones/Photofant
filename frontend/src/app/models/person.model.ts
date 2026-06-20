@@ -21,3 +21,20 @@ export interface FaceMatch {
   best_face_id: number;
   score: number;
 }
+
+export interface PersonDupePair {
+  asset_a_id: number;
+  asset_b_id: number;
+  phash_distance: number;
+  similarity_pct: number;
+}
+
+export interface FaceImportResult {
+  face_id: number;
+  person_id: number | null;
+  has_embedding: boolean;
+}
+
+export interface PersonImportResponse {
+  job_id: string;
+}

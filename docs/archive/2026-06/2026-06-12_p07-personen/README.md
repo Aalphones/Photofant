@@ -13,7 +13,7 @@ Google-Fotos-Kern: Face-Detection und -Recognition, Auto-Clustering in Person-Or
 | 3 | [Person-Ordner & Kopien](phase-3-person-ordner.md) | heikel | complete |
 | 4 | [Personen-View](phase-4-personen-view.md) | standard | complete |
 | 5 | [Review-Queue, Merge & Split](phase-5-review-merge-split.md) | heikel | complete |
-| 6 | [Face-Import, Duplikate & Rebuild](phase-6-face-import-dupes.md) | standard | pending |
+| 6 | [Face-Import, Duplikate & Rebuild](phase-6-face-import-dupes.md) | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -49,10 +49,24 @@ Google-Fotos-Kern: Face-Detection und -Recognition, Auto-Clustering in Person-Or
 
 ## Summary
 
+Alle 6 Phasen von P7 abgeschlossen. Face-Detection + Embedding (buffalo_l ONNX), HDBSCAN-Clustering, physische Person-Ordner mit Kopien, Personen-View mit Merge/Split/Review-Queue, und abschließend Face-Import (direkter Crop-Import + Person-Folder-Import) mit Duplikat-Scan per pHash und Face-Rebuild-Target.
+
 ## Files touched
+
+Backend: `inference/adapters/buffalo_l.py`, `api/faces.py`, `api/persons.py`, `api/duplicates.py` (neu), `jobs/import_job.py`, `jobs/rebuild_job.py`, `main.py`
+Frontend: `models/person.model.ts`, `models/index.ts`, `models/maintenance.model.ts`, `services/person.service.ts`, `features/personen/personen.ts`, `personen.html`, `person-card/person-card.ts`, `person-card.html`, `dupe-check-dialog/` (neu)
 
 ## Commits
 
+Siehe `git log` — alle Phasen per `feat(p7): Phase N` committet.
+
 ## Deviations from plan
 
+- `POST /api/faces/import` akzeptiert `person_id` als Form-Feld (nicht Query-Param) für Multipart-Kompatibilität.
+- Rebuild-Target `faces` re-croppt BBox-basiert ohne Detection-Neustart — buffalo_l nicht erforderlich für den Rebuild selbst.
+
 ## Follow-ups
+
+- Wartungs-UI für Face-Rebuild-Button (derzeit nur per API auslösbar)
+- Dupe-Modal: Trash-Aktion (rechts löschen) aus dem Prototyp noch nicht verdrahtet
+- `POST /api/faces/import` ohne `person_id` landet in `_unknown` — zukünftig Zuordnung per Matching-Score

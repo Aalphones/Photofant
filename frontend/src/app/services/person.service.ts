@@ -1,7 +1,16 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { PersonDto, PersonFace, FaceMatch, MergeResult, SplitResult } from '@photofant/models';
+import type {
+  FaceImportResult,
+  FaceMatch,
+  MergeResult,
+  PersonDto,
+  PersonDupePair,
+  PersonFace,
+  PersonImportResponse,
+  SplitResult,
+} from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
 export class PersonService {
@@ -33,6 +42,27 @@ export class PersonService {
 
   assignFace(faceId: number, personId: number): Observable<unknown> {
     return this.http.patch(`/api/faces/${faceId}/assign`, { person_id: personId });
+  }
+
+  importToPersonFolder(personId: number, files: File[]): Observable<PersonImportResponse> {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file, file.name);
+    }
+    return this.http.post<PersonImportResponse>(`/api/persons/${personId}/import`, formData);
+  }
+
+  importFacesDirect(personId: number, files: File[]): Observable<FaceImportResult[]> {
+    const formData = new FormData();
+    formData.append('person_id', String(personId));
+    for (const file of files) {
+      formData.append('files', file, file.name);
+    }
+    return this.http.post<FaceImportResult[]>('/api/faces/import', formData);
+  }
+
+  searchDuplicates(personId: number, threshold = 10): Observable<PersonDupePair[]> {
+    return this.http.post<PersonDupePair[]>('/api/duplicates/search', { person_id: personId, threshold });
   }
 
   portraitUrl(faceId: number): string {

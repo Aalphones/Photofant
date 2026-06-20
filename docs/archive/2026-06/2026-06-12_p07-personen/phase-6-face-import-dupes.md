@@ -1,6 +1,6 @@
 # P7 · Phase 6 — Face-Import, Duplikate & Rebuild
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -16,9 +16,9 @@
 
 ## Checkliste
 
-- [ ] Face-Import-Endpoint + UI-Einstieg (Personen-Karte / Personen-Detail)
-- [ ] Duplikat-Endpoint (pHash über Instanzen einer Person, Paar-Bildung, %-Umrechnung) + Dupe-Modal
-- [ ] Rebuild-Erweiterung (`target: "faces"`, Schutz `origin = manual_original`)
-- [ ] Doc-Update: routes.md; README Features-Stand
+- [x] Face-Import-Endpoint + UI-Einstieg (Personen-Karte / Personen-Detail)
+- [x] Duplikat-Endpoint (pHash über Instanzen einer Person, Paar-Bildung, %-Umrechnung) + Dupe-Modal
+- [x] Rebuild-Erweiterung (`target: "faces"`, Schutz `origin = manual_original`)
+- [x] Doc-Update: routes.md; README Features-Stand
 
 ## Report-Back

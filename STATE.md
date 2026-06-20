@@ -1,16 +1,13 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-06-12_p07-personen/`
-
-**Phase:** 6/6 — Face-Import, Duplikate & Rebuild (pending)
-**Nächster Schritt:** Phase 6 starten — Face-Import, FS-Drop-Scan, Duplikatsuche pro Person, Face-Rebuild.
+**Aktiver Plan:** keiner (P7 vollständig, nächster: P8 Editor CPU)
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)
 - `docs/archive/2026-06/2026-06-19_design-angleichung/` — alle 4 Phasen complete (2026-06-19)
 - `docs/archive/2026-06/2026-06-19_einstellungen-refactoring/` — alle 3 Phasen complete (2026-06-19)
 - `docs/archive/2026-06/2026-06-19_duplikaterkennung/` — alle 6 Phasen complete (2026-06-20)
-- P7 Personen Phase 1–5 complete (2026-06-20)
+- `docs/archive/2026-06/2026-06-12_p07-personen/` — alle 6 Phasen complete (2026-06-20)
 
 **Backlog-Pläne (größere Features):**
 - P7 Personen: `docs/planning/2026-06-12_p07-personen/`

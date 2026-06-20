@@ -318,6 +318,34 @@ class BuffaloLEngine:
         self._rec_path = str(base / "w600k_r50.onnx")
         self._age_gender_path = str(base / "genderage.onnx")
 
+    def embed_crop(self, image: np.ndarray) -> np.ndarray | None:
+        """Compute ArcFace embedding for an image that IS a face crop (no detection).
+
+        Resizes directly to 112×112 and runs the recognition model. Used for
+        manual_original face imports where no detection step is needed.
+        """
+        from PIL import Image as PILImage
+
+        from photofant.inference.session_manager import session_manager
+
+        try:
+            pil = PILImage.fromarray(image).convert("RGB").resize((112, 112), PILImage.BILINEAR)
+            face_112 = np.array(pil, dtype=np.uint8)
+            blob = _make_arcface_blob(face_112)
+
+            rec_session = session_manager.acquire_session(self._rec_path)
+            try:
+                rec_input_name = rec_session.get_inputs()[0].name
+                rec_output_name = rec_session.get_outputs()[0].name
+                raw = rec_session.run([rec_output_name], {rec_input_name: blob})[0]
+            finally:
+                session_manager.release_session(self._rec_path)
+
+            return _l2_normalize(raw).astype(np.float32)
+        except Exception:
+            log.exception("embed_crop failed")
+            return None
+
     def detect(self, image: np.ndarray) -> list[dict]:
         """Return one dict per face: {bbox, score, age, embedding, landmarks}."""
         from photofant.inference.session_manager import session_manager

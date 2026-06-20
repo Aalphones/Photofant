@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -65,6 +66,10 @@ class SplitResultDto(BaseModel):
     new_person_id: int | None
     faces_moved: int
     instances_created: int
+
+
+class PersonImportResponse(BaseModel):
+    job_id: str
 
 
 def _build_person_dto(session: Session, person: Person) -> PersonDto:
@@ -192,6 +197,44 @@ async def merge_persons_endpoint(body: MergeRequest, session: DbSession) -> Merg
         faces_moved=result["faces_moved"],
         instances_moved=result["instances_moved"],
     )
+
+
+@router.post("/{person_id}/import", response_model=PersonImportResponse)
+async def import_to_person_folder(
+    person_id: int,
+    session: DbSession,
+    files: Annotated[list[UploadFile], File()],
+) -> PersonImportResponse:
+    """Upload images and import them into a person's photos/ folder with fixed_person=True."""
+    from photofant.config import get_data_root
+    from photofant.jobs.import_job import enqueue_person_import
+    from photofant.media.person_folders import ensure_person_folder
+
+    person = session.get(Person, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    data_root = get_data_root()
+    person_dir = ensure_person_folder(data_root, person)
+    photos_dir = person_dir / "photos"
+    photos_dir.mkdir(parents=True, exist_ok=True)
+
+    saved_paths: list[str] = []
+    for upload in files:
+        filename = upload.filename or "upload.jpg"
+        suffix = Path(filename).suffix.lower() or ".jpg"
+        dest = photos_dir / filename
+        counter = 1
+        while dest.exists():
+            stem = Path(filename).stem
+            dest = photos_dir / f"{stem}_{counter}{suffix}"
+            counter += 1
+        content = await upload.read()
+        dest.write_bytes(content)
+        saved_paths.append(str(dest))
+
+    status = await enqueue_person_import(person_id, saved_paths)
+    return PersonImportResponse(job_id=status.id)
 
 
 @router.post("/{person_id}/split", response_model=SplitResultDto)

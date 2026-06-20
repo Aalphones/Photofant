@@ -10,11 +10,12 @@ from photofant.jobs.thumbnail_job import gather_active_items, generate_thumbnail
 
 log = logging.getLogger(__name__)
 
-RebuildTarget = Literal["thumbnails", "embeddings"]
+RebuildTarget = Literal["thumbnails", "embeddings", "faces"]
 
 _TARGET_LABELS: dict[str, str] = {
     "thumbnails": "Thumbnails neu aufbauen",
     "embeddings": "Vektor-Index neu aufbauen",
+    "faces": "Face-Crops neu extrahieren",
 }
 
 
@@ -49,11 +50,92 @@ async def _rebuild_embeddings(status: JobStatus) -> None:
     log.info("Vector index rebuilt: %d embedding(s)", count)
 
 
+def _rebuild_faces_sync() -> int:
+    """Re-crop all derived face crops from their source images.
+
+    Skips faces with origin='manual_original' — those are user-provided and
+    must never be overwritten. Returns the number of re-extracted crops.
+    """
+    from pathlib import Path as _Path
+
+    import numpy as np
+    from PIL import Image as PILImage
+    from sqlalchemy import select
+
+    from photofant.db.models import AssetInstance, Face
+
+    with SessionLocal() as session:
+        face_rows = session.execute(
+            select(Face.id, Face.asset_id, Face.crop_path, Face.bbox, Face.padding)
+            .where(
+                Face.origin != "manual_original",
+                Face.asset_id.is_not(None),
+            )
+        ).all()
+
+        # Build a map: asset_id → first active instance path
+        asset_ids = list({int(row[1]) for row in face_rows})
+        if not asset_ids:
+            return 0
+
+        instance_rows = session.execute(
+            select(AssetInstance.asset_id, AssetInstance.path)
+            .where(
+                AssetInstance.asset_id.in_(asset_ids),
+                AssetInstance.deleted_at.is_(None),
+            )
+        ).all()
+
+    path_map: dict[int, str] = {}
+    for asset_id, path in instance_rows:
+        if int(asset_id) not in path_map:
+            path_map[int(asset_id)] = path
+
+    rebuilt = 0
+    for face_id, asset_id, crop_path, bbox, padding in face_rows:
+        source = path_map.get(int(asset_id))
+        if source is None:
+            continue
+        try:
+            img_pil = PILImage.open(source).convert("RGB")
+            image = np.array(img_pil, dtype=np.uint8)
+
+            if bbox:
+                pad = padding or 40
+                x1 = max(0, int(bbox.get("x1", 0)) - pad)
+                y1 = max(0, int(bbox.get("y1", 0)) - pad)
+                x2 = min(image.shape[1], int(bbox.get("x2", image.shape[1])) + pad)
+                y2 = min(image.shape[0], int(bbox.get("y2", image.shape[0])) + pad)
+                crop = image[y1:y2, x1:x2]
+            else:
+                crop = image
+
+            dest = _Path(crop_path)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            PILImage.fromarray(crop).save(str(dest), "JPEG", quality=92)
+            rebuilt += 1
+        except Exception:
+            log.exception("Face rebuild failed for face %d (asset %d)", face_id, asset_id)
+
+    return rebuilt
+
+
+async def _rebuild_faces(status: JobStatus) -> None:
+    """Re-extract derived face crops from source images (async wrapper)."""
+    import asyncio
+
+    job_queue.update(status, progress=0.1, state=JobState.RUNNING)
+    count = await asyncio.to_thread(_rebuild_faces_sync)
+    log.info("Face rebuild complete: %d crops re-extracted", count)
+
+
 async def run_rebuild_job(status: JobStatus, target: RebuildTarget) -> None:
     if target == "thumbnails":
         await _rebuild_thumbnails(status)
     elif target == "embeddings":
         await _rebuild_embeddings(status)
+    elif target == "faces":
+        await _rebuild_faces(status)
     else:  # pragma: no cover - guarded by the API Literal
         raise ValueError(f"unknown rebuild target '{target}'")
 

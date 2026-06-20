@@ -22,6 +22,7 @@
         (rename)="onRename($event)"
         (importFiles)="onImportFiles($event)"
         (splitClick)="onSplitClick(person)"
+        (dupeCheck)="onDupeCheck(person)"
       />
     }
   </div>
@@ -40,5 +41,12 @@
     [person]="person"
     (close)="splitPerson.set(null)"
     (split)="onSplit($event)"
+  />
+}
+
+@if (dupeCheckPerson(); as person) {
+  <pf-dupe-check-dialog
+    [person]="person"
+    (close)="dupeCheckPerson.set(null)"
   />
 }

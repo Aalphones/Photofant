@@ -8,29 +8,31 @@ import {
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import type { PersonDto } from '@photofant/models';
-import { AssetService } from '@photofant/services';
+import { PersonService } from '@photofant/services';
 import { Icon } from '@photofant/ui';
 import { filtersActions, personsActions, personsSelectors } from '@photofant/store';
 import { PersonCard } from './person-card/person-card';
 import { MergeDialog } from './merge-dialog/merge-dialog';
 import { SplitDialog } from './split-dialog/split-dialog';
+import { DupeCheckDialog } from './dupe-check-dialog/dupe-check-dialog';
 
 @Component({
   selector: 'pf-personen',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PersonCard, MergeDialog, SplitDialog, Icon],
+  imports: [PersonCard, MergeDialog, SplitDialog, DupeCheckDialog, Icon],
   templateUrl: './personen.html',
   styleUrl: './personen.scss',
 })
 export class Personen implements OnInit {
   private readonly store = inject(Store);
   private readonly router = inject(Router);
-  private readonly assetService = inject(AssetService);
+  private readonly personService = inject(PersonService);
 
   protected readonly persons = this.store.selectSignal(personsSelectors.selectAll);
   protected readonly isLoading = this.store.selectSignal(personsSelectors.selectIsLoading);
   protected readonly showMergeDialog = signal(false);
   protected readonly splitPerson = signal<PersonDto | null>(null);
+  protected readonly dupeCheckPerson = signal<PersonDto | null>(null);
 
   ngOnInit(): void {
     this.store.dispatch(personsActions.loadPersons());
@@ -46,7 +48,11 @@ export class Personen implements OnInit {
   }
 
   protected onImportFiles(event: { personId: number; files: File[] }): void {
-    this.assetService.uploadFiles(event.files).subscribe();
+    this.personService.importToPersonFolder(event.personId, event.files).subscribe();
+  }
+
+  protected onDupeCheck(person: PersonDto): void {
+    this.dupeCheckPerson.set(person);
   }
 
   protected onMerge(event: { fromId: number; intoId: number }): void {

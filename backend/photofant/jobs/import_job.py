@@ -374,6 +374,35 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
         await _enqueue_pipeline(imported_items)
 
 
+async def run_person_import_job(status: JobStatus, person_id: int, paths: list[str]) -> None:
+    """Import files that were uploaded directly to a person's folder (fixed_person)."""
+    from photofant.settings import load_settings
+
+    settings = load_settings()
+    dupe_threshold = settings["dupe_threshold"]
+
+    total = len(paths)
+    imported_items: list[tuple[int, str]] = []
+
+    for index, path_str in enumerate(paths):
+        file_path = Path(path_str)
+        result = await asyncio.to_thread(_import_to_person, file_path, person_id, dupe_threshold)
+        if result is not None:
+            imported_items.append(result)
+        job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
+
+    if imported_items:
+        await _enqueue_pipeline(imported_items)
+
+
+async def enqueue_person_import(person_id: int, paths: list[str]) -> JobStatus:
+    return await job_queue.enqueue(
+        kind=JobKind.IMPORT,
+        label=f"Importiere {len(paths)} Datei(en) für Person {person_id}",
+        coro_factory=lambda job_status: run_person_import_job(job_status, person_id, paths),
+    )
+
+
 async def enqueue_import(paths: list[str]) -> JobStatus:
     return await job_queue.enqueue(
         kind=JobKind.IMPORT,

@@ -25,6 +25,14 @@
       </button>
       <button
         class="person-card__hover-btn"
+        (click)="onDupeCheckClick($event)"
+        aria-label="Duplikate suchen"
+        title="Duplikate suchen"
+      >
+        <pf-icon name="compare" [size]="14" />
+      </button>
+      <button
+        class="person-card__hover-btn"
         (click)="onImportClick($event)"
         aria-label="Bilder importieren"
         title="Bilder importieren"
