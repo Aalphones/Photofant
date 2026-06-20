@@ -28,6 +28,7 @@ export class PersonCard {
   readonly select = output<void>();
   readonly rename = output<{ id: number; name: string }>();
   readonly importFiles = output<{ personId: number; files: File[] }>();
+  readonly splitClick = output<void>();
 
   protected readonly isEditing = signal(false);
   protected readonly editName = signal('');
@@ -94,6 +95,11 @@ export class PersonCard {
     if (event.key === 'Enter') { this.confirmEdit(); }
     if (event.key === 'Escape') { this.cancelEdit(); }
     event.stopPropagation();
+  }
+
+  protected onSplitClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.splitClick.emit();
   }
 
   protected onImportClick(event: MouseEvent): void {

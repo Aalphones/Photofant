@@ -1,16 +1,19 @@
-"""Persons API — list and rename Person records.
+"""Persons API — list, rename, merge and split Person records.
 
-GET   /api/persons       → PersonDto[] (sorted by count desc, unknown last)
-PATCH /api/persons/{id}  → rename → PersonDto
+GET    /api/persons             → PersonDto[]
+PATCH  /api/persons/{id}        → rename
+POST   /api/persons/merge       → merge two persons
+POST   /api/persons/{id}/split  → split faces into new person
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from photofant.db.models import AssetInstance, Face, Person
@@ -34,6 +37,34 @@ class PersonDto(BaseModel):
 
 class RenameRequest(BaseModel):
     name: str
+
+
+class PersonFaceDto(BaseModel):
+    id: int
+    asset_id: int | None
+    crop_url: str
+    score: float | None
+    age: int | None
+
+
+class MergeRequest(BaseModel):
+    from_id: int
+    into_id: int
+
+
+class SplitRequest(BaseModel):
+    face_ids: list[int]
+
+
+class MergeResultDto(BaseModel):
+    faces_moved: int
+    instances_moved: int
+
+
+class SplitResultDto(BaseModel):
+    new_person_id: int | None
+    faces_moved: int
+    instances_created: int
 
 
 def _build_person_dto(session: Session, person: Person) -> PersonDto:
@@ -83,6 +114,29 @@ async def list_persons(session: DbSession) -> list[PersonDto]:
     return [_build_person_dto(session, person) for person in persons]
 
 
+@router.get("/{person_id}/faces", response_model=list[PersonFaceDto])
+async def list_person_faces(person_id: int, session: DbSession) -> list[PersonFaceDto]:
+    person = session.get(Person, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    faces = (
+        session.query(Face)
+        .filter(Face.person_id == person_id)
+        .order_by(Face.id.asc())
+        .all()
+    )
+    return [
+        PersonFaceDto(
+            id=face.id,
+            asset_id=face.asset_id,
+            crop_url=f"/faces/{face.id}/thumbnail",
+            score=face.score,
+            age=face.age,
+        )
+        for face in faces
+    ]
+
+
 @router.patch("/{person_id}", response_model=PersonDto)
 async def rename_person(person_id: int, body: RenameRequest, session: DbSession) -> PersonDto:
     person = session.get(Person, person_id)
@@ -98,3 +152,70 @@ async def rename_person(person_id: int, body: RenameRequest, session: DbSession)
     session.refresh(person)
     log.info("Renamed person %d to %r", person_id, person.name)
     return _build_person_dto(session, person)
+
+
+@router.post("/merge", response_model=MergeResultDto)
+async def merge_persons_endpoint(body: MergeRequest, session: DbSession) -> MergeResultDto:
+    """Merge from_person into into_person — all assets and faces move physically."""
+    from photofant.config import get_data_root
+    from photofant.media.person_folders import merge_persons
+
+    from_person = session.get(Person, body.from_id)
+    into_person = session.get(Person, body.into_id)
+    if from_person is None:
+        raise HTTPException(status_code=404, detail="Source person not found")
+    if into_person is None:
+        raise HTTPException(status_code=404, detail="Target person not found")
+    if body.from_id == body.into_id:
+        raise HTTPException(status_code=422, detail="Cannot merge a person into itself")
+
+    data_root = get_data_root()
+
+    try:
+        result = await asyncio.to_thread(merge_persons, session, body.from_id, body.into_id, data_root)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    session.commit()
+
+    affected_assets = session.execute(
+        select(AssetInstance.asset_id)
+        .where(AssetInstance.person_id == body.into_id, AssetInstance.deleted_at.is_(None))
+        .distinct()
+    ).fetchall()
+    asset_ids = [int(row[0]) for row in affected_assets]
+    if asset_ids:
+        from photofant.jobs.collections_job import enqueue_reevaluate_assets
+        asyncio.ensure_future(enqueue_reevaluate_assets(asset_ids))
+
+    return MergeResultDto(
+        faces_moved=result["faces_moved"],
+        instances_moved=result["instances_moved"],
+    )
+
+
+@router.post("/{person_id}/split", response_model=SplitResultDto)
+async def split_person(person_id: int, body: SplitRequest, session: DbSession) -> SplitResultDto:
+    """Split selected faces from a person into a new person."""
+    from photofant.config import get_data_root
+    from photofant.media.person_folders import split_faces
+
+    person = session.get(Person, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    if not body.face_ids:
+        raise HTTPException(status_code=422, detail="face_ids must not be empty")
+
+    data_root = get_data_root()
+
+    try:
+        result = await asyncio.to_thread(split_faces, session, person_id, body.face_ids, data_root)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    session.commit()
+    return SplitResultDto(
+        new_person_id=result["new_person_id"],
+        faces_moved=result["faces_moved"],
+        instances_created=result["instances_created"],
+    )

@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { DupePair, DupeResolution } from '@photofant/models';
+import type { DupePair, DupeResolution, FaceReviewItem, FaceReviewAction } from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
 export class ReviewService {
@@ -19,6 +19,17 @@ export class ReviewService {
     return this.http.post<{ job_id: string }>('/api/jobs/dupe-scan', {
       scope,
       asset_ids: assetIds ?? null,
+    });
+  }
+
+  listFaceReviewQueue(): Observable<FaceReviewItem[]> {
+    return this.http.get<FaceReviewItem[]>('/api/review-queue');
+  }
+
+  resolveFaceReview(faceId: number, action: FaceReviewAction, personId?: number): Observable<{ status: string }> {
+    return this.http.post<{ status: string }>(`/api/review-queue/${faceId}`, {
+      action,
+      person_id: personId ?? null,
     });
   }
 }

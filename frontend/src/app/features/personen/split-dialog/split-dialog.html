@@ -1,0 +1,65 @@
+<div class="split-dialog__backdrop" (click)="onBackdrop($event)">
+  <div class="split-dialog__card">
+    <div class="split-dialog__header">
+      <h3 class="split-dialog__title">Person aufteilen</h3>
+      <button class="split-dialog__close" (click)="close.emit()">
+        <pf-icon name="x" [size]="18" />
+      </button>
+    </div>
+
+    <div class="split-dialog__body">
+      <p class="split-dialog__hint">
+        Markiere die Gesichter, die von
+        <strong>{{ person().name ?? 'Person #' + person().id }}</strong>
+        abgespalten werden sollen. Sie werden zu einer neuen Person.
+      </p>
+
+      @if (loading()) {
+        <div class="split-dialog__loading">Lade Gesichter…</div>
+      } @else if (faces().length < 2) {
+        <div class="split-dialog__loading">Zu wenige Gesichter zum Aufteilen.</div>
+      } @else {
+        <div class="split-dialog__grid">
+          @for (face of faces(); track face.id) {
+            <button
+              class="split-dialog__face"
+              [class.split-dialog__face--selected]="isSelected(face.id)"
+              (click)="toggleFace(face.id)"
+            >
+              <img
+                class="split-dialog__face-img"
+                [src]="'/api' + face.crop_url"
+                [alt]="'Gesicht #' + face.id"
+              />
+              @if (isSelected(face.id)) {
+                <div class="split-dialog__check">
+                  <pf-icon name="check" [size]="14" />
+                </div>
+              }
+              @if (face.score != null) {
+                <span class="split-dialog__score">{{ (face.score * 100) | number:'1.0-0' }}%</span>
+              }
+            </button>
+          }
+        </div>
+
+        <div class="split-dialog__footer">
+          <span class="split-dialog__count">{{ selectedCount() }} ausgewählt</span>
+          <div class="split-dialog__actions">
+            <button class="split-dialog__btn split-dialog__btn--cancel" (click)="close.emit()">
+              Abbrechen
+            </button>
+            <button
+              class="split-dialog__btn split-dialog__btn--confirm"
+              [disabled]="!canSplit()"
+              (click)="onConfirm()"
+            >
+              <pf-icon name="split" [size]="14" />
+              Abspalten
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

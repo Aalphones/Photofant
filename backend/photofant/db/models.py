@@ -187,10 +187,13 @@ class ReviewItem(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    type: Mapped[str] = mapped_column(Text, nullable=False)  # dupe_candidate | ...
+    type: Mapped[str] = mapped_column(Text, nullable=False)  # dupe_candidate | face_suggestion
     asset_a_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
     asset_b_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
     phash_distance: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     resolution: Mapped[str | None] = mapped_column(Text, nullable=True)
+    face_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    suggested_person_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)

@@ -218,7 +218,12 @@
           <div class="psec-title">Gesichter ({{ faces().length }})</div>
           <div class="face-strip">
             @for (face of faces(); track face.id) {
-              <div class="face-thumb" [title]="faceLabel(face)">
+              <button
+                class="face-thumb"
+                [class.face-thumb--selected]="selectedFace()?.id === face.id"
+                [title]="faceLabel(face)"
+                (click)="toggleFaceMatches(face)"
+              >
                 <img
                   class="face-thumb__img"
                   [src]="'/api' + face.crop_url"
@@ -227,9 +232,44 @@
                 <span class="face-thumb__badge">
                   {{ faceScore(face) }}
                 </span>
-              </div>
+              </button>
             }
           </div>
+
+          <!-- Matches panel -->
+          @if (selectedFace()) {
+            <div class="face-matches">
+              <div class="face-matches__head">
+                <span class="face-matches__title">Person zuweisen</span>
+              </div>
+
+              @if (faceMatchesLoading()) {
+                <div class="face-matches__empty">Lade Matches…</div>
+              } @else if (faceMatches().length === 0) {
+                <div class="face-matches__empty">Keine Matches gefunden.</div>
+              } @else {
+                <div class="face-matches__list">
+                  @for (match of faceMatches(); track match.person_id) {
+                    <button
+                      class="face-matches__row"
+                      (click)="assignFaceToPerson(selectedFace()!.id, match.person_id)"
+                      [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
+                    >
+                      <img
+                        class="face-matches__avatar"
+                        [src]="'/api/faces/' + match.best_face_id + '/thumbnail'"
+                        alt=""
+                      />
+                      <div class="face-matches__info">
+                        <span class="face-matches__name">{{ match.person_name ?? 'Person #' + match.person_id }}</span>
+                        <span class="face-matches__score">{{ matchScorePercent(match.score) }}%</span>
+                      </div>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
         </div>
       }
 

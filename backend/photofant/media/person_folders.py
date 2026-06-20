@@ -19,7 +19,7 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from photofant.db.models import Asset, AssetInstance, Face, Person
+from photofant.db.models import AssetInstance, Face, Person
 
 log = logging.getLogger(__name__)
 
@@ -409,4 +409,212 @@ def reassign_face(
         "old_person_id": old_person_id,
         "new_person_id": new_person_id,
         "asset_id": asset_id,
+    }
+
+
+# ── merge two persons ─────────────────────────────────────────────────
+
+
+def merge_persons(
+    session: Session,
+    from_person_id: int,
+    into_person_id: int,
+    data_root: Path,
+) -> dict[str, int]:
+    """Merge from_person into into_person: move all assets and faces.
+
+    Steps:
+      1. Reassign all faces from source to target
+      2. Move all asset instances (files) to target person folder
+      3. Delete the source person row
+
+    Returns {faces_moved, instances_moved}.
+    """
+    from_person = session.get(Person, from_person_id)
+    into_person = session.get(Person, into_person_id)
+    if from_person is None:
+        raise ValueError(f"Source person {from_person_id} not found")
+    if into_person is None:
+        raise ValueError(f"Target person {into_person_id} not found")
+
+    into_dir = ensure_person_folder(data_root, into_person)
+
+    faces = session.scalars(
+        select(Face).where(Face.person_id == from_person_id)
+    ).all()
+    faces_moved = 0
+    for face in faces:
+        face.person_id = into_person_id
+        old_crop = Path(face.crop_path)
+        new_crop = into_dir / "faces" / old_crop.name
+        try:
+            final = _safe_move(old_crop, new_crop)
+            face.crop_path = str(final.resolve())
+        except FileNotFoundError:
+            log.warning("Face crop %s missing during merge — skipping", old_crop)
+        faces_moved += 1
+    session.flush()
+
+    instances = session.scalars(
+        select(AssetInstance).where(
+            AssetInstance.person_id == from_person_id,
+            AssetInstance.deleted_at.is_(None),
+        )
+    ).all()
+
+    instances_moved = 0
+    for instance in instances:
+        existing_target = session.scalar(
+            select(AssetInstance).where(
+                AssetInstance.asset_id == instance.asset_id,
+                AssetInstance.person_id == into_person_id,
+                AssetInstance.deleted_at.is_(None),
+            )
+        )
+
+        if existing_target is not None:
+            old_path = Path(instance.path)
+            if old_path.exists():
+                old_path.unlink()
+            session.delete(instance)
+            instances_moved += 1
+            continue
+
+        subfolder = "favourites" if instance.favourite else "photos"
+        old_path = Path(instance.path)
+        new_path = into_dir / subfolder / old_path.name
+        try:
+            final = _safe_move(old_path, new_path)
+            instance.person_id = into_person_id
+            instance.path = str(final.resolve())
+            instances_moved += 1
+        except FileNotFoundError:
+            log.warning("Instance file %s missing during merge — skipping", old_path)
+
+    session.flush()
+
+    remaining = session.scalar(
+        select(func.count()).select_from(AssetInstance).where(
+            AssetInstance.person_id == from_person_id,
+            AssetInstance.deleted_at.is_(None),
+        )
+    ) or 0
+
+    if remaining == 0 and not from_person.is_unknown:
+        from_dir = data_root / person_folder_name(from_person)
+        session.delete(from_person)
+        session.flush()
+        if from_dir.exists():
+            import shutil as _shutil
+            _shutil.rmtree(str(from_dir), ignore_errors=True)
+            log.info("Removed empty person folder %s", from_dir)
+
+    log.info(
+        "Merged person %d into %d: %d faces, %d instances moved",
+        from_person_id, into_person_id, faces_moved, instances_moved,
+    )
+    return {"faces_moved": faces_moved, "instances_moved": instances_moved}
+
+
+# ── split faces into new person ────────────────────────────────────────
+
+
+def split_faces(
+    session: Session,
+    source_person_id: int,
+    face_ids: list[int],
+    data_root: Path,
+) -> dict[str, int | None]:
+    """Split selected faces from a person into a new person.
+
+    Creates a new Person, reassigns the given faces, and materializes
+    the new person folder with the affected asset instances.
+
+    Returns {new_person_id, faces_moved, instances_created}.
+    """
+    source_person = session.get(Person, source_person_id)
+    if source_person is None:
+        raise ValueError(f"Source person {source_person_id} not found")
+
+    new_person = Person(name=None, is_unknown=False)
+    session.add(new_person)
+    session.flush()
+
+    new_dir = ensure_person_folder(data_root, new_person)
+    faces_moved = 0
+
+    for fid in face_ids:
+        face = session.get(Face, fid)
+        if face is None or face.person_id != source_person_id:
+            continue
+
+        face.person_id = new_person.id
+        old_crop = Path(face.crop_path)
+        new_crop = new_dir / "faces" / old_crop.name
+        try:
+            final = _safe_move(old_crop, new_crop)
+            face.crop_path = str(final.resolve())
+        except FileNotFoundError:
+            log.warning("Face crop %s missing during split — skipping move", old_crop)
+        faces_moved += 1
+
+    session.flush()
+
+    affected_assets = session.execute(
+        select(Face.asset_id)
+        .where(Face.id.in_(face_ids), Face.asset_id.isnot(None))
+        .distinct()
+    ).fetchall()
+
+    instances_created = 0
+    for (asset_id_raw,) in affected_assets:
+        asset_id = int(asset_id_raw)
+
+        still_in_source = session.scalar(
+            select(func.count()).select_from(Face).where(
+                Face.asset_id == asset_id,
+                Face.person_id == source_person_id,
+            )
+        ) or 0
+
+        if still_in_source == 0:
+            old_instance = session.scalar(
+                select(AssetInstance).where(
+                    AssetInstance.asset_id == asset_id,
+                    AssetInstance.person_id == source_person_id,
+                    AssetInstance.deleted_at.is_(None),
+                )
+            )
+            if old_instance and not old_instance.fixed_person:
+                old_path = Path(old_instance.path)
+                subfolder = "favourites" if old_instance.favourite else "photos"
+                new_path = new_dir / subfolder / old_path.name
+                try:
+                    final = _safe_move(old_path, new_path)
+                    old_instance.person_id = new_person.id
+                    old_instance.path = str(final.resolve())
+                    instances_created += 1
+                except FileNotFoundError:
+                    log.warning("Instance %s missing during split — creating copy", old_path)
+                    result = materialize_assignment(session, asset_id, new_person.id, data_root)
+                    if result:
+                        instances_created += 1
+            else:
+                result = materialize_assignment(session, asset_id, new_person.id, data_root)
+                if result:
+                    instances_created += 1
+        else:
+            result = materialize_assignment(session, asset_id, new_person.id, data_root)
+            if result:
+                instances_created += 1
+
+    session.flush()
+    log.info(
+        "Split %d faces from person %d → new person %d (%d instances)",
+        faces_moved, source_person_id, new_person.id, instances_created,
+    )
+    return {
+        "new_person_id": new_person.id,
+        "faces_moved": faces_moved,
+        "instances_created": instances_created,
     }

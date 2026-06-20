@@ -1,0 +1,143 @@
+@if (isLoading()) {
+  <div class="rf__loading">Lade Gesichter-Queue…</div>
+} @else if (items().length === 0) {
+  <div class="rf__empty">
+    <pf-icon name="face" [size]="40" />
+    <div class="rf__empty-title">Keine offenen Gesichter-Reviews</div>
+    <div class="rf__empty-hint">Neue Vorschläge erscheinen nach dem nächsten Import oder Clustering.</div>
+  </div>
+} @else {
+  <!-- Progress bar -->
+  <div class="rf__header">
+    <div class="rf__prog-row">
+      <div class="rf__prog-bar">
+        <div class="rf__prog-fill" [style.width.%]="progress().current / progress().total * 100"></div>
+      </div>
+      <span class="rf__prog-label">{{ progress().current }} / {{ progress().total }}</span>
+    </div>
+  </div>
+
+  <div class="rf__body">
+    <!-- Sidebar -->
+    <div class="rf__sidebar">
+      <div class="rf__sidebar-label">Warteschlange</div>
+      @for (item of items(); track item.face_id; let idx = $index) {
+        <button
+          class="rf__qitem"
+          [class.rf__qitem--active]="idx === currentIndex()"
+          (click)="onSelectItem(idx)"
+        >
+          <span class="rf__qitem-num">{{ idx + 1 }}</span>
+          <img class="rf__qitem-thumb" [src]="item.crop_url" alt="" loading="lazy" />
+          <div class="rf__qitem-info">
+            <div class="rf__qitem-name">{{ item.suggested_person_name ?? 'Unbekannt' }}</div>
+            <span class="rf__qitem-score" [class]="scoreClass(item.score)">{{ scorePercent(item.score) }}%</span>
+          </div>
+        </button>
+      }
+    </div>
+
+    <!-- Main area -->
+    @if (currentItem(); as item) {
+      <div class="rf__main">
+        <div class="rf__photo-area">
+          <img class="rf__photo" [src]="item.crop_url" alt="Gesicht" />
+        </div>
+
+        <div class="rf__panel">
+          <!-- Score -->
+          <div class="rf__panel-sec">
+            <div class="rf__sec-title">Ähnlichkeitswert</div>
+            <div class="rf__score-row">
+              <div class="rf__score-bar">
+                <div
+                  class="rf__score-fill"
+                  [style.width.%]="scorePercent(item.score)"
+                  [class.rf__score-fill--high]="item.score >= 0.85"
+                  [class.rf__score-fill--mid]="item.score >= 0.7 && item.score < 0.85"
+                  [class.rf__score-fill--low]="item.score < 0.7"
+                ></div>
+              </div>
+              <span class="rf__score-pill" [class]="scoreClass(item.score)">{{ scorePercent(item.score) }}%</span>
+            </div>
+          </div>
+
+          <!-- Suggested person -->
+          <div class="rf__panel-sec">
+            <div class="rf__sec-title">Vorgeschlagene Zuordnung</div>
+            @if (item.suggested_person_name) {
+              <div class="rf__match-card">
+                <div class="rf__match-name">{{ item.suggested_person_name }}</div>
+              </div>
+            } @else {
+              <div class="rf__match-unknown">Kein Treffer</div>
+            }
+          </div>
+
+          <!-- Actions -->
+          <div class="rf__panel-sec">
+            <div class="rf__actions">
+              <button class="rf__btn rf__btn--confirm" (click)="onConfirm()">
+                <pf-icon name="check" [size]="15" />
+                {{ item.suggested_person_name ? 'Bestätigen' : 'Als unbekannt' }}
+              </button>
+              <button class="rf__btn rf__btn--reject" (click)="onReject()">
+                <pf-icon name="x" [size]="15" />
+                Ablehnen
+              </button>
+            </div>
+            <button class="rf__assign-btn" (click)="toggleAssign()">
+              <pf-icon name="people" [size]="15" />
+              Andere Person…
+            </button>
+          </div>
+
+          <!-- Reassign search -->
+          @if (assignOpen()) {
+            <div class="rf__panel-sec">
+              <div class="rf__assign-search">
+                <pf-icon name="search" [size]="13" />
+                <input
+                  class="rf__assign-input"
+                  placeholder="Person suchen…"
+                  [value]="assignQuery()"
+                  (input)="assignQuery.set($any($event.target).value)"
+                />
+              </div>
+              @for (person of filteredPersons().slice(0, 5); track person.id) {
+                <button class="rf__assign-row" (click)="onReassign(person.id)">
+                  <span class="rf__assign-name">{{ person.name }}</span>
+                  <span class="rf__assign-count">{{ person.count }} Bilder</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Footer with keyboard hints -->
+  <div class="rf__footer">
+    <button class="rf__nav-btn" [disabled]="currentIndex() === 0" (click)="onPrev()">
+      <pf-icon name="arrowLeft" [size]="16" />
+    </button>
+    <span class="rf__nav-label">{{ currentIndex() + 1 }} / {{ items().length }}</span>
+    <button class="rf__nav-btn" [disabled]="currentIndex() === items().length - 1" (click)="onNext()">
+      <pf-icon name="arrowRight" [size]="16" />
+    </button>
+    <div class="rf__footer-spacer"></div>
+    <span class="rf__kbd-hint">
+      <span class="rf__kbd">Enter / Y</span>
+      <span class="rf__kbd-label">Bestätigen</span>
+    </span>
+    <span class="rf__kbd-hint">
+      <span class="rf__kbd">N</span>
+      <span class="rf__kbd-label">Ablehnen</span>
+    </span>
+    <span class="rf__kbd-hint">
+      <span class="rf__kbd">← →</span>
+      <span class="rf__kbd-label">Navigieren</span>
+    </span>
+  </div>
+}

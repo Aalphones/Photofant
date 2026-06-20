@@ -14,7 +14,7 @@ export type {
 export { JOB_STATES, JOB_KINDS } from './job.model';
 
 export type { AssetDto, AssetDetailDto, AssetsPage, AssetGroup, TagDto, FaceDto, FacetItem, TagFacetItem, Facets, Density, SortKey, SortOrder, GroupKey, SearchMode, TagListItem, SimilarAsset } from './asset.model';
-export type { PersonDto } from './person.model';
+export type { PersonDto, PersonFace, FaceMatch } from './person.model';
 export { DENSITIES, DENSITY_THUMB_SIZE, SORT_KEYS, SORT_ORDERS, GROUP_KEYS, BASE_HEIGHTS, SEARCH_MODES } from './asset.model';
 
 export type {
@@ -32,8 +32,8 @@ export { COLLECTION_KINDS, MATCH_MODES, TRIGGER_TYPES } from './collection.model
 
 export type { ModelDto, ModelView, ModelStatus, ModelTier, CapabilitiesDto, ModelBindError } from './model.model';
 
-export type { AssetSummary, DupePair, DupeResolution } from './review.model';
-export { DUPE_RESOLUTIONS } from './review.model';
+export type { AssetSummary, DupePair, DupeResolution, FaceReviewItem, FaceReviewAction, MergeResult, SplitResult } from './review.model';
+export { DUPE_RESOLUTIONS, FACE_REVIEW_ACTIONS } from './review.model';
 export {
   MODEL_ENRICHMENT,
   ROLE_META,

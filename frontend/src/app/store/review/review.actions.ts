@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { DupePair, DupeResolution } from '@photofant/models';
+import type { DupePair, DupeResolution, FaceReviewItem, FaceReviewAction } from '@photofant/models';
 
 export const reviewActions = createActionGroup({
   source: 'Review',
@@ -16,5 +16,11 @@ export const reviewActions = createActionGroup({
     'Trigger Dupe Scan Selection': props<{ assetIds: number[] }>(),
     'Trigger Dupe Scan Selection Success': props<{ jobId: string }>(),
     'Trigger Dupe Scan Selection Failure': props<{ error: string }>(),
+    'Load Face Queue':          emptyProps(),
+    'Load Face Queue Success':  props<{ items: FaceReviewItem[] }>(),
+    'Load Face Queue Failure':  props<{ error: string }>(),
+    'Resolve Face Review':      props<{ faceId: number; action: FaceReviewAction; personId?: number }>(),
+    'Resolve Face Review Success': props<{ faceId: number }>(),
+    'Resolve Face Review Failure': props<{ error: string }>(),
   },
 });

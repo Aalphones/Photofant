@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, ROOT_EFFECTS_INIT, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { catchError, map, mergeMap, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { DupePair } from '@photofant/models';
+import type { DupePair, FaceReviewItem } from '@photofant/models';
 import { ReviewService } from '@photofant/services';
 import { reviewActions } from './review.actions';
 
@@ -72,6 +72,34 @@ export class ReviewEffects {
           ),
           catchError((error: HttpErrorResponse) =>
             of(reviewActions.triggerDupeScanSelectionFailure({ error: error.message })),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  readonly loadFaceQueue$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(reviewActions.loadFaceQueue),
+      switchMap(() =>
+        this.reviewService.listFaceReviewQueue().pipe(
+          map((items: FaceReviewItem[]) => reviewActions.loadFaceQueueSuccess({ items })),
+          catchError((error: HttpErrorResponse) =>
+            of(reviewActions.loadFaceQueueFailure({ error: error.message })),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  readonly resolveFaceReview$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(reviewActions.resolveFaceReview),
+      mergeMap(({ faceId, action, personId }) =>
+        this.reviewService.resolveFaceReview(faceId, action, personId).pipe(
+          map(() => reviewActions.resolveFaceReviewSuccess({ faceId })),
+          catchError((error: HttpErrorResponse) =>
+            of(reviewActions.resolveFaceReviewFailure({ error: error.message })),
           ),
         ),
       ),

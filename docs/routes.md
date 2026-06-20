@@ -467,6 +467,65 @@ Fehler-Codes:
 - `404` — Face oder Ziel-Person nicht gefunden
 - `409 { code: "NO_EMBEDDING" }` — Face hat noch kein Embedding
 
+## Review-Queue — Gesichter (P7 Phase 5)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/review` (Face-Queue) | `GET` | `/api/review-queue` | — | `FaceReviewItemDto[]` |
+| `/review` (Face-Entscheidung) | `POST` | `/api/review-queue/{face_id}` | `{ action, person_id? }` | `{ status }` |
+
+```typescript
+interface FaceReviewItemDto {
+  id: number;
+  face_id: number;
+  suggested_person_id: number | null;
+  suggested_person_name: string | null;
+  score: number;
+  asset_id: number;
+  crop_url: string;
+}
+
+type FaceReviewAction = 'confirm' | 'reject' | 'reassign';
+```
+
+Aktions-Semantik (`POST /api/review-queue/{face_id}`):
+- `confirm`: Zuordnung zur vorgeschlagenen Person bestätigen → physischer Move
+- `reject`: Zuordnung ablehnen → Face geht zu `_unknown`
+- `reassign` (mit `person_id`): Face zu einer anderen Person zuweisen
+
+## Merge & Split (P7 Phase 5)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/personen` (Merge) | `POST` | `/api/persons/merge` | `{ from_id, into_id }` | `MergeResultDto` |
+| `/personen` (Split) | `POST` | `/api/persons/{id}/split` | `{ face_ids: number[] }` | `SplitResultDto` |
+| `/personen` (Faces einer Person) | `GET` | `/api/persons/{id}/faces` | — | `PersonFaceDto[]` |
+
+```typescript
+interface MergeResultDto {
+  faces_moved: number;
+  instances_moved: number;
+}
+
+interface SplitResultDto {
+  new_person_id: number | null;
+  faces_moved: number;
+  instances_created: number;
+}
+
+interface PersonFaceDto {
+  id: number;
+  asset_id: number | null;
+  crop_url: string;
+  score: number | null;
+  age: number | null;
+}
+```
+
+**Merge:** Alle Faces und AssetInstances von `from_person` wandern physisch zu `into_person`. Quell-Person wird gelöscht, Ordner aufgeräumt. Duplikate (selbes Asset in beiden Personen) werden aufgelöst.
+
+**Split:** Ausgewählte Faces werden in eine neue Person verschoben. Wenn die Quell-Person kein Face mehr für ein Asset hat, wird die Instanz verschoben statt kopiert.
+
 ## Job-Stream
 
 | Trigger | Endpoint | Protokoll |

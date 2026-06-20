@@ -26,3 +26,28 @@ export const DUPE_RESOLUTIONS = [
 ] as const;
 
 export type DupeResolution = (typeof DUPE_RESOLUTIONS)[number];
+
+export interface FaceReviewItem {
+  id: number;
+  face_id: number;
+  suggested_person_id: number | null;
+  suggested_person_name: string | null;
+  score: number;
+  asset_id: number;
+  crop_url: string;
+}
+
+export const FACE_REVIEW_ACTIONS = ['confirm', 'reject', 'reassign'] as const;
+
+export type FaceReviewAction = (typeof FACE_REVIEW_ACTIONS)[number];
+
+export interface MergeResult {
+  faces_moved: number;
+  instances_moved: number;
+}
+
+export interface SplitResult {
+  new_person_id: number | null;
+  faces_moved: number;
+  instances_created: number;
+}

@@ -17,11 +17,11 @@
 
 ## Checkliste
 
-- [ ] Review-Queue-Persistenz (Score-Band aus Phase 2) + Endpoints + View
-- [ ] Merge-Endpoint + Bestätigungs-UI (Richtungs-Klarheit!)
-- [ ] Split-Flow (Face-Auswahl in der Personen-Detail-Ansicht)
-- [ ] Matches-Panel (Detail-Panel-Sektion „Person zuweisen" mit Top-10 + Score)
-- [ ] Tests: Merge-Konsistenz (Datei-Count, keine Verluste), Split-Zuordnung
-- [ ] Doc-Update: routes.md
+- [x] Review-Queue-Persistenz (Score-Band aus Phase 2) + Endpoints + View
+- [x] Merge-Endpoint + Bestätigungs-UI (Richtungs-Klarheit!)
+- [x] Split-Flow (Face-Auswahl in der Personen-Detail-Ansicht)
+- [x] Matches-Panel (Detail-Panel-Sektion „Person zuweisen" mit Top-10 + Score)
+- [x] Tests: Merge-Konsistenz (Datei-Count, keine Verluste), Split-Zuordnung
+- [x] Doc-Update: routes.md
 
 ## Report-Back

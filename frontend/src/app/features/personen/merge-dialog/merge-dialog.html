@@ -1,0 +1,140 @@
+<div class="merge-dialog__backdrop" (click)="onBackdrop($event)">
+  <div class="merge-dialog__card">
+    <div class="merge-dialog__header">
+      <h3 class="merge-dialog__title">Personen zusammenführen</h3>
+      <button class="merge-dialog__close" (click)="close.emit()">
+        <pf-icon name="x" [size]="18" />
+      </button>
+    </div>
+
+    @switch (step()) {
+      @case ('select-from') {
+        <div class="merge-dialog__body">
+          <p class="merge-dialog__hint">Welche Person soll aufgelöst werden?</p>
+          <div class="merge-dialog__search">
+            <pf-icon name="search" [size]="13" />
+            <input
+              placeholder="Person suchen…"
+              [value]="searchQuery()"
+              (input)="searchQuery.set($any($event.target).value)"
+            />
+          </div>
+          <div class="merge-dialog__list">
+            @for (person of filteredPersons(); track person.id) {
+              <button class="merge-dialog__row" (click)="selectFrom(person)">
+                @if (portraitUrl(person); as url) {
+                  <img class="merge-dialog__avatar" [src]="url" alt="" />
+                } @else {
+                  <div class="merge-dialog__avatar merge-dialog__avatar--empty">
+                    <pf-icon name="user" [size]="18" />
+                  </div>
+                }
+                <div class="merge-dialog__row-info">
+                  <span class="merge-dialog__row-name">{{ person.name ?? '—' }}</span>
+                  <span class="merge-dialog__row-count">{{ person.count }} Bilder</span>
+                </div>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @case ('select-into') {
+        <div class="merge-dialog__body">
+          <button class="merge-dialog__back" (click)="onBack()">
+            <pf-icon name="arrowLeft" [size]="14" />
+            Zurück
+          </button>
+          <p class="merge-dialog__hint">
+            <strong>{{ fromPerson()?.name }}</strong> ({{ fromPerson()?.count }} Bilder) auflösen in:
+          </p>
+          <div class="merge-dialog__search">
+            <pf-icon name="search" [size]="13" />
+            <input
+              placeholder="Zielperson suchen…"
+              [value]="searchQuery()"
+              (input)="searchQuery.set($any($event.target).value)"
+            />
+          </div>
+          <div class="merge-dialog__list">
+            @for (person of filteredPersons(); track person.id) {
+              <button class="merge-dialog__row" (click)="selectInto(person)">
+                @if (portraitUrl(person); as url) {
+                  <img class="merge-dialog__avatar" [src]="url" alt="" />
+                } @else {
+                  <div class="merge-dialog__avatar merge-dialog__avatar--empty">
+                    <pf-icon name="user" [size]="18" />
+                  </div>
+                }
+                <div class="merge-dialog__row-info">
+                  <span class="merge-dialog__row-name">{{ person.name ?? '—' }}</span>
+                  <span class="merge-dialog__row-count">{{ person.count }} Bilder</span>
+                </div>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @case ('confirm') {
+        <div class="merge-dialog__body">
+          <button class="merge-dialog__back" (click)="onBack()">
+            <pf-icon name="arrowLeft" [size]="14" />
+            Zurück
+          </button>
+
+          <div class="merge-dialog__confirm-card">
+            <div class="merge-dialog__confirm-row">
+              <div class="merge-dialog__confirm-person">
+                @if (portraitUrl(fromPerson()!); as url) {
+                  <img class="merge-dialog__confirm-avatar" [src]="url" alt="" />
+                } @else {
+                  <div class="merge-dialog__confirm-avatar merge-dialog__avatar--empty">
+                    <pf-icon name="user" [size]="24" />
+                  </div>
+                }
+                <div>
+                  <div class="merge-dialog__confirm-name">{{ fromPerson()?.name }}</div>
+                  <div class="merge-dialog__confirm-count">{{ fromPerson()?.count }} Bilder</div>
+                </div>
+              </div>
+
+              <pf-icon name="arrowRight" [size]="20" />
+
+              <div class="merge-dialog__confirm-person">
+                @if (portraitUrl(intoPerson()!); as url) {
+                  <img class="merge-dialog__confirm-avatar" [src]="url" alt="" />
+                } @else {
+                  <div class="merge-dialog__confirm-avatar merge-dialog__avatar--empty">
+                    <pf-icon name="user" [size]="24" />
+                  </div>
+                }
+                <div>
+                  <div class="merge-dialog__confirm-name">{{ intoPerson()?.name }}</div>
+                  <div class="merge-dialog__confirm-count">{{ intoPerson()?.count }} Bilder</div>
+                </div>
+              </div>
+            </div>
+
+            <p class="merge-dialog__confirm-text">
+              {{ fromPerson()?.count }} Bilder wandern von
+              <strong>{{ fromPerson()?.name }}</strong> nach
+              <strong>{{ intoPerson()?.name }}</strong>.
+              Die Person „{{ fromPerson()?.name }}" wird anschließend gelöscht.
+            </p>
+          </div>
+
+          <div class="merge-dialog__footer">
+            <button class="merge-dialog__btn merge-dialog__btn--cancel" (click)="close.emit()">
+              Abbrechen
+            </button>
+            <button class="merge-dialog__btn merge-dialog__btn--confirm" (click)="onConfirm()">
+              <pf-icon name="check" [size]="14" />
+              Zusammenführen
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

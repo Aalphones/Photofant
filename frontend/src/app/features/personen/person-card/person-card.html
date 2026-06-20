@@ -12,16 +12,26 @@
   role="button"
   tabindex="0"
 >
-  <!-- Import-Button (hover) -->
+  <!-- Hover-Actions -->
   @if (!person().is_unknown) {
-    <button
-      class="person-card__import"
-      (click)="onImportClick($event)"
-      aria-label="Bilder importieren"
-      title="Bilder in diesen Ordner importieren"
-    >
-      <pf-icon name="upload" [size]="14" />
-    </button>
+    <div class="person-card__hover-actions">
+      <button
+        class="person-card__hover-btn"
+        (click)="onSplitClick($event)"
+        aria-label="Person aufteilen"
+        title="Gesichter abspalten"
+      >
+        <pf-icon name="split" [size]="14" />
+      </button>
+      <button
+        class="person-card__hover-btn"
+        (click)="onImportClick($event)"
+        aria-label="Bilder importieren"
+        title="Bilder importieren"
+      >
+        <pf-icon name="upload" [size]="14" />
+      </button>
+    </div>
   }
 
   <!-- Avatar -->

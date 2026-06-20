@@ -8,6 +8,12 @@
     <p class="personen__empty-hint">Starte die Gesichtserkennung in den Einstellungen.</p>
   </div>
 } @else {
+  <div class="personen__toolbar">
+    <button class="personen__action-btn" (click)="showMergeDialog.set(true)">
+      <pf-icon name="merge" [size]="14" />
+      Zusammenführen
+    </button>
+  </div>
   <div class="personen__grid">
     @for (person of persons(); track person.id) {
       <pf-person-card
@@ -15,7 +21,24 @@
         (select)="onSelect(person)"
         (rename)="onRename($event)"
         (importFiles)="onImportFiles($event)"
+        (splitClick)="onSplitClick(person)"
       />
     }
   </div>
+}
+
+@if (showMergeDialog()) {
+  <pf-merge-dialog
+    [persons]="persons()"
+    (close)="showMergeDialog.set(false)"
+    (merge)="onMerge($event)"
+  />
+}
+
+@if (splitPerson(); as person) {
+  <pf-split-dialog
+    [person]="person"
+    (close)="splitPerson.set(null)"
+    (split)="onSplit($event)"
+  />
 }

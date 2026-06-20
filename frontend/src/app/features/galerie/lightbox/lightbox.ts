@@ -12,8 +12,8 @@ import { DOCUMENT } from '@angular/common';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetSummary, DupePair, DupeResolution, FaceDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
-import { AssetService, ClassifyService, TagService } from '@photofant/services';
+import type { AssetDto, AssetSummary, DupePair, DupeResolution, FaceDto, FaceMatch, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
+import { AssetService, ClassifyService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
@@ -73,6 +73,7 @@ export class Lightbox {
   private readonly classifyService  = inject(ClassifyService);
   private readonly shortcutService  = inject(ShortcutService);
   private readonly document        = inject(DOCUMENT);
+  private readonly personService    = inject(PersonService);
   private readonly destroyRef      = inject(DestroyRef);
 
   protected readonly showRerunDialog = signal(false);
@@ -122,6 +123,11 @@ export class Lightbox {
   protected readonly similarLoading      = signal(false);
   protected readonly similarAssets       = signal<SimilarAsset[]>([]);
   protected readonly selectedSimilarPair = signal<DupePair | null>(null);
+
+  // ── Face matches (person assignment) ─────────────────────────────────────
+  protected readonly selectedFace       = signal<FaceDto | null>(null);
+  protected readonly faceMatches        = signal<FaceMatch[]>([]);
+  protected readonly faceMatchesLoading = signal(false);
 
   // ── Computed display ─────────────────────────────────────────────────────
 
@@ -222,6 +228,9 @@ export class Lightbox {
       this.showSimilarOverlay.set(false);
       this.similarAssets.set([]);
       this.selectedSimilarPair.set(null);
+      // Reset face matches
+      this.selectedFace.set(null);
+      this.faceMatches.set([]);
     });
 
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -368,6 +377,44 @@ export class Lightbox {
     }
     this.selectedSimilarPair.set(null);
     this.showSimilarOverlay.set(false);
+  }
+
+  // ── Face matches (person assignment) ──────────────────────────────────────
+
+  protected toggleFaceMatches(face: FaceDto): void {
+    if (this.selectedFace()?.id === face.id) {
+      this.selectedFace.set(null);
+      this.faceMatches.set([]);
+      return;
+    }
+    this.selectedFace.set(face);
+    this.faceMatchesLoading.set(true);
+    this.faceMatches.set([]);
+    this.personService.getFaceMatches(face.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (matches: FaceMatch[]) => {
+          this.faceMatches.set(matches);
+          this.faceMatchesLoading.set(false);
+        },
+        error: () => { this.faceMatchesLoading.set(false); },
+      });
+  }
+
+  protected assignFaceToPerson(faceId: number, personId: number): void {
+    this.personService.assignFace(faceId, personId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.selectedFace.set(null);
+          this.faceMatches.set([]);
+          this.reloadTrigger.update((count: number) => count + 1);
+        },
+      });
+  }
+
+  protected matchScorePercent(score: number): number {
+    return Math.round(score * 100);
   }
 
   // ── Tag editing ───────────────────────────────────────────────────────────

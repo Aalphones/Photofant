@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ReviewDupes } from './review-dupes/review-dupes';
+import { ReviewFaces } from './review-faces/review-faces';
 
 type ReviewTab = 'gesichter' | 'duplikate';
 
 @Component({
   selector: 'pf-review',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReviewDupes],
+  imports: [ReviewDupes, ReviewFaces],
   templateUrl: './review.html',
   styleUrl: './review.scss',
 })

@@ -2,14 +2,15 @@
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p07-personen/`
 
-**Phase:** 5/6 — Review-Queue, Merge & Split (pending)
-**Nächster Schritt:** Phase 5 starten — Backend: `GET /api/review-queue`, `POST /api/review-queue/{face_id}`, `POST /api/persons/merge`, `POST /api/persons/{id}/split`; Frontend: Review-Queue-UI + Merge/Split-Dialog. Rating: heikel → `/model opusplan` empfohlen.
+**Phase:** 6/6 — Face-Import, Duplikate & Rebuild (pending)
+**Nächster Schritt:** Phase 6 starten — Face-Import, FS-Drop-Scan, Duplikatsuche pro Person, Face-Rebuild.
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)
 - `docs/archive/2026-06/2026-06-19_design-angleichung/` — alle 4 Phasen complete (2026-06-19)
 - `docs/archive/2026-06/2026-06-19_einstellungen-refactoring/` — alle 3 Phasen complete (2026-06-19)
 - `docs/archive/2026-06/2026-06-19_duplikaterkennung/` — alle 6 Phasen complete (2026-06-20)
+- P7 Personen Phase 1–5 complete (2026-06-20)
 
 **Backlog-Pläne (größere Features):**
 - P7 Personen: `docs/planning/2026-06-12_p07-personen/`

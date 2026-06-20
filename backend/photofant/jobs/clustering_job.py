@@ -78,6 +78,30 @@ def run_incremental_match(face_id: int) -> None:
             )
 
         elif result.band == "review" and result.person_id is not None:
+            from datetime import UTC, datetime
+
+            from photofant.db.models import ReviewItem
+
+            existing = session.query(ReviewItem).filter(
+                ReviewItem.type == "face_suggestion",
+                ReviewItem.face_id == face_id,
+                ReviewItem.resolved_at.is_(None),
+            ).first()
+
+            if existing is None:
+                asset_id = face.asset_id or 0
+                review_item = ReviewItem(
+                    type="face_suggestion",
+                    asset_a_id=asset_id,
+                    asset_b_id=asset_id,
+                    phash_distance=0,
+                    face_id=face_id,
+                    suggested_person_id=result.person_id,
+                    score=result.score,
+                    created_at=datetime.now(UTC).replace(tzinfo=None),
+                )
+                session.add(review_item)
+
             log.info(
                 "Face %d → review suggestion for person %d (score=%.3f)",
                 face_id, result.person_id, result.score,

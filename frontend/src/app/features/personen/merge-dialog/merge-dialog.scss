@@ -1,0 +1,246 @@
+:host {
+  display: contents;
+}
+
+.merge-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  background: oklch(0 0 0 / 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+}
+
+.merge-dialog__card {
+  background: var(--surface);
+  border-radius: 12px;
+  width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px oklch(0 0 0 / 0.25);
+}
+
+.merge-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.merge-dialog__title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.merge-dialog__close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--text-3);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-2);
+  }
+}
+
+.merge-dialog__body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.merge-dialog__hint {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: 12px;
+}
+
+.merge-dialog__back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 12px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.merge-dialog__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-1);
+  margin-bottom: 12px;
+
+  pf-icon {
+    color: var(--text-3);
+    flex: none;
+  }
+
+  input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+  }
+}
+
+.merge-dialog__list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.merge-dialog__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover {
+    background: var(--surface-1);
+  }
+}
+
+.merge-dialog__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+
+  &--empty {
+    display: grid;
+    place-items: center;
+    background: var(--surface-2);
+    color: var(--text-3);
+  }
+}
+
+.merge-dialog__row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.merge-dialog__row-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.merge-dialog__row-count {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--mono);
+  margin-top: 2px;
+}
+
+// Confirm step
+.merge-dialog__confirm-card {
+  background: var(--surface-1);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.merge-dialog__confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 16px;
+
+  pf-icon {
+    color: var(--text-3);
+    flex: none;
+  }
+}
+
+.merge-dialog__confirm-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.merge-dialog__confirm-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+
+  &.merge-dialog__avatar--empty {
+    display: grid;
+    place-items: center;
+    background: var(--surface-2);
+    color: var(--text-3);
+  }
+}
+
+.merge-dialog__confirm-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.merge-dialog__confirm-count {
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--mono);
+  margin-top: 2px;
+}
+
+.merge-dialog__confirm-text {
+  font-size: 13px;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.merge-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.merge-dialog__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &--cancel {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  &--confirm {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  &:hover {
+    opacity: 0.85;
+  }
+}

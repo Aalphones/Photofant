@@ -24,7 +24,7 @@
       opacity: 1;
     }
 
-    .person-card__import {
+    .person-card__hover-actions {
       opacity: 1;
     }
   }
@@ -35,22 +35,28 @@
   }
 }
 
-/* Import-Button (top-right, appears on hover) */
-.person-card__import {
+/* Hover action buttons (top-right) */
+.person-card__hover-actions {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+
+.person-card__hover-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: var(--radius-s);
   background: var(--surface-2);
   border: 1px solid var(--line);
   color: var(--text-3);
-  opacity: 0;
-  transition: opacity .15s, background .12s, color .12s;
+  transition: background .12s, color .12s;
 
   &:hover {
     background: var(--surface-hover);
