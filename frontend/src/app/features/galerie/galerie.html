@@ -45,7 +45,15 @@
     (tagAction)="onBulkTag($event)"
     (addToAlbum)="onAddToAlbum($event)"
     (rerunAction)="onBulkRerunOpen()"
+    (dupeScanAction)="onBulkDupeScan()"
   />
+}
+
+@if (dupeScanToast()) {
+  <div class="galerie__toast">
+    {{ dupeScanToast() }}
+    <a class="galerie__toast-link" routerLink="/review">→ Review-Queue</a>
+  </div>
 }
 
 @if (showBulkRerunDialog()) {

@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { AssetDetailDto, AssetDto, AssetsPage, SearchMode, SortKey, SortOrder } from '@photofant/models';
+import type { AssetDetailDto, AssetDto, AssetsPage, SearchMode, SimilarAsset, SortKey, SortOrder } from '@photofant/models';
 
 export interface ListAssetsParams {
   page: number;
@@ -113,5 +113,13 @@ export class AssetService {
 
   fileUrl(id: number): string {
     return `/api/assets/${id}/file`;
+  }
+
+  getSimilarAssets(id: number): Observable<SimilarAsset[]> {
+    return this.http.get<SimilarAsset[]>(`/api/assets/${id}/similar`);
+  }
+
+  setAssetOriginal(id: number, originalId: number | null): Observable<AssetDto> {
+    return this.http.patch<AssetDto>(`/api/assets/${id}/original`, { original_id: originalId });
   }
 }

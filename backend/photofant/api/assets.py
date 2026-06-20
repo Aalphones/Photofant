@@ -64,6 +64,7 @@ class AssetDto(BaseModel):
     favourite: bool
     version_count: int
     generation_meta: dict | None  # type: ignore[type-arg]
+    has_phash: bool
 
 
 class TagDto(BaseModel):
@@ -141,6 +142,7 @@ def build_asset_dto(asset: Asset, instance: AssetInstance) -> AssetDto:
         favourite=instance.favourite,
         version_count=0,  # version table added in P8
         generation_meta=asset.generation_meta,
+        has_phash=asset.phash is not None,
     )
 
 
@@ -526,6 +528,23 @@ async def patch_asset_caption(asset_id: int, body: PatchCaptionRequest, session:
         captioner=asset.captioner,
         caption_preset_id=asset.caption_preset_id,
     )
+
+
+class SetOriginalRequest(BaseModel):
+    original_id: int | None
+
+
+@router.patch("/{asset_id}/original", response_model=AssetDto)
+async def set_asset_original(asset_id: int, body: SetOriginalRequest, session: DbSession) -> AssetDto:
+    """Set (or clear) asset.original_id — used by the Lightbox ad-hoc compare."""
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset, instance = row
+    asset.original_id = body.original_id
+    session.commit()
+    session.refresh(asset)
+    return build_asset_dto(asset, instance)
 
 
 @router.delete("/{asset_id}", status_code=204)

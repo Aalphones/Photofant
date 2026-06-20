@@ -28,6 +28,7 @@ export class BulkBar {
   readonly tagAction = output<{ add: string[]; remove: number[] }>();
   readonly addToAlbum = output<number>();
   readonly rerunAction = output<void>();
+  readonly dupeScanAction = output<void>();
 
   protected readonly showTagInput = signal(false);
   protected readonly tagInput = signal('');
@@ -76,5 +77,9 @@ export class BulkBar {
 
   protected onClose(): void {
     this.close.emit();
+  }
+
+  protected triggerDupeScan(): void {
+    this.dupeScanAction.emit();
   }
 }

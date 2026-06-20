@@ -61,4 +61,20 @@ export class ReviewEffects {
       ),
     ),
   );
+
+  readonly triggerDupeScanSelection$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(reviewActions.triggerDupeScanSelection),
+      switchMap(({ assetIds }) =>
+        this.reviewService.triggerDupeScan('selection', assetIds).pipe(
+          map((response: { job_id: string }) =>
+            reviewActions.triggerDupeScanSelectionSuccess({ jobId: response.job_id }),
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(reviewActions.triggerDupeScanSelectionFailure({ error: error.message })),
+          ),
+        ),
+      ),
+    ),
+  );
 }

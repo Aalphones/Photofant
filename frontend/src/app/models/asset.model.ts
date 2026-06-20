@@ -53,6 +53,19 @@ export interface AssetDto {
   favourite: boolean;
   version_count: number;
   generation_meta: Record<string, unknown> | null;
+  has_phash: boolean;
+}
+
+export interface SimilarAsset {
+  id: number;
+  width: number | null;
+  height: number | null;
+  format: string | null;
+  source: string | null;
+  file_size: number | null;
+  created_at: string | null;
+  imported_at: string | null;
+  phash_distance: number;
 }
 
 export interface TagDto {

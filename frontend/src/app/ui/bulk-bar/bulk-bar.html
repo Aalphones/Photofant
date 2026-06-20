@@ -50,6 +50,14 @@
     Klassifizieren
   </button>
 
+  @if (count() >= 2) {
+    <div class="bulkbar__divider"></div>
+    <button class="bulkbar__action" (click)="triggerDupeScan()">
+      <pf-icon name="compare" [size]="15" />
+      Duplikate prüfen
+    </button>
+  }
+
   <div class="bulkbar__divider"></div>
   <button class="bulkbar__close" (click)="onClose()" aria-label="Auswahl aufheben">
     <pf-icon name="x" [size]="16" />

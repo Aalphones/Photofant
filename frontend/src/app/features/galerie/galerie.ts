@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { collectionsActions, collectionsSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors, tagsActions } from '@photofant/store';
+import { collectionsActions, collectionsSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
 import { ClassifyService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
@@ -13,7 +13,7 @@ import type { RerunPayload } from '@photofant/ui';
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon, BulkBar, RerunDialog],
+  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon, BulkBar, RerunDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
 })
@@ -43,6 +43,8 @@ export class Galerie {
   protected readonly railOpen = signal(false);
   protected readonly showBulkRerunDialog = signal(false);
   protected readonly bulkRerunPresets = this.store.selectSignal(presetsSelectors.selectPresets);
+  protected readonly dupeScanToast = signal<string | null>(null);
+  private dupeScanToastTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly isEmpty = computed((): boolean =>
     !this.isLoading() && this.groups().length === 0
@@ -154,5 +156,15 @@ export class Galerie {
 
   protected onBulkRerunCancel(): void {
     this.showBulkRerunDialog.set(false);
+  }
+
+  protected onBulkDupeScan(): void {
+    const ids = this.selectedIds();
+    if (ids.length < 2) { return; }
+    this.store.dispatch(reviewActions.triggerDupeScanSelection({ assetIds: ids }));
+    this.store.dispatch(galleryActions.clearSelection());
+    if (this.dupeScanToastTimer != null) { clearTimeout(this.dupeScanToastTimer); }
+    this.dupeScanToast.set(`Duplikat-Scan für ${ids.length} Bilder gestartet`);
+    this.dupeScanToastTimer = setTimeout(() => { this.dupeScanToast.set(null); }, 4000);
   }
 }

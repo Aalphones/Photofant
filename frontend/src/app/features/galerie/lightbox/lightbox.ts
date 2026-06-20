@@ -7,18 +7,19 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDto, TagDto, TagListItem } from '@photofant/models';
+import type { AssetDto, AssetSummary, DupePair, DupeResolution, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
 import { AssetService, ClassifyService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
 import { galleryActions, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
+import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare';
 
 interface GenMetaEntry { key: string; value: string }
 
@@ -61,7 +62,7 @@ function formatDate(dateStr: string | null): string {
 @Component({
   selector: 'pf-lightbox',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ZoomStage, Icon, RerunDialog],
+  imports: [ZoomStage, Icon, RerunDialog, DupeCompare],
   templateUrl: './lightbox.html',
   styleUrl: './lightbox.scss',
 })
@@ -115,6 +116,13 @@ export class Lightbox {
   protected readonly editingCaption  = signal(false);
   protected readonly captionDraft    = signal('');
 
+  // ── Similar assets overlay ────────────────────────────────────────────────
+
+  protected readonly showSimilarOverlay  = signal(false);
+  protected readonly similarLoading      = signal(false);
+  protected readonly similarAssets       = signal<SimilarAsset[]>([]);
+  protected readonly selectedSimilarPair = signal<DupePair | null>(null);
+
   // ── Computed display ─────────────────────────────────────────────────────
 
   protected readonly displayTags = computed(() =>
@@ -162,6 +170,10 @@ export class Lightbox {
     this.asset()?.favourite ?? false
   );
 
+  protected readonly hasPHash = computed((): boolean =>
+    this.asset()?.has_phash ?? false
+  );
+
   protected readonly sourceLabel = computed((): string => {
     const source = this.asset()?.source;
     if (!source) return '—';
@@ -189,6 +201,10 @@ export class Lightbox {
       this.tagInputValue.set('');
       this.editingCaption.set(false);
       this.hiddenTagIds.set([]);
+      // Reset similar overlay when navigating to a different asset
+      this.showSimilarOverlay.set(false);
+      this.similarAssets.set([]);
+      this.selectedSimilarPair.set(null);
     });
 
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -262,6 +278,79 @@ export class Lightbox {
 
   protected onRerunCancel(): void {
     this.showRerunDialog.set(false);
+  }
+
+  // ── Similar assets overlay ────────────────────────────────────────────────
+
+  protected similarityPercent(distance: number): number {
+    return Math.max(0, Math.round((1 - distance / 64) * 100));
+  }
+
+  protected openSimilarOverlay(): void {
+    const asset: AssetDto | null = this.asset();
+    if (asset == null || !asset.has_phash) { return; }
+    this.showSimilarOverlay.set(true);
+    this.similarLoading.set(true);
+    this.assetService.getSimilarAssets(asset.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (assets: SimilarAsset[]) => {
+          this.similarAssets.set(assets);
+          this.similarLoading.set(false);
+        },
+        error: () => { this.similarLoading.set(false); },
+      });
+  }
+
+  protected closeSimilarOverlay(): void {
+    this.showSimilarOverlay.set(false);
+    this.selectedSimilarPair.set(null);
+  }
+
+  protected openSimilarCompare(similar: SimilarAsset): void {
+    const asset: AssetDto | null = this.asset();
+    if (asset == null) { return; }
+    const assetAsSummary: AssetSummary = {
+      id: asset.id,
+      width: asset.width,
+      height: asset.height,
+      format: asset.format,
+      source: asset.source,
+      file_size: asset.file_size,
+      created_at: asset.created_at,
+      imported_at: asset.imported_at,
+    };
+    const pair: DupePair = {
+      id: 0,
+      asset_a: assetAsSummary,
+      asset_b: similar,
+      phash_distance: similar.phash_distance,
+      created_at: new Date().toISOString(),
+    };
+    this.selectedSimilarPair.set(pair);
+  }
+
+  protected onSimilarResolve(event: { pair: DupePair; resolution: DupeResolution }): void {
+    const { pair, resolution } = event;
+    if (resolution === 'dismiss') {
+      this.selectedSimilarPair.set(null);
+      return;
+    }
+    if (resolution === 'delete_a') {
+      this.store.dispatch(galleryActions.deleteAsset({ id: pair.asset_a.id }));
+    } else if (resolution === 'delete_b') {
+      this.store.dispatch(galleryActions.deleteAsset({ id: pair.asset_b.id }));
+    } else if (resolution === 'a_is_original') {
+      this.assetService.setAssetOriginal(pair.asset_b.id, pair.asset_a.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe();
+    } else if (resolution === 'b_is_original') {
+      this.assetService.setAssetOriginal(pair.asset_a.id, pair.asset_b.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe();
+    }
+    this.selectedSimilarPair.set(null);
+    this.showSimilarOverlay.set(false);
   }
 
   // ── Tag editing ───────────────────────────────────────────────────────────

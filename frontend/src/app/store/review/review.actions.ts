@@ -13,5 +13,8 @@ export const reviewActions = createActionGroup({
     'Trigger Dupe Scan':       emptyProps(),
     'Trigger Dupe Scan Success': props<{ jobId: string }>(),
     'Trigger Dupe Scan Failure': props<{ error: string }>(),
+    'Trigger Dupe Scan Selection': props<{ assetIds: number[] }>(),
+    'Trigger Dupe Scan Selection Success': props<{ jobId: string }>(),
+    'Trigger Dupe Scan Selection Failure': props<{ error: string }>(),
   },
 });

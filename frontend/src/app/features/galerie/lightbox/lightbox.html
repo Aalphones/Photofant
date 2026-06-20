@@ -75,6 +75,18 @@
             Klassifizieren
           </button>
         </div>
+        <div class="pbtn-row">
+          <button
+            class="pbtn pbtn--ghost"
+            [class.pbtn--disabled]="!hasPHash()"
+            [disabled]="!hasPHash()"
+            [title]="hasPHash() ? 'Ähnliche Bilder suchen' : 'Noch nicht analysiert'"
+            (click)="openSimilarOverlay()"
+          >
+            <pf-icon name="compare" [size]="15" />
+            Ähnliche Bilder
+          </button>
+        </div>
       </div>
 
       <!-- Metadaten -->
@@ -213,5 +225,47 @@
     [presets]="presets()"
     (confirm)="onRerunConfirm($event)"
     (cancel)="onRerunCancel()"
+  />
+}
+
+@if (showSimilarOverlay()) {
+  <div class="similar-scrim" (click)="closeSimilarOverlay()">
+    <div class="similar-overlay" (click)="$event.stopPropagation()">
+      <div class="similar-overlay__head">
+        <span class="similar-overlay__title">Ähnliche Bilder</span>
+        <button class="similar-overlay__close" (click)="closeSimilarOverlay()" aria-label="Schließen">
+          <pf-icon name="x" [size]="16" />
+        </button>
+      </div>
+
+      @if (similarLoading()) {
+        <div class="similar-overlay__empty">Suche läuft…</div>
+      } @else if (similarAssets().length === 0) {
+        <div class="similar-overlay__empty">Keine ähnlichen Bilder gefunden.</div>
+      } @else {
+        <div class="similar-overlay__strip">
+          @for (similar of similarAssets(); track similar.id) {
+            <button class="similar-thumb" (click)="openSimilarCompare(similar)">
+              <img
+                class="similar-thumb__img"
+                [src]="'/api/assets/' + similar.id + '/thumbnail?size=256'"
+                [alt]="'Asset #' + similar.id"
+              />
+              <span class="similar-thumb__badge">
+                {{ similarityPercent(similar.phash_distance) }}%
+              </span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
+
+@if (selectedSimilarPair()) {
+  <pf-dupe-compare
+    [pair]="selectedSimilarPair()!"
+    (close)="selectedSimilarPair.set(null)"
+    (resolve)="onSimilarResolve($event)"
   />
 }
