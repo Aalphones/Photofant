@@ -252,6 +252,27 @@ interface ScanResult {
 }
 ```
 
+## Edit-Sessions (P8 Phase 1)
+
+| Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/editor/:kind/:id` (Session erstellen) | `POST` | `/api/edit-sessions` | `{ target: { kind: "instance"\|"face"\|"version", id } }` | `CreateSessionResponse` |
+| Editor (Session-Stand laden) | `GET` | `/api/edit-sessions/{key}` | — | `SessionStateResponse` |
+| Editor (Op anwenden) | `POST` | `/api/edit-sessions/{key}/steps` | `{ op, params }` | `{ seq, preview_url }` |
+| Editor (Rollback) | `POST` | `/api/edit-sessions/{key}/rollback` | `{ to_seq }` | `{ seq }` |
+| Editor (Preview abrufen) | `GET` | `/api/edit-sessions/{key}/preview/{seq}` | — | JPEG (seq=0 → Original) |
+
+```typescript
+interface CreateSessionResponse { session_key: string; original_preview_url: string; }
+interface SessionStateResponse  { session_key: string; kind: string; target_id: number; steps: StepInfo[]; }
+interface StepInfo              { seq: number; op: string; params: Record<string, unknown>; }
+interface ApplyStepResponse     { seq: number; preview_url: string; }
+```
+
+**Ops Stage 4:** `rotate` (`{ dir: "cw"|"ccw"|"180" }`), `mirror` (`{ axis: "h"|"v" }`),
+`crop` (`{ ratio, x, y, w, h }` — x/y/w/h in Prozent), `pad`, `convert` (`{ format, quality }`),
+`smart_crop` (Phase 3 — Stub). Phase 1 rechnet Preview auf max 1024 px; Final-Render in Originalauflösung kommt in Phase 4 (Save).
+
 Fehler-Codes (strukturiert im `detail`-Feld):
 - `404 { code: "MODEL_NOT_FOUND" }` — `manifest_id` nicht im Manifest (auch bei `DELETE`)
 - `409 { code: "LICENSE_ACK_REQUIRED", license_note: string }` — `license_ack: true` fehlt

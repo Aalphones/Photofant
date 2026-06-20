@@ -18,10 +18,18 @@
 
 ## Checkliste
 
-- [ ] Session-/Step-Endpoints + Render-Pipeline (Steps deterministisch aus Original + Param-Kette reproduzierbar)
-- [ ] `edit_step`-Handling in der Cache-DB (Preview-Erzeugung)
-- [ ] Editor-Route + Shell (Toolbar, Stage mit Zoom/Pan-Wiederverwendung aus Lightbox, Step-Leiste)
-- [ ] `store/editor/` + Öffnen-Einstiege (Lightbox „Bearbeiten", Bulk-Bar später)
-- [ ] Doc-Update: routes.md
+- [x] Session-/Step-Endpoints + Render-Pipeline (Steps deterministisch aus Original + Param-Kette reproduzierbar)
+- [x] `edit_step`-Handling in der Cache-DB (Preview-Erzeugung)
+- [x] Editor-Route + Shell (Toolbar, Stage mit Zoom/Pan-Wiederverwendung aus Lightbox, Step-Leiste)
+- [x] `store/editor/` + Öffnen-Einstiege (Lightbox „Bearbeiten", Bulk-Bar später)
+- [x] Doc-Update: routes.md
 
 ## Report-Back
+
+Phase abgeschlossen (2026-06-20). Alle AK erfüllt.
+- Backend: `edit_session` + `edit_step` in Cache-DB; Endpoints `POST /edit-sessions`, `/steps`, `/rollback`, `GET /preview/{seq}`
+- Render-Pipeline: Pillow (rotate/mirror/crop/pad/convert), Preview max 1024px, async via run_in_executor
+- Frontend: NgRx-Slice `editor`, `EditSessionService`, Route `/editor/instance/:id` außerhalb Shell
+- Editor-Shell mit BasisPanel (alle Stage-4-Basis-Ops), StepBar (History mit Previews), SaveModal
+- Lightbox: „Bearbeiten"-Button öffnet Editor
+- Commit: 15b3cc7

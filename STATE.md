@@ -1,6 +1,8 @@
 # STATE
 
-**Aktiver Plan:** keiner (P7 vollständig, nächster: P8 Editor CPU)
+**Aktiver Plan:** `docs/planning/2026-06-12_p08-editor-cpu/`
+**Phase:** 2/5 — Geometrie-Operationen (pending)
+**Nächster Schritt:** Crop-Canvas-Komponente (Drag-Handles, Ratio-Lock, Koordinaten-Mapping Stage↔Original) + Pillow-Op-Module finalisieren
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)
