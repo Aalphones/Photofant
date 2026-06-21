@@ -25,7 +25,9 @@
           [density]="density()"
           [selectionMode]="selectionMode()"
           [isSelected]="isAssetSelected(asset.id)"
+          [isArmed]="isArmed()"
           (openAsset)="onOpenAsset($event)"
+          (batchBind)="onBatchBind($event)"
         />
       }
       <div class="grid__spacer"></div>

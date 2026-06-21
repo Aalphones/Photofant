@@ -1,21 +1,25 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { collectionsActions, collectionsSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
-import { AssetService, ClassifyService } from '@photofant/services';
+import { collectionsActions, collectionsSelectors, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
+import { AssetService, ClassifyService, ComfyUIService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
 import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
+import { RunLeiste } from './run-leiste/run-leiste';
+import type { RunFirePayload } from './run-leiste/run-leiste';
 import { BulkBar, BulkEditDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { BulkEditPayload, RerunPayload } from '@photofant/ui';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
+  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
+  host: { '(document:keydown.escape)': 'onEscape()' },
 })
 export class Galerie {
   private readonly store           = inject(Store);
@@ -23,6 +27,8 @@ export class Galerie {
   private readonly route           = inject(ActivatedRoute);
   private readonly classifyService = inject(ClassifyService);
   private readonly assetService    = inject(AssetService);
+  private readonly comfyuiService  = inject(ComfyUIService);
+  private readonly destroyRef      = inject(DestroyRef);
 
   protected readonly groups        = this.store.selectSignal(gallerySelectors.selectGroups);
   protected readonly density       = this.store.selectSignal(filtersSelectors.density);
@@ -47,6 +53,25 @@ export class Galerie {
   protected readonly bulkRerunPresets = this.store.selectSignal(presetsSelectors.selectPresets);
   protected readonly dupeScanToast = signal<string | null>(null);
   private dupeScanToastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // --- Workflow-Modus (Run-Leiste) ---
+  protected readonly activeWorkflows   = this.store.selectSignal(comfyuiSelectors.selectActiveWorkflows);
+  protected readonly workflowMode      = signal(false);
+  protected readonly activeWorkflowId  = signal<number | null>(null);
+  protected readonly slotBindings      = signal<Record<string, number | number[]>>({});
+  protected readonly armedSlotKey      = signal<string | null>(null);
+  protected readonly batchAxisKey      = signal<string | null>(null);
+  protected readonly isFiring          = signal(false);
+  protected readonly runToast          = signal<string | null>(null);
+  private runToastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  protected readonly isArmed = computed((): boolean => this.armedSlotKey() !== null);
+
+  protected readonly activeWorkflow = computed(() => {
+    const workflowId = this.activeWorkflowId();
+    if (workflowId === null) { return null; }
+    return this.activeWorkflows().find((workflow) => workflow.id === workflowId) ?? null;
+  });
 
   protected readonly isEmpty = computed((): boolean =>
     !this.isLoading() && this.groups().length === 0
@@ -184,5 +209,128 @@ export class Galerie {
 
   protected onBulkEditCancel(): void {
     this.showBulkEditDialog.set(false);
+  }
+
+  // --- Workflow-Modus ---
+
+  protected onEscape(): void {
+    if (this.armedSlotKey() !== null) {
+      this.armedSlotKey.set(null);
+    }
+  }
+
+  protected toggleWorkflowMode(): void {
+    if (this.workflowMode()) {
+      this.resetWorkflowMode();
+    } else {
+      this.workflowMode.set(true);
+    }
+  }
+
+  protected onWorkflowChanged(workflowId: number | null): void {
+    const hasBindings = Object.keys(this.slotBindings()).length > 0;
+    if (hasBindings && workflowId !== this.activeWorkflowId()) {
+      if (!window.confirm('Workflow wechseln? Alle aktuellen Bindungen werden gelöscht.')) {
+        return;
+      }
+    }
+    this.activeWorkflowId.set(workflowId);
+    this.slotBindings.set({});
+    this.armedSlotKey.set(null);
+    this.batchAxisKey.set(null);
+  }
+
+  protected onSlotArmed(slotKey: string | null): void {
+    this.armedSlotKey.set(slotKey);
+  }
+
+  /** Galerie-Klick wenn ein Slot scharf: Einzelbild binden + entschärfen */
+  protected onBindAsset(assetId: number): void {
+    const armedKey = this.armedSlotKey();
+    if (armedKey === null) {
+      this.onOpenAsset(assetId);
+      return;
+    }
+    const currentBindings = this.slotBindings();
+    const updatedBindings = { ...currentBindings, [armedKey]: assetId };
+    // Wenn dieser Slot war die Batch-Achse, Batch-Achse aufheben (Single überschreibt)
+    if (this.batchAxisKey() === armedKey) {
+      this.batchAxisKey.set(null);
+    }
+    this.slotBindings.set(updatedBindings);
+    this.armedSlotKey.set(null);
+  }
+
+  /** Strg+Klick wenn ein Slot scharf: zum Batch-Array hinzufügen */
+  protected onBatchBindAsset(assetId: number): void {
+    const armedKey = this.armedSlotKey();
+    if (armedKey === null) { return; }
+
+    const currentBindings = this.slotBindings();
+    const existing = currentBindings[armedKey];
+    const existingArray = Array.isArray(existing)
+      ? existing
+      : existing != null ? [existing] : [];
+
+    // Doppelte IDs überspringen
+    if (existingArray.includes(assetId)) { return; }
+
+    const updatedArray = [...existingArray, assetId];
+
+    // Batch-Achse verschieben wenn nötig (zweiter Slot bekommt Multi-Select)
+    const previousBatchKey = this.batchAxisKey();
+    if (previousBatchKey !== null && previousBatchKey !== armedKey) {
+      // Alte Batch-Achse auf Einzelwert reduzieren (erstes Element behalten)
+      const oldBatch = currentBindings[previousBatchKey];
+      const oldFirst = Array.isArray(oldBatch) ? oldBatch[0] : oldBatch;
+      this.slotBindings.set({
+        ...currentBindings,
+        [previousBatchKey]: oldFirst ?? 0,
+        [armedKey]: updatedArray,
+      });
+      this.showBatchAxisHint();
+    } else {
+      this.slotBindings.set({ ...currentBindings, [armedKey]: updatedArray });
+    }
+    this.batchAxisKey.set(armedKey);
+    // Scharf-Zustand bleibt (weiteres Batch-Binden möglich)
+  }
+
+  protected onRunFire(payload: RunFirePayload): void {
+    if (this.isFiring()) { return; }
+    this.isFiring.set(true);
+    this.comfyuiService.runWorkflow(payload.workflowId, payload.inputs, payload.params)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+      next: (response) => {
+        this.isFiring.set(false);
+        this.armedSlotKey.set(null);
+        const count = response.jobs.length;
+        this.showRunToast(`${count} Job${count !== 1 ? 's' : ''} an ComfyUI gesendet`);
+      },
+      error: (error: unknown) => {
+        this.isFiring.set(false);
+        const message = error instanceof Error ? error.message : 'Fehler beim Senden an ComfyUI';
+        this.showRunToast(`Fehler: ${message}`);
+      },
+    });
+  }
+
+  protected resetWorkflowMode(): void {
+    this.workflowMode.set(false);
+    this.activeWorkflowId.set(null);
+    this.slotBindings.set({});
+    this.armedSlotKey.set(null);
+    this.batchAxisKey.set(null);
+  }
+
+  private showRunToast(message: string): void {
+    if (this.runToastTimer != null) { clearTimeout(this.runToastTimer); }
+    this.runToast.set(message);
+    this.runToastTimer = setTimeout(() => { this.runToast.set(null); }, 5000);
+  }
+
+  private showBatchAxisHint(): void {
+    this.showRunToast('Batch-Achse verschoben — zweiter Slot übernimmt die Multi-Auswahl');
   }
 }

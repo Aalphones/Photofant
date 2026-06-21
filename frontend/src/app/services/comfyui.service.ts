@@ -143,4 +143,15 @@ export class ComfyUIService {
       map((raw: WorkflowApi) => workflowFromApi(raw))
     );
   }
+
+  runWorkflow(
+    workflowId: number,
+    inputs: Record<string, number | number[]>,
+    params: Record<string, unknown> = {},
+  ): Observable<{ jobs: { job_id: string }[] }> {
+    return this.http.post<{ jobs: { job_id: string }[] }>(
+      `/api/comfyui/workflows/${workflowId}/run`,
+      { inputs, params },
+    );
+  }
 }

@@ -24,6 +24,7 @@ function sourceLabel(source: string | null): string {
     '[style.flex-basis.px]':      'flexBasis()',
     '[class.cell--selected]':     'isSelected()',
     '[class.cell--selmode]':      'selectionMode()',
+    '[class.cell--armed]':        'isArmed()',
     '(click)':                    'onCellClick($event)',
   },
 })
@@ -36,8 +37,10 @@ export class GalerieCell {
   readonly density       = input.required<Density>();
   readonly isSelected    = input<boolean>(false);
   readonly selectionMode = input<boolean>(false);
+  readonly isArmed       = input<boolean>(false);
 
-  readonly openAsset = output<number>();
+  readonly openAsset  = output<number>();
+  readonly batchBind  = output<number>();
 
   protected readonly aspectRatio = computed((): number => {
     const { width, height } = this.asset();
@@ -61,7 +64,14 @@ export class GalerieCell {
   );
 
   protected onCellClick(event: MouseEvent): void {
-    if (this.selectionMode() || event.ctrlKey || event.metaKey) {
+    if (this.isArmed()) {
+      event.stopPropagation();
+      if (event.ctrlKey || event.shiftKey || event.metaKey) {
+        this.batchBind.emit(this.asset().id);
+      } else {
+        this.openAsset.emit(this.asset().id);
+      }
+    } else if (this.selectionMode() || event.ctrlKey || event.metaKey) {
       event.stopPropagation();
       this.store.dispatch(galleryActions.toggleSelected({ id: this.asset().id }));
     } else {

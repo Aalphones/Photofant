@@ -91,6 +91,14 @@
   }
 }
 
+.subbar__btn--workflow {
+  &-on {
+    background: oklch(0.700 0.150 305 / 0.16);
+    border-color: oklch(0.700 0.150 305 / 0.45);
+    color: var(--semantic);
+  }
+}
+
 .subbar__tools {
   display: flex;
   align-items: center;

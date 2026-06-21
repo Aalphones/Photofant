@@ -1,0 +1,85 @@
+<div class="rleiste__inner">
+
+  <!-- Workflow-Dropdown -->
+  <div class="rleiste__workflow">
+    <select
+      class="rleiste__select"
+      (change)="onWorkflowSelect($event)"
+      [value]="activeWorkflow()?.id ?? ''"
+    >
+      <option value="">Workflow wählen…</option>
+      @for (wf of workflows(); track wf.id) {
+        <option [value]="wf.id">{{ wf.name }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Slots -->
+  @if (activeWorkflow(); as workflow) {
+    <div class="rleiste__slots">
+      @for (inp of workflow.inputs; track inp.key) {
+        <button
+          class="rleiste__slot"
+          [class.rleiste__slot--armed]="isSlotArmed(inp.key)"
+          [class.rleiste__slot--batch]="isSlotBatchAxis(inp.key)"
+          [class.rleiste__slot--bound]="isBound(inp.key)"
+          [class.rleiste__slot--mask]="inp.kind === 'mask'"
+          [disabled]="inp.kind === 'mask'"
+          (click)="onSlotClick(inp.key, inp.kind)"
+          [title]="inp.kind === 'mask' ? 'Masken-Slots: erst verfügbar mit P9 Phase 4' : (isSlotArmed(inp.key) ? 'Klick entschärft · Strg+Klick im Grid = Batch' : 'Klicken zum Scharf-Schalten')"
+          [attr.aria-label]="inp.label"
+          [attr.aria-pressed]="isSlotArmed(inp.key)"
+        >
+          @if (slotThumbnail(inp.key); as thumb) {
+            <img class="rleiste__slot-thumb" [src]="thumb" alt="" />
+          } @else {
+            <div class="rleiste__slot-empty">
+              @if (inp.kind === 'mask') {
+                <pf-icon name="alertTriangle" [size]="12" />
+              } @else {
+                <pf-icon name="plus" [size]="12" />
+              }
+            </div>
+          }
+
+          <span class="rleiste__slot-label">{{ inp.label }}</span>
+
+          @if (slotBatchCount(inp.key) > 1) {
+            <span class="rleiste__slot-badge">×{{ slotBatchCount(inp.key) }}</span>
+          }
+
+          @if (isSlotArmed(inp.key)) {
+            <span class="rleiste__slot-armed-hint">↑ wählen</span>
+          }
+        </button>
+      }
+    </div>
+
+    <!-- Fire + Reset -->
+    <div class="rleiste__actions">
+      <button
+        class="rleiste__fire"
+        [class.rleiste__fire--ready]="canFire()"
+        [disabled]="!canFire() || isFiring()"
+        (click)="onFire()"
+      >
+        <pf-icon name="play" [size]="12" />
+        @if (isFiring()) {
+          <span>Sende…</span>
+        } @else if (fireCount() > 1) {
+          <span>Feuern ({{ fireCount() }}×)</span>
+        } @else {
+          <span>Feuern</span>
+        }
+      </button>
+    </div>
+  } @else {
+    <span class="rleiste__hint">Workflow wählen, um Slots zu sehen</span>
+  }
+
+  <!-- Close -->
+  <button class="rleiste__close" (click)="closed.emit()" title="Run-Modus beenden">
+    <pf-icon name="x" [size]="13" />
+  </button>
+
+</div>

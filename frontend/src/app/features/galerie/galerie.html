@@ -1,8 +1,25 @@
 <pf-sub-toolbar
   [selectionMode]="selectionMode()"
+  [workflowMode]="workflowMode()"
   (railToggle)="railOpen.set(!railOpen())"
   (selToggle)="toggleSelectionMode()"
+  (workflowToggle)="toggleWorkflowMode()"
 />
+
+@if (workflowMode()) {
+  <pf-run-leiste
+    [workflows]="activeWorkflows()"
+    [activeWorkflow]="activeWorkflow()"
+    [bindings]="slotBindings()"
+    [armedSlotKey]="armedSlotKey()"
+    [batchAxisKey]="batchAxisKey()"
+    [isFiring]="isFiring()"
+    (workflowChanged)="onWorkflowChanged($event)"
+    (slotArmed)="onSlotArmed($event)"
+    (fire)="onRunFire($event)"
+    (closed)="resetWorkflowMode()"
+  />
+}
 
 <div class="galerie__body">
   @if (railOpen()) {
@@ -25,7 +42,9 @@
         [isLoading]="isLoading()"
         [selectionMode]="selectionMode()"
         [selectedIds]="selectedIds()"
-        (openAsset)="onOpenAsset($event)"
+        [isArmed]="isArmed()"
+        (openAsset)="isArmed() ? onBindAsset($event) : onOpenAsset($event)"
+        (batchBind)="onBatchBindAsset($event)"
         (selectAll)="onSelectAll($event)"
         (loadMore)="onLoadMore()"
       />
@@ -55,6 +74,10 @@
     {{ dupeScanToast() }}
     <a class="galerie__toast-link" routerLink="/review">→ Review-Queue</a>
   </div>
+}
+
+@if (runToast()) {
+  <div class="galerie__toast">{{ runToast() }}</div>
 }
 
 @if (showBulkRerunDialog()) {

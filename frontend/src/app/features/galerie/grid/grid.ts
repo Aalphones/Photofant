@@ -31,10 +31,12 @@ export class GalerieGrid {
   readonly isLoading     = input.required<boolean>();
   readonly selectionMode = input<boolean>(false);
   readonly selectedIds   = input<number[]>([]);
+  readonly isArmed       = input<boolean>(false);
 
-  readonly openAsset = output<number>();
-  readonly selectAll = output<number[]>();
-  readonly loadMore  = output<void>();
+  readonly openAsset  = output<number>();
+  readonly selectAll  = output<number[]>();
+  readonly loadMore   = output<void>();
+  readonly batchBind  = output<number>();
 
   private readonly sentinel = viewChild.required<ElementRef<HTMLDivElement>>('loadSentinel');
 
@@ -71,6 +73,10 @@ export class GalerieGrid {
 
   protected onOpenAsset(id: number): void {
     this.openAsset.emit(id);
+  }
+
+  protected onBatchBind(id: number): void {
+    this.batchBind.emit(id);
   }
 
   protected onSelectAll(ids: number[]): void {

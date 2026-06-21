@@ -67,4 +67,16 @@
     <pf-icon name="select" [size]="14" />
     <span>{{ selectionMode() ? 'Beenden' : 'Auswählen' }}</span>
   </button>
+
+  <!-- Workflow-Modus -->
+  <button
+    class="subbar__btn subbar__btn--workflow"
+    [class.subbar__btn--workflow-on]="workflowMode()"
+    (click)="workflowToggle.emit()"
+    [attr.aria-pressed]="workflowMode()"
+    title="ComfyUI-Workflow starten"
+  >
+    <pf-icon name="sparkle" [size]="14" />
+    <span>Run</span>
+  </button>
 </div>

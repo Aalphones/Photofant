@@ -22,10 +22,12 @@ interface FilterChip {
 export class SubToolbar {
   private readonly store           = inject(Store);
 
-  readonly railToggle    = output<void>();
-  readonly selToggle     = output<void>();
+  readonly railToggle      = output<void>();
+  readonly selToggle       = output<void>();
+  readonly workflowToggle  = output<void>();
 
-  readonly selectionMode = input<boolean>(false);
+  readonly selectionMode  = input<boolean>(false);
+  readonly workflowMode   = input<boolean>(false);
 
   protected readonly total      = this.store.selectSignal(gallerySelectors.selectServerTotal);
   protected readonly sort       = this.store.selectSignal(filtersSelectors.sort);

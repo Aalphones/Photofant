@@ -24,6 +24,18 @@
 
   // Selection mode: always show pick button faintly
   &.cell--selmode .cell__pick { opacity: 0.6; }
+
+  // Armed slot mode: cursor crosshair + subtle accent ring
+  &.cell--armed {
+    cursor: crosshair;
+    outline: 2px solid var(--accent-line);
+    outline-offset: -2px;
+
+    &:hover {
+      outline-color: var(--accent);
+      transform: none;
+    }
+  }
 }
 
 .cell__img-wrap {
