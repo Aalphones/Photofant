@@ -1,6 +1,6 @@
 # P8b · Phase 3 — Trigger-Flow (Fire-and-Forget)
 
-> Rating: **heikel** (externe API-Kopplung, Queue, Template-Patch, Fehlerpfade) · Status: pending
+> Rating: **heikel** (externe API-Kopplung, Queue, Template-Patch, Fehlerpfade) · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -19,13 +19,13 @@
 
 ## Checkliste
 
-- [ ] Job-Typ `comfyui_run` in der bestehenden Queue (ein Job pro Batch-Bild)
-- [ ] Worker: `upload_image` → `deepcopy` → Input-/Param-Patch über Bindungen → `submit_prompt`
-- [ ] Batch-Expansion + Achsen-Regel (genau eine Achse, mask nicht batchbar)
-- [ ] Optionaler Status-Poll (`/history/{id}`) → SSE-Event
-- [ ] Route `run` (Validierung: Pflicht-Inputs gesetzt, Workflow aktiv+valide, Verbindung ok)
-- [ ] Minimaler Trigger-Pfad zum Verproben: ein Asset → ein Workflow → feuern (UI-Vollausbau folgt Phase 4)
-- [ ] Tests: Patch-Logik (Template unverändert, Kopie korrekt gepatcht), Batch-Expansion, Fehler je Job isoliert; ComfyUI-Endpunkte gemockt
-- [ ] Doc-Update: README-Kontrakt; Patch-/Batch-Regeln in FINDINGS festhalten
+- [x] Job-Typ `comfyui_run` in der bestehenden Queue (ein Job pro Batch-Bild)
+- [x] Worker: `upload_image` → `deepcopy` → Input-/Param-Patch über Bindungen → `submit_prompt`
+- [x] Batch-Expansion + Achsen-Regel (genau eine Achse, mask nicht batchbar)
+- [x] Optionaler Status-Poll (`/history/{id}`) → SSE-Event (get_history implementiert; Polling im Worker als Phase-4-Aufgabe markiert)
+- [x] Route `run` (Validierung: Pflicht-Inputs gesetzt, Workflow aktiv+valide, Verbindung ok)
+- [x] Minimaler Trigger-Pfad zum Verproben: ein Asset → ein Workflow → feuern (UI-Vollausbau folgt Phase 4)
+- [x] Tests: Patch-Logik (Template unverändert, Kopie korrekt gepatcht), Batch-Expansion, Fehler je Job isoliert; ComfyUI-Endpunkte gemockt
+- [x] Doc-Update: README-Kontrakt; Patch-/Batch-Regeln in FINDINGS festhalten
 
 ## Report-Back

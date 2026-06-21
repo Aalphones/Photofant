@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-15_p08b-comfyui-integration/`
-**Phase:** 3/5 — Trigger-Flow (Fire-and-Forget) (pending)
-**Nächster Schritt:** Phase 3 starten: POST /api/comfyui/workflows/{id}/run, Template-Patch, Queue-Jobs, SSE-Status
+**Phase:** 4/5 — Galerie-Run-Leiste (Armed-Slots, Batch) (pending)
+**Nächster Schritt:** Phase 4 starten: Frontend Run-Leiste, Armed-Slot-Mechanik, Batch-Axis-UI, Feuern-Button mit Anzahl
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

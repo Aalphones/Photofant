@@ -2,6 +2,14 @@
 
 > Notizen, Spike-Ergebnisse und Entscheidungen während der Umsetzung. Beim Archivieren ins README (Summary/Deviations) destillieren.
 
+## Phase-3-Entscheidungen (2026-06-21)
+
+- **Antwort-Schema `/run` gibt nur `job_id` zurück**, nicht `prompt_id`. Die `prompt_id` ist erst nach der async Upload+Prompt-Sequenz bekannt (Worker, nicht Route-Handler). Kontrakt leicht abgewichen: `{jobs: [{job_id}]}`.
+- **Status-Polling (`/history/{id}`)** als Client-Methode implementiert, aber noch nicht im Worker-Aufruf verdrahtet — Phase 4 baut die Run-Leiste und kann SSE dort einbinden.
+- **Job-Fehler-Isolation** ist durch die bestehende Queue-Mechanik abgedeckt (per-Job try/except im `_worker`); kein eigener Mechanismus nötig.
+
+- [ ] → Phase 4: `get_history`-Polling im Worker aktivieren, sobald Run-Leiste SSE-Events konsumiert.
+
 ## Offene Punkte / Risiken
 
 - **API-Format ≠ UI-Format.** Nur das API-Format-JSON ist patch- und queuebar (Konzept §6). Introspektion + Validierung müssen das prüfen, sonst stilles Scheitern.
