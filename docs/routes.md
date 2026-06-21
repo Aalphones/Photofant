@@ -261,12 +261,30 @@ interface ScanResult {
 | Editor (Op anwenden) | `POST` | `/api/edit-sessions/{key}/steps` | `{ op, params }` | `{ seq, preview_url }` |
 | Editor (Rollback) | `POST` | `/api/edit-sessions/{key}/rollback` | `{ to_seq }` | `{ seq }` |
 | Editor (Preview abrufen) | `GET` | `/api/edit-sessions/{key}/preview/{seq}` | — | JPEG (seq=0 → Original) |
+| Editor (Speichern) | `POST` | `/api/edit-sessions/{key}/save` | `{ mode: "overwrite"\|"new_copy" }` | `VersionDto` (201) |
+| Versionen (Aktuelle setzen) | `POST` | `/api/assets/{id}/set-current` | `{ version_id: number }` | `VersionDto` |
+| Versionen (Re-Import) | `POST` | `/api/assets/{id}/versions/import` | `multipart/form-data; file` | `{ version: VersionDto }` (201) |
+| Versionen (Thumbnail) | `GET` | `/api/versions/{id}/thumbnail` | `size` (256\|512\|1024) | JPEG blob |
+| Versionen (Datei) | `GET` | `/api/versions/{id}/file` | — | Original-Datei |
 
 ```typescript
 interface CreateSessionResponse { session_key: string; original_preview_url: string; }
 interface SessionStateResponse  { session_key: string; kind: string; target_id: number; steps: StepInfo[]; }
 interface StepInfo              { seq: number; op: string; params: Record<string, unknown>; }
 interface ApplyStepResponse     { seq: number; preview_url: string; }
+
+interface ResDto     { width: number; height: number; }
+interface VersionDto {
+  id: number;
+  type: string | null;
+  parent_id: number | null;
+  path: string;
+  is_current: boolean;
+  params: Record<string, unknown> | null;
+  created_at: string | null;
+  res: ResDto | null;
+  thumbnail_url: string;
+}
 ```
 
 **Op-Params (pydantic-validiert):**
@@ -281,7 +299,7 @@ interface ApplyStepResponse     { seq: number; preview_url: string; }
 | `rembg` | `{}` | Hintergrund entfernen via u2net ONNX → RGBA mit Alpha-Maske; 422 `MODEL_UNAVAILABLE` wenn Modell nicht aktiv |
 | `smart_crop` | `{}` | Gesichtserkennung (SCRFD) → quadratischer Crop 3× Gesichtsgröße; 422 `MODEL_UNAVAILABLE` wenn buffalo\_l nicht aktiv |
 
-**Preview-Strategie:** Arbeitskopie wird auf max 1024 px gethumbnailed, dann Ops angewendet. Prozent-Koordinaten sind auflösungsunabhängig. Final-Render in Originalauflösung kommt in Phase 4 (Save). `rembg`- und `smart_crop`-Preview zeigen Schachbrett-Transparenz (RGBA auf JPEG-Preview: weiß composited).
+**Preview-Strategie:** Arbeitskopie wird auf max 1024 px gethumbnailed, dann Ops angewendet. Prozent-Koordinaten sind auflösungsunabhängig. **Final-Render** (`POST .../save`) rendert in Originalauflösung und speichert nach `personX/edits/`. `rembg`- und `smart_crop`-Preview zeigen Schachbrett-Transparenz (RGBA auf JPEG-Preview: weiß composited).
 
 Fehler-Codes (strukturiert im `detail`-Feld):
 - `404 { code: "MODEL_NOT_FOUND" }` — `manifest_id` nicht im Manifest (auch bei `DELETE`)
@@ -608,7 +626,18 @@ interface AssetDto {
   created_at: string | null;      // ISO-8601
   imported_at: string | null;     // ISO-8601
   favourite: boolean;
-  version_count: number;
+  version_count: number;          // Anzahl gespeicherter Versionen für diese Instanz
   generation_meta: Record<string, unknown> | null;
+}
+
+interface AssetDetailDto extends AssetDto {
+  path: string | null;
+  tags: TagDto[];
+  tagger: string | null;
+  caption: string | null;
+  captioner: string | null;
+  caption_preset_id: number | null;
+  faces: FaceDto[];
+  versions: VersionDto[];         // alle Versionen (Instance + Face) für dieses Asset
 }
 ```

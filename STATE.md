@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p08-editor-cpu/`
-**Phase:** 4/5 — Versionierung & Speichern (pending)
-**Nächster Schritt:** Save-Endpoint (`POST /api/edit-sessions/{key}/save`), Final-Render in Originalauflösung, Version-DB-Kette, VersionDto
+**Phase:** 5/5 — Neuverarbeitung, Vergleich & Bulk (pending)
+**Nächster Schritt:** Bulk-Edit-Endpoint, Neuverarbeitungs-Logik (pHash-Face-Dedupe auf neuen Versionen), Side-by-side-Vergleich
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

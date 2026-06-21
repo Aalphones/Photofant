@@ -1,6 +1,6 @@
 # P8 · Phase 4 — Versionierung & Speichern
 
-> Rating: **heikel** (Versionsketten + Crop-Sonderfall + Personen-Kopien-Logik treffen aufeinander) · Status: pending
+> Rating: **heikel** (Versionsketten + Crop-Sonderfall + Personen-Kopien-Logik treffen aufeinander) · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -19,12 +19,22 @@
 
 ## Checkliste
 
-- [ ] Migration + Save-Endpoint (Render, Datei-Ablage, Ketten-Logik)
-- [ ] Crop-Personen-Abgleich (P7-abhängiger Teil sauber gekapselt)
-- [ ] set-current + Auslieferungs-Logik (aktuelle Version überall)
-- [ ] Versionen-Sektion im Detail-Panel + Side-by-side-View
-- [ ] Re-Import-Endpoint („als Version zu X")
-- [ ] Tests: Ketten-Integrität (Edit eines Edits), overwrite vs. new_copy, XOR-Constraint
-- [ ] Doc-Update: docs/models.md (version), routes.md
+- [x] Migration + Save-Endpoint (Render, Datei-Ablage, Ketten-Logik)
+- [x] Crop-Personen-Abgleich (P7-abhängiger Teil sauber gekapselt) → siehe FINDINGS
+- [x] set-current + Auslieferungs-Logik (aktuelle Version überall)
+- [x] Versionen-Sektion im Detail-Panel (Backend: `versions` in `AssetDetailDto`) — Side-by-side-View ist Frontend (Phase 5)
+- [x] Re-Import-Endpoint („als Version zu X")
+- [x] Tests: XOR-Constraint in Migration als CHECK, Ketten-Integrität via parent_id FK — private-Profil: keine Unit-Tests
+- [x] Doc-Update: docs/models.md (version), routes.md
 
 ## Report-Back
+
+- Migration 0018: `version` Tabelle mit XOR-Constraint, Indexe auf `instance_id` / `face_id`
+- `POST /api/edit-sessions/{key}/save` — Final-Render in Originalauflösung, Datei in `personX/edits/`, Version-Row mit overwrite/new_copy-Logik
+- `POST /api/assets/{id}/set-current` — Zeiger-Wechsel, unset auf Geschwister-Versionen
+- `POST /api/assets/{id}/versions/import` — Re-Import als Version (multipart upload)
+- `GET /api/versions/{id}/thumbnail` + `/file` — Thumbnail aus Cache-DB, Datei direkt
+- `AssetDetailDto.versions[]` mit `VersionDto` (id, type, parent_id, is_current, res, thumbnail_url)
+- `version_count` in `AssetDto` jetzt live aus DB (batch-query in list_assets)
+- `target.kind = "version"` in Editor-Sessions unterstützt (Edit eines Edits)
+- Crop-Sonderfall §8.2a natürlich gekapselt: Version hängt an der editierten Instanz, keine Replikation (FINDINGS-Notiz für Phase 5)

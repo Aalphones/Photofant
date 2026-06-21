@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -177,6 +177,26 @@ class Face(Base):
     origin_type: Mapped[str | None] = mapped_column(Text, nullable=True)  # original | upscale | flux_edit
     is_upscaled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     resolution: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class Version(Base):
+    __tablename__ = "version"
+    __table_args__ = (
+        CheckConstraint(
+            "(instance_id IS NOT NULL AND face_id IS NULL) OR (instance_id IS NULL AND face_id IS NOT NULL)",
+            name="ck_version_xor",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    instance_id: Mapped[int | None] = mapped_column(ForeignKey("asset_instance.id"), nullable=True, index=True)
+    face_id: Mapped[int | None] = mapped_column(ForeignKey("face.id"), nullable=True, index=True)
+    type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("version.id"), nullable=True)
+    path: Mapped[str] = mapped_column(Text, nullable=False)
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    params: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 

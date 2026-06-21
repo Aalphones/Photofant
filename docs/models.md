@@ -318,12 +318,31 @@ Indizes: `ix_face_asset_id`, `ix_face_person_id`.
 
 ---
 
+### `version` (migration 0018)
+
+Saved edit versions per asset_instance or face. Exactly one of `instance_id`/`face_id` is set (XOR constraint). `parent_id` chains edits-of-edits. `is_current` marks the active version for display in gallery/lightbox.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `instance_id` | INTEGER FK → `asset_instance.id` | gesetzt: Edit eines Fotos; XOR mit `face_id` |
+| `face_id` | INTEGER FK → `face.id` | gesetzt: Edit eines Faces; XOR mit `instance_id` |
+| `type` | TEXT | `crop \| rotate \| mirror \| pad \| rembg \| convert \| smart_crop \| import \| edit` |
+| `parent_id` | INTEGER FK → `version.id` | Edit eines Edits → Kette; NULL = erste Version |
+| `path` | TEXT | Datei in `personX/edits/`, nicht null |
+| `is_current` | BOOLEAN | `0` default; genau eine Version pro instance/face ist `1` |
+| `params` | JSON | `{ steps: [{op, params}], width, height }` |
+| `created_at` | DATETIME | UTC naive |
+
+Indexes: `ix_version_instance_id`, `ix_version_face_id`. Check constraint: `ck_version_xor`.
+
+---
+
 ## Upcoming tables (planned)
 
 | Table | Migration | Plan |
 |---|---|---|
-| `version` | 0016 | P8 |
-| `prompt_template` | 0017 | P9 |
+| `prompt_template` | tbd | P9 |
 
 ---
 

@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from photofant.config import get_data_root
 from photofant.db import vector_index
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
-from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Face, Tag
+from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Face, Person, Tag, Version
 from photofant.db.session import get_session
 from photofant.jobs.collections_job import enqueue_reevaluate_assets
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
@@ -86,6 +86,23 @@ class FaceDto(BaseModel):
     is_upscaled: bool
 
 
+class ResDto(BaseModel):
+    width: int
+    height: int
+
+
+class VersionDto(BaseModel):
+    id: int
+    type: str | None
+    parent_id: int | None
+    path: str
+    is_current: bool
+    params: dict | None  # type: ignore[type-arg]
+    created_at: datetime | None
+    res: ResDto | None
+    thumbnail_url: str
+
+
 class AssetDetailDto(AssetDto):
     path: str | None
     tags: list[TagDto]
@@ -93,7 +110,8 @@ class AssetDetailDto(AssetDto):
     caption: str | None
     captioner: str | None
     caption_preset_id: int | None
-    faces: list[FaceDto]
+    faces: list[FaceDto] = []
+    versions: list[VersionDto] = []
 
 
 class FacetItem(BaseModel):
@@ -142,7 +160,7 @@ class PatchCaptionRequest(BaseModel):
     caption: str
 
 
-def build_asset_dto(asset: Asset, instance: AssetInstance) -> AssetDto:
+def build_asset_dto(asset: Asset, instance: AssetInstance, version_count: int = 0) -> AssetDto:
     return AssetDto(
         id=asset.id,
         content_hash=asset.content_hash,
@@ -154,7 +172,7 @@ def build_asset_dto(asset: Asset, instance: AssetInstance) -> AssetDto:
         created_at=asset.created_at,
         imported_at=asset.imported_at,
         favourite=instance.favourite,
-        version_count=0,  # version table added in P8
+        version_count=version_count,
         generation_meta=asset.generation_meta,
         has_phash=asset.phash is not None,
     )
@@ -336,7 +354,7 @@ async def list_assets(
         all_rows.sort(key=_by_score, reverse=True)
         total = len(all_rows)
         start = (page - 1) * page_size
-        items = [build_asset_dto(a, i) for a, i in all_rows[start : start + page_size]]
+        page_rows = all_rows[start : start + page_size]
     else:
         total = query.count()
         sort_col: Any
@@ -345,9 +363,13 @@ async def list_assets(
         else:
             sort_col = Asset.file_size
         order_fn = asc if order == SortOrder.ASC else desc
-        rows = query.order_by(order_fn(sort_col)).offset((page - 1) * page_size).limit(page_size).all()
-        items = [build_asset_dto(asset, instance) for asset, instance in rows]
+        page_rows = query.order_by(order_fn(sort_col)).offset((page - 1) * page_size).limit(page_size).all()
 
+    version_counts = _batch_version_counts(session, [inst.id for _, inst in page_rows])
+    items = [
+        build_asset_dto(asset, instance, version_counts.get(instance.id, 0))
+        for asset, instance in page_rows
+    ]
     return AssetsPage(items=items, total=total, page=page, page_size=page_size, facets=facets)
 
 
@@ -409,6 +431,58 @@ async def get_asset_file(asset_id: int, session: DbSession) -> FileResponse:
     )
 
 
+def _batch_version_counts(session: Session, instance_ids: list[int]) -> dict[int, int]:
+    if not instance_ids:
+        return {}
+    rows = (
+        session.query(Version.instance_id, func.count(Version.id))
+        .filter(Version.instance_id.in_(instance_ids))
+        .group_by(Version.instance_id)
+        .all()
+    )
+    return {int(instance_id): int(count) for instance_id, count in rows}
+
+
+def _load_asset_versions(session: Session, instance_id: int, asset_id: int) -> list[VersionDto]:
+    instance_versions = (
+        session.query(Version)
+        .filter(Version.instance_id == instance_id)
+        .order_by(Version.created_at.asc())
+        .all()
+    )
+    face_ids = [
+        face_id for (face_id,) in
+        session.query(Face.id).filter(Face.asset_id == asset_id).all()
+    ]
+    face_versions: list[Version] = []
+    if face_ids:
+        face_versions = (
+            session.query(Version)
+            .filter(Version.face_id.in_(face_ids))
+            .order_by(Version.created_at.asc())
+            .all()
+        )
+    all_versions = instance_versions + face_versions
+    result: list[VersionDto] = []
+    for version in all_versions:
+        params = version.params or {}
+        width = params.get("width")
+        height = params.get("height")
+        res = ResDto(width=width, height=height) if width and height else None
+        result.append(VersionDto(
+            id=version.id,
+            type=version.type,
+            parent_id=version.parent_id,
+            path=version.path,
+            is_current=version.is_current,
+            params=version.params,
+            created_at=version.created_at,
+            res=res,
+            thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+        ))
+    return result
+
+
 def _load_asset_faces(session: Session, asset_id: int) -> list[FaceDto]:
     rows = session.query(Face).filter(Face.asset_id == asset_id).all()
     return [
@@ -434,9 +508,15 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
         raise HTTPException(status_code=404, detail="Asset not found")
 
     asset, instance = row
-    base = build_asset_dto(asset, instance)
+    version_count = (
+        session.query(func.count(Version.id))
+        .filter(Version.instance_id == instance.id)
+        .scalar()
+    ) or 0
+    base = build_asset_dto(asset, instance, version_count)
     tags = _load_asset_tags(session, asset.id)
     faces = _load_asset_faces(session, asset.id)
+    versions = _load_asset_versions(session, instance.id, asset.id)
     return AssetDetailDto(
         **base.model_dump(),
         path=instance.path,
@@ -446,6 +526,7 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
         captioner=asset.captioner,
         caption_preset_id=asset.caption_preset_id,
         faces=faces,
+        versions=versions,
     )
 
 
@@ -609,3 +690,150 @@ async def delete_asset(asset_id: int, session: DbSession) -> Response:
     data_root = get_data_root()
     await moves.soft_delete(session, instance, data_root)
     return Response(status_code=204)
+
+
+# ── Versioning endpoints ──────────────────────────────────────────────────────
+
+
+class SetCurrentRequest(BaseModel):
+    version_id: int
+
+
+@router.post("/{asset_id}/set-current", response_model=VersionDto)
+async def set_current_version(asset_id: int, body: SetCurrentRequest, session: DbSession) -> VersionDto:
+    """Switch the active version pointer. Gallery/Lightbox follow is_current."""
+    version = session.get(Version, body.version_id)
+    if version is None:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    _, instance = row
+
+    if version.instance_id is not None and version.instance_id != instance.id:
+        raise HTTPException(status_code=422, detail="Version does not belong to this asset's instance")
+    if version.face_id is not None:
+        face = session.get(Face, version.face_id)
+        if face is None or face.asset_id != asset_id:
+            raise HTTPException(status_code=422, detail="Version's face does not belong to this asset")
+
+    siblings = (
+        session.query(Version)
+        .filter(Version.is_current.is_(True))
+    )
+    if version.instance_id is not None:
+        siblings = siblings.filter(Version.instance_id == version.instance_id)
+    else:
+        siblings = siblings.filter(Version.face_id == version.face_id)
+    for sibling in siblings.all():
+        sibling.is_current = False
+
+    version.is_current = True
+    session.commit()
+    session.refresh(version)
+
+    params = version.params or {}
+    width = params.get("width")
+    height = params.get("height")
+    res = ResDto(width=width, height=height) if width and height else None
+    return VersionDto(
+        id=version.id,
+        type=version.type,
+        parent_id=version.parent_id,
+        path=version.path,
+        is_current=version.is_current,
+        params=version.params,
+        created_at=version.created_at,
+        res=res,
+        thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+    )
+
+
+class VersionImportResponse(BaseModel):
+    version: VersionDto
+
+
+@router.post("/{asset_id}/versions/import", response_model=VersionImportResponse, status_code=201)
+async def import_as_version(
+    asset_id: int,
+    session: DbSession,
+    file: UploadFile = File(...),
+) -> VersionImportResponse:
+    """Import an external file as a new version of this asset."""
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    _, instance = row
+
+    person = session.get(Person, instance.person_id)
+    if person is None:
+        raise HTTPException(status_code=500, detail="Person not found")
+
+    from photofant.media.person_folders import ensure_person_folder
+
+    data_root_path = Path(get_data_root())
+    person_dir = ensure_person_folder(data_root_path, person)
+    edits_dir = person_dir / "edits"
+    edits_dir.mkdir(parents=True, exist_ok=True)
+
+    import uuid as _uuid
+    original_name = Path(file.filename or "import.jpg")
+    ext = original_name.suffix.lower() or ".jpg"
+    filename = f"import_{_uuid.uuid4().hex[:12]}{ext}"
+    dest = edits_dir / filename
+
+    content = await file.read()
+    dest.write_bytes(content)
+
+    from PIL import Image as _Image
+    try:
+        with _Image.open(dest) as img:
+            width, height = img.size
+    except Exception:
+        width, height = None, None
+
+    siblings = (
+        session.query(Version)
+        .filter(Version.instance_id == instance.id, Version.is_current.is_(True))
+    )
+    for sibling in siblings.all():
+        sibling.is_current = False
+
+    from datetime import UTC as _UTC, datetime as _datetime
+    version = Version(
+        instance_id=instance.id,
+        face_id=None,
+        type="import",
+        parent_id=None,
+        path=str(dest.resolve()),
+        is_current=True,
+        params={"width": width, "height": height, "source": "re-import"},
+        created_at=_datetime.now(_UTC),
+    )
+    session.add(version)
+    session.commit()
+    session.refresh(version)
+
+    from photofant.db.cache import get_cache_db_path, init_cache_db, store_thumbnail
+    from photofant.media.thumbnails import generate_thumbnail
+
+    cache_path = get_cache_db_path()
+    init_cache_db(cache_path)
+    for thumb_size in (256, 512):
+        thumb = await asyncio.to_thread(generate_thumbnail, dest, thumb_size)
+        await asyncio.to_thread(store_thumbnail, cache_path, version.id, thumb_size, thumb, "edit")
+
+    res = ResDto(width=width, height=height) if width and height else None
+    version_dto = VersionDto(
+        id=version.id,
+        type=version.type,
+        parent_id=version.parent_id,
+        path=version.path,
+        is_current=version.is_current,
+        params=version.params,
+        created_at=version.created_at,
+        res=res,
+        thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+    )
+    return VersionImportResponse(version=version_dto)
