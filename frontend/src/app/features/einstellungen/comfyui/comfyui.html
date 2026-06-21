@@ -1,0 +1,144 @@
+<div class="comfyui__kopf">
+  <h2>ComfyUI-Integration</h2>
+  <p>Verbindet Photofant mit einer laufenden ComfyUI-Instanz. Photofant triggert Workflows — ComfyUI führt aus.</p>
+</div>
+
+<div class="comfyui__gruppen-label">Verbindung</div>
+<div class="comfyui__gruppe">
+
+  <!-- enabled toggle -->
+  <div class="comfyui__zeile comfyui__zeile--oben">
+    <div class="comfyui__zeile-inhalt">
+      <div class="comfyui__zeile-titel">ComfyUI-Integration aktivieren</div>
+      <div class="comfyui__zeile-sub">Workflow-Trigger und Import sind nur bei aktivierter Verbindung verfügbar.</div>
+    </div>
+    <div class="comfyui__zeile-steuerung">
+      <button
+        class="comfyui__schalter"
+        [class.comfyui__schalter--an]="draftEnabled()"
+        role="switch"
+        [attr.aria-checked]="draftEnabled()"
+        (click)="toggleEnabled()"
+      ><i></i></button>
+    </div>
+  </div>
+
+  <!-- base_url -->
+  <div class="comfyui__zeile comfyui__zeile--oben">
+    <div class="comfyui__zeile-inhalt">
+      <div class="comfyui__zeile-titel">ComfyUI-URL</div>
+      <div class="comfyui__zeile-sub">Host und Port der ComfyUI-Instanz. Default: <code>http://127.0.0.1:8188</code></div>
+    </div>
+    <div class="comfyui__zeile-steuerung">
+      <input
+        class="comfyui__texteingabe"
+        type="url"
+        [value]="draftBaseUrl()"
+        (change)="onBaseUrlChange($any($event.target))"
+        placeholder="http://127.0.0.1:8188"
+      >
+    </div>
+  </div>
+
+  <!-- client_id -->
+  <div class="comfyui__zeile comfyui__zeile--oben">
+    <div class="comfyui__zeile-inhalt">
+      <div class="comfyui__zeile-titel">Client-ID</div>
+      <div class="comfyui__zeile-sub">Kennung für die Queue-Zuordnung in ComfyUI. Default: <code>photofant</code></div>
+    </div>
+    <div class="comfyui__zeile-steuerung">
+      <input
+        class="comfyui__texteingabe comfyui__texteingabe--schmal"
+        type="text"
+        [value]="draftClientId()"
+        (change)="onClientIdChange($any($event.target))"
+        placeholder="photofant"
+      >
+    </div>
+  </div>
+
+  <!-- timeout -->
+  <div class="comfyui__zeile comfyui__zeile--oben">
+    <div class="comfyui__zeile-inhalt">
+      <div class="comfyui__zeile-titel">HTTP-Timeout (s)</div>
+      <div class="comfyui__zeile-sub">Maximale Wartezeit pro Request. Default: 10 s</div>
+    </div>
+    <div class="comfyui__zeile-steuerung">
+      <input
+        class="comfyui__zahleneingabe"
+        type="number"
+        min="1"
+        max="300"
+        [value]="draftTimeout()"
+        (change)="onTimeoutChange($any($event.target))"
+      >
+    </div>
+  </div>
+
+  <!-- output_dir (optional) -->
+  <div class="comfyui__zeile comfyui__zeile--oben">
+    <div class="comfyui__zeile-inhalt">
+      <div class="comfyui__zeile-titel">Output-Ordner <span class="comfyui__optional">(optional)</span></div>
+      <div class="comfyui__zeile-sub">Lokaler Pfad zu ComfyUIs <code>output/</code>-Ordner — nur für Direkt-Import bei lokalem Betrieb nötig.</div>
+    </div>
+    <div class="comfyui__zeile-steuerung">
+      <input
+        class="comfyui__texteingabe"
+        type="text"
+        [value]="draftOutputDir()"
+        (change)="onOutputDirChange($any($event.target))"
+        placeholder="Leer lassen = nur via ComfyUI-API"
+      >
+    </div>
+  </div>
+
+</div>
+
+<!-- Aktions-Zeile -->
+<div class="comfyui__aktionen">
+  <button
+    class="comfyui__btn comfyui__btn--akzent"
+    [disabled]="!isDirty() || isSaving()"
+    (click)="save()"
+  >
+    @if (isSaving()) {
+      <span class="spinner"></span>
+      Speichern …
+    } @else {
+      <pf-icon name="check" [size]="15" />
+      Speichern
+    }
+  </button>
+
+  <button
+    class="comfyui__btn comfyui__btn--rahmen"
+    [disabled]="isTesting() || isDirty()"
+    (click)="testConnection()"
+    [title]="isDirty() ? 'Zuerst speichern, dann testen' : 'Verbindung testen'"
+  >
+    @if (isTesting()) {
+      <span class="spinner"></span>
+      Testen …
+    } @else {
+      <pf-icon name="scan" [size]="15" />
+      Verbindung testen
+    }
+  </button>
+</div>
+
+<!-- Test-Ergebnis -->
+@if (testResult(); as result) {
+  <div class="comfyui__testergebnis" [class.comfyui__testergebnis--ok]="result.ok" [class.comfyui__testergebnis--fehler]="!result.ok">
+    @if (result.ok) {
+      <pf-icon name="check" [size]="14" />
+    } @else {
+      <pf-icon name="alertTriangle" [size]="14" />
+    }
+    <span>{{ result.detail }}</span>
+  </div>
+}
+
+<!-- Allgemeiner Fehler -->
+@if (error()) {
+  <div class="error-banner">{{ error() }}</div>
+}

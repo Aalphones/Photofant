@@ -1,0 +1,40 @@
+@use '../st-shared' as *;
+:host { display: block; max-width: 660px; }
+.comfyui__kopf { margin-bottom: 22px; }
+.comfyui__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.comfyui__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+.comfyui__gruppen-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 0 2px 8px; }
+.comfyui__gruppe { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+.comfyui__zeile { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.comfyui__zeile:last-child { border-bottom: none; }
+.comfyui__zeile--oben { align-items: flex-start; }
+.comfyui__zeile-inhalt { flex: 1; min-width: 0; }
+.comfyui__zeile-titel { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.comfyui__zeile-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.45; }
+.comfyui__zeile-steuerung { flex: none; display: flex; align-items: center; gap: 10px; }
+.comfyui__optional { font-size: 11px; font-weight: 400; color: var(--text-3); }
+.comfyui__schalter { position: relative; width: 42px; height: 24px; border-radius: 999px; flex: none; cursor: pointer; background: var(--line-2); border: 1px solid var(--line-2); }
+.comfyui__schalter--an { background: var(--accent); border-color: var(--accent); }
+.comfyui__schalter > i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .16s; }
+.comfyui__schalter--an > i { transform: translateX(18px); }
+.comfyui__texteingabe { height: 32px; width: 220px; padding: 0 8px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-s); color: var(--text); font-size: 13px; outline: none; }
+.comfyui__texteingabe--schmal { width: 140px; }
+.comfyui__texteingabe:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+.comfyui__zahleneingabe { height: 32px; width: 90px; padding: 0 8px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-s); color: var(--text); font-size: 13px; text-align: right; outline: none; }
+.comfyui__zahleneingabe:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+.comfyui__aktionen { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.comfyui__btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: var(--radius-s); font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .12s; }
+.comfyui__btn:disabled { opacity: .45; cursor: not-allowed; }
+.comfyui__btn--akzent { background: var(--accent); color: #fff; border: none; }
+.comfyui__btn--akzent:not(:disabled):hover { opacity: .88; }
+.comfyui__btn--rahmen { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.comfyui__btn--rahmen:not(:disabled):hover { background: var(--bg-2); }
+.comfyui__testergebnis { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border-radius: var(--radius-s); font-size: 13px; line-height: 1.45; margin-bottom: 12px; }
+.comfyui__testergebnis--ok { background: var(--success-weak, color-mix(in srgb, var(--accent) 12%, transparent)); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }
+.comfyui__testergebnis--fehler { background: var(--danger-weak); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent); }
+@media (max-width: 860px) {
+  .comfyui__zeile { flex-wrap: wrap; gap: 8px; }
+  .comfyui__zeile-steuerung { width: 100%; }
+  .comfyui__texteingabe { width: 100%; }
+  .comfyui__texteingabe--schmal { width: 100%; }
+}

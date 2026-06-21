@@ -1,7 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Nächster Schritt:** nächsten Plan aus Backlog wählen
+**Aktiver Plan:** `docs/planning/2026-06-15_p08b-comfyui-integration/`
+**Phase:** 2/5 — Workflow-Template-Registry (pending)
+**Nächster Schritt:** Phase 2 starten: Workflow-CRUD-Endpoints + Introspektion-Backend, DB-Migration für Workflow-Config
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

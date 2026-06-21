@@ -8,7 +8,7 @@ Photofant **triggert** Workflows, ComfyUI **führt aus**. Fire-and-Forget: Ergeb
 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
-| 1 | [Verbindung & Settings (ADR-003)](phase-1-verbindung-settings.md) | standard | pending |
+| 1 | [Verbindung & Settings (ADR-003)](phase-1-verbindung-settings.md) | standard | complete |
 | 2 | [Workflow-Template-Registry](phase-2-workflow-registry.md) | heikel | pending |
 | 3 | [Trigger-Flow (Fire-and-Forget)](phase-3-trigger-flow.md) | heikel | pending |
 | 4 | [Galerie-Run-Leiste (Armed-Slots, Batch)](phase-4-run-leiste.md) | heikel | pending |

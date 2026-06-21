@@ -16,6 +16,14 @@ class DisplaySettings(TypedDict):
     date_format: str
 
 
+class ComfyUISettings(TypedDict):
+    enabled: bool
+    base_url: str
+    client_id: str
+    output_dir: str
+    timeout: int
+
+
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
@@ -37,6 +45,7 @@ class AppSettings(TypedDict):
     face_review_threshold: float
     face_min_cluster_size: int
     display: DisplaySettings
+    comfyui: ComfyUISettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -63,6 +72,13 @@ SETTINGS_DEFAULTS: AppSettings = {
         "locale": "de",
         "date_format": "dmy",
     },
+    "comfyui": {
+        "enabled": False,
+        "base_url": "http://127.0.0.1:8188",
+        "client_id": "photofant",
+        "output_dir": "",
+        "timeout": 10,
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -87,6 +103,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "face_review_threshold": (float, int),
     "face_min_cluster_size": int,
     "display": dict,
+    "comfyui": dict,
 }
 
 

@@ -16,3 +16,5 @@ export type { Locale, DateFormat } from './settings.service';
 export { ReviewService } from './review.service';
 export { PersonService } from './person.service';
 export { EditSessionService } from './edit-session.service';
+export { ComfyUIService } from './comfyui.service';
+export type { TestConnectionResponse } from './comfyui.service';

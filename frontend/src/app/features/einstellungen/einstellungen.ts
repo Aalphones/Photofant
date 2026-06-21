@@ -9,11 +9,12 @@ import { Tastaturkuerzel } from './tastaturkuerzel/tastaturkuerzel';
 import { BackupWartung } from './backup-wartung/backup-wartung';
 import { Info } from './info/info';
 import { Tags } from './tags/tags';
+import { ComfyUISection } from './comfyui/comfyui';
 
 @Component({
   selector: 'pf-einstellungen',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, Bibliothek, Verarbeitung, Darstellung, Bearbeitung, Tastaturkuerzel, BackupWartung, Info, Tags],
+  imports: [Icon, Bibliothek, Verarbeitung, Darstellung, Bearbeitung, Tastaturkuerzel, BackupWartung, Info, Tags, ComfyUISection],
   templateUrl: './einstellungen.html',
   styleUrl: './einstellungen.scss',
 })

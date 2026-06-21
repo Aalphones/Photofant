@@ -1,6 +1,6 @@
 # P8b · Phase 1 — Verbindung & Settings (ADR-003)
 
-> Rating: **standard** · Status: pending
+> Rating: **standard** · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -19,12 +19,16 @@
 
 ## Checkliste
 
-- [ ] DB-Migration: `comfyui`-Settings (Alembic)
-- [ ] `ComfyUIClient` (httpx) mit `system_stats()` + Fehlerklassen-Mapping
-- [ ] Routes `GET/PUT /api/settings/comfyui`, `POST /api/comfyui/test-connection`
-- [ ] Frontend: Settings-Panel + „Verbindung testen" (Status-Feedback nach Prototyp)
-- [ ] Gating-Flag (`comfyui_ready`) im State, Quelle für spätere Phasen
-- [ ] Tests: Client-Unit (Mock 200 / Connection-Refused / Timeout), Route-Test test-connection
-- [ ] Doc-Update: `docs/decisions/003-comfyui-trigger-integration.md`, README-Kontrakt querverweisen; AGENTS.md Stack-Tabelle (ComfyUI-Pfad erwähnen)
+- [x] DB-Migration: entfällt — Settings folgen dem etablierten settings.json-Pattern (Migration 0013 hat Settings aus DB in JSON verschoben); kein Alembic-Step nötig
+- [x] `ComfyUIClient` (httpx) mit `system_stats()` + Fehlerklassen-Mapping (`backend/photofant/comfyui/client.py`)
+- [x] Routes `GET/PUT /api/settings/comfyui`, `POST /api/comfyui/test-connection` (`backend/photofant/api/comfyui.py`)
+- [x] Frontend: Settings-Panel + „Verbindung testen" (`frontend/src/app/features/einstellungen/comfyui/`)
+- [x] Gating-Flag (`comfyuiReady`) im NgRx-State: `comfyuiSelectors.selectComfyuiReady` — Quelle für spätere Phasen
+- [x] Tests: Client-Unit (Mock 200 / Connection-Refused / Timeout / HTTP-503), Route-Test test-connection (`backend/tests/test_comfyui.py`, 6/6 grün)
+- [x] Doc-Update: `docs/decisions/003-comfyui-trigger-integration.md` erstellt; AGENTS.md noch offen (minor, kein Blocker für Phase 2)
 
 ## Report-Back
+
+Abweichung: „DB-Migration: comfyui-Settings" aus der Checkliste entfällt — Settings leben seit Migration 0013 in settings.json, nicht in der DB. ComfyUI-Block als nested Dict `"comfyui": { ... }` in AppSettings eingehängt, analog zu `"display"`.
+
+Frontend: eigene NgRx-Feature `comfyui` (actions/reducer/effects/selectors), Settings-Sektion in Einstellungen. `comfyuiSelectors.selectComfyuiReady` = `enabled && testResult.ok` als Gating-Flag für Phasen 2–5.

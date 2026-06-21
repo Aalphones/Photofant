@@ -1,3 +1,19 @@
+export interface ComfyUIConfig {
+  enabled: boolean;
+  baseUrl: string;
+  clientId: string;
+  outputDir: string;
+  timeout: number;
+}
+
+export const COMFYUI_CONFIG_DEFAULTS: ComfyUIConfig = {
+  enabled: false,
+  baseUrl: 'http://127.0.0.1:8188',
+  clientId: 'photofant',
+  outputDir: '',
+  timeout: 10,
+};
+
 export interface ProcessingConfig {
   autoTag: boolean;
   autoCaption: boolean;

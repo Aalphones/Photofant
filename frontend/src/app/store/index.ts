@@ -11,3 +11,4 @@ export * from './tags/index';
 export * from './collections/index';
 export * from './review/index';
 export * from './editor/index';
+export * from './comfyui/index';
