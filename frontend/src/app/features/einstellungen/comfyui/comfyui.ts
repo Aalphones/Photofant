@@ -9,7 +9,8 @@ import {
 import { Store } from '@ngrx/store';
 import { Icon } from '@photofant/ui';
 import { comfyuiActions, comfyuiSelectors } from '@photofant/store';
-import type { ComfyUIConfig } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIWorkflow, WorkflowInput } from '@photofant/models';
+import { WORKFLOW_CATEGORIES } from '@photofant/models';
 
 @Component({
   selector: 'pf-einstellungen-comfyui',
@@ -27,7 +28,15 @@ export class ComfyUISection {
   readonly testResult = this.store.selectSignal(comfyuiSelectors.selectTestResult);
   readonly error = this.store.selectSignal(comfyuiSelectors.selectError);
 
-  // Local draft — user edits fields, clicks Speichern
+  readonly workflows = this.store.selectSignal(comfyuiSelectors.selectWorkflows);
+  readonly isLoadingWorkflows = this.store.selectSignal(comfyuiSelectors.selectIsLoadingWorkflows);
+  readonly isCreatingWorkflow = this.store.selectSignal(comfyuiSelectors.selectIsCreatingWorkflow);
+  readonly selectedWorkflowId = this.store.selectSignal(comfyuiSelectors.selectSelectedWorkflowId);
+  readonly selectedWorkflow = this.store.selectSignal(comfyuiSelectors.selectSelectedWorkflow);
+  readonly workflowError = this.store.selectSignal(comfyuiSelectors.selectWorkflowError);
+
+  readonly categories = WORKFLOW_CATEGORIES;
+
   readonly draftEnabled = signal<boolean>(false);
   readonly draftBaseUrl = signal<string>('');
   readonly draftClientId = signal<string>('');
@@ -45,11 +54,14 @@ export class ComfyUISection {
     );
   });
 
+  readonly editingWorkflow = signal<ComfyUIWorkflow | null>(null);
+  readonly editName = signal<string>('');
+  readonly editCategory = signal<string>('generic');
+
   constructor() {
     effect(() => {
       this.store.dispatch(comfyuiActions.loadConfig());
     });
-    // Sync draft when config loads
     effect(() => {
       const cfg = this.config();
       this.draftEnabled.set(cfg.enabled);
@@ -57,6 +69,9 @@ export class ComfyUISection {
       this.draftClientId.set(cfg.clientId);
       this.draftOutputDir.set(cfg.outputDir);
       this.draftTimeout.set(cfg.timeout);
+    });
+    effect(() => {
+      this.store.dispatch(comfyuiActions.loadWorkflows());
     });
   }
 
@@ -99,5 +114,125 @@ export class ComfyUISection {
 
   testConnection(): void {
     this.store.dispatch(comfyuiActions.testConnection());
+  }
+
+  onTemplateUpload(input: HTMLInputElement): void {
+    const file = input.files?.[0];
+    if (!file) return;
+    const name = file.name.replace(/\.api\.json$|\.json$/, '').replace(/[_-]/g, ' ');
+    this.store.dispatch(comfyuiActions.createWorkflow({ file, name, category: 'generic' }));
+    input.value = '';
+  }
+
+  selectWorkflow(workflowId: number): void {
+    const current = this.selectedWorkflowId();
+    if (current === workflowId) {
+      this.store.dispatch(comfyuiActions.selectWorkflow({ workflowId: null }));
+      this.editingWorkflow.set(null);
+    } else {
+      this.store.dispatch(comfyuiActions.selectWorkflow({ workflowId }));
+      this.editingWorkflow.set(null);
+    }
+  }
+
+  startEditWorkflow(workflow: ComfyUIWorkflow): void {
+    this.editingWorkflow.set(workflow);
+    this.editName.set(workflow.name);
+    this.editCategory.set(workflow.category);
+  }
+
+  cancelEditWorkflow(): void {
+    this.editingWorkflow.set(null);
+  }
+
+  saveEditWorkflow(): void {
+    const editing = this.editingWorkflow();
+    if (!editing) return;
+
+    const patch: { name?: string; category?: string } = {};
+    if (this.editName() !== editing.name) {
+      patch.name = this.editName();
+    }
+    if (this.editCategory() !== editing.category) {
+      patch.category = this.editCategory();
+    }
+    if (Object.keys(patch).length > 0) {
+      this.store.dispatch(comfyuiActions.updateWorkflow({ workflowId: editing.id, patch }));
+    }
+    this.editingWorkflow.set(null);
+  }
+
+  onEditNameChange(target: HTMLInputElement): void {
+    this.editName.set(target.value);
+  }
+
+  onEditCategoryChange(target: HTMLSelectElement): void {
+    this.editCategory.set(target.value);
+  }
+
+  deleteWorkflow(workflowId: number): void {
+    this.store.dispatch(comfyuiActions.deleteWorkflow({ workflowId }));
+  }
+
+  activateWorkflow(workflowId: number): void {
+    this.store.dispatch(comfyuiActions.activateWorkflow({ workflowId }));
+  }
+
+  deactivateWorkflow(workflowId: number): void {
+    this.store.dispatch(comfyuiActions.deactivateWorkflow({ workflowId }));
+  }
+
+  duplicateWorkflow(workflowId: number): void {
+    this.store.dispatch(comfyuiActions.duplicateWorkflow({ workflowId }));
+  }
+
+  statusLabel(workflow: ComfyUIWorkflow): string {
+    if (!workflow.isValid) return 'invalide';
+    if (workflow.isActive) return 'aktiv';
+    return 'inaktiv';
+  }
+
+  statusClass(workflow: ComfyUIWorkflow): string {
+    if (!workflow.isValid) return 'comfyui__status--fehler';
+    if (workflow.isActive) return 'comfyui__status--ok';
+    return 'comfyui__status--inaktiv';
+  }
+
+  removeInput(workflow: ComfyUIWorkflow, index: number): void {
+    const inputs = [...workflow.inputs];
+    inputs.splice(index, 1);
+    this.store.dispatch(comfyuiActions.updateWorkflow({
+      workflowId: workflow.id,
+      patch: { inputs },
+    }));
+  }
+
+  removeParam(workflow: ComfyUIWorkflow, index: number): void {
+    const params = [...workflow.params];
+    params.splice(index, 1);
+    this.store.dispatch(comfyuiActions.updateWorkflow({
+      workflowId: workflow.id,
+      patch: { params },
+    }));
+  }
+
+  toggleInputRequired(workflow: ComfyUIWorkflow, index: number): void {
+    const inputs = workflow.inputs.map((input: WorkflowInput, idx: number) =>
+      idx === index ? { ...input, required: !input.required } : input
+    );
+    this.store.dispatch(comfyuiActions.updateWorkflow({
+      workflowId: workflow.id,
+      patch: { inputs },
+    }));
+  }
+
+  toggleInputLockable(workflow: ComfyUIWorkflow, index: number): void {
+    const inputs = workflow.inputs.map((input: WorkflowInput, idx: number) =>
+      idx === index ? { ...input, lockable: !input.lockable } : input
+    );
+    this.store.dispatch(comfyuiActions.updateWorkflow({
+      workflowId: workflow.id,
+      patch: { inputs },
+    }));
   }
 }

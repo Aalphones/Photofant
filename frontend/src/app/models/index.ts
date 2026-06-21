@@ -47,6 +47,18 @@ export {
 export type { EditorTargetKind, CropRatio, CropRect, EditorStep, CreateSessionResponse, ApplyStepResponse, RollbackResponse } from './edit-session.model';
 
 export type {
+  WorkflowInput,
+  WorkflowParam,
+  ComfyUIWorkflow,
+  ValidationError as WorkflowValidationError,
+  NodeInfo,
+  InputSuggestion,
+  IntrospectionResult,
+  WorkflowCategory,
+} from './comfyui-workflow.model';
+export { WORKFLOW_CATEGORIES } from './comfyui-workflow.model';
+
+export type {
   BackupInfo,
   IssueKind,
   RepairActionKind,

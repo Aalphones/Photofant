@@ -51,4 +51,115 @@ export class ComfyUIEffects {
       ),
     )
   );
+
+  readonly loadWorkflows$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(comfyuiActions.loadWorkflows),
+      switchMap(() =>
+        this.comfyuiService.listWorkflows().pipe(
+          map((workflows) => comfyuiActions.loadWorkflowsSuccess({ workflows })),
+          catchError((error: HttpErrorResponse) =>
+            of(comfyuiActions.loadWorkflowsFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly createWorkflow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(comfyuiActions.createWorkflow),
+      switchMap(({ file, name, category }) =>
+        this.comfyuiService.createWorkflow(file, name, category).pipe(
+          map((workflow) => comfyuiActions.createWorkflowSuccess({ workflow })),
+          catchError((error: HttpErrorResponse) =>
+            of(comfyuiActions.createWorkflowFailure({ error: extractErrorMessage(error) }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly updateWorkflow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(comfyuiActions.updateWorkflow),
+      switchMap(({ workflowId, patch }) =>
+        this.comfyuiService.updateWorkflow(workflowId, patch).pipe(
+          map((workflow) => comfyuiActions.updateWorkflowSuccess({ workflow })),
+          catchError((error: HttpErrorResponse) =>
+            of(comfyuiActions.updateWorkflowFailure({ error: extractErrorMessage(error) }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly deleteWorkflow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(comfyuiActions.deleteWorkflow),
+      switchMap(({ workflowId }) =>
+        this.comfyuiService.deleteWorkflow(workflowId).pipe(
+          map(() => comfyuiActions.deleteWorkflowSuccess({ workflowId })),
+          catchError((error: HttpErrorResponse) =>
+            of(comfyuiActions.deleteWorkflowFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly activateWorkflow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(comfyuiActions.activateWorkflow),
+      switchMap(({ workflowId }) =>
+        this.comfyuiService.activateWorkflow(workflowId).pipe(
+          map((workflow) => comfyuiActions.activateWorkflowSuccess({ workflow })),
+          catchError((error: HttpErrorResponse) =>
+            of(comfyuiActions.activateWorkflowFailure({ error: extractErrorMessage(error) }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly deactivateWorkflow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(comfyuiActions.deactivateWorkflow),
+      switchMap(({ workflowId }) =>
+        this.comfyuiService.deactivateWorkflow(workflowId).pipe(
+          map((workflow) => comfyuiActions.deactivateWorkflowSuccess({ workflow })),
+          catchError((error: HttpErrorResponse) =>
+            of(comfyuiActions.deactivateWorkflowFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly duplicateWorkflow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(comfyuiActions.duplicateWorkflow),
+      switchMap(({ workflowId }) =>
+        this.comfyuiService.duplicateWorkflow(workflowId).pipe(
+          map((workflow) => comfyuiActions.duplicateWorkflowSuccess({ workflow })),
+          catchError((error: HttpErrorResponse) =>
+            of(comfyuiActions.duplicateWorkflowFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+}
+
+function extractErrorMessage(error: HttpErrorResponse): string {
+  if (error.error && typeof error.error === 'object' && 'detail' in error.error) {
+    const detail = error.error.detail;
+    if (typeof detail === 'string') {
+      return detail;
+    }
+    if (typeof detail === 'object' && detail !== null && 'message' in detail) {
+      return String(detail.message);
+    }
+  }
+  return error.message;
 }

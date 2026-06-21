@@ -4,6 +4,7 @@
 .comfyui__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
 .comfyui__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
 .comfyui__gruppen-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 0 2px 8px; }
+.comfyui__gruppen-label--mt { margin-top: 28px; }
 .comfyui__gruppe { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
 .comfyui__zeile { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .comfyui__zeile:last-child { border-bottom: none; }
@@ -29,12 +30,94 @@
 .comfyui__btn--akzent:not(:disabled):hover { opacity: .88; }
 .comfyui__btn--rahmen { background: transparent; color: var(--text); border: 1px solid var(--line); }
 .comfyui__btn--rahmen:not(:disabled):hover { background: var(--bg-2); }
+.comfyui__btn--gefahr { background: transparent; color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
+.comfyui__btn--gefahr:not(:disabled):hover { background: var(--danger-weak); }
+.comfyui__btn--klein { height: 28px; padding: 0 10px; font-size: 12px; gap: 4px; }
 .comfyui__testergebnis { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border-radius: var(--radius-s); font-size: 13px; line-height: 1.45; margin-bottom: 12px; }
 .comfyui__testergebnis--ok { background: var(--success-weak, color-mix(in srgb, var(--accent) 12%, transparent)); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }
 .comfyui__testergebnis--fehler { background: var(--danger-weak); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent); }
+
+/* ── Workflow-Verwaltung ──────────────────────────────── */
+
+.comfyui__workflow-toolbar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+}
+.comfyui__upload-label {
+  cursor: pointer;
+  input { display: none; }
+}
+.comfyui__upload-input { display: none; }
+.comfyui__upload-status { font-size: 12px; color: var(--text-3); }
+.comfyui__loading { font-size: 13px; color: var(--text-3); padding: 12px 0; }
+.comfyui__leer {
+  font-size: 13px; color: var(--text-3); padding: 20px 16px;
+  background: var(--bg-2); border: 1px dashed var(--line); border-radius: var(--radius);
+  text-align: center; line-height: 1.5;
+}
+
+.comfyui__workflow-karte {
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius);
+  margin-bottom: 8px; overflow: hidden;
+  &--offen { border-color: var(--accent-line); }
+}
+
+.comfyui__workflow-kopf {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+  &:hover { background: var(--bg-3, color-mix(in srgb, var(--bg-2) 80%, var(--text) 3%)); }
+}
+.comfyui__workflow-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.comfyui__workflow-name { font-size: 13.5px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comfyui__workflow-kat { font-size: 11px; color: var(--text-3); background: var(--bg); padding: 2px 7px; border-radius: 4px; flex: none; }
+.comfyui__workflow-rechts { display: flex; align-items: center; gap: 10px; flex: none; }
+.comfyui__status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+.comfyui__status--ok { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.comfyui__status--inaktiv { color: var(--text-3); background: var(--bg); }
+.comfyui__status--fehler { color: var(--danger); background: var(--danger-weak); }
+
+.comfyui__workflow-detail { padding: 0 16px 16px; border-top: 1px solid var(--line); }
+
+.comfyui__val-fehler { margin: 12px 0 8px; }
+.comfyui__val-fehler-zeile {
+  display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--danger);
+  padding: 6px 10px; background: var(--danger-weak); border-radius: var(--radius-s); margin-bottom: 4px;
+  line-height: 1.4;
+}
+.comfyui__val-tipp { color: var(--text-3); font-style: italic; }
+
+.comfyui__detail-sektion { margin-top: 14px; }
+.comfyui__detail-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+
+.comfyui__input-zeile {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+  background: var(--bg); border-radius: var(--radius-s); margin-bottom: 4px; font-size: 12px;
+}
+.comfyui__input-key { font-weight: 600; color: var(--text); flex: none; }
+.comfyui__input-meta { color: var(--text-3); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comfyui__input-actions { display: flex; gap: 4px; flex: none; }
+.comfyui__icon-btn {
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--text-3); cursor: pointer; border-radius: 4px;
+  &:hover { background: var(--bg-2); color: var(--text); }
+}
+
+.comfyui__workflow-aktionen { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+.comfyui__edit-form { margin: 12px 0; }
+.comfyui__edit-zeile { display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  label { font-size: 12px; font-weight: 500; color: var(--text-3); width: 70px; flex: none; }
+}
+.comfyui__edit-aktionen { display: flex; gap: 6px; margin-top: 8px; }
+.comfyui__select {
+  height: 32px; padding: 0 8px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--radius-s); color: var(--text); font-size: 13px; outline: none;
+  &:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+}
+
 @media (max-width: 860px) {
   .comfyui__zeile { flex-wrap: wrap; gap: 8px; }
   .comfyui__zeile-steuerung { width: 100%; }
   .comfyui__texteingabe { width: 100%; }
   .comfyui__texteingabe--schmal { width: 100%; }
+  .comfyui__workflow-kopf { flex-wrap: wrap; }
 }

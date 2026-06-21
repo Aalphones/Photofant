@@ -1,4 +1,5 @@
 import { createSelector } from '@ngrx/store';
+import type { ComfyUIWorkflow } from '@photofant/models';
 import { comfyuiFeature } from './comfyui.reducer';
 
 const {
@@ -8,12 +9,29 @@ const {
   selectIsTesting,
   selectTestResult,
   selectError,
+  selectWorkflows,
+  selectIsLoadingWorkflows,
+  selectIsCreatingWorkflow,
+  selectSelectedWorkflowId,
+  selectWorkflowError,
 } = comfyuiFeature;
 
 const selectComfyuiReady = createSelector(
   selectConfig,
   selectTestResult,
   (config, testResult) => config.enabled && testResult?.ok === true
+);
+
+const selectSelectedWorkflow = createSelector(
+  selectWorkflows,
+  selectSelectedWorkflowId,
+  (workflows: ComfyUIWorkflow[], selectedId: number | null) =>
+    selectedId !== null ? workflows.find((workflow: ComfyUIWorkflow) => workflow.id === selectedId) ?? null : null
+);
+
+const selectActiveWorkflows = createSelector(
+  selectWorkflows,
+  (workflows: ComfyUIWorkflow[]) => workflows.filter((workflow: ComfyUIWorkflow) => workflow.isActive && workflow.isValid)
 );
 
 export const comfyuiSelectors = {
@@ -24,4 +42,11 @@ export const comfyuiSelectors = {
   selectTestResult,
   selectError,
   selectComfyuiReady,
+  selectWorkflows,
+  selectIsLoadingWorkflows,
+  selectIsCreatingWorkflow,
+  selectSelectedWorkflowId,
+  selectSelectedWorkflow,
+  selectActiveWorkflows,
+  selectWorkflowError,
 };

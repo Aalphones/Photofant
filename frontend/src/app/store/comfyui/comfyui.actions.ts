@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { ComfyUIConfig } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIWorkflow, WorkflowInput, WorkflowParam } from '@photofant/models';
 
 export const comfyuiActions = createActionGroup({
   source: 'ComfyUI',
@@ -14,5 +14,29 @@ export const comfyuiActions = createActionGroup({
     'Test Connection Success': props<{ ok: boolean; detail: string }>(),
     'Test Connection Failure': props<{ error: string }>(),
     'Clear Test Result':    emptyProps(),
+
+    'Load Workflows':          emptyProps(),
+    'Load Workflows Success':  props<{ workflows: ComfyUIWorkflow[] }>(),
+    'Load Workflows Failure':  props<{ error: string }>(),
+    'Create Workflow':         props<{ file: File; name: string; category: string }>(),
+    'Create Workflow Success':  props<{ workflow: ComfyUIWorkflow }>(),
+    'Create Workflow Failure':  props<{ error: string }>(),
+    'Update Workflow':         props<{ workflowId: number; patch: { name?: string; category?: string; inputs?: WorkflowInput[]; params?: WorkflowParam[] } }>(),
+    'Update Workflow Success':  props<{ workflow: ComfyUIWorkflow }>(),
+    'Update Workflow Failure':  props<{ error: string }>(),
+    'Delete Workflow':         props<{ workflowId: number }>(),
+    'Delete Workflow Success':  props<{ workflowId: number }>(),
+    'Delete Workflow Failure':  props<{ error: string }>(),
+    'Activate Workflow':       props<{ workflowId: number }>(),
+    'Activate Workflow Success': props<{ workflow: ComfyUIWorkflow }>(),
+    'Activate Workflow Failure': props<{ error: string }>(),
+    'Deactivate Workflow':       props<{ workflowId: number }>(),
+    'Deactivate Workflow Success': props<{ workflow: ComfyUIWorkflow }>(),
+    'Deactivate Workflow Failure': props<{ error: string }>(),
+    'Duplicate Workflow':       props<{ workflowId: number }>(),
+    'Duplicate Workflow Success': props<{ workflow: ComfyUIWorkflow }>(),
+    'Duplicate Workflow Failure': props<{ error: string }>(),
+    'Select Workflow':         props<{ workflowId: number | null }>(),
+    'Clear Workflow Error':    emptyProps(),
   },
 });

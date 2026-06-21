@@ -1,6 +1,6 @@
 # P8b · Phase 2 — Workflow-Template-Registry
 
-> Rating: **heikel** (Template-Parsing + Bindung über Titel + Validierung sind der brüchige Kern) · Status: pending
+> Rating: **heikel** (Template-Parsing + Bindung über Titel + Validierung sind der brüchige Kern) · Status: **complete** (2026-06-21)
 
 ## Kontext (vorher lesen)
 
@@ -19,13 +19,31 @@
 
 ## Checkliste
 
-- [ ] DB-Migration: `comfyui_workflow` + `inputs`/`params` (JSON-Spalten oder Subtabellen)
-- [ ] Template-Speicher: Upload → Kopie nach `workflows/`, Pfad in DB
-- [ ] Introspektion: API-Format-Parser (Nodes, `_meta.title`, `class_type`, Eingangs-Heuristik)
-- [ ] Validator (Titel-Existenz + Eindeutigkeit, Feld-Existenz, SaveImage, Re-Import-Drift-Markierung)
-- [ ] Routes CRUD + introspect + activate (mit Validierungs-Gate)
-- [ ] Frontend: Settings-Workflow-Verwaltung (Anlegen, Auto-Vorschlag bestätigen/anpassen, Input/Param-Zeilen, Validierungs-Feedback, Status-Liste)
-- [ ] Tests: Introspektion gegen ein Beispiel-Template; Validator-Fälle (fehlender Titel / doppelter Titel / fehlendes Feld / kein SaveImage / Drift bei Re-Import)
-- [ ] Doc-Update: README-Kontrakt; Beispiel-Workflow-Config (§5) als Fixture ablegen
+- [x] DB-Migration: `comfyui_workflow` (0019) mit JSON-Spalten für inputs/params
+- [x] Template-Speicher: Upload → Kopie nach `{data_root_base}/.photofant/workflows/`, Pfad in DB
+- [x] Introspektion: API-Format-Parser (`introspect.py`) — Nodes, `_meta.title`, `class_type`, Eingangs-Heuristik (IMAGE_LOADER_CLASSES, MASK_LOADER_CLASSES)
+- [x] Validator (`validator.py`) — Titel-Existenz + Eindeutigkeit, Feld-Existenz, SaveImage, Re-Import-Drift (`check_drift`)
+- [x] Routes CRUD + introspect + activate/deactivate/duplicate/revalidate (14 Endpoints)
+- [x] Frontend: Settings-Workflow-Verwaltung — Upload, Workflow-Karten, Status (aktiv/inaktiv/invalide), Validierungsfehler, Input/Param-Zeilen mit Inline-Aktionen, Edit-Modus
+- [x] Tests: 15 Tests (6 Introspection + 9 Validation) — fehlender Titel, doppelter Titel, fehlendes Feld, kein SaveImage, no_binding, node_id-Fallback, UI-Format-Reject
+- [x] Doc-Update: README-Kontrakt aktuell; Beispiel-Fixture entfällt (Tests nutzen Inline-Templates)
 
 ## Report-Back
+
+**Scope:** Workflow-Template-Registry mit CRUD, Introspektion, Validierung und Settings-UI.
+
+**Backend:**
+- Migration 0019: `comfyui_workflow` mit id, name, category, template_path, inputs/params (JSON), is_active, is_valid, validation_errors (JSON), timestamps
+- `comfyui/introspect.py`: Erkennt API- vs UI-Format, IMAGE_LOADER_CLASSES (LoadImage, LoadImageMask, ...), generiert InputSuggestion-Objekte
+- `comfyui/validator.py`: Prüft Titel-Existenz + Eindeutigkeit, Feld-Existenz, SaveImage-Pflicht; `check_drift()` für Re-Import
+- `api/comfyui.py`: 14 Endpoints (Settings + Workflow-CRUD + introspect + activate/deactivate/duplicate/revalidate)
+
+**Frontend:**
+- Models: WorkflowInput, WorkflowParam, ComfyUIWorkflow, ValidationError, IntrospectionResult + WORKFLOW_CATEGORIES
+- Service: 9 neue Methoden + snake_case→camelCase Mapper
+- Store: 20+ Actions, erweiterte State/Reducer/Effects/Selectors
+- UI: Workflow-Karten mit Status-Badge, expandierbares Detail-Panel, Input/Param-Verwaltung, Inline-Edit
+
+**Tests:** 15 Unit-Tests (Introspektion + Validation), alle bestehenden 6 ComfyUI-Tests weiterhin grün.
+
+**Abweichungen:** Keine. Beispiel-Fixture nicht als Datei abgelegt — Tests verwenden Inline-Templates.

@@ -1,5 +1,5 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { ComfyUIConfig } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIWorkflow } from '@photofant/models';
 import { COMFYUI_CONFIG_DEFAULTS } from '@photofant/models';
 import { comfyuiActions } from './comfyui.actions';
 
@@ -15,6 +15,11 @@ export interface ComfyUIState {
   isTesting: boolean;
   testResult: TestResult | null;
   error: string | null;
+  workflows: ComfyUIWorkflow[];
+  isLoadingWorkflows: boolean;
+  isCreatingWorkflow: boolean;
+  selectedWorkflowId: number | null;
+  workflowError: string | null;
 }
 
 const initialState: ComfyUIState = {
@@ -24,7 +29,16 @@ const initialState: ComfyUIState = {
   isTesting: false,
   testResult: null,
   error: null,
+  workflows: [],
+  isLoadingWorkflows: false,
+  isCreatingWorkflow: false,
+  selectedWorkflowId: null,
+  workflowError: null,
 };
+
+function replaceWorkflow(workflows: ComfyUIWorkflow[], updated: ComfyUIWorkflow): ComfyUIWorkflow[] {
+  return workflows.map((workflow: ComfyUIWorkflow) => workflow.id === updated.id ? updated : workflow);
+}
 
 export const comfyuiFeature = createFeature({
   name: 'comfyui',
@@ -63,6 +77,72 @@ export const comfyuiFeature = createFeature({
 
     on(comfyuiActions.clearTestResult, (state: ComfyUIState) =>
       ({ ...state, testResult: null })
+    ),
+
+    // Workflows
+    on(comfyuiActions.loadWorkflows, (state: ComfyUIState) =>
+      ({ ...state, isLoadingWorkflows: true, workflowError: null })
+    ),
+    on(comfyuiActions.loadWorkflowsSuccess, (state: ComfyUIState, { workflows }) =>
+      ({ ...state, isLoadingWorkflows: false, workflows })
+    ),
+    on(comfyuiActions.loadWorkflowsFailure, (state: ComfyUIState, { error }) =>
+      ({ ...state, isLoadingWorkflows: false, workflowError: error })
+    ),
+
+    on(comfyuiActions.createWorkflow, (state: ComfyUIState) =>
+      ({ ...state, isCreatingWorkflow: true, workflowError: null })
+    ),
+    on(comfyuiActions.createWorkflowSuccess, (state: ComfyUIState, { workflow }) =>
+      ({ ...state, isCreatingWorkflow: false, workflows: [...state.workflows, workflow], selectedWorkflowId: workflow.id })
+    ),
+    on(comfyuiActions.createWorkflowFailure, (state: ComfyUIState, { error }) =>
+      ({ ...state, isCreatingWorkflow: false, workflowError: error })
+    ),
+
+    on(comfyuiActions.updateWorkflowSuccess, (state: ComfyUIState, { workflow }) =>
+      ({ ...state, workflows: replaceWorkflow(state.workflows, workflow) })
+    ),
+    on(comfyuiActions.updateWorkflowFailure, (state: ComfyUIState, { error }) =>
+      ({ ...state, workflowError: error })
+    ),
+
+    on(comfyuiActions.deleteWorkflowSuccess, (state: ComfyUIState, { workflowId }) => ({
+      ...state,
+      workflows: state.workflows.filter((workflow: ComfyUIWorkflow) => workflow.id !== workflowId),
+      selectedWorkflowId: state.selectedWorkflowId === workflowId ? null : state.selectedWorkflowId,
+    })),
+    on(comfyuiActions.deleteWorkflowFailure, (state: ComfyUIState, { error }) =>
+      ({ ...state, workflowError: error })
+    ),
+
+    on(comfyuiActions.activateWorkflowSuccess, (state: ComfyUIState, { workflow }) =>
+      ({ ...state, workflows: replaceWorkflow(state.workflows, workflow) })
+    ),
+    on(comfyuiActions.activateWorkflowFailure, (state: ComfyUIState, { error }) =>
+      ({ ...state, workflowError: error })
+    ),
+
+    on(comfyuiActions.deactivateWorkflowSuccess, (state: ComfyUIState, { workflow }) =>
+      ({ ...state, workflows: replaceWorkflow(state.workflows, workflow) })
+    ),
+    on(comfyuiActions.deactivateWorkflowFailure, (state: ComfyUIState, { error }) =>
+      ({ ...state, workflowError: error })
+    ),
+
+    on(comfyuiActions.duplicateWorkflowSuccess, (state: ComfyUIState, { workflow }) =>
+      ({ ...state, workflows: [...state.workflows, workflow] })
+    ),
+    on(comfyuiActions.duplicateWorkflowFailure, (state: ComfyUIState, { error }) =>
+      ({ ...state, workflowError: error })
+    ),
+
+    on(comfyuiActions.selectWorkflow, (state: ComfyUIState, { workflowId }) =>
+      ({ ...state, selectedWorkflowId: workflowId })
+    ),
+
+    on(comfyuiActions.clearWorkflowError, (state: ComfyUIState) =>
+      ({ ...state, workflowError: null })
     ),
   ),
 });
