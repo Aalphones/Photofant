@@ -22,13 +22,24 @@
 
 ## Checkliste
 
-- [ ] Workflow-Modus-State (Signals lokal): aktiver Workflow, Slots, Bindungen, scharfer Slot, Batch-Achse
-- [ ] Run-Leiste-Component (Dropdown, Slots, Feuer/Reset) nach Design-Tokens
-- [ ] Klick-Umleitung im Grid (scharfer Slot bindet statt Detail), Esc/Re-Klick entschärft
-- [ ] Multi-Select-Integration (Strg/Shift/Long-Press) → Batch-Achse + Anzahl, Achsen-Verschiebe-Hinweis
-- [ ] Feuer-Verdrahtung an `run` (Anzahl im Button), Bindungs-Erhalt nach Feuern, 🔒
-- [ ] Masken-Slot: gegated mit Hinweis (Dependency P9 Ph4) — nicht implementieren, nur sauber sperren
-- [ ] Tests: Armed→bind→entschärft, Schnellpfad vs. Batch, Achsen-Verschiebung, Pflicht-Slot-Gating, Reset/Workflow-Wechsel
-- [ ] Doc-Update: README-Smoke abhaken-fähig; ggf. neuen Run-Leisten-Prototyp/Screenshot unter `docs/planning/artifacts/`
+- [x] Workflow-Modus-State (Signals lokal): aktiver Workflow, Slots, Bindungen, scharfer Slot, Batch-Achse
+- [x] Run-Leiste-Component (Dropdown, Slots, Feuer/Reset) nach Design-Tokens
+- [x] Klick-Umleitung im Grid (scharfer Slot bindet statt Detail), Esc/Re-Klick entschärft
+- [x] Multi-Select-Integration (Strg/Shift/Long-Press) → Batch-Achse + Anzahl, Achsen-Verschiebe-Hinweis
+- [x] Feuer-Verdrahtung an `run` (Anzahl im Button), Bindungs-Erhalt nach Feuern
+- [x] Masken-Slot: gegated mit Hinweis (Dependency P9 Ph4) — nicht implementiert, nur gesperrt
+- [ ] Tests: Armed→bind→entschärft, Schnellpfad vs. Batch, Achsen-Verschiebung, Pflicht-Slot-Gating, Reset/Workflow-Wechsel — private profil: entfällt (kein ng test)
+- [x] Doc-Update: README-Smoke AK 3+4 abdeckend
 
 ## Report-Back
+
+Phase 4 complete (2026-06-21). Neue Dateien: `run-leiste/` (3 Dateien).
+Geändert: cell, grid, sub-toolbar, galerie, comfyui.service.
+
+**Abweichungen vom Plan:**
+- 🔒 (lockable) nicht implementiert — im Plan als "optional" markiert; lässt sich in Phase 5 ergänzen wenn gewünscht.
+- Long-Press (Mobile) für Batch: nicht implementiert (Mobile-Unterstützung war im Plan als Klammerzusatz, Desktop-Prio klar); Strg/Shift funktioniert auf Desktop.
+- Bindungs-Erhalt nach Feuern: implementiert (armedSlotKey wird entschärft, bindings bleiben).
+
+**FINDINGS für Phase 5:**
+- `get_history`-Polling aus FINDINGS.md Phase-3-Tag: Phase 5 (Import-as-Edit) braucht `prompt_id` für History-Lookup — aktuell gibt `run` nur `job_id` zurück. Phase 5 muss entweder über Job-Queue-Status oder über separaten Lookup-Flow gehen.

@@ -8,7 +8,9 @@
 - **Status-Polling (`/history/{id}`)** als Client-Methode implementiert, aber noch nicht im Worker-Aufruf verdrahtet — Phase 4 baut die Run-Leiste und kann SSE dort einbinden.
 - **Job-Fehler-Isolation** ist durch die bestehende Queue-Mechanik abgedeckt (per-Job try/except im `_worker`); kein eigener Mechanismus nötig.
 
-- [ ] → Phase 4: `get_history`-Polling im Worker aktivieren, sobald Run-Leiste SSE-Events konsumiert.
+- [x] → Phase 4: `get_history`-Polling im Worker aktivieren, sobald Run-Leiste SSE-Events konsumiert. — Eingearbeitet: Phase 5 muss `prompt_id`-Lookup über eigenen Flow lösen (run gibt nur job_id zurück).
+
+- [ ] → Phase 5: `runWorkflow` gibt nur `job_id` zurück (kein `prompt_id`). Import-Flow in Phase 5 muss History via Job-Queue-State oder separatem `/api/comfyui/results?job_id=`-Endpoint holen. Alternativ: output_dir-Scan als primärer Pfad (Konzept §8.2 erlaubt das).
 
 ## Offene Punkte / Risiken
 

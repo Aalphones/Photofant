@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-15_p08b-comfyui-integration/`
-**Phase:** 4/5 — Galerie-Run-Leiste (Armed-Slots, Batch) (pending)
-**Nächster Schritt:** Phase 4 starten: Frontend Run-Leiste, Armed-Slot-Mechanik, Batch-Axis-UI, Feuern-Button mit Anzahl
+**Phase:** 5/5 — Import als Edit (on demand) (pending)
+**Nächster Schritt:** Phase 5 starten: Results-Endpoint, Output-Dir-Scan, Import-via-P8-Hook als Edit-Version
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

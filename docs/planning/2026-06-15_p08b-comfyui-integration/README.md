@@ -11,7 +11,7 @@ Photofant **triggert** Workflows, ComfyUI **führt aus**. Fire-and-Forget: Ergeb
 | 1 | [Verbindung & Settings (ADR-003)](phase-1-verbindung-settings.md) | standard | complete |
 | 2 | [Workflow-Template-Registry](phase-2-workflow-registry.md) | heikel | complete |
 | 3 | [Trigger-Flow (Fire-and-Forget)](phase-3-trigger-flow.md) | heikel | complete |
-| 4 | [Galerie-Run-Leiste (Armed-Slots, Batch)](phase-4-run-leiste.md) | heikel | pending |
+| 4 | [Galerie-Run-Leiste (Armed-Slots, Batch)](phase-4-run-leiste.md) | heikel | complete |
 | 5 | [Import als Edit (on demand)](phase-5-import-edit.md) | standard | pending |
 
 ## Kontrakt (Backend ↔ Frontend)
