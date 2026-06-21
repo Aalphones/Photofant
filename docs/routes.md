@@ -278,9 +278,10 @@ interface ApplyStepResponse     { seq: number; preview_url: string; }
 | `mirror` | `{ axis: "h"\|"v" }` | |
 | `pad` | `{ target: "1:1"\|"4:3"\|"16:9"\|…, color: "#000000"\|"#ffffff"\|"transparent" }` | Transparent → RGBA (PNG-Preview: weiß) |
 | `convert` | `{ format: "png"\|"jpeg", quality: 1–100 }` | `quality` nur für JPEG; Alpha-Verlust bei JPEG |
-| `smart_crop` | `{}` | Phase 3 — Stub, gibt Bild unverändert zurück |
+| `rembg` | `{}` | Hintergrund entfernen via u2net ONNX → RGBA mit Alpha-Maske; 422 `MODEL_UNAVAILABLE` wenn Modell nicht aktiv |
+| `smart_crop` | `{}` | Gesichtserkennung (SCRFD) → quadratischer Crop 3× Gesichtsgröße; 422 `MODEL_UNAVAILABLE` wenn buffalo\_l nicht aktiv |
 
-**Preview-Strategie:** Arbeitskopie wird auf max 1024 px gethumbnailed, dann Ops angewendet. Prozent-Koordinaten sind auflösungsunabhängig. Final-Render in Originalauflösung kommt in Phase 4 (Save).
+**Preview-Strategie:** Arbeitskopie wird auf max 1024 px gethumbnailed, dann Ops angewendet. Prozent-Koordinaten sind auflösungsunabhängig. Final-Render in Originalauflösung kommt in Phase 4 (Save). `rembg`- und `smart_crop`-Preview zeigen Schachbrett-Transparenz (RGBA auf JPEG-Preview: weiß composited).
 
 Fehler-Codes (strukturiert im `detail`-Feld):
 - `404 { code: "MODEL_NOT_FOUND" }` — `manifest_id` nicht im Manifest (auch bei `DELETE`)

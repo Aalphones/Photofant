@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p08-editor-cpu/`
-**Phase:** 3/5 — rembg & Smart-Crop (pending)
-**Nächster Schritt:** rembg-Integration (Modell-Download, ONNX-Inferenz) + Smart-Crop-Logik (Face-BBox → Crop-Region)
+**Phase:** 4/5 — Versionierung & Speichern (pending)
+**Nächster Schritt:** Save-Endpoint (`POST /api/edit-sessions/{key}/save`), Final-Render in Originalauflösung, Version-DB-Kette, VersionDto
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

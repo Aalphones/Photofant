@@ -30,10 +30,22 @@
         <button class="ed-act primary" (click)="onStartCrop()">
           <pf-icon name="crop" [size]="15" /> Zuschneiden
         </button>
-        <button class="ed-act ghost" title="Smart-Crop auf Gesicht" (click)="applySmartCrop()">
-          <pf-icon name="face" [size]="15" />
-        </button>
+        @if (capabilities()?.faces !== false) {
+          <button class="ed-act ghost" title="Smart-Crop auf Gesicht" (click)="applySmartCrop()">
+            <pf-icon name="face" [size]="15" />
+          </button>
+        } @else {
+          <button class="ed-act ghost" [disabled]="true" title="Benötigt Personen-Erkennung">
+            <pf-icon name="face" [size]="15" />
+          </button>
+        }
       </div>
+      @if (capabilities()?.faces === false) {
+        <div class="ed-note warn" style="margin-top: 6px">
+          <pf-icon name="alertTriangle" [size]="14" />
+          <span>Smart-Crop benötigt Personen-Erkennung (buffalo_l).</span>
+        </div>
+      }
     }
   </div>
 
@@ -100,6 +112,28 @@
     <button class="ed-act ghost" (click)="applyPad()">
       <pf-icon name="expand2" [size]="15" /> Padding anwenden
     </button>
+  </div>
+
+  <!-- Hintergrund entfernen (rembg) -->
+  <div class="ed-ts">
+    <div class="ed-ts-lbl">Hintergrund entfernen</div>
+    @if (capabilities()?.rembg === false) {
+      <div class="ed-note warn">
+        <pf-icon name="alertTriangle" [size]="14" />
+        <span>Benötigt rembg-Modell (u2net) — in Einstellungen → Modelle installieren.</span>
+      </div>
+      <button class="ed-act ghost" [disabled]="true">
+        <pf-icon name="layers" [size]="15" /> Hintergrund entfernen
+      </button>
+    } @else {
+      <div class="ed-note info">
+        <pf-icon name="info" [size]="14" />
+        <span>Entfernt den Hintergrund und erstellt ein PNG mit Transparenz.</span>
+      </div>
+      <button class="ed-act ghost" (click)="applyRembg()">
+        <pf-icon name="layers" [size]="15" /> Hintergrund entfernen
+      </button>
+    }
   </div>
 
   <!-- Format-Konvertierung -->

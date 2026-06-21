@@ -11,7 +11,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { DOCUMENT } from '@angular/common';
 import { Icon } from '@photofant/ui';
-import { editorActions, editorSelectors } from '@photofant/store';
+import { editorActions, editorSelectors, modelsActions, modelsSelectors } from '@photofant/store';
 import type { CropRatio, CropRect, EditorTargetKind } from '@photofant/models';
 import { ZoomStage } from '../galerie/lightbox/zoom-stage';
 import { BasisPanel } from './basis-panel/basis-panel';
@@ -43,6 +43,7 @@ export class Editor {
   protected readonly error = this.store.selectSignal(editorSelectors.selectError);
   protected readonly currentPreviewUrl = this.store.selectSignal(editorSelectors.selectCurrentPreviewUrl);
   protected readonly hasUnsavedSteps = this.store.selectSignal(editorSelectors.selectHasUnsavedSteps);
+  protected readonly capabilities = this.store.selectSignal(modelsSelectors.selectCapabilities);
 
   protected readonly histOpen = signal(true);
   protected readonly showSaveModal = signal(false);
@@ -64,6 +65,7 @@ export class Editor {
     const id = Number(params['id']);
 
     this.store.dispatch(editorActions.init({ kind, id }));
+    this.store.dispatch(modelsActions.loadCapabilities());
 
     const keyHandler = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement;

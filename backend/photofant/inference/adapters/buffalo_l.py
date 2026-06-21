@@ -240,16 +240,7 @@ def _warp_affine(image: np.ndarray, M: np.ndarray, out_size: int) -> np.ndarray:
     # PIL uses inverse transform: we need M_inv
     M_inv = np.linalg.pinv(np.vstack([M, [0, 0, 1]]))[:2]
 
-    # Build output pixel coordinates
-    grid_x, grid_y = np.meshgrid(np.arange(out_size), np.arange(out_size))
-    coords = np.stack([grid_x.ravel(), grid_y.ravel(), np.ones(out_size * out_size)])
-    src_coords = M_inv @ coords  # (2, N)
-
-    src_x = np.clip(src_coords[0], 0, width - 1).reshape(out_size, out_size)
-    src_y = np.clip(src_coords[1], 0, height - 1).reshape(out_size, out_size)
-
-    # Bilinear interpolation via PIL remap
-    # Simpler: use PIL transform with AFFINE (inverse map)
+    # Use PIL AFFINE transform (inverse map)
     a, b_coef, c, d, e, f = M_inv.ravel()[:6]
     transformed = pil_img.transform(
         (out_size, out_size),
@@ -359,7 +350,7 @@ class BuffaloLEngine:
             input_name = det_session.get_inputs()[0].name
             output_names = [o.name for o in det_session.get_outputs()]
             raw_outputs = det_session.run(output_names, {input_name: blob})
-            det_outputs = {name: arr for name, arr in zip(output_names, raw_outputs, strict=True)}
+            det_outputs = dict(zip(output_names, raw_outputs, strict=True))
         finally:
             session_manager.release_session(self._det_path)
 

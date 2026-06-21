@@ -143,7 +143,6 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         score = face_dict.get("score")
         age = face_dict.get("age")
         embedding = face_dict.get("embedding")
-        landmarks = face_dict.get("landmarks")
 
         crop_np = _crop_with_padding(image, bbox, _FACE_PADDING_DEFAULT)
         crop_filename = f"{asset_id}_{face_index}.jpg"

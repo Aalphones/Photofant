@@ -208,9 +208,7 @@ def _is_scannable(file_path: Path, data_root: Path) -> bool:
         return False
     if parts[0] == ".photofant":
         return False
-    if len(parts) >= 2 and parts[1] in ("faces", "edits"):
-        return False
-    return True
+    return not (len(parts) >= 2 and parts[1] in ("faces", "edits"))
 
 
 def _import_to_person(

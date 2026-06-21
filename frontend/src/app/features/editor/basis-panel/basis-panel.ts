@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { Icon } from '@photofant/ui';
-import type { CropRatio, CropRect } from '@photofant/models';
+import type { CapabilitiesDto, CropRatio, CropRect } from '@photofant/models';
 
 export interface OpEvent {
   op: string;
@@ -42,6 +42,7 @@ export class BasisPanel {
   readonly cropActive = input(false);
   readonly cropRect = input<CropRect>({ x: 0, y: 0, w: 100, h: 100 });
   readonly cropRatio = input<CropRatio>('free');
+  readonly capabilities = input<CapabilitiesDto | null>(null);
 
   readonly applyOp = output<OpEvent>();
   readonly activateCrop = output<void>();
@@ -135,6 +136,10 @@ export class BasisPanel {
 
   protected setJpegQuality(value: number): void {
     this.jpegQuality.set(value);
+  }
+
+  protected applyRembg(): void {
+    this.applyOp.emit({ op: 'rembg', params: {}, label: 'Hintergrund entfernen' });
   }
 
   protected applyConvert(): void {

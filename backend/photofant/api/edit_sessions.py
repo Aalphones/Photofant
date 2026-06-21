@@ -35,7 +35,7 @@ from photofant.db.cache import (
 )
 from photofant.db.models import Asset, AssetInstance, Face
 from photofant.db.session import get_session
-from photofant.media.ops import apply_op
+from photofant.media.ops import ModelNotAvailableError, apply_op
 
 log = logging.getLogger(__name__)
 
@@ -198,7 +198,13 @@ async def apply_step(session_key: str, body: ApplyStepRequest) -> StepResponse:
     all_steps: list[dict[str, Any]] = [*existing, {"seq": new_seq, "op": body.op, "params_dict": body.params}]
 
     loop = asyncio.get_event_loop()
-    preview = await loop.run_in_executor(None, _render_steps, source_path, all_steps)
+    try:
+        preview = await loop.run_in_executor(None, _render_steps, source_path, all_steps)
+    except ModelNotAvailableError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "MODEL_UNAVAILABLE", "op": exc.op, "role": exc.role},
+        ) from exc
 
     params_json = json.dumps(body.params)
     append_edit_step(db_path, session_key, new_seq, body.op, params_json, preview)
