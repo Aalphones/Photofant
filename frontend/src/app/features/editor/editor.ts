@@ -48,6 +48,7 @@ export class Editor {
   protected readonly histOpen = signal(true);
   protected readonly showSaveModal = signal(false);
   protected readonly activeTool = signal<'basis'>('basis');
+  protected readonly compareMode = signal(false);
 
   protected readonly cropActive = signal(false);
   protected readonly cropRect = signal<CropRect>({ x: 0, y: 0, w: 100, h: 100 });
@@ -58,6 +59,8 @@ export class Editor {
   protected readonly displayImageUrl = computed((): string =>
     this.currentPreviewUrl() ?? ''
   );
+
+  protected readonly hasSteps = computed((): boolean => this.steps().length > 0);
 
   constructor() {
     const params = this.route.snapshot.params;
@@ -111,6 +114,10 @@ export class Editor {
 
   protected toggleHist(): void {
     this.histOpen.update((open: boolean) => !open);
+  }
+
+  protected toggleCompare(): void {
+    this.compareMode.update((on: boolean) => !on);
   }
 
   protected onActivateCrop(): void {

@@ -50,6 +50,12 @@
     Klassifizieren
   </button>
 
+  <div class="bulkbar__divider"></div>
+  <button class="bulkbar__action" (click)="openEditDialog()">
+    <pf-icon name="crop" [size]="15" />
+    Bearbeiten
+  </button>
+
   @if (count() >= 2) {
     <div class="bulkbar__divider"></div>
     <button class="bulkbar__action" (click)="triggerDupeScan()">

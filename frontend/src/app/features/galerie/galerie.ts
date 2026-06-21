@@ -2,18 +2,18 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { collectionsActions, collectionsSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
-import { ClassifyService } from '@photofant/services';
+import { AssetService, ClassifyService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
 import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
-import { BulkBar, Icon, RerunDialog } from '@photofant/ui';
-import type { RerunPayload } from '@photofant/ui';
+import { BulkBar, BulkEditDialog, Icon, RerunDialog } from '@photofant/ui';
+import type { BulkEditPayload, RerunPayload } from '@photofant/ui';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon, BulkBar, RerunDialog, RouterLink],
+  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
 })
@@ -22,6 +22,7 @@ export class Galerie {
   private readonly router          = inject(Router);
   private readonly route           = inject(ActivatedRoute);
   private readonly classifyService = inject(ClassifyService);
+  private readonly assetService    = inject(AssetService);
 
   protected readonly groups        = this.store.selectSignal(gallerySelectors.selectGroups);
   protected readonly density       = this.store.selectSignal(filtersSelectors.density);
@@ -42,6 +43,7 @@ export class Galerie {
 
   protected readonly railOpen = signal(false);
   protected readonly showBulkRerunDialog = signal(false);
+  protected readonly showBulkEditDialog = signal(false);
   protected readonly bulkRerunPresets = this.store.selectSignal(presetsSelectors.selectPresets);
   protected readonly dupeScanToast = signal<string | null>(null);
   private dupeScanToastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -166,5 +168,21 @@ export class Galerie {
     if (this.dupeScanToastTimer != null) { clearTimeout(this.dupeScanToastTimer); }
     this.dupeScanToast.set(`Duplikat-Scan für ${ids.length} Bilder gestartet`);
     this.dupeScanToastTimer = setTimeout(() => { this.dupeScanToast.set(null); }, 4000);
+  }
+
+  protected onBulkEditOpen(): void {
+    this.showBulkEditDialog.set(true);
+  }
+
+  protected onBulkEditConfirm(payload: BulkEditPayload): void {
+    this.showBulkEditDialog.set(false);
+    const ids = this.selectedIds();
+    if (!ids.length) { return; }
+    this.assetService.bulkEdit(ids, payload.op, payload.params).subscribe();
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onBulkEditCancel(): void {
+    this.showBulkEditDialog.set(false);
   }
 }

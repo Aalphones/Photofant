@@ -132,4 +132,12 @@ export class AssetService {
   setAssetOriginal(id: number, originalId: number | null): Observable<AssetDto> {
     return this.http.patch<AssetDto>(`/api/assets/${id}/original`, { original_id: originalId });
   }
+
+  bulkEdit(assetIds: number[], op: string, params: Record<string, unknown>): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>('/api/assets/bulk-edit', {
+      asset_ids: assetIds,
+      op,
+      params,
+    });
+  }
 }

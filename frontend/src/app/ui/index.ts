@@ -11,3 +11,5 @@ export { CaptionPresetForm } from './caption-preset-form/caption-preset-form';
 export { PresetDialog } from './preset-dialog/preset-dialog';
 export type { PresetSavePayload } from './preset-dialog/preset-dialog';
 export { BulkBar } from './bulk-bar/bulk-bar';
+export { BulkEditDialog } from './bulk-edit-dialog/bulk-edit-dialog';
+export type { BulkEditPayload } from './bulk-edit-dialog/bulk-edit-dialog';

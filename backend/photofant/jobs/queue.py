@@ -38,6 +38,7 @@ class JobKind(StrEnum):
     DUPE_SCAN = "dupe_scan"
     FACE = "face"
     CLUSTERING = "clustering"
+    BULK_EDIT = "bulk_edit"
 
 
 @dataclass

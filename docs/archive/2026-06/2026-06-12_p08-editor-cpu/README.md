@@ -1,6 +1,6 @@
 # P8 — Editor CPU (Stage 4)
 
-> Status: geparkt · Quelle: [Konzept](../../Konzept-Photofant.md) §8 · Abhängigkeiten: P2, P4 (rembg); Smart-Crop voll erst mit P7. **Vorziehbar vor P7**, wenn gewünscht.
+> Status: complete · Quelle: [Konzept](../../Konzept-Photofant.md) §8 · Abhängigkeiten: P2, P4 (rembg); Smart-Crop voll erst mit P7. **Vorziehbar vor P7**, wenn gewünscht.
 
 Vollständiger lokaler Editor für nicht-generative Operationen: Crop/Rotate/Mirror/Convert/Pad, rembg, Versionierung mit bewusstem Speichern und flüchtiger Step-History in der Cache-DB. Edits wirken auf Fotos, Face-Crops **und** bestehende Edits (Versionskette).
 
@@ -12,7 +12,7 @@ Vollständiger lokaler Editor für nicht-generative Operationen: Crop/Rotate/Mir
 | 2 | [Geometrie-Operationen](phase-2-geometrie-ops.md) | heikel | complete |
 | 3 | [rembg & Smart-Crop](phase-3-rembg-smartcrop.md) | standard | complete |
 | 4 | [Versionierung & Speichern](phase-4-versionierung.md) | heikel | complete |
-| 5 | [Neuverarbeitung, Vergleich & Bulk](phase-5-neuverarbeitung-bulk.md) | standard | pending |
+| 5 | [Neuverarbeitung, Vergleich & Bulk](phase-5-neuverarbeitung-bulk.md) | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -43,10 +43,32 @@ Vollständiger lokaler Editor für nicht-generative Operationen: Crop/Rotate/Mir
 
 ## Summary
 
+Vollständiger lokaler Editor implementiert: 5 Phasen, alle Ops (Crop, Pad, Rotate, Mirror, Convert, rembg, Smart-Crop), Step-History mit Rollback in Cache-DB, Versionierung mit Overwrite/New-Copy, pHash-Face-Dedupe nach §8.3, Bulk-Edit-Job + Dialog, Side-by-side-Vergleich.
+
 ## Files touched
+
+**Backend**: `jobs/queue.py`, `jobs/bulk_edit_job.py` (neu), `jobs/face_job.py`, `api/assets.py`, `api/edit_sessions.py`, `api/faces.py`, `media/ops.py`, `db/models.py`, `main.py`, Alembic-Migrations.
+
+**Frontend**: `features/editor/*`, `features/galerie/*`, `ui/bulk-bar/*`, `ui/bulk-edit-dialog/*` (neu), `ui/step-bar/*`, `ui/save-modal/*`, `ui/basis-panel/*`, `ui/zoom-stage/*`, `store/editor/*`, `services/asset.service.ts`, `models/*`.
+
+**Docs**: `docs/routes.md`, `docs/planning/…` alle Phase-Dateien.
 
 ## Commits
 
+- `15b3cc7` feat(p8): Phase 1 — Editor-Shell & Step-History
+- `43f2287` docs(p8): Phase 1 complete — routes.md, Phase-Report, STATE auf Phase 2
+- `a3b0ba6` feat(p8): Phase 2 — Geometrie-Operationen (Crop, Pad, Rotate, Mirror, Convert)
+- `f1d0735` feat(p8): Phase 3 — rembg & Smart-Crop
+- `92ba750` feat(p8): Phase 4 — Versionierung & Speichern
+- Phase 5: wird in diesem Commit abgeschlossen
+
 ## Deviations from plan
 
+- `save_mode` aus `BulkEditRequest` entfernt — Bulk-Edit erzeugt immer `new_copy` (Overwrite semantisch sinnlos bei unabhängigen Assets in einer Auswahl).
+- Side-by-side als zwei `<img>`-Panes statt Slider — einfacher, kein Drag-Overhead, erfüllt AK.
+- Vererbungs-Logik ist No-Code: Tags/Caption erben via `parent_id`, Auflösung schreibt `_build_version_params` — nichts zu tun.
+
 ## Follow-ups
+
+- P9: `is_upscale_source`-Flag aktivieren + Upscale-Op (Konzept §8.3 Ausnahme).
+- Crop-Personen-Replikation (§8.2a): automatisches Anlegen der Version bei allen im Bild verbliebenen Personen — Erweiterungspunkt in `_resolve_save_context` vorbereitet.

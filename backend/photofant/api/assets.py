@@ -837,3 +837,25 @@ async def import_as_version(
         thumbnail_url=f"/api/versions/{version.id}/thumbnail",
     )
     return VersionImportResponse(version=version_dto)
+
+
+# ── Bulk-Edit endpoint ────────────────────────────────────────────────────────
+
+class BulkEditRequest(BaseModel):
+    asset_ids: list[int]
+    op: str
+    params: dict[str, Any]  # type: ignore[type-arg]
+
+
+@router.post("/bulk-edit", response_model=JobStarted, status_code=202)
+async def bulk_edit_assets(body: BulkEditRequest) -> JobStarted:
+    """Apply one op to a selection of assets — creates a new Version per asset as a Queue-Job."""
+    if not body.asset_ids:
+        raise HTTPException(status_code=422, detail="asset_ids must not be empty")
+    _ALLOWED_BULK_OPS = frozenset({"rotate", "mirror", "convert", "rembg"})
+    if body.op not in _ALLOWED_BULK_OPS:
+        raise HTTPException(status_code=422, detail=f"op must be one of: {', '.join(sorted(_ALLOWED_BULK_OPS))}")
+
+    from photofant.jobs.bulk_edit_job import enqueue_bulk_edit
+    status = await enqueue_bulk_edit(body.asset_ids, body.op, body.params)
+    return JobStarted(job_id=status.id)

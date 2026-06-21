@@ -45,6 +45,7 @@
     (tagAction)="onBulkTag($event)"
     (addToAlbum)="onAddToAlbum($event)"
     (rerunAction)="onBulkRerunOpen()"
+    (editAction)="onBulkEditOpen()"
     (dupeScanAction)="onBulkDupeScan()"
   />
 }
@@ -62,5 +63,13 @@
     [presets]="bulkRerunPresets()"
     (confirm)="onBulkRerunConfirm($event)"
     (cancel)="onBulkRerunCancel()"
+  />
+}
+
+@if (showBulkEditDialog()) {
+  <pf-bulk-edit-dialog
+    [scopeLabel]="selectedCount() + ' Bilder'"
+    (confirm)="onBulkEditConfirm($event)"
+    (cancel)="onBulkEditCancel()"
   />
 }

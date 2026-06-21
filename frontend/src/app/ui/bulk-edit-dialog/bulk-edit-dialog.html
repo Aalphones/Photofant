@@ -1,0 +1,82 @@
+<div class="be-scrim" (click)="handleScrimClick()"></div>
+
+<div class="be-modal" (click)="$event.stopPropagation()">
+  <div class="be-head">
+    <div class="be-head__icon">
+      <pf-icon name="crop" [size]="18" />
+    </div>
+    <div class="be-head__info">
+      <div class="be-title">Bulk-Bearbeitung</div>
+      <div class="be-sub">{{ scopeLabel() }}</div>
+    </div>
+    <button class="be-close" (click)="handleCancel()" aria-label="Schließen">
+      <pf-icon name="x" [size]="17" />
+    </button>
+  </div>
+
+  <div class="be-body">
+    <div class="be-field-lbl">Operation</div>
+    @for (op of OPS; track op.key) {
+      <label class="be-op" [class.be-op--on]="selectedOp() === op.key" (click)="selectOp(op.key)">
+        <div class="be-radio" [class.be-radio--on]="selectedOp() === op.key"></div>
+        <div class="be-op__info">
+          <div class="be-op__name">{{ op.label }}</div>
+          <div class="be-op__desc">{{ op.desc }}</div>
+        </div>
+      </label>
+    }
+
+    @if (selectedOp() === 'rotate') {
+      <div class="be-params">
+        <div class="be-field-lbl">Richtung</div>
+        <div class="be-seg">
+          <button class="be-seg__btn" [class.be-seg__btn--on]="rotateDir() === 'cw'"  (click)="rotateDir.set('cw')">90° im UZS</button>
+          <button class="be-seg__btn" [class.be-seg__btn--on]="rotateDir() === 'ccw'" (click)="rotateDir.set('ccw')">90° gegen UZS</button>
+          <button class="be-seg__btn" [class.be-seg__btn--on]="rotateDir() === '180'" (click)="rotateDir.set('180')">180°</button>
+        </div>
+      </div>
+    }
+
+    @if (selectedOp() === 'mirror') {
+      <div class="be-params">
+        <div class="be-field-lbl">Achse</div>
+        <div class="be-seg">
+          <button class="be-seg__btn" [class.be-seg__btn--on]="mirrorAxis() === 'h'" (click)="mirrorAxis.set('h')">Horizontal</button>
+          <button class="be-seg__btn" [class.be-seg__btn--on]="mirrorAxis() === 'v'" (click)="mirrorAxis.set('v')">Vertikal</button>
+        </div>
+      </div>
+    }
+
+    @if (selectedOp() === 'convert') {
+      <div class="be-params">
+        <div class="be-field-lbl">Format</div>
+        <div class="be-seg">
+          <button class="be-seg__btn" [class.be-seg__btn--on]="convertFormat() === 'jpeg'" (click)="convertFormat.set('jpeg')">JPEG</button>
+          <button class="be-seg__btn" [class.be-seg__btn--on]="convertFormat() === 'png'"  (click)="convertFormat.set('png')">PNG</button>
+        </div>
+        @if (convertFormat() === 'jpeg') {
+          <div class="be-quality-row">
+            <label class="be-field-lbl" for="be-quality">Qualität: {{ convertQuality() }}</label>
+            <input
+              id="be-quality"
+              class="be-quality-slider"
+              type="range"
+              min="1"
+              max="100"
+              [value]="convertQuality()"
+              (input)="onQualityInput($event)"
+            />
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="be-foot">
+    <button class="md-btn ghost" (click)="handleCancel()">Abbrechen</button>
+    <button class="md-btn primary" (click)="handleConfirm()">
+      <pf-icon name="crop" [size]="15" />
+      Job starten
+    </button>
+  </div>
+</div>

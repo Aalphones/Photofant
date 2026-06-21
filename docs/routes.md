@@ -299,6 +299,26 @@ interface VersionDto {
 | `rembg` | `{}` | Hintergrund entfernen via u2net ONNX → RGBA mit Alpha-Maske; 422 `MODEL_UNAVAILABLE` wenn Modell nicht aktiv |
 | `smart_crop` | `{}` | Gesichtserkennung (SCRFD) → quadratischer Crop 3× Gesichtsgröße; 422 `MODEL_UNAVAILABLE` wenn buffalo\_l nicht aktiv |
 
+## Bulk-Edit (P8 Phase 5)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/galerie` (Bulk-Bar → Bearbeiten) | `POST` | `/api/assets/bulk-edit` | `BulkEditRequest` | `JobStarted` (202) |
+
+```typescript
+interface BulkEditRequest {
+  asset_ids: number[];
+  op: 'rotate' | 'mirror' | 'convert' | 'rembg';
+  params: Record<string, unknown>;  // op-spezifisch — gleiche Params wie Edit-Session-Ops
+}
+
+interface JobStarted { job_id: string; }
+```
+
+Verhalten: Erstellt pro Asset eine neue `Version` (immer `new_copy`, kein Overwrite). Op-Params werden pydantic-validiert (gleiche Regeln wie Edit-Session-Steps). Ungültige Op → `422`. Fehler pro Asset werden geloggt, Job läuft für übrige weiter. Ergebnis per `/api/jobs/stream` sichtbar.
+
+---
+
 **Preview-Strategie:** Arbeitskopie wird auf max 1024 px gethumbnailed, dann Ops angewendet. Prozent-Koordinaten sind auflösungsunabhängig. **Final-Render** (`POST .../save`) rendert in Originalauflösung und speichert nach `personX/edits/`. `rembg`- und `smart_crop`-Preview zeigen Schachbrett-Transparenz (RGBA auf JPEG-Preview: weiß composited).
 
 Fehler-Codes (strukturiert im `detail`-Feld):

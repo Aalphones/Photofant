@@ -41,6 +41,7 @@ from photofant.db.cache import (
     truncate_steps_after,
 )
 from photofant.db.models import Asset, AssetInstance, Face, Person, Version
+from photofant.db.session import SessionLocal as _SessionLocal
 from photofant.db.session import get_session
 from photofant.media.ops import ModelNotAvailableError, apply_op
 from photofant.media.person_folders import ensure_person_folder
@@ -315,6 +316,193 @@ def _resolve_save_context(
     raise HTTPException(status_code=422, detail=f"Unsupported session kind: {kind!r}")
 
 
+# ── pHash-Dedupe nach Version-Save (§8.3) ────────────────────────────────────
+
+_PHASH_QUASI_IDENTICAL_THRESHOLD = 10  # Hamming distance (64-bit dhash)
+_FACE_PADDING_VERSION = 40  # px, same as face_job default
+_FACE_CROP_QUALITY = 92
+
+
+def _phash_hamming(h1: str, h2: str) -> int:
+    """Hamming distance between two hex dhash strings."""
+    try:
+        import imagehash
+        return imagehash.hex_to_hash(h1) - imagehash.hex_to_hash(h2)
+    except Exception:
+        return 999
+
+
+def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_src: int | None) -> None:
+    """Detect faces in a newly saved version, skip quasi-duplicates via pHash (§8.3).
+
+    Runs in a thread after save so the HTTP response is already sent.
+    No-op when buffalo_l is unavailable; logged at INFO level.
+
+    P9-Upscale note: is_upscale_source flag is always False here — upscale ops
+    (§8.3 step 5: keep even if pHash-similar when resolution is clearly higher)
+    are gated in P9. The infrastructure is wired up; only the caller sets the flag.
+    """
+    from photofant.config import get_data_root
+    from photofant.inference.adapters.buffalo_l import resolve_buffalo_l
+
+    engine = resolve_buffalo_l()
+    if engine is None:
+        log.info("pHash-Dedupe skipped for version %d — buffalo_l not available", version_id)
+        return
+
+    with _SessionLocal() as session:
+        version = session.get(Version, version_id)
+        if version is None:
+            return
+        version_path = Path(version.path)
+        if not version_path.exists():
+            log.warning("pHash-Dedupe: version %d file not found at %s", version_id, version.path)
+            return
+
+        # Collect existing phashes for lineage comparison
+        existing_phashes: list[str] = []
+        if instance_id is not None:
+            asset_id_row = (
+                session.query(AssetInstance)
+                .filter(AssetInstance.id == instance_id)
+                .first()
+            )
+            if asset_id_row is not None:
+                existing_phashes = [
+                    face.phash
+                    for face in session.query(Face).filter(
+                        Face.asset_id == asset_id_row.asset_id,
+                        Face.phash.isnot(None),
+                    ).all()
+                ]
+        elif face_id_src is not None:
+            source_face = session.get(Face, face_id_src)
+            if source_face is not None and source_face.phash:
+                existing_phashes = [source_face.phash]
+
+        unknown_person = session.query(Person).filter_by(is_unknown=True).first()
+        if unknown_person is None:
+            log.error("pHash-Dedupe: _unknown person row missing")
+            return
+        unknown_person_id = unknown_person.id
+
+    import numpy as np
+    from PIL import Image as PILImage
+
+    try:
+        image_pil = PILImage.open(version_path).convert("RGB")
+        image_np = np.array(image_pil, dtype=np.uint8)
+    except Exception:
+        log.exception("pHash-Dedupe: failed to open version image %s", version_path)
+        return
+
+    try:
+        faces_detected = engine.detect(image_np)
+    except Exception:
+        log.exception("pHash-Dedupe: buffalo_l detection failed for version %d", version_id)
+        return
+
+    if not faces_detected:
+        log.info("pHash-Dedupe: no faces in version %d", version_id)
+        return
+
+    data_root = Path(get_data_root())
+    faces_dir = data_root / "_unknown" / "faces"
+    faces_dir.mkdir(parents=True, exist_ok=True)
+
+    for face_index, face_dict in enumerate(faces_detected):
+        bbox = face_dict["bbox"]
+        score = face_dict.get("score")
+        age = face_dict.get("age")
+        embedding = face_dict.get("embedding")
+
+        height_img, width_img = image_np.shape[:2]
+        x1, y1, x2, y2 = (int(round(v)) for v in bbox)
+        x1 = max(0, x1 - _FACE_PADDING_VERSION)
+        y1 = max(0, y1 - _FACE_PADDING_VERSION)
+        x2 = min(width_img, x2 + _FACE_PADDING_VERSION)
+        y2 = min(height_img, y2 + _FACE_PADDING_VERSION)
+        crop_np = image_np[y1:y2, x1:x2]
+
+        crop_filename = f"v{version_id}_{face_index}.jpg"
+        crop_path = faces_dir / crop_filename
+        try:
+            from PIL import Image as _PILImage
+            _PILImage.fromarray(crop_np).save(str(crop_path), "JPEG", quality=_FACE_CROP_QUALITY)
+        except Exception:
+            log.exception("pHash-Dedupe: failed to save face crop for version %d idx %d", version_id, face_index)
+            continue
+
+        # Compute pHash
+        try:
+            import imagehash
+            crop_pil = PILImage.fromarray(crop_np).convert("RGB")
+            new_phash = str(imagehash.dhash(crop_pil, hash_size=8))
+        except Exception:
+            log.exception("pHash-Dedupe: pHash computation failed for version %d idx %d", version_id, face_index)
+            new_phash = None
+
+        # P9-Upscale flag (always False in P8 — upscale ops are P9-gated)
+        is_upscale_source = False
+
+        # Check quasi-identity against lineage faces
+        if new_phash and not is_upscale_source:
+            is_duplicate = any(
+                _phash_hamming(new_phash, existing) <= _PHASH_QUASI_IDENTICAL_THRESHOLD
+                for existing in existing_phashes
+                if existing
+            )
+            if is_duplicate:
+                log.info(
+                    "pHash-Dedupe: face %d of version %d is quasi-identical — skipped",
+                    face_index, version_id,
+                )
+                crop_path.unlink(missing_ok=True)
+                continue
+
+        # New distinct face — create Face row
+        resolution = crop_np.shape[0] * crop_np.shape[1]
+        embedding_bytes = embedding.astype("float32").tobytes() if embedding is not None else None
+
+        with _SessionLocal() as session:
+            face_row = Face(
+                asset_id=None,
+                person_id=unknown_person_id,
+                source_version_id=version_id,
+                crop_path=str(crop_path.resolve()),
+                bbox={"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3]},
+                padding=_FACE_PADDING_VERSION,
+                embedding=embedding_bytes,
+                phash=new_phash,
+                score=score,
+                age=age,
+                origin="derived",
+                origin_type="edit",
+                is_upscaled=False,
+                resolution=resolution,
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            session.add(face_row)
+            session.commit()
+            saved_face_id = face_row.id
+
+        log.info(
+            "pHash-Dedupe: new face %d for version %d (score=%.3f)",
+            saved_face_id, version_id, score or 0.0,
+        )
+
+        # Thumbnail
+        try:
+            from photofant.db.cache import get_cache_db_path, init_cache_db, store_thumbnail
+            from photofant.media.thumbnails import generate_thumbnail
+            cache_path = get_cache_db_path()
+            init_cache_db(cache_path)
+            thumb = generate_thumbnail(crop_path, size=256)
+            store_thumbnail(cache_path, saved_face_id, size=256, data=thumb, target_kind="face")
+        except Exception:
+            log.exception("pHash-Dedupe: thumbnail failed for face %d", saved_face_id)
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("", response_model=CreateSessionResponse, status_code=201)
@@ -451,6 +639,13 @@ async def save_session(session_key: str, body: SaveRequest, db: DbSession) -> Ve
             db.commit()
             db.refresh(current_version)
             await _generate_version_thumbnail(current_version.id, new_path)
+            loop.run_in_executor(
+                None,
+                _run_version_phash_dedupe,
+                current_version.id,
+                instance_id,
+                face_id,
+            )
             return _build_version_dto(current_version, width, height)
 
     filename = f"edit_{uuid.uuid4().hex[:12]}.{ext}"
@@ -474,6 +669,16 @@ async def save_session(session_key: str, body: SaveRequest, db: DbSession) -> Ve
     db.refresh(version)
 
     await _generate_version_thumbnail(version.id, edit_path)
+
+    # Kick off pHash-Dedupe as a background task (§8.3) — non-blocking
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(
+        None,
+        _run_version_phash_dedupe,
+        version.id,
+        instance_id,
+        face_id,
+    )
 
     return _build_version_dto(version, width, height)
 
