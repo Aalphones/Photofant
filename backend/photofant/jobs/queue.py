@@ -39,6 +39,7 @@ class JobKind(StrEnum):
     FACE = "face"
     CLUSTERING = "clustering"
     BULK_EDIT = "bulk_edit"
+    COMFYUI_RUN = "comfyui_run"
 
 
 @dataclass

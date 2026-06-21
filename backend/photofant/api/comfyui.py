@@ -12,6 +12,7 @@ POST /api/comfyui/workflows/{id}/activate   -- activate (with validation gate)
 POST /api/comfyui/workflows/{id}/deactivate -- deactivate
 POST /api/comfyui/workflows/{id}/duplicate  -- duplicate workflow
 POST /api/comfyui/workflows/{id}/revalidate -- re-validate after template change
+POST /api/comfyui/workflows/{id}/run        -- fire-and-forget trigger (Phase 3)
 """
 from __future__ import annotations
 
@@ -500,3 +501,84 @@ def revalidate_workflow(workflow_id: int, db: DbSession) -> WorkflowResponse:
     workflow.updated_at = datetime.now(UTC).replace(tzinfo=None)
 
     return _workflow_to_response(workflow)
+
+
+# -- Run (Fire-and-Forget, Phase 3) ------------------------------------------
+
+class RunRequest(BaseModel):
+    inputs: dict[str, int | list[int]]
+    params: dict[str, Any] = {}
+
+
+class RunJobDto(BaseModel):
+    job_id: str
+
+
+class RunResponse(BaseModel):
+    jobs: list[RunJobDto]
+
+
+@comfyui_router.post("/workflows/{workflow_id}/run", response_model=RunResponse)
+async def run_workflow(workflow_id: int, body: RunRequest, db: DbSession) -> RunResponse:
+    from photofant.jobs.comfyui_run_job import enqueue_comfyui_runs, expand_batch
+
+    workflow = db.get(ComfyUIWorkflow, workflow_id)
+    if workflow is None:
+        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
+
+    if not workflow.is_active or not workflow.is_valid:
+        raise HTTPException(
+            status_code=422,
+            detail="Workflow ist nicht aktiv oder nicht valide — zuerst validieren und aktivieren",
+        )
+
+    cfg = load_settings()
+    comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
+    if not comfyui_cfg.get("enabled", False):
+        raise HTTPException(
+            status_code=422,
+            detail="ComfyUI-Integration ist deaktiviert — zuerst in den Einstellungen aktivieren",
+        )
+
+    # Connection gate
+    base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
+    timeout = float(comfyui_cfg.get("timeout", 10))
+    connection_client = ComfyUIClient(base_url=base_url, timeout=timeout)
+    try:
+        connection_client.system_stats()
+    except ComfyUIError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"ComfyUI nicht erreichbar: {exc.what_found}. {exc.next_step}.",
+        ) from exc
+
+    input_bindings: list[dict[str, Any]] = workflow.inputs or []
+    param_bindings: list[dict[str, Any]] = workflow.params or []
+
+    # Validate required inputs are provided
+    required_keys = {b["key"] for b in input_bindings if b.get("required", True)}
+    missing = required_keys - set(body.inputs.keys())
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Pflicht-Inputs fehlen: {', '.join(sorted(missing))}",
+        )
+
+    # Validate and expand batch axis
+    try:
+        expanded = expand_batch(body.inputs, input_bindings)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    template = _load_template(workflow.template_path)
+
+    statuses = await enqueue_comfyui_runs(
+        workflow_template=template,
+        input_bindings=input_bindings,
+        param_bindings=param_bindings,
+        expanded_inputs=expanded,
+        params=body.params,
+        workflow_name=workflow.name,
+    )
+
+    return RunResponse(jobs=[RunJobDto(job_id=status.id) for status in statuses])
