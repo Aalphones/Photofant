@@ -166,7 +166,7 @@ class TestComfyUIRunWorker:
     @pytest.mark.asyncio
     async def test_success_path_calls_upload_and_prompt(self) -> None:
         from photofant.jobs.comfyui_run_job import run_comfyui_run_job
-        from photofant.jobs.queue import JobKind, JobState, JobStatus
+        from photofant.jobs.queue import JobKind, JobStatus
 
         status = JobStatus(id="job-1", kind=JobKind.COMFYUI_RUN, label="Test")
         original_snapshot = copy.deepcopy(UPSCALE_TEMPLATE)

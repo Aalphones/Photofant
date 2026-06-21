@@ -13,26 +13,36 @@ POST /api/comfyui/workflows/{id}/deactivate -- deactivate
 POST /api/comfyui/workflows/{id}/duplicate  -- duplicate workflow
 POST /api/comfyui/workflows/{id}/revalidate -- re-validate after template change
 POST /api/comfyui/workflows/{id}/run        -- fire-and-forget trigger (Phase 3)
+GET  /api/comfyui/results              -- list output images (history + output_dir)
+GET  /api/comfyui/results/view         -- proxy ComfyUI /view (CORS-free preview)
+POST /api/comfyui/results/import       -- import a ComfyUI output as Edit-Version (Phase 5)
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import shutil
+import uuid as _uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi.responses import Response as _FastAPIResponse
+from PIL import Image as _Image
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from photofant.comfyui.client import ComfyUIClient, ComfyUIError
 from photofant.comfyui.introspect import introspect_template
 from photofant.comfyui.validator import validate_workflow
-from photofant.config import get_data_root_base
-from photofant.db.models import ComfyUIWorkflow
+from photofant.config import get_data_root, get_data_root_base
+from photofant.db.cache import get_cache_db_path, init_cache_db, store_thumbnail
+from photofant.db.models import AssetInstance, ComfyUIWorkflow, Person, Version
 from photofant.db.session import get_session
+from photofant.media.person_folders import ensure_person_folder
+from photofant.media.thumbnails import generate_thumbnail
 from photofant.settings import load_settings, save_settings
 
 log = logging.getLogger(__name__)
@@ -582,3 +592,250 @@ async def run_workflow(workflow_id: int, body: RunRequest, db: DbSession) -> Run
     )
 
     return RunResponse(jobs=[RunJobDto(job_id=status.id) for status in statuses])
+
+
+# -- Results (Phase 5) --------------------------------------------------------
+
+_IMAGE_EXTS = frozenset({".png", ".jpg", ".jpeg", ".webp"})
+
+
+class ComfyUIResultItem(BaseModel):
+    filename: str
+    subfolder: str
+    source: str  # "history" | "output_dir"
+    preview_url: str
+
+
+class ComfyUIResultsResponse(BaseModel):
+    items: list[ComfyUIResultItem]
+
+
+def _extract_history_items(history: dict[str, Any]) -> list[ComfyUIResultItem]:
+    """Parse ComfyUI /history response → list of output image items."""
+    items: list[ComfyUIResultItem] = []
+    for _prompt_id, entry in history.items():
+        outputs = entry.get("outputs", {}) if isinstance(entry, dict) else {}
+        for _node_id, node_out in outputs.items():
+            for img in node_out.get("images", []):
+                filename = img.get("filename", "")
+                subfolder = img.get("subfolder", "")
+                if not filename:
+                    continue
+                items.append(ComfyUIResultItem(
+                    filename=filename,
+                    subfolder=subfolder,
+                    source="history",
+                    preview_url=f"/api/comfyui/results/view?filename={filename}&subfolder={subfolder}",
+                ))
+    return items
+
+
+def _scan_output_dir(output_dir: str) -> list[ComfyUIResultItem]:
+    """Walk output_dir (non-recursively) for image files, newest first."""
+    if not output_dir:
+        return []
+    base = Path(output_dir)
+    if not base.is_dir():
+        return []
+    files = sorted(
+        (child for child in base.iterdir() if child.is_file() and child.suffix.lower() in _IMAGE_EXTS),
+        key=lambda child: child.stat().st_mtime,
+        reverse=True,
+    )
+    return [
+        ComfyUIResultItem(
+            filename=child.name,
+            subfolder="",
+            source="output_dir",
+            preview_url=f"/api/comfyui/results/view?filename={child.name}&subfolder=",
+        )
+        for child in files[:50]
+    ]
+
+
+@comfyui_router.get("/results", response_model=ComfyUIResultsResponse)
+def list_results(prompt_id: str | None = None) -> ComfyUIResultsResponse:
+    cfg = load_settings()
+    comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
+
+    items: list[ComfyUIResultItem] = []
+
+    # History path (if prompt_id given and ComfyUI reachable)
+    if prompt_id:
+        base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
+        timeout = float(comfyui_cfg.get("timeout", 10))
+        client = ComfyUIClient(base_url=base_url, timeout=timeout)
+        history = client.get_history(prompt_id)
+        items.extend(_extract_history_items(history))
+
+    # output_dir scan (always, deduplication by filename)
+    output_dir = str(comfyui_cfg.get("output_dir", ""))
+    dir_items = _scan_output_dir(output_dir)
+    history_filenames = {item.filename for item in items}
+    items.extend(item for item in dir_items if item.filename not in history_filenames)
+
+    return ComfyUIResultsResponse(items=items)
+
+
+@comfyui_router.get("/results/view")
+def view_result(filename: str, subfolder: str = "") -> _FastAPIResponse:
+    """Proxy ComfyUI /view — CORS-free preview for the frontend."""
+    cfg = load_settings()
+    comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
+
+    # Try ComfyUI remote first
+    base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
+    timeout = float(comfyui_cfg.get("timeout", 10))
+    client = ComfyUIClient(base_url=base_url, timeout=timeout)
+    _MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
+
+    try:
+        data = client.view_image(filename, subfolder)
+        ext = Path(filename).suffix.lower()
+        return _FastAPIResponse(content=data, media_type=_MEDIA_TYPES.get(ext, "image/png"))
+    except ComfyUIError:
+        pass
+
+    # Fallback: read from local output_dir
+    output_dir = str(comfyui_cfg.get("output_dir", ""))
+    if output_dir:
+        candidates = [
+            Path(output_dir) / subfolder / filename if subfolder else Path(output_dir) / filename,
+            Path(output_dir) / filename,
+        ]
+        for candidate in candidates:
+            if candidate.is_file():
+                media_type = _MEDIA_TYPES.get(candidate.suffix.lower(), "image/png")
+                return _FastAPIResponse(content=candidate.read_bytes(), media_type=media_type)
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"Datei '{filename}' nicht gefunden (weder in ComfyUI noch in output_dir)",
+    )
+
+
+class ComfyUIImportRequest(BaseModel):
+    asset_id: int
+    filename: str
+    subfolder: str = ""
+
+
+class ComfyUIImportResponse(BaseModel):
+    version_id: int
+    type: str
+    path: str
+    is_current: bool
+    params: dict[str, Any] | None  # type: ignore[type-arg]
+    thumbnail_url: str
+
+
+@comfyui_router.post("/results/import", response_model=ComfyUIImportResponse, status_code=201)
+async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> ComfyUIImportResponse:
+    """Fetch a ComfyUI output image and import it as an Edit-Version (type=comfyui)."""
+    # -- Load asset --
+    instance = db.query(AssetInstance).filter(
+        AssetInstance.asset_id == body.asset_id,
+        AssetInstance.deleted_at.is_(None),
+    ).first()
+    if instance is None:
+        raise HTTPException(status_code=404, detail="Asset nicht gefunden")
+
+    person = db.get(Person, instance.person_id)
+    if person is None:
+        raise HTTPException(status_code=500, detail="Person nicht gefunden")
+
+    # -- Fetch image bytes (ComfyUI /view → fallback: output_dir) --
+    cfg = load_settings()
+    comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
+    base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
+    timeout = float(comfyui_cfg.get("timeout", 10))
+    output_dir = str(comfyui_cfg.get("output_dir", ""))
+
+    import contextlib
+
+    image_bytes: bytes | None = None
+
+    client = ComfyUIClient(base_url=base_url, timeout=timeout)
+    with contextlib.suppress(ComfyUIError):
+        image_bytes = client.view_image(body.filename, body.subfolder)
+
+    if image_bytes is None:
+        for candidate in [
+            Path(output_dir) / body.subfolder / body.filename if body.subfolder else None,
+            Path(output_dir) / body.filename if output_dir else None,
+        ]:
+            if candidate is not None and candidate.is_file():
+                image_bytes = candidate.read_bytes()
+                break
+
+    if image_bytes is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Datei '{body.filename}' nicht abrufbar — weder via ComfyUI noch in output_dir",
+        )
+
+    # -- Write to person/edits/ --
+    data_root_path = Path(get_data_root())
+    person_dir = ensure_person_folder(data_root_path, person)
+    edits_dir = person_dir / "edits"
+    edits_dir.mkdir(parents=True, exist_ok=True)
+
+    ext = Path(body.filename).suffix.lower() or ".png"
+    dest_name = f"comfyui_{_uuid.uuid4().hex[:12]}{ext}"
+    dest = edits_dir / dest_name
+    dest.write_bytes(image_bytes)
+
+    # -- Read dimensions --
+    try:
+        with _Image.open(dest) as img:
+            width, height = img.size
+    except Exception:
+        width, height = None, None
+
+    # -- Create Version (type=comfyui) --
+    siblings = db.query(Version).filter(
+        Version.instance_id == instance.id,
+        Version.is_current.is_(True),
+    )
+    for sibling in siblings.all():
+        sibling.is_current = False
+
+    version = Version(
+        instance_id=instance.id,
+        face_id=None,
+        type="comfyui",
+        parent_id=None,
+        path=str(dest.resolve()),
+        is_current=True,
+        params={
+            "width": width,
+            "height": height,
+            "source": "comfyui",
+            "source_filename": body.filename,
+            "source_subfolder": body.subfolder,
+        },
+        created_at=datetime.now(UTC),
+    )
+    db.add(version)
+    db.commit()
+    db.refresh(version)
+
+    # -- Generate thumbnails --
+    cache_path = get_cache_db_path()
+    init_cache_db(cache_path)
+    for thumb_size in (256, 512):
+        try:
+            thumb = await asyncio.to_thread(generate_thumbnail, dest, thumb_size)
+            await asyncio.to_thread(store_thumbnail, cache_path, version.id, thumb_size, thumb, "edit")
+        except Exception:
+            log.warning("Thumbnail-Generierung fehlgeschlagen für %s (size %d)", dest, thumb_size)
+
+    log.info("comfyui import: asset %d → version %d (%s)", body.asset_id, version.id, body.filename)
+    return ComfyUIImportResponse(
+        version_id=version.id,
+        type=version.type or "comfyui",
+        path=version.path,
+        is_current=version.is_current,
+        params=version.params,
+        thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+    )

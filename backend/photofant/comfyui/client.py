@@ -132,3 +132,30 @@ class ComfyUIClient:
             return response.json()  # type: ignore[no-any-return]
         except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError):
             return {}
+
+    def view_image(self, filename: str, subfolder: str = "", image_type: str = "output") -> bytes:
+        """GET /view — download an output image by filename. Raises ComfyUIError on failure."""
+        url = f"{self._base}/view"
+        params = {"filename": filename, "subfolder": subfolder, "type": image_type}
+        try:
+            response = httpx.get(url, params=params, timeout=self._timeout)
+            response.raise_for_status()
+            return response.content
+        except httpx.ConnectError as exc:
+            raise ComfyUIError(
+                what_expected=f"ComfyUI unter {self._base}",
+                what_found="Verbindung abgelehnt beim Bild-Download",
+                next_step="Prüfen, ob ComfyUI läuft und die URL korrekt ist",
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise ComfyUIError(
+                what_expected=f"Antwort in {self._timeout:.0f} s",
+                what_found="Timeout beim Bild-Download",
+                next_step="Timeout erhöhen oder ComfyUI-Last prüfen",
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            raise ComfyUIError(
+                what_expected="HTTP 200 beim Bild-Download",
+                what_found=f"HTTP {exc.response.status_code}",
+                next_step=f"Datei '{filename}' in ComfyUI output-Ordner prüfen",
+            ) from exc

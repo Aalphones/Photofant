@@ -73,3 +73,23 @@ export interface IntrospectionResult {
 
 export const WORKFLOW_CATEGORIES = ['upscale', 'img2img', 'inpaint', 'generic'] as const;
 export type WorkflowCategory = (typeof WORKFLOW_CATEGORIES)[number];
+
+export interface ComfyUIResultItem {
+  filename: string;
+  subfolder: string;
+  source: 'history' | 'output_dir';
+  preview_url: string;
+}
+
+export interface ComfyUIResultsResponse {
+  items: ComfyUIResultItem[];
+}
+
+export interface ComfyUIImportResponse {
+  version_id: number;
+  type: string;
+  path: string;
+  is_current: boolean;
+  params: Record<string, unknown> | null;
+  thumbnail_url: string;
+}

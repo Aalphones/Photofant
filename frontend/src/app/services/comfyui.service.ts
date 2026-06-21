@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs';
 import type { Observable } from 'rxjs';
-import type { ComfyUIConfig, ComfyUIWorkflow, IntrospectionResult, WorkflowInput, WorkflowParam } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, IntrospectionResult, WorkflowInput, WorkflowParam } from '@photofant/models';
 import { COMFYUI_CONFIG_DEFAULTS } from '@photofant/models';
 
 export interface TestConnectionResponse {
@@ -153,5 +153,24 @@ export class ComfyUIService {
       `/api/comfyui/workflows/${workflowId}/run`,
       { inputs, params },
     );
+  }
+
+  listResults(promptId?: string): Observable<ComfyUIResultsResponse> {
+    const params = promptId ? { prompt_id: promptId } : {};
+    return this.http.get<ComfyUIResultsResponse>('/api/comfyui/results', { params });
+  }
+
+  getResultViewUrl(filename: string, subfolder: string): string {
+    const encoded = encodeURIComponent(filename);
+    const sub = encodeURIComponent(subfolder);
+    return `/api/comfyui/results/view?filename=${encoded}&subfolder=${sub}`;
+  }
+
+  importResult(assetId: number, filename: string, subfolder: string): Observable<ComfyUIImportResponse> {
+    return this.http.post<ComfyUIImportResponse>('/api/comfyui/results/import', {
+      asset_id: assetId,
+      filename,
+      subfolder,
+    });
   }
 }

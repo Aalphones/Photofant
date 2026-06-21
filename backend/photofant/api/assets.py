@@ -800,7 +800,8 @@ async def import_as_version(
     for sibling in siblings.all():
         sibling.is_current = False
 
-    from datetime import UTC as _UTC, datetime as _datetime
+    from datetime import UTC as _UTC
+    from datetime import datetime as _datetime
     version = Version(
         instance_id=instance.id,
         face_id=None,

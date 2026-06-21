@@ -91,6 +91,14 @@
             Ähnliche Bilder
           </button>
         </div>
+        @if (comfyuiConfig().enabled) {
+          <div class="pbtn-row">
+            <button class="pbtn pbtn--ghost" (click)="openComfyuiImportDialog()">
+              <pf-icon name="sparkle" [size]="15" />
+              Aus ComfyUI importieren
+            </button>
+          </div>
+        }
       </div>
 
       <!-- Metadaten -->
@@ -331,5 +339,13 @@
     [pair]="selectedSimilarPair()!"
     (close)="selectedSimilarPair.set(null)"
     (resolve)="onSimilarResolve($event)"
+  />
+}
+
+@if (showComfyuiImportDialog() && asset()) {
+  <pf-comfyui-import-dialog
+    [assetId]="asset()!.id"
+    (close)="closeComfyuiImportDialog()"
+    (imported)="onComfyuiImported($event)"
   />
 }

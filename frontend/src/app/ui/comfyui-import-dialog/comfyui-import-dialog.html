@@ -1,0 +1,56 @@
+<div class="cid-scrim" (click)="onClose()"></div>
+
+<div class="cid" role="dialog" aria-modal="true" aria-label="Aus ComfyUI importieren">
+
+  <div class="cid-header">
+    <h2 class="cid-title">Aus ComfyUI importieren</h2>
+    <button class="cid-close" (click)="onClose()" aria-label="Schließen">
+      <pf-icon name="x" [size]="18" />
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="cid-state">Lade ComfyUI-Ergebnisse…</div>
+  } @else if (errorMsg()) {
+    <div class="cid-state cid-state--error">{{ errorMsg() }}</div>
+  } @else if (results().length === 0) {
+    <div class="cid-state">Keine Bilder im ComfyUI-Output gefunden.</div>
+  } @else {
+    <div class="cid-grid">
+      @for (item of results(); track item.filename) {
+        <button
+          class="cid-thumb"
+          [class.cid-thumb--selected]="isSelected(item)"
+          (click)="toggleSelect(item)"
+          [title]="item.filename"
+        >
+          <img [src]="previewUrl(item)" [alt]="item.filename" class="cid-img" loading="lazy" />
+          <span class="cid-badge" [class.cid-badge--history]="item.source === 'history'">
+            {{ item.source === 'history' ? 'History' : 'Output' }}
+          </span>
+          @if (isSelected(item)) {
+            <span class="cid-check">
+              <pf-icon name="check" [size]="14" />
+            </span>
+          }
+        </button>
+      }
+    </div>
+  }
+
+  @if (importError()) {
+    <div class="cid-import-error">{{ importError() }}</div>
+  }
+
+  <div class="cid-footer">
+    <button class="cid-btn cid-btn--ghost" (click)="onClose()">Abbrechen</button>
+    <button
+      class="cid-btn cid-btn--primary"
+      [disabled]="!selectedItem() || isImporting()"
+      (click)="onImport()"
+    >
+      @if (isImporting()) { Importiere… } @else { Importieren }
+    </button>
+  </div>
+
+</div>

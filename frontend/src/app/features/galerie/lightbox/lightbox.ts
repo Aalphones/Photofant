@@ -13,12 +13,12 @@ import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetSummary, DupePair, DupeResolution, FaceDto, FaceMatch, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
+import type { AssetDto, AssetSummary, ComfyUIImportResponse, DupePair, DupeResolution, FaceDto, FaceMatch, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
 import { AssetService, ClassifyService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
-import { Icon, RerunDialog } from '@photofant/ui';
+import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
-import { galleryActions, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare';
 
@@ -63,7 +63,7 @@ function formatDate(dateStr: string | null): string {
 @Component({
   selector: 'pf-lightbox',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ZoomStage, Icon, RerunDialog, DupeCompare],
+  imports: [ZoomStage, Icon, RerunDialog, DupeCompare, ComfyuiImportDialog],
   templateUrl: './lightbox.html',
   styleUrl: './lightbox.scss',
 })
@@ -79,9 +79,11 @@ export class Lightbox {
   private readonly destroyRef      = inject(DestroyRef);
 
   protected readonly showRerunDialog = signal(false);
+  protected readonly showComfyuiImportDialog = signal(false);
 
   protected readonly asset    = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
   protected readonly presets  = this.store.selectSignal(presetsSelectors.selectPresets);
+  protected readonly comfyuiConfig = this.store.selectSignal(comfyuiSelectors.selectConfig);
   protected readonly hasPrev  = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
   protected readonly hasNext  = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
 
@@ -502,5 +504,21 @@ export class Lightbox {
 
   protected cancelCaptionEdit(): void {
     this.editingCaption.set(false);
+  }
+
+  // ── ComfyUI Import ────────────────────────────────────────────────────────
+
+  protected openComfyuiImportDialog(): void {
+    this.store.dispatch(comfyuiActions.loadConfig());
+    this.showComfyuiImportDialog.set(true);
+  }
+
+  protected onComfyuiImported(_result: ComfyUIImportResponse): void {
+    this.showComfyuiImportDialog.set(false);
+    this.reloadTrigger.update((count: number) => count + 1);
+  }
+
+  protected closeComfyuiImportDialog(): void {
+    this.showComfyuiImportDialog.set(false);
   }
 }

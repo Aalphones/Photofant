@@ -4,7 +4,6 @@ from __future__ import annotations
 from photofant.comfyui.introspect import introspect_template
 from photofant.comfyui.validator import validate_workflow
 
-
 UPSCALE_TEMPLATE = {
     "1": {
         "class_type": "LoadImage",

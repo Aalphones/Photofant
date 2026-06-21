@@ -55,6 +55,9 @@ export type {
   InputSuggestion,
   IntrospectionResult,
   WorkflowCategory,
+  ComfyUIResultItem,
+  ComfyUIResultsResponse,
+  ComfyUIImportResponse,
 } from './comfyui-workflow.model';
 export { WORKFLOW_CATEGORIES } from './comfyui-workflow.model';
 
