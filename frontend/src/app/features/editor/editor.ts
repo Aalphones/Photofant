@@ -12,10 +12,11 @@ import { Store } from '@ngrx/store';
 import { DOCUMENT } from '@angular/common';
 import { Icon } from '@photofant/ui';
 import { editorActions, editorSelectors } from '@photofant/store';
-import type { EditorTargetKind } from '@photofant/models';
+import type { CropRatio, CropRect, EditorTargetKind } from '@photofant/models';
 import { ZoomStage } from '../galerie/lightbox/zoom-stage';
 import { BasisPanel } from './basis-panel/basis-panel';
 import type { OpEvent } from './basis-panel/basis-panel';
+import { CropOverlay } from './crop-overlay/crop-overlay';
 import { StepBar } from './step-bar/step-bar';
 import { SaveModal } from './save-modal/save-modal';
 import type { SaveMode } from './save-modal/save-modal';
@@ -23,7 +24,7 @@ import type { SaveMode } from './save-modal/save-modal';
 @Component({
   selector: 'pf-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, ZoomStage, BasisPanel, StepBar, SaveModal],
+  imports: [Icon, ZoomStage, BasisPanel, CropOverlay, StepBar, SaveModal],
   templateUrl: './editor.html',
   styleUrl: './editor.scss',
 })
@@ -47,6 +48,12 @@ export class Editor {
   protected readonly showSaveModal = signal(false);
   protected readonly activeTool = signal<'basis'>('basis');
 
+  protected readonly cropActive = signal(false);
+  protected readonly cropRect = signal<CropRect>({ x: 0, y: 0, w: 100, h: 100 });
+  protected readonly cropRatio = signal<CropRatio>('free');
+
+  protected readonly zoomInteractive = computed((): boolean => !this.cropActive());
+
   protected readonly displayImageUrl = computed((): string =>
     this.currentPreviewUrl() ?? ''
   );
@@ -62,7 +69,9 @@ export class Editor {
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') { return; }
       if (event.key === 'Escape') {
-        if (this.showSaveModal()) {
+        if (this.cropActive()) {
+          this.cropActive.set(false);
+        } else if (this.showSaveModal()) {
           this.showSaveModal.set(false);
         } else {
           this.goBack();
@@ -102,7 +111,27 @@ export class Editor {
     this.histOpen.update((open: boolean) => !open);
   }
 
+  protected onActivateCrop(): void {
+    this.cropActive.set(true);
+    this.cropRect.set({ x: 0, y: 0, w: 100, h: 100 });
+  }
+
+  protected onDeactivateCrop(): void {
+    this.cropActive.set(false);
+  }
+
+  protected onCropRatioChange(ratio: CropRatio): void {
+    this.cropRatio.set(ratio);
+  }
+
+  protected onCropRectChange(rect: CropRect): void {
+    this.cropRect.set(rect);
+  }
+
   protected onApplyOp(event: OpEvent): void {
+    if (event.op === 'crop') {
+      this.cropActive.set(false);
+    }
     this.store.dispatch(editorActions.applyStep({
       op: event.op,
       params: event.params,
@@ -116,7 +145,6 @@ export class Editor {
 
   protected onSave(mode: SaveMode): void {
     this.showSaveModal.set(false);
-    // Phase 4 will implement the actual save endpoint
     console.info('[Editor] Save requested:', mode);
   }
 }

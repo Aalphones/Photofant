@@ -24,6 +24,7 @@ export class ZoomStage {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly imageUrl = input.required<string>();
+  readonly interactive = input(true);
 
   private readonly wrapEl = viewChild.required<ElementRef<HTMLDivElement>>('wrapEl');
   private readonly innerEl = viewChild.required<ElementRef<HTMLDivElement>>('innerEl');
@@ -55,6 +56,12 @@ export class ZoomStage {
     effect(() => {
       this.imageUrl();
       this.resetZoom();
+    });
+
+    effect(() => {
+      if (!this.interactive()) {
+        this.resetZoom();
+      }
     });
   }
 

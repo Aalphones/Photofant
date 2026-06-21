@@ -1,0 +1,14 @@
+<div class="crop-rect"
+  [style.left.px]="cropScreen().left"
+  [style.top.px]="cropScreen().top"
+  [style.width.px]="cropScreen().width"
+  [style.height.px]="cropScreen().height"
+  (pointerdown)="onPointerDown($event, 'move')"
+>
+  @for (handle of handles; track handle) {
+    <div
+      class="crop-handle crop-handle--{{ handle }}"
+      (pointerdown)="onPointerDown($event, handle)"
+    ></div>
+  }
+</div>

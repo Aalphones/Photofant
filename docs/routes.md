@@ -252,7 +252,7 @@ interface ScanResult {
 }
 ```
 
-## Edit-Sessions (P8 Phase 1)
+## Edit-Sessions (P8)
 
 | Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
@@ -269,9 +269,18 @@ interface StepInfo              { seq: number; op: string; params: Record<string
 interface ApplyStepResponse     { seq: number; preview_url: string; }
 ```
 
-**Ops Stage 4:** `rotate` (`{ dir: "cw"|"ccw"|"180" }`), `mirror` (`{ axis: "h"|"v" }`),
-`crop` (`{ ratio, x, y, w, h }` — x/y/w/h in Prozent), `pad`, `convert` (`{ format, quality }`),
-`smart_crop` (Phase 3 — Stub). Phase 1 rechnet Preview auf max 1024 px; Final-Render in Originalauflösung kommt in Phase 4 (Save).
+**Op-Params (pydantic-validiert):**
+
+| Op | Params | Hinweise |
+|---|---|---|
+| `crop` | `{ x, y, w, h }` — je `float 0–100` (Prozent der Bilddimensionen) | Koordinaten-Mapping: Prozent → Pixel per `round()` auf Zielauflösung |
+| `rotate` | `{ dir: "cw"\|"ccw"\|"180"\|"free", angle?: float }` | `angle` nur bei `dir: "free"` (−360 bis 360°) |
+| `mirror` | `{ axis: "h"\|"v" }` | |
+| `pad` | `{ target: "1:1"\|"4:3"\|"16:9"\|…, color: "#000000"\|"#ffffff"\|"transparent" }` | Transparent → RGBA (PNG-Preview: weiß) |
+| `convert` | `{ format: "png"\|"jpeg", quality: 1–100 }` | `quality` nur für JPEG; Alpha-Verlust bei JPEG |
+| `smart_crop` | `{}` | Phase 3 — Stub, gibt Bild unverändert zurück |
+
+**Preview-Strategie:** Arbeitskopie wird auf max 1024 px gethumbnailed, dann Ops angewendet. Prozent-Koordinaten sind auflösungsunabhängig. Final-Render in Originalauflösung kommt in Phase 4 (Save).
 
 Fehler-Codes (strukturiert im `detail`-Feld):
 - `404 { code: "MODEL_NOT_FOUND" }` — `manifest_id` nicht im Manifest (auch bei `DELETE`)

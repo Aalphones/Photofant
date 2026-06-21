@@ -1,5 +1,14 @@
 export type EditorTargetKind = 'instance' | 'face' | 'version';
 
+export type CropRatio = 'free' | '1:1' | '4:3' | '3:4' | '16:9' | '3:2' | '2:3';
+
+export interface CropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface EditorStep {
   seq: number;
   op: string;

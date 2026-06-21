@@ -9,7 +9,7 @@ Vollständiger lokaler Editor für nicht-generative Operationen: Crop/Rotate/Mir
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
 | 1 | [Editor-Shell & Step-History](phase-1-editor-shell-history.md) | heikel | complete |
-| 2 | [Geometrie-Operationen](phase-2-geometrie-ops.md) | heikel | pending |
+| 2 | [Geometrie-Operationen](phase-2-geometrie-ops.md) | heikel | complete |
 | 3 | [rembg & Smart-Crop](phase-3-rembg-smartcrop.md) | standard | pending |
 | 4 | [Versionierung & Speichern](phase-4-versionierung.md) | heikel | pending |
 | 5 | [Neuverarbeitung, Vergleich & Bulk](phase-5-neuverarbeitung-bulk.md) | standard | pending |

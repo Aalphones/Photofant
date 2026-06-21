@@ -114,6 +114,31 @@
   }
 }
 
+// ── Color picker for pad ─────────────────────────────────────────────────────
+
+.ed-color-seg {
+  gap: 4px;
+}
+
+.ed-color-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.ed-color-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+
+  &--transparent {
+    background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 8px 8px;
+  }
+}
+
 .ed-ctrl { margin-bottom: 8px; }
 
 .ed-ctrl-row {

@@ -47,7 +47,15 @@
         </div>
       </div>
 
-      <pf-basis-panel (applyOp)="onApplyOp($event)" />
+      <pf-basis-panel
+        [cropActive]="cropActive()"
+        [cropRect]="cropRect()"
+        [cropRatio]="cropRatio()"
+        (applyOp)="onApplyOp($event)"
+        (activateCrop)="onActivateCrop()"
+        (deactivateCrop)="onDeactivateCrop()"
+        (cropRatioChange)="onCropRatioChange($event)"
+      />
     </div>
 
     <!-- Center: Canvas -->
@@ -58,11 +66,20 @@
         </div>
       }
       @if (displayImageUrl()) {
-        <pf-zoom-stage [imageUrl]="displayImageUrl()" />
+        <pf-zoom-stage [imageUrl]="displayImageUrl()" [interactive]="zoomInteractive()" />
       } @else {
         <div class="ed-canvas-placeholder">
           <div class="ed-spinner"></div>
         </div>
+      }
+
+      @if (cropActive() && displayImageUrl()) {
+        <pf-crop-overlay
+          [imageUrl]="displayImageUrl()"
+          [ratio]="cropRatio()"
+          [rect]="cropRect()"
+          (rectChange)="onCropRectChange($event)"
+        />
       }
     </div>
 

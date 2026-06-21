@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p08-editor-cpu/`
-**Phase:** 2/5 — Geometrie-Operationen (pending)
-**Nächster Schritt:** Crop-Canvas-Komponente (Drag-Handles, Ratio-Lock, Koordinaten-Mapping Stage↔Original) + Pillow-Op-Module finalisieren
+**Phase:** 3/5 — rembg & Smart-Crop (pending)
+**Nächster Schritt:** rembg-Integration (Modell-Download, ONNX-Inferenz) + Smart-Crop-Logik (Face-BBox → Crop-Region)
 
 **Abgeschlossen:**
 - `docs/archive/2026-06/2026-06-18_einstellungen-fehlende-sektionen/` — alle 4 Phasen complete (2026-06-19)

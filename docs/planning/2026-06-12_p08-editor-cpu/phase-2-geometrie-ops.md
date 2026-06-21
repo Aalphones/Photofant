@@ -1,6 +1,6 @@
 # P8 · Phase 2 — Geometrie-Operationen
 
-> Rating: **heikel** (Crop-Canvas-Interaktion ist das komplexeste Frontend-Stück; Koordinaten-Mapping Stage↔Original) · Status: pending
+> Rating: **heikel** (Crop-Canvas-Interaktion ist das komplexeste Frontend-Stück; Koordinaten-Mapping Stage↔Original) · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -16,10 +16,17 @@
 
 ## Checkliste
 
-- [ ] Pillow-Op-Module (crop/pad/rotate/mirror/convert) + Param-Schemas (pydantic)
-- [ ] Crop-Tool-Komponente (Handles, Ratio-Lock, Tastatur-Nudge)
-- [ ] Rotate/Mirror/Pad/Convert-Tool-Panels
-- [ ] Arbeitskopie-Strategie (Preview-Auflösung vs. Final-Render)
-- [ ] Doc-Update: keiner über routes.md hinaus
+- [x] Pillow-Op-Module (crop/pad/rotate/mirror/convert) + Param-Schemas (pydantic)
+- [x] Crop-Tool-Komponente (Handles, Ratio-Lock, Tastatur-Nudge)
+- [x] Rotate/Mirror/Pad/Convert-Tool-Panels
+- [x] Arbeitskopie-Strategie (Preview-Auflösung vs. Final-Render)
+- [x] Doc-Update: routes.md Op-Param-Tabelle
 
 ## Report-Back
+
+- `backend/photofant/media/ops.py`: Pydantic-validierte Op-Implementierungen (CropParams, RotateParams, MirrorParams, PadParams, ConvertParams) + Dispatcher `apply_op()`
+- `edit_sessions.py`: `_render_steps` nutzt jetzt `apply_op()` aus ops.py; RGBA-Compositing nach Ende der Op-Pipeline (statt vor Ops), damit Pad-Transparent korrekt funktioniert
+- `frontend/crop-overlay/`: Neue Komponente mit 8 Drag-Handles, Ratio-Lock, Keyboard-Nudge (Pfeiltasten ± Shift), box-shadow-basierte Dimming-Maske, image-bounds-Berechnung per ResizeObserver + Image.naturalWidth
+- `basis-panel`: Erweitert um Pad-Aspect-Ratio (1:1, 4:3, 16:9, 3:2) + Farbwahl (Schwarz/Weiß/Transparent), Frei-Drehen-Slider (±180°), Crop-Mode-Toggle mit Aktivieren/Abbrechen
+- `editor.ts`: Crop-State (cropActive, cropRect, cropRatio) als Signals; ZoomStage erhält `interactive`-Input (Zoom disabled bei aktivem Crop)
+- `routes.md`: Op-Param-Tabelle mit Typen und Wertebereichen

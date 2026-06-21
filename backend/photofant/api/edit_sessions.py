@@ -1,4 +1,4 @@
-"""Edit-Session API — CPU-only image editor (P8 Phase 1)
+"""Edit-Session API — CPU-only image editor (P8)
 
 POST /edit-sessions                      → create session, returns session_key
 GET  /edit-sessions/{key}                → session state + step list
@@ -35,6 +35,7 @@ from photofant.db.cache import (
 )
 from photofant.db.models import Asset, AssetInstance, Face
 from photofant.db.session import get_session
+from photofant.media.ops import apply_op
 
 log = logging.getLogger(__name__)
 
@@ -95,69 +96,31 @@ class RollbackResponse(BaseModel):
 
 # ── Render pipeline ───────────────────────────────────────────────────────────
 
-def _apply_op(img: Image.Image, op: str, params: dict[str, Any]) -> Image.Image:  # type: ignore[type-arg]
-    if op == "rotate":
-        direction = str(params.get("dir", "cw"))
-        angles: dict[str, float] = {"cw": -90.0, "ccw": 90.0, "180": 180.0}
-        angle = angles.get(direction, -90.0)
-        return img.rotate(angle, expand=True)
-
-    if op == "mirror":
-        axis = str(params.get("axis", "h"))
-        transpose = Image.Transpose.FLIP_LEFT_RIGHT if axis == "h" else Image.Transpose.FLIP_TOP_BOTTOM
-        return img.transpose(transpose)
-
-    if op == "pad":
-        width, height = img.size
-        target = max(width, height)
-        padded = Image.new("RGB", (target, target), (0, 0, 0))
-        padded.paste(img, ((target - width) // 2, (target - height) // 2))
-        return padded
-
-    if op == "convert":
-        # Format change is a save-time concern; for preview we just ensure RGB
-        return img.convert("RGB")
-
-    if op == "crop":
-        # Params: x, y, w, h as percentages of the image
-        x_pct = float(params.get("x", 0))
-        y_pct = float(params.get("y", 0))
-        w_pct = float(params.get("w", 100))
-        h_pct = float(params.get("h", 100))
-        img_w, img_h = img.size
-        left = int(x_pct / 100 * img_w)
-        top = int(y_pct / 100 * img_h)
-        right = min(img_w, left + int(w_pct / 100 * img_w))
-        bottom = min(img_h, top + int(h_pct / 100 * img_h))
-        if right <= left or bottom <= top:
-            return img
-        return img.crop((left, top, right, bottom))
-
-    if op == "smart_crop":
-        # Phase 3 — stub returns image unchanged
-        return img
-
-    log.warning("Unknown op %r — returning image unchanged", op)
-    return img
-
-
 def _render_steps(source_path: Path, steps: list[dict[str, Any]], preview_max: int = _PREVIEW_MAX_PX) -> bytes:  # type: ignore[type-arg]
-    """Apply all steps to the original image and return JPEG bytes."""
+    """Apply all steps to the original image and return JPEG preview bytes.
+
+    Preview strategy: thumbnail to max 1024px, then apply ops. Percentages
+    are resolution-independent, so the preview is visually correct. Final render
+    (Phase 4 save) applies ops at original resolution.
+    """
     try:
         with Image.open(source_path) as raw:
             img: Image.Image = ImageOps.exif_transpose(raw) or raw
             if img.mode not in ("RGB", "RGBA", "L"):
                 img = img.convert("RGB")
-            if img.mode == "RGBA":
-                background = Image.new("RGB", img.size, (255, 255, 255))
-                alpha = img.split()[3]
-                background.paste(img, mask=alpha)
-                img = background
-            elif img.mode == "L":
+            if img.mode == "L":
                 img = img.convert("RGB")
             img.thumbnail((preview_max, preview_max), Image.Resampling.LANCZOS)
             for step in steps:
-                img = _apply_op(img, step["op"], step["params_dict"])
+                img = apply_op(img, step["op"], step["params_dict"])
+            # JPEG preview: composite alpha onto white
+            if img.mode in ("RGBA", "LA", "PA"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                alpha = img.split()[-1]
+                background.paste(img, mask=alpha)
+                img = background
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
     except (UnidentifiedImageError, OSError) as exc:
         raise HTTPException(status_code=422, detail=f"Cannot render image: {exc}") from exc
     buf = io.BytesIO()
