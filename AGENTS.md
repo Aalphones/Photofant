@@ -56,3 +56,4 @@ cd frontend && npm run lint && npm run build
 4. **Keine Modell-Binaries im Repo** — Bezug nur über die Settings-UI oder In-Place-Einbindung.
 5. **Die UI blockiert nie** — alles Langsame läuft über die Job-Queue.
 6. **Nach Code-Änderungen zugehörige Tests laufen lassen**, Failures fixen.
+7. **Tunable Parameter gehören in `settings.json`** — Schwellwerte, Timeouts, Größen und andere einstellbare Werte werden nie als Modul-Konstante oder Magic Number hardcoded. Im Planungsschritt melden, welche Keys angelegt werden sollen; Sascha entscheidet dann, bevor die Phase läuft. Ausnahme: modell-interne Architekturparameter (Tensorformen, Strides, Canvas-Größen), die fest mit dem Modell-Design zusammenhängen.
