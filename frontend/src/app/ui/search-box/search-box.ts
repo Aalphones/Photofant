@@ -9,12 +9,13 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
-import type { SearchMode, TagListItem } from '@photofant/models';
+import type { PersonDto, TagListItem } from '@photofant/models';
 import { TagService } from '@photofant/services';
-import { searchActions, searchSelectors } from '@photofant/store';
+import { filtersActions, personsSelectors, searchActions } from '@photofant/store';
 import { Icon } from '../icon/icon';
 
 interface AutocompleteItem {
+  type: 'tag' | 'person';
   text: string;
   id?: number;
   count?: number;
@@ -22,11 +23,6 @@ interface AutocompleteItem {
 
 const RECENT_SEARCHES_KEY = 'pf_recent_searches';
 const MAX_RECENT = 5;
-const MODES: ReadonlyArray<{ value: SearchMode; label: string }> = [
-  { value: 'tags',     label: 'Tags' },
-  { value: 'caption',  label: 'Caption' },
-  { value: 'semantic', label: 'Semantisch' },
-];
 
 @Component({
   selector: 'pf-search-box',
@@ -40,22 +36,20 @@ export class SearchBox {
   private readonly tagService = inject(TagService);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly queryInput$ = new Subject<string>();
-
-  protected readonly currentMode = this.store.selectSignal(searchSelectors.selectMode);
-  protected readonly localQuery  = signal('');
-  protected readonly isOpen      = signal(false);
-  protected readonly modes       = MODES;
-
+  private readonly queryInput$    = new Subject<string>();
+  private readonly allPersons     = this.store.selectSignal(personsSelectors.selectAll);
   private readonly recentSearches = signal<string[]>(this.loadRecentSearches());
+
+  protected readonly localQuery = signal('');
+  protected readonly isOpen     = signal(false);
 
   private readonly tagSuggestions = toSignal(
     this.queryInput$.pipe(
       debounceTime(150),
       distinctUntilChanged(),
-      switchMap((q: string) => {
-        if (!q || q.length < 1) return of([] as TagListItem[]);
-        return this.tagService.listTags(q, 8).pipe(
+      switchMap((query: string) => {
+        if (!query || query.length < 1) return of([] as TagListItem[]);
+        return this.tagService.listTags(query, 6).pipe(
           catchError(() => of([] as TagListItem[])),
         );
       }),
@@ -63,28 +57,34 @@ export class SearchBox {
     { initialValue: [] as TagListItem[] },
   );
 
+  private readonly personSuggestions = computed<PersonDto[]>(() => {
+    const query = this.localQuery().trim().toLowerCase();
+    if (!query) return [];
+    return this.allPersons()
+      .filter((person: PersonDto) =>
+        !person.is_unknown && person.name != null && person.name.toLowerCase().includes(query)
+      )
+      .slice(0, 4);
+  });
+
   protected readonly suggestions = computed<AutocompleteItem[]>(() => {
-    const mode = this.currentMode();
-    if (mode === 'tags') {
-      return this.tagSuggestions().map((tag: TagListItem) => ({
-        text:  tag.name,
-        id:    tag.id,
-        count: tag.count,
-      }));
+    const query = this.localQuery().trim();
+    if (!query) {
+      return this.recentSearches().map((text: string) => ({ type: 'tag' as const, text }));
     }
-    return this.recentSearches().map((text: string) => ({ text }));
-  });
-
-  protected readonly placeholder = computed<string>(() => {
-    const mode = this.currentMode();
-    if (mode === 'caption')  return 'Bildtext suchen…';
-    if (mode === 'semantic') return 'Semantisch suchen…';
-    return 'Tags suchen…';
-  });
-
-  protected readonly modeLabel = computed<string>(() => {
-    const found = MODES.find((m) => m.value === this.currentMode());
-    return found?.label ?? 'Tags';
+    const persons = this.personSuggestions().map((person: PersonDto) => ({
+      type: 'person' as const,
+      text: person.name!,
+      id: person.id,
+      count: person.count,
+    }));
+    const tags = this.tagSuggestions().map((tag: TagListItem) => ({
+      type: 'tag' as const,
+      text: tag.name,
+      id: tag.id,
+      count: tag.count,
+    }));
+    return [...persons, ...tags];
   });
 
   constructor() {
@@ -92,8 +92,8 @@ export class SearchBox {
       debounceTime(300),
       distinctUntilChanged(),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe((q: string) => {
-      this.store.dispatch(searchActions.setQuery({ q }));
+    ).subscribe((query: string) => {
+      this.store.dispatch(searchActions.setQuery({ q: query }));
     });
   }
 
@@ -118,26 +118,15 @@ export class SearchBox {
     this.store.dispatch(searchActions.clear());
   }
 
-  protected setMode(mode: SearchMode): void {
-    this.localQuery.set('');
-    this.store.dispatch(searchActions.setMode({ mode }));
-  }
-
-  protected cycleMode(): void {
-    const current = this.currentMode();
-    const index   = MODES.findIndex((m) => m.value === current);
-    const next    = MODES[(index + 1) % MODES.length];
-    if (next !== undefined) {
-      this.localQuery.set('');
-      this.store.dispatch(searchActions.setMode({ mode: next.value }));
-    }
-  }
-
   protected selectSuggestion(item: AutocompleteItem): void {
-    this.localQuery.set(item.text);
-    this.queryInput$.next(item.text);
-    this.store.dispatch(searchActions.setQuery({ q: item.text }));
-    if (this.currentMode() !== 'tags') {
+    if (item.type === 'person') {
+      this.store.dispatch(filtersActions.setPersonId({ personId: item.id! }));
+      this.localQuery.set('');
+      this.queryInput$.next('');
+    } else {
+      this.localQuery.set(item.text);
+      this.queryInput$.next(item.text);
+      this.store.dispatch(searchActions.setQuery({ q: item.text }));
       this.saveRecentSearch(item.text);
     }
     this.isOpen.set(false);
