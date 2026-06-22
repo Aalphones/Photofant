@@ -50,6 +50,17 @@
     --nav-w:  212px;
     --rail-w: 264px;
     --top-h:   58px;
+
+    /* semantic aliases — map legacy names used in component SCSS to canonical tokens */
+    --border:       var(--line);
+    --border-focus: var(--accent);
+    --text-1:       var(--text);
+    --text-muted:   var(--text-3);
+    --accent-dim:   var(--accent-weak);
+    --radius-lg:    var(--radius-l);
+    --surface-3:    var(--surface-hover);
+    --surface-high: var(--surface-2);
+    --bg-3:         oklch(0.208 0.007 256);
   }
 
   * { box-sizing: border-box; }
