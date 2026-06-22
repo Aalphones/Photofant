@@ -34,6 +34,7 @@ export class PersonCard {
   protected readonly isEditing = signal(false);
   protected readonly editName = signal('');
   protected readonly isDragOver = signal(false);
+  protected readonly actionsVisible = signal(false);
 
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -52,19 +53,18 @@ export class PersonCard {
 
   protected onCardClick(event: MouseEvent): void {
     if (this.isEditing()) return;
+    if (this.actionsVisible()) {
+      this.actionsVisible.set(false);
+      event.stopPropagation();
+      return;
+    }
     this.select.emit();
-    event.stopPropagation();
-  }
-
-  protected onDoubleClick(event: MouseEvent): void {
-    if (this.person().is_unknown) return;
-    this.startEdit();
     event.stopPropagation();
   }
 
   protected onPointerDown(): void {
     if (this.person().is_unknown) return;
-    this.longPressTimer = setTimeout(() => { this.startEdit(); }, 600);
+    this.longPressTimer = setTimeout(() => { this.actionsVisible.set(true); }, 600);
   }
 
   protected onPointerUp(): void {
@@ -98,18 +98,27 @@ export class PersonCard {
     event.stopPropagation();
   }
 
+  protected onRenameClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.actionsVisible.set(false);
+    this.startEdit();
+  }
+
   protected onSplitClick(event: MouseEvent): void {
     event.stopPropagation();
+    this.actionsVisible.set(false);
     this.splitClick.emit();
   }
 
   protected onDupeCheckClick(event: MouseEvent): void {
     event.stopPropagation();
+    this.actionsVisible.set(false);
     this.dupeCheck.emit();
   }
 
   protected onImportClick(event: MouseEvent): void {
     event.stopPropagation();
+    this.actionsVisible.set(false);
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;

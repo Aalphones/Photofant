@@ -44,6 +44,11 @@
   gap: 4px;
   opacity: 0;
   transition: opacity .15s;
+  z-index: 1;
+
+  &--visible {
+    opacity: 1;
+  }
 }
 
 .person-card__hover-btn {

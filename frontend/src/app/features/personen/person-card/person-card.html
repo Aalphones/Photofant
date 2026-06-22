@@ -2,7 +2,6 @@
   class="person-card"
   [class.person-card--drag-over]="isDragOver()"
   (click)="onCardClick($event)"
-  (dblclick)="onDoubleClick($event)"
   (pointerdown)="onPointerDown()"
   (pointerup)="onPointerUp()"
   (pointerleave)="onPointerUp()"
@@ -14,7 +13,15 @@
 >
   <!-- Hover-Actions -->
   @if (!person().is_unknown) {
-    <div class="person-card__hover-actions">
+    <div class="person-card__hover-actions" [class.person-card__hover-actions--visible]="actionsVisible()">
+      <button
+        class="person-card__hover-btn"
+        (click)="onRenameClick($event)"
+        aria-label="Person umbenennen"
+        title="Umbenennen"
+      >
+        <pf-icon name="pencil" [size]="14" />
+      </button>
       <button
         class="person-card__hover-btn"
         (click)="onSplitClick($event)"
