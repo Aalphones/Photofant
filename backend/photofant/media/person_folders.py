@@ -180,10 +180,22 @@ def materialize_assignment(
         )
     ) or 0
 
+    # Don't move the _unknown instance if there are still faces assigned to _unknown
+    # for this asset (e.g. noise-cluster faces). Moving it would leave _unknown with a
+    # portrait_face_id but count=0, making the Unknown tab appear broken.
+    remaining_unknown_faces: int = 0
+    if unknown_person and unknown_instance is not None:
+        remaining_unknown_faces = session.scalar(
+            select(func.count())
+            .select_from(Face)
+            .where(Face.asset_id == asset_id, Face.person_id == unknown_person.id)
+        ) or 0
+
     can_move_unknown = (
         unknown_instance is not None
         and not unknown_instance.fixed_person
         and real_instance_count == 0
+        and remaining_unknown_faces == 0
     )
 
     if can_move_unknown:
@@ -437,6 +449,12 @@ def merge_persons(
     if into_person is None:
         raise ValueError(f"Target person {into_person_id} not found")
 
+    # Carry name over when merging a named person into a nameless cluster
+    if from_person.name is not None and into_person.name is None:
+        into_person.name = from_person.name
+        session.flush()
+        log.info("Carried name %r from person %d to person %d", into_person.name, from_person_id, into_person_id)
+
     into_dir = ensure_person_folder(data_root, into_person)
 
     faces = session.scalars(
@@ -559,6 +577,13 @@ def split_faces(
         faces_moved += 1
 
     session.flush()
+
+    if faces_moved == 0:
+        # No faces matched — the new person would be an empty nameless fragment; clean it up.
+        session.delete(new_person)
+        session.flush()
+        log.warning("split_faces: no faces moved from person %d — cleaned up empty person", source_person_id)
+        return {"new_person_id": None, "faces_moved": 0, "instances_created": 0}
 
     affected_assets = session.execute(
         select(Face.asset_id)

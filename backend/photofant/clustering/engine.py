@@ -156,19 +156,27 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
         if not assignable_face_ids:
             continue
 
+        # Collect faces that are actually still in _unknown before creating a Person row.
+        # Without this check, re-running clustering creates empty nameless Person rows
+        # for clusters whose faces were already assigned in a previous run.
+        faces_from_unknown: list[Face] = []
+        for fid in assignable_face_ids:
+            session.execute(select(Face).where(Face.id == fid).with_for_update())
+            face = session.get(Face, fid)
+            if face is not None and face.person_id == unknown_person_id:
+                faces_from_unknown.append(face)
+
+        if not faces_from_unknown:
+            continue
+
         person = Person(name=None, is_unknown=False)
         session.add(person)
         session.flush()
         persons_created += 1
 
-        for fid in assignable_face_ids:
-            session.execute(
-                select(Face).where(Face.id == fid).with_for_update()
-            )
-            face = session.get(Face, fid)
-            if face is not None and face.person_id == unknown_person_id:
-                face.person_id = person.id
-                faces_assigned += 1
+        for face in faces_from_unknown:
+            face.person_id = person.id
+            faces_assigned += 1
 
     noise_indices = [index for index, cluster_label in enumerate(labels) if cluster_label == -1]
     noise_count = len(noise_indices)
