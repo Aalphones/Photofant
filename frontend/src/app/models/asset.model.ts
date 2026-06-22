@@ -84,6 +84,7 @@ export interface FaceDto {
   id: number;
   asset_id: number | null;
   person_id: number | null;
+  person_name: string | null;
   crop_url: string;
   score: number | null;
   age: number | null;

@@ -233,6 +233,7 @@
               <button
                 class="face-thumb"
                 [class.face-thumb--selected]="selectedFace()?.id === face.id"
+                [class.face-thumb--assigned]="face.person_name != null"
                 [title]="faceLabel(face)"
                 (click)="toggleFaceMatches(face)"
               >
@@ -242,7 +243,7 @@
                   [alt]="'Gesicht #' + face.id"
                 />
                 <span class="face-thumb__badge">
-                  {{ faceScore(face) }}
+                  {{ face.person_name ?? faceScore(face) }}
                 </span>
               </button>
             }

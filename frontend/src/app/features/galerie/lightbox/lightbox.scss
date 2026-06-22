@@ -561,6 +561,10 @@ pf-zoom-stage {
   border-color: var(--accent);
 }
 
+.face-thumb--assigned {
+  border-color: oklch(0.55 0.18 145 / 0.6);
+}
+
 .face-thumb__badge {
   position: absolute;
   bottom: 0;
@@ -571,8 +575,11 @@ pf-zoom-stage {
   font-size: 10px;
   font-weight: 600;
   text-align: center;
-  padding: 2px 0;
+  padding: 2px 2px;
   font-family: var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 // ── Face matches panel ──────────────────────────────────────────────────────

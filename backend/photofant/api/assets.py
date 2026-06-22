@@ -78,6 +78,7 @@ class FaceDto(BaseModel):
     id: int
     asset_id: int | None
     person_id: int | None
+    person_name: str | None = None
     crop_url: str
     score: float | None
     age: int | None
@@ -485,11 +486,17 @@ def _load_asset_versions(session: Session, instance_id: int, asset_id: int) -> l
 
 def _load_asset_faces(session: Session, asset_id: int) -> list[FaceDto]:
     rows = session.query(Face).filter(Face.asset_id == asset_id).all()
+    person_ids = {face.person_id for face in rows if face.person_id is not None}
+    person_names: dict[int, str] = {}
+    if person_ids:
+        persons = session.query(Person).filter(Person.id.in_(person_ids)).all()
+        person_names = {p.id: p.name for p in persons if p.name is not None}
     return [
         FaceDto(
             id=face.id,
             asset_id=face.asset_id,
             person_id=face.person_id,
+            person_name=person_names.get(face.person_id) if face.person_id is not None else None,
             crop_url=f"/faces/{face.id}/thumbnail",
             score=face.score,
             age=face.age,

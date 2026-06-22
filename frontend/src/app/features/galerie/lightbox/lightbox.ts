@@ -189,13 +189,10 @@ export class Lightbox {
   protected readonly faces = computed((): FaceDto[] => this.detail()?.faces ?? []);
 
   protected faceLabel(face: FaceDto): string {
+    if (face.person_name) { return face.person_name; }
     const parts: string[] = [];
-    if (face.age != null) {
-      parts.push(`~${face.age} J.`);
-    }
-    if (face.score != null) {
-      parts.push(`${Math.round(face.score * 100)}% sicher`);
-    }
+    if (face.age != null) { parts.push(`~${face.age} J.`); }
+    if (face.score != null) { parts.push(`${Math.round(face.score * 100)}% sicher`); }
     return parts.join(' · ') || 'Gesicht';
   }
 
@@ -425,6 +422,10 @@ export class Lightbox {
           this.selectedFace.set(null);
           this.faceMatches.set([]);
           this.reloadTrigger.update((count: number) => count + 1);
+        },
+        error: (err: unknown) => {
+          console.error('[Lightbox] Face assignment failed:', err);
+          this.faceMatchesLoading.set(false);
         },
       });
   }
