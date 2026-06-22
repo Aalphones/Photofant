@@ -31,7 +31,7 @@ def _load_thresholds() -> tuple[float, float, int]:
     settings = load_settings()
     auto_threshold: float = float(settings.get("face_auto_threshold", 0.6))
     review_threshold: float = float(settings.get("face_review_threshold", 0.45))
-    min_cluster_size: int = int(settings.get("face_min_cluster_size", 3))
+    min_cluster_size: int = int(settings.get("face_min_cluster_size", 2))
     return auto_threshold, review_threshold, min_cluster_size
 
 
@@ -102,13 +102,18 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
         dtype=np.float32,
     )
 
-    log.info("Clustering %d face embeddings (min_cluster_size=%d)", len(face_ids), min_cluster_size)
+    log.info(
+        "Clustering %d face embeddings (min_cluster_size=%d, epsilon=%.2f)",
+        len(face_ids), min_cluster_size, 1.0 - auto_threshold,
+    )
 
     try:
         from sklearn.cluster import HDBSCAN as SklearnHDBSCAN
 
         clusterer = SklearnHDBSCAN(
             min_cluster_size=min_cluster_size,
+            min_samples=1,
+            cluster_selection_epsilon=1.0 - auto_threshold,
             metric="cosine",
             store_centers="centroid",
         )
