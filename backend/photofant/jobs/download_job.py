@@ -260,7 +260,7 @@ async def _download_http_file(
     else:
         log.warning("No SHA-256 in manifest for %s — integrity check skipped", label)
 
-    temp_path.rename(dest)
+    temp_path.replace(dest)  # replace() overwrites atomically on both Windows and Unix
     log.info("Downloaded %s → %s", label, dest)
 
 

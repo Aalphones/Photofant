@@ -32,8 +32,10 @@ from photofant.api import (
     tags,
     trash,
 )
+from photofant.config import get_models_dir
 from photofant.inference.generative_engine import generative_engine
 from photofant.inference.session_manager import session_manager
+from photofant.jobs.download_job import scan_models_dir
 from photofant.jobs.queue import job_queue
 from photofant.models.loader import load_manifest
 from photofant.settings import ensure_settings_file
@@ -56,6 +58,14 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     ensure_settings_file()
     load_manifest()  # validate manifest.json at startup; logs errors, never crashes
     job_queue.start()
+    # Auto-scan: register any models already present in models_dir so a new
+    # instance picks up existing downloads without manual intervention.
+    models_dir = get_models_dir()
+    found = await asyncio.to_thread(scan_models_dir, models_dir)
+    if found:
+        log.info("Auto-scan: %d model(s) registered from %s", len(found), models_dir)
+    else:
+        log.debug("Auto-scan: no matching models found in %s", models_dir)
     eviction_task = asyncio.create_task(_idle_eviction_loop())
     yield
     log.info("Shutting down Photofant backend")

@@ -279,7 +279,19 @@ def _stage_format(primary: Path, spec: ValidationSpec) -> ModelFileFormat:
     return detected
 
 
-def _stage_role(primary: Path, entry: ManifestEntry, spec: ValidationSpec) -> None:
+def _has_image_input(onnx_path: Path) -> bool:
+    """Return True if the ONNX file at onnx_path has at least one 4-D input tensor."""
+    session = _open_onnx_session(onnx_path)
+    if session is None:
+        return False
+    try:
+        inputs = session.get_inputs()
+    except Exception:  # noqa: BLE001 — engine internals, never surfaced
+        return False
+    return any(len(getattr(model_input, "shape", []) or []) >= 4 for model_input in inputs)
+
+
+def _stage_role(root: Path, primary: Path, entry: ManifestEntry, spec: ValidationSpec) -> None:
     """Stage 3: the file plausibly fits the slot's role.
 
     Reliable role discrimination needs the ONNX graph (input rank/shape), which
@@ -288,34 +300,54 @@ def _stage_role(primary: Path, entry: ManifestEntry, spec: ValidationSpec) -> No
     the format stage and the completeness stage already carry the role signal for
     the core ONNX set (a wrong-format file is rejected earlier, a tagger bundle
     must ship its CSV, etc.).
+
+    Multi-component folders (e.g. CLIP with vision + text model) must have at
+    least ONE .onnx file with a 4-D input. Checking only the alphabetically-first
+    file would misidentify the text encoder as the primary and fail the role check.
+    root is the folder path passed by validate_in_place; primary is the specific
+    .onnx file chosen by _locate_primary.
     """
-    session = _open_onnx_session(primary)
-    if session is None:
+    image_roles = {"face", "tagger", "semantic_search", "rembg"}
+    if entry.role not in image_roles:
+        return
+
+    # For folders, scan all .onnx files under root (covers sub-dirs like onnx/).
+    # For single files, just that file. Any one passing the 4-D check is enough.
+    if spec.layout is ModelLayout.FOLDER and root.is_dir():
+        candidates = sorted(root.rglob("*.onnx"))
+    else:
+        candidates = [primary]
+
+    if not candidates:
+        return
+
+    # Check whether onnxruntime is available before looping over candidates.
+    if _open_onnx_session(candidates[0]) is None:
         log.info(
             "onnxruntime unavailable — role introspection for %r deferred to the inference runtime",
             entry.id,
         )
         return
 
-    image_roles = {"face", "tagger", "semantic_search", "rembg"}
-    if entry.role not in image_roles:
+    if any(_has_image_input(candidate) for candidate in candidates):
         return
 
-    try:
-        inputs = session.get_inputs()
-    except Exception as error:  # noqa: BLE001 — engine internals, logged not surfaced
-        log.warning("Could not read ONNX inputs for role check of %r: %s", entry.id, error)
-        return
+    input_ranks_per_file = []
+    for candidate in candidates:
+        session = _open_onnx_session(candidate)
+        if session is not None:
+            try:
+                ranks = [len(getattr(inp, "shape", []) or []) for inp in session.get_inputs()]
+                input_ranks_per_file.append(f"{candidate.name}:{ranks}")
+            except Exception:  # noqa: BLE001
+                pass
 
-    has_image_input = any(len(getattr(model_input, "shape", []) or []) >= 4 for model_input in inputs)
-    if not has_image_input:
-        input_ranks = [len(getattr(model_input, "shape", []) or []) for model_input in inputs]
-        raise ModelValidationError(
-            ModelErrorCode.WRONG_ROLE,
-            expected=f"ein Bild-Modell für die Rolle `{entry.role}` (4-D-Eingang)",
-            found=f"ein Modell mit Eingangs-Rängen {input_ranks}",
-            next_step="Slot oder Datei korrigieren — die Datei passt nicht zu dieser Rolle.",
-        )
+    raise ModelValidationError(
+        ModelErrorCode.WRONG_ROLE,
+        expected=f"ein Bild-Modell für die Rolle `{entry.role}` (mind. ein 4-D-Eingang)",
+        found=f"kein Modell im Ordner hat einen 4-D-Eingang — {'; '.join(input_ranks_per_file)}",
+        next_step="Slot oder Ordner korrigieren — keines der ONNX-Modelle darin passt zu dieser Rolle.",
+    )
 
 
 def _stage_completeness(path: Path, spec: ValidationSpec) -> None:
@@ -392,7 +424,7 @@ def validate_in_place(entry: ManifestEntry, raw_path: str) -> InPlaceValidation:
         )
 
     _stage_format(primary, spec)
-    _stage_role(primary, entry, spec)
+    _stage_role(path, primary, entry, spec)
     _stage_completeness(path, spec)
     _stage_loadability(primary, spec)
 
