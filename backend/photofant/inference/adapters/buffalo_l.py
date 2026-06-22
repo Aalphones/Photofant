@@ -12,7 +12,7 @@ Detection pipeline per image:
   1. Resize + pad → 640×640 blob → SCRFD → raw anchor predictions
   2. Decode anchors, NMS → BBoxes + 5-point landmarks per face
   3. Affine-align each face to canonical 112×112 landmarks → ArcFace → 512-d embedding
-  4. Same alignment resized to 64×64 → genderage → age
+  4. Same alignment resized to 96×96 → genderage → age
   5. Return list[dict] with keys: bbox, landmarks, embedding, score, age
 
 Crop (what gets saved to disk) uses the original BBox + padding, NOT the
@@ -96,7 +96,8 @@ def _decode_scrfd_outputs(
     kps_tensors: list[np.ndarray] = []
 
     for tensor in outputs.values():
-        tensor = tensor.squeeze(0)  # remove batch dim
+        if tensor.ndim > 1 and tensor.shape[0] == 1:
+            tensor = tensor.squeeze(0)  # remove batch dim if present
         last_dim = tensor.shape[-1]
         if last_dim == 1:
             score_tensors.append(tensor.reshape(-1))
@@ -382,8 +383,8 @@ class BuffaloLEngine:
                 embedding_raw = rec_session.run([rec_output_name], {rec_input_name: arc_blob})[0]
                 face["embedding"] = _l2_normalize(embedding_raw).astype(np.float32)
 
-                # Age estimation (64×64, same alignment scaled down)
-                aligned_64 = _align_face(image, landmarks, out_size=64)
+                # Age estimation (96×96, same alignment scaled down)
+                aligned_64 = _align_face(image, landmarks, out_size=96)
                 age_blob = _make_arcface_blob(aligned_64[:, :, :])  # same norm
                 age_raw = age_session.run([age_output_name], {age_input_name: age_blob})[0]
                 face["age"], _ = _decode_age_gender(age_raw)
