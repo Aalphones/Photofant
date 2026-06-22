@@ -46,12 +46,12 @@
                 <div class="dupe-check-dialog__thumbs">
                   <img
                     class="dupe-check-dialog__thumb"
-                    [src]="thumbnailUrl(pair.asset_a_id)"
+                    [src]="thumbnailUrl(pair.asset_a_id, pair.asset_a_content_hash)"
                     alt=""
                   />
                   <img
                     class="dupe-check-dialog__thumb"
-                    [src]="thumbnailUrl(pair.asset_b_id)"
+                    [src]="thumbnailUrl(pair.asset_b_id, pair.asset_b_content_hash)"
                     alt=""
                   />
                 </div>

@@ -22,6 +22,7 @@ export class RunLeiste {
   readonly workflows    = input.required<ComfyUIWorkflow[]>();
   readonly activeWorkflow = input<ComfyUIWorkflow | null>(null);
   readonly bindings     = input<Record<string, number | number[]>>({});
+  readonly hashMap      = input<Record<number, string>>({});
   readonly armedSlotKey = input<string | null>(null);
   readonly batchAxisKey = input<string | null>(null);
   readonly isFiring     = input<boolean>(false);
@@ -55,7 +56,7 @@ export class RunLeiste {
     if (binding == null) { return null; }
     const assetId = Array.isArray(binding) ? binding[0] ?? null : binding;
     if (assetId == null) { return null; }
-    return this.assetService.thumbnailUrl(assetId, 256);
+    return this.assetService.thumbnailUrl(assetId, 256, this.hashMap()[assetId]);
   }
 
   protected slotBatchCount(slotKey: string): number {

@@ -74,8 +74,8 @@ export class DupeCheckDialog implements OnInit {
     });
   }
 
-  protected thumbnailUrl(assetId: number): string {
-    return `/api/assets/${assetId}/thumbnail?size=256`;
+  protected thumbnailUrl(assetId: number, contentHash: string): string {
+    return `/api/assets/${assetId}/thumbnail?size=256&v=${contentHash.slice(0, 8)}`;
   }
 
   protected onBackdrop(event: MouseEvent): void {

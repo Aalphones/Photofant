@@ -25,6 +25,8 @@ export interface FaceMatch {
 export interface PersonDupePair {
   asset_a_id: number;
   asset_b_id: number;
+  asset_a_content_hash: string;
+  asset_b_content_hash: string;
   phash_distance: number;
   similarity_pct: number;
 }

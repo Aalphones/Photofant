@@ -64,6 +64,7 @@ export class Galerie {
   protected readonly workflowMode      = signal(false);
   protected readonly activeWorkflowId  = signal<number | null>(null);
   protected readonly slotBindings      = signal<Record<string, number | number[]>>({});
+  protected readonly assetHashMap      = this.store.selectSignal(gallerySelectors.selectHashMap);
   protected readonly armedSlotKey      = signal<string | null>(null);
   protected readonly batchAxisKey      = signal<string | null>(null);
   protected readonly isFiring          = signal(false);

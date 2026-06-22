@@ -135,6 +135,17 @@ const selectLightboxNavContext = createSelector(
     ({ assets, lightboxId, hasMore, isLoading }),
 );
 
+const selectHashMap = createSelector(
+  selectEntities,
+  (entities): Record<number, string> => {
+    const map: Record<number, string> = {};
+    for (const asset of Object.values(entities)) {
+      if (asset) { map[asset.id] = asset.content_hash; }
+    }
+    return map;
+  }
+);
+
 export const gallerySelectors = {
   selectAll,
   selectTotal,
@@ -158,4 +169,5 @@ export const gallerySelectors = {
   selectFaceItems,
   selectFaceTotal,
   selectFaceHasMore,
+  selectHashMap,
 };

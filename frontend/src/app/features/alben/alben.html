@@ -95,13 +95,13 @@
     <div class="albums-grid">
       @for (col of collections(); track col.id) {
         <button class="album-card" (click)="open(col.id)">
-          <div class="album-cover" [class.album-cover--empty]="col.cover_asset_ids.length === 0">
-            @if (col.cover_asset_ids.length === 0) {
+          <div class="album-cover" [class.album-cover--empty]="col.cover_assets.length === 0">
+            @if (col.cover_assets.length === 0) {
               <pf-icon name="album" [size]="28" />
             } @else {
-              @for (assetId of col.cover_asset_ids; track assetId) {
+              @for (asset of col.cover_assets; track asset.id) {
                 <div class="album-cover__cell">
-                  <img [src]="thumbnailUrl(assetId)" alt="" loading="lazy" />
+                  <img [src]="thumbnailUrl(asset)" alt="" loading="lazy" />
                 </div>
               }
             }

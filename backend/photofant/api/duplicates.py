@@ -34,6 +34,8 @@ class DupeSearchRequest(BaseModel):
 class DupePairDto(BaseModel):
     asset_a_id: int
     asset_b_id: int
+    asset_a_content_hash: str
+    asset_b_content_hash: str
     phash_distance: int
     similarity_pct: int
 
@@ -51,7 +53,7 @@ async def search_person_duplicates(
     threshold = max(0, min(body.threshold, _MAX_THRESHOLD))
 
     rows = session.execute(
-        select(AssetInstance.asset_id, Asset.phash)
+        select(AssetInstance.asset_id, Asset.phash, Asset.content_hash)
         .join(Asset, Asset.id == AssetInstance.asset_id)
         .where(
             AssetInstance.person_id == body.person_id,
@@ -63,15 +65,16 @@ async def search_person_duplicates(
     if len(rows) < 2:
         return []
 
-    asset_phashes = [(int(row[0]), int(row[1])) for row in rows]
+    asset_data = [(int(row[0]), int(row[1]), str(row[2])) for row in rows]
+    hash_by_id: dict[int, str] = {row[0]: row[2] for row in asset_data}
 
     pairs: list[DupePairDto] = []
     seen: set[tuple[int, int]] = set()
 
-    for i in range(len(asset_phashes)):
-        for j in range(i + 1, len(asset_phashes)):
-            id_a, phash_a = asset_phashes[i]
-            id_b, phash_b = asset_phashes[j]
+    for i in range(len(asset_data)):
+        for j in range(i + 1, len(asset_data)):
+            id_a, phash_a, _ = asset_data[i]
+            id_b, phash_b, _ = asset_data[j]
 
             distance = hamming_distance(phash_a, phash_b)
             if distance > threshold:
@@ -86,6 +89,8 @@ async def search_person_duplicates(
             pairs.append(DupePairDto(
                 asset_a_id=key[0],
                 asset_b_id=key[1],
+                asset_a_content_hash=hash_by_id[key[0]],
+                asset_b_content_hash=hash_by_id[key[1]],
                 phash_distance=distance,
                 similarity_pct=similarity_pct,
             ))

@@ -1,5 +1,6 @@
 export interface AssetSummary {
   id: number;
+  content_hash: string;
   width: number | null;
   height: number | null;
   format: string | null;

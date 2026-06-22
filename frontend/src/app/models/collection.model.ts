@@ -17,13 +17,18 @@ export interface Trigger {
   negate: boolean;
 }
 
+export interface CoverAsset {
+  id: number;
+  content_hash: string;
+}
+
 export interface Collection {
   id: number;
   name: string;
   kind: CollectionKind;
   match_mode: MatchMode;
   member_count: number;
-  cover_asset_ids: number[];
+  cover_assets: CoverAsset[];
 }
 
 export interface CollectionDetail extends Collection {

@@ -116,7 +116,7 @@ export class Alben {
     this.back();
   }
 
-  protected thumbnailUrl(assetOrId: AssetDto | number): string {
+  protected thumbnailUrl(assetOrId: { id: number; content_hash: string } | number): string {
     if (typeof assetOrId === 'number') {
       return this.assetService.thumbnailUrl(assetOrId, 256);
     }

@@ -21,6 +21,7 @@ export type {
   Collection,
   CollectionDetail,
   CollectionKind,
+  CoverAsset,
   MatchMode,
   Trigger,
   TriggerType,

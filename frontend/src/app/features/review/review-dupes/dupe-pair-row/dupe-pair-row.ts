@@ -26,8 +26,8 @@ export class DupePairRow {
     return 'low';
   });
 
-  protected thumbnailUrl(assetId: number): string {
-    return `/api/assets/${assetId}/thumbnail?size=256`;
+  protected thumbnailUrl(asset: { id: number; content_hash: string }): string {
+    return `/api/assets/${asset.id}/thumbnail?size=256&v=${asset.content_hash.slice(0, 8)}`;
   }
 
   protected onCompare(): void {

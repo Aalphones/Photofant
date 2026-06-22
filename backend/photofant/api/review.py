@@ -30,6 +30,7 @@ def _now_utc() -> datetime:
 
 class AssetSummaryDto(BaseModel):
     id: int
+    content_hash: str
     width: int | None
     height: int | None
     format: str | None
@@ -58,6 +59,7 @@ class ResolveRequest(BaseModel):
 def _to_summary(asset: Asset) -> AssetSummaryDto:
     return AssetSummaryDto(
         id=asset.id,
+        content_hash=asset.content_hash,
         width=asset.width,
         height=asset.height,
         format=asset.format,

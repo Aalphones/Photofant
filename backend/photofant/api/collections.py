@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from photofant.db.models import (
+    Asset,
     AssetInstance,
     Collection,
     CollectionItem,
@@ -48,13 +49,18 @@ class TriggerDto(BaseModel):
     negate: bool
 
 
+class CoverAssetDto(BaseModel):
+    id: int
+    content_hash: str
+
+
 class CollectionDto(BaseModel):
     id: int
     name: str
     kind: str
     match_mode: str
     member_count: int
-    cover_asset_ids: list[int]
+    cover_assets: list[CoverAssetDto]
 
 
 class CollectionDetailDto(CollectionDto):
@@ -106,6 +112,20 @@ def _member_asset_ids(session: Session, collection_id: int, limit: int | None = 
     return [row[0] for row in query.all()]
 
 
+def _cover_assets(session: Session, collection_id: int) -> list[CoverAssetDto]:
+    """Up to 4 cover assets (id + content_hash) for album thumbnail display."""
+    rows = (
+        session.query(CollectionItem.asset_id, Asset.content_hash)
+        .join(Asset, Asset.id == CollectionItem.asset_id)
+        .join(AssetInstance, AssetInstance.asset_id == CollectionItem.asset_id)
+        .filter(CollectionItem.collection_id == collection_id, AssetInstance.deleted_at.is_(None))
+        .distinct()
+        .limit(4)
+        .all()
+    )
+    return [CoverAssetDto(id=row[0], content_hash=row[1]) for row in rows]
+
+
 def _build_trigger_dto(session: Session, trigger: SmartTrigger) -> TriggerDto:
     tag_name: str | None = None
     if trigger.type == "tag" and trigger.tag_id is not None:
@@ -130,7 +150,7 @@ def _build_collection_dto(session: Session, collection: Collection) -> Collectio
         kind=collection.kind,
         match_mode=collection.match_mode,
         member_count=len(member_ids),
-        cover_asset_ids=member_ids[:4],
+        cover_assets=_cover_assets(session, collection.id),
     )
 
 
