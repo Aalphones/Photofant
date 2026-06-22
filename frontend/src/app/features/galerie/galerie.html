@@ -49,14 +49,6 @@
         (loadMore)="onFaceLoadMore()"
       />
     } @else {
-      @if (mediaType() === 'all' && faceItems().length > 0) {
-        <pf-face-grid
-          [faceItems]="faceItems()"
-          [isLoading]="false"
-          (openFace)="onOpenFace($event)"
-          (loadMore)="onFacePreviewLoadMore()"
-        />
-      }
       <pf-galerie-grid
         [groups]="groups()"
         [density]="density()"
@@ -64,10 +56,12 @@
         [selectionMode]="selectionMode()"
         [selectedIds]="selectedIds()"
         [isArmed]="isArmed()"
+        [facesMap]="facesMap()"
         (openAsset)="isArmed() ? onBindAsset($event) : onOpenAsset($event)"
         (batchBind)="onBatchBindAsset($event)"
         (selectAll)="onSelectAll($event)"
         (loadMore)="onLoadMore()"
+        (openFace)="onOpenFace($event)"
       />
     }
   </div>

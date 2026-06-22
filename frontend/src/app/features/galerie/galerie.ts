@@ -13,6 +13,7 @@ import { RunLeiste } from './run-leiste/run-leiste';
 import type { RunFirePayload } from './run-leiste/run-leiste';
 import { BulkBar, BulkEditDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { BulkEditPayload, RerunPayload } from '@photofant/ui';
+import type { FaceGalleryItemDto } from '@photofant/models';
 
 @Component({
   selector: 'pf-galerie',
@@ -77,6 +78,24 @@ export class Galerie {
     const workflowId = this.activeWorkflowId();
     if (workflowId === null) { return null; }
     return this.activeWorkflows().find((workflow) => workflow.id === workflowId) ?? null;
+  });
+
+  protected readonly facesMap = computed((): Map<number, FaceGalleryItemDto[]> => {
+    if (this.mediaType() !== 'all') {
+      return new Map<number, FaceGalleryItemDto[]>();
+    }
+    const map = new Map<number, FaceGalleryItemDto[]>();
+    for (const face of this.faceItems()) {
+      if (face.asset_id != null) {
+        const existing = map.get(face.asset_id);
+        if (existing !== undefined) {
+          existing.push(face);
+        } else {
+          map.set(face.asset_id, [face]);
+        }
+      }
+    }
+    return map;
   });
 
   protected readonly isEmpty = computed((): boolean => {
@@ -149,10 +168,6 @@ export class Galerie {
     if (!this.isLoading() && this.faceHasMore()) {
       this.store.dispatch(galleryActions.requestNextPage());
     }
-  }
-
-  protected onFacePreviewLoadMore(): void {
-    // Preview in 'all' mode is fixed to 12 items — no pagination
   }
 
   protected onOpenFace(event: { faceId: number; assetId: number | null }): void {

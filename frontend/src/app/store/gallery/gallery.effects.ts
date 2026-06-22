@@ -3,6 +3,7 @@ import { Actions, createEffect, ofType, ROOT_EFFECTS_INIT } from '@ngrx/effects'
 import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, EMPTY, filter, map, merge, mergeMap, of, switchMap, tap } from 'rxjs';
+import type { Action } from '@ngrx/store';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job } from '@photofant/models';
 import { AssetService, PersonService, SettingsService } from '@photofant/services';
@@ -108,23 +109,36 @@ export class GalleryEffects {
           ),
         );
 
-        // In 'all' mode, also fetch a face preview (first page only, no pagination)
-        if (params.mediaType === 'all' && params.page === 1) {
-          const facePreviewParams: { page: number; page_size: number; person_id?: number } = {
-            page: 1,
-            page_size: 12,
-          };
-          if (params.personId != null) { facePreviewParams.person_id = params.personId; }
-          const faceFetch$ = this.personService.listFacesGallery(facePreviewParams).pipe(
-            map((result: FacesPage) => galleryActions.loadFacesPageSuccess({
-              items: result.items,
-              total: result.total,
-              page: result.page,
-              pageSize: result.page_size,
-            })),
-            catchError(() => EMPTY),
+        // In 'all' mode, fetch faces for the current asset page after assets are loaded
+        if (params.mediaType === 'all') {
+          return assetFetch$.pipe(
+            mergeMap((assetAction: Action) => {
+              if (assetAction.type !== galleryActions.loadPageSuccess.type) {
+                return of(assetAction);
+              }
+              const successAction = assetAction as ReturnType<typeof galleryActions.loadPageSuccess>;
+              const assetIds = successAction.items.map((item: AssetDto) => item.id);
+              if (assetIds.length === 0) {
+                return of(assetAction);
+              }
+              const faceParams: { page: number; page_size: number; person_id?: number; asset_ids: number[] } = {
+                page: successAction.page,
+                page_size: 500,
+                asset_ids: assetIds,
+              };
+              if (params.personId != null) { faceParams.person_id = params.personId; }
+              const faceFetch$ = this.personService.listFacesGallery(faceParams).pipe(
+                map((result: FacesPage) => galleryActions.loadFacesPageSuccess({
+                  items: result.items,
+                  total: result.total,
+                  page: successAction.page,
+                  pageSize: result.page_size,
+                })),
+                catchError(() => EMPTY),
+              );
+              return merge(of(assetAction), faceFetch$);
+            }),
           );
-          return merge(assetFetch$, faceFetch$);
         }
 
         return assetFetch$;

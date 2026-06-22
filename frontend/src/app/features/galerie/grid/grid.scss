@@ -54,6 +54,11 @@
   flex-basis: 0;
 }
 
+.grid__face-wrapper {
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
 .grid__skeleton-row {
   display: flex;
   flex-wrap: wrap;

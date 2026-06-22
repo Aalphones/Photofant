@@ -85,12 +85,15 @@ class FacesGalleryPage(BaseModel):
 async def list_faces_gallery(
     session: DbSession,
     page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=200)] = 50,
+    page_size: Annotated[int, Query(ge=1, le=1000)] = 50,
     person_id: int | None = None,
+    asset_ids: Annotated[list[int] | None, Query()] = None,
 ) -> FacesGalleryPage:
     query = session.query(Face)
     if person_id is not None:
         query = query.filter(Face.person_id == person_id)
+    if asset_ids:
+        query = query.filter(Face.asset_id.in_(asset_ids))
 
     total = query.count()
     faces = (

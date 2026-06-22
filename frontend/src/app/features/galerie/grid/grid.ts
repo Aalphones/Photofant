@@ -10,16 +10,17 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import type { AssetDto, AssetGroup, Density } from '@photofant/models';
+import type { AssetDto, AssetGroup, Density, FaceGalleryItemDto } from '@photofant/models';
 import { BASE_HEIGHTS } from '@photofant/models';
 import { GalerieCell } from '../cell/cell';
+import { FaceCell } from '../face-cell/face-cell';
 
 const SKELETON_RATIOS = [1.4, 0.75, 1.0, 1.6, 0.85, 1.2, 0.7, 1.5, 1.1, 0.9];
 
 @Component({
   selector: 'pf-galerie-grid',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GalerieCell],
+  imports: [GalerieCell, FaceCell],
   templateUrl: './grid.html',
   styleUrl: './grid.scss',
 })
@@ -33,7 +34,10 @@ export class GalerieGrid {
   readonly selectedIds   = input<number[]>([]);
   readonly isArmed       = input<boolean>(false);
 
+  readonly facesMap   = input<Map<number, FaceGalleryItemDto[]>>(new Map());
+
   readonly openAsset  = output<number>();
+  readonly openFace   = output<{ faceId: number; assetId: number | null }>();
   readonly selectAll  = output<number[]>();
   readonly loadMore   = output<void>();
   readonly batchBind  = output<number>();
@@ -65,6 +69,14 @@ export class GalerieGrid {
 
   protected isAssetSelected(assetId: number): boolean {
     return this.selectedIds().includes(assetId);
+  }
+
+  protected facesForAsset(assetId: number): FaceGalleryItemDto[] {
+    return this.facesMap().get(assetId) ?? [];
+  }
+
+  protected onOpenFace(event: { faceId: number; assetId: number | null }): void {
+    this.openFace.emit(event);
   }
 
   protected groupIds(group: AssetGroup): number[] {

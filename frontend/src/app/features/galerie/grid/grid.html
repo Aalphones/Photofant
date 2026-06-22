@@ -29,6 +29,19 @@
           (openAsset)="onOpenAsset($event)"
           (batchBind)="onBatchBind($event)"
         />
+        @for (face of facesForAsset(asset.id); track face.id) {
+          <div
+            class="grid__face-wrapper"
+            [style.width.px]="baseHeight()"
+            [style.height.px]="baseHeight()"
+          >
+            <pf-face-cell
+              [face]="face"
+              [cellSize]="baseHeight()"
+              (openFace)="onOpenFace($event)"
+            />
+          </div>
+        }
       }
       <div class="grid__spacer"></div>
     </div>
