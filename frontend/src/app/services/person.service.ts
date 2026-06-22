@@ -50,6 +50,10 @@ export class PersonService {
     return this.http.patch(`/api/faces/${faceId}/assign`, { person_id: personId });
   }
 
+  revealPersonFolder(personId: number): Observable<void> {
+    return this.http.post<void>(`/api/persons/${personId}/reveal`, null);
+  }
+
   importToPersonFolder(personId: number, files: File[]): Observable<PersonImportResponse> {
     const formData = new FormData();
     for (const file of files) {

@@ -30,6 +30,7 @@ export class PersonCard {
   readonly importFiles = output<{ personId: number; files: File[] }>();
   readonly splitClick = output<void>();
   readonly dupeCheck = output<void>();
+  readonly revealInFileBrowser = output<void>();
 
   protected readonly isEditing = signal(false);
   protected readonly editName = signal('');
@@ -114,6 +115,12 @@ export class PersonCard {
     event.stopPropagation();
     this.actionsVisible.set(false);
     this.dupeCheck.emit();
+  }
+
+  protected onRevealClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.actionsVisible.set(false);
+    this.revealInFileBrowser.emit();
   }
 
   protected onImportClick(event: MouseEvent): void {

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import subprocess
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -273,6 +275,27 @@ async def import_to_person_folder(
 
     status = await enqueue_person_import(person_id, saved_paths)
     return PersonImportResponse(job_id=status.id)
+
+
+@router.post("/{person_id}/reveal", status_code=204)
+async def reveal_person_folder(person_id: int, session: DbSession) -> None:
+    """Open the person's folder in the system file browser (Windows Explorer)."""
+    from photofant.config import get_data_root
+    from photofant.media.person_folders import ensure_person_folder
+
+    person = session.get(Person, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    data_root = get_data_root()
+    person_dir = ensure_person_folder(data_root, person)
+
+    if sys.platform == "win32":
+        subprocess.Popen(["explorer", str(person_dir)])
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", str(person_dir)])
+    else:
+        subprocess.Popen(["xdg-open", str(person_dir)])
 
 
 @router.post("/{person_id}/split", response_model=SplitResultDto)

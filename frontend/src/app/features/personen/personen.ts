@@ -55,6 +55,10 @@ export class Personen implements OnInit {
     this.dupeCheckPerson.set(person);
   }
 
+  protected onRevealInFileBrowser(person: PersonDto): void {
+    this.personService.revealPersonFolder(person.id).subscribe();
+  }
+
   protected onMerge(event: { fromId: number; intoId: number }): void {
     this.store.dispatch(personsActions.mergePersons(event));
     this.showMergeDialog.set(false);
