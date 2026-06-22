@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
-import { Icon } from '../icon/icon';
 import type { CaptionPresetDto } from '@photofant/models';
 import type { ClassifyStep } from '@photofant/services';
+import { Icon } from '../icon/icon';
 
 export interface RerunPayload {
   steps: ClassifyStep[];
@@ -14,7 +14,7 @@ interface StepOption {
   desc: string;
 }
 
-const DEFAULT_STEPS: readonly ClassifyStep[] = ['heuristics', 'tags', 'caption', 'embedding'];
+const DEFAULT_STEPS: readonly ClassifyStep[] = ['heuristics', 'tags', 'caption', 'embedding', 'phash'];
 
 const ALL_STEPS: StepOption[] = [
   { key: 'heuristics', label: 'Qualität',    desc: 'Auflösung + Schärfe → quality_score' },
