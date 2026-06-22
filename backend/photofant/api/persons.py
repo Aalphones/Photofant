@@ -36,6 +36,10 @@ class PersonDto(BaseModel):
     portrait_face_id: int | None
 
 
+class CreatePersonRequest(BaseModel):
+    name: str
+
+
 class RenameRequest(BaseModel):
     name: str
 
@@ -107,6 +111,30 @@ def _build_person_dto(session: Session, person: Person) -> PersonDto:
         fav_count=fav_count,
         portrait_face_id=portrait_face.id if portrait_face is not None else None,
     )
+
+
+@router.post("", response_model=PersonDto, status_code=201)
+async def create_person(body: CreatePersonRequest, session: DbSession) -> PersonDto:
+    """Create a new named person and ensure their folder exists."""
+    from photofant.config import get_data_root
+    from photofant.media.person_folders import ensure_person_folder
+
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="Name must not be empty")
+
+    new_person = Person(name=name, is_unknown=False)
+    session.add(new_person)
+    session.flush()
+
+    data_root = get_data_root()
+    ensure_person_folder(data_root, new_person)
+
+    session.commit()
+    session.refresh(new_person)
+
+    log.info("Created person %d with name %r", new_person.id, new_person.name)
+    return _build_person_dto(session, new_person)
 
 
 @router.get("", response_model=list[PersonDto])

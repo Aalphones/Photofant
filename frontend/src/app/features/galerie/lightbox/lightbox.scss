@@ -652,3 +652,66 @@ pf-zoom-stage {
   color: var(--text-3);
   flex: none;
 }
+
+.face-matches__new-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text-3);
+  border-top: 1px solid var(--line);
+  transition: background 0.1s, color 0.1s;
+
+  &:hover {
+    background: var(--surface-2);
+    color: var(--accent);
+  }
+}
+
+.face-matches__create {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--line);
+}
+
+.face-matches__create-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 7px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+  font-size: 12px;
+  color: var(--text-1);
+  outline: none;
+
+  &::placeholder { color: var(--text-3); }
+}
+
+.face-matches__create-confirm,
+.face-matches__create-cancel {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-s);
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.face-matches__create-confirm {
+  color: var(--accent);
+
+  &:hover:not(:disabled) { background: oklch(0.55 0.18 285 / 0.12); }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+}
+
+.face-matches__create-cancel {
+  color: var(--text-3);
+
+  &:hover { background: var(--surface-2); color: var(--text-1); }
+}

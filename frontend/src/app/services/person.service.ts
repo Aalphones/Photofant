@@ -21,6 +21,10 @@ export class PersonService {
     return this.http.get<PersonDto[]>('/api/persons');
   }
 
+  createPerson(name: string): Observable<PersonDto> {
+    return this.http.post<PersonDto>('/api/persons', { name });
+  }
+
   renamePerson(id: number, name: string): Observable<PersonDto> {
     return this.http.patch<PersonDto>(`/api/persons/${id}`, { name });
   }

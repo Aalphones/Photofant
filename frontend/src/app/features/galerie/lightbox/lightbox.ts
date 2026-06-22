@@ -13,7 +13,7 @@ import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetSummary, ComfyUIImportResponse, DupePair, DupeResolution, FaceDto, FaceMatch, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
+import type { AssetDto, AssetSummary, ComfyUIImportResponse, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
 import { AssetService, ClassifyService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -132,6 +132,8 @@ export class Lightbox {
   protected readonly selectedFace       = signal<FaceDto | null>(null);
   protected readonly faceMatches        = signal<FaceMatch[]>([]);
   protected readonly faceMatchesLoading = signal(false);
+  protected readonly creatingNewPerson  = signal(false);
+  protected readonly newPersonName      = signal('');
 
   // ── Computed display ─────────────────────────────────────────────────────
 
@@ -235,6 +237,8 @@ export class Lightbox {
       // Reset face matches
       this.selectedFace.set(null);
       this.faceMatches.set([]);
+      this.creatingNewPerson.set(false);
+      this.newPersonName.set('');
     });
 
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -426,6 +430,45 @@ export class Lightbox {
 
   protected matchScorePercent(score: number): number {
     return Math.round(score * 100);
+  }
+
+  protected startCreatePerson(): void {
+    this.creatingNewPerson.set(true);
+    this.newPersonName.set('');
+  }
+
+  protected cancelCreatePerson(): void {
+    this.creatingNewPerson.set(false);
+    this.newPersonName.set('');
+  }
+
+  protected confirmCreatePerson(): void {
+    const name = this.newPersonName().trim();
+    const face = this.selectedFace();
+    if (!name || face == null) {
+      this.cancelCreatePerson();
+      return;
+    }
+    this.personService.createPerson(name)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (person: PersonDto) => {
+          this.creatingNewPerson.set(false);
+          this.newPersonName.set('');
+          this.assignFaceToPerson(face.id, person.id);
+        },
+        error: () => {
+          this.creatingNewPerson.set(false);
+        },
+      });
+  }
+
+  protected onNewPersonKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      this.confirmCreatePerson();
+    } else if (event.key === 'Escape') {
+      this.cancelCreatePerson();
+    }
   }
 
   // ── Tag editing ───────────────────────────────────────────────────────────

@@ -280,6 +280,40 @@
                   }
                 </div>
               }
+
+              <!-- Neue Person anlegen -->
+              @if (creatingNewPerson()) {
+                <div class="face-matches__create">
+                  <input
+                    class="face-matches__create-input"
+                    [value]="newPersonName()"
+                    (input)="newPersonName.set($any($event.target).value)"
+                    (keydown)="onNewPersonKeyDown($event)"
+                    placeholder="Name der neuen Person…"
+                    autofocus
+                  />
+                  <button
+                    class="face-matches__create-confirm"
+                    (click)="confirmCreatePerson()"
+                    aria-label="Bestätigen"
+                    [disabled]="!newPersonName().trim()"
+                  >
+                    <pf-icon name="check" [size]="13" />
+                  </button>
+                  <button
+                    class="face-matches__create-cancel"
+                    (click)="cancelCreatePerson()"
+                    aria-label="Abbrechen"
+                  >
+                    <pf-icon name="x" [size]="13" />
+                  </button>
+                </div>
+              } @else {
+                <button class="face-matches__new-btn" (click)="startCreatePerson()">
+                  <pf-icon name="plus" [size]="13" />
+                  Neuer Person anlegen
+                </button>
+              }
             </div>
           }
         </div>
