@@ -290,7 +290,7 @@
                           />
                         } @else {
                           <div class="face-matches__avatar face-matches__avatar--placeholder">
-                            {{ (person.name || '?')[0].toUpperCase() }}
+                            {{ (person.name || '?')[0]?.toUpperCase() }}
                           </div>
                         }
                         <div class="face-matches__info">
