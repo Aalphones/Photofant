@@ -10,7 +10,7 @@
 
 - [x] → Phase 4: `get_history`-Polling im Worker aktivieren, sobald Run-Leiste SSE-Events konsumiert. — Eingearbeitet: Phase 5 muss `prompt_id`-Lookup über eigenen Flow lösen (run gibt nur job_id zurück).
 
-- [ ] → Phase 5: `runWorkflow` gibt nur `job_id` zurück (kein `prompt_id`). Import-Flow in Phase 5 muss History via Job-Queue-State oder separatem `/api/comfyui/results?job_id=`-Endpoint holen. Alternativ: output_dir-Scan als primärer Pfad (Konzept §8.2 erlaubt das).
+- [x] → Phase 5: `runWorkflow` gibt nur `job_id` zurück (kein `prompt_id`). Import-Flow in Phase 5 muss History via Job-Queue-State oder separatem `/api/comfyui/results?job_id=`-Endpoint holen. Alternativ: output_dir-Scan als primärer Pfad (Konzept §8.2 erlaubt das).
 
 ## Offene Punkte / Risiken
 

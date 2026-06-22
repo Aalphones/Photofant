@@ -1,6 +1,6 @@
 # P8b — ComfyUI-Workflow-Integration (Stage 5, koexistierend)
 
-> Status: geparkt · **optional** · Quelle: [Konzept-ComfyUI-Integration](../../Konzept-ComfyUI-Integration.md) · Abhängigkeiten: P2 (Galerie + Job-Queue), P4 (Settings/Registry-Pattern), P8 (Versionierung, `personX/edits/`, Import-Hook) · **koexistiert mit P9** (in-process GenerativeEngine), ersetzt es nicht.
+> Status: complete · **optional** · Quelle: [Konzept-ComfyUI-Integration](../../Konzept-ComfyUI-Integration.md) · Abhängigkeiten: P2 (Galerie + Job-Queue), P4 (Settings/Registry-Pattern), P8 (Versionierung, `personX/edits/`, Import-Hook) · **koexistiert mit P9** (in-process GenerativeEngine), ersetzt es nicht.
 
 Photofant **triggert** Workflows, ComfyUI **führt aus**. Fire-and-Forget: Ergebnis landet in ComfyUIs eigenem `output/`, wird **dort** reviewt, und nur bei Bedarf als Edit zurück importiert (bewusstes Speichern, §8.2-Prinzip aus P8). Kein torch/diffusers-Stack — ComfyUI besitzt Modelle, VRAM, GGUF/fp8. Dieser Pfad steht **neben** dem in-process-Backend aus P9; ADR-003 dokumentiert die Koexistenz und das Verhältnis zu ADR-002.
 
@@ -12,7 +12,7 @@ Photofant **triggert** Workflows, ComfyUI **führt aus**. Fire-and-Forget: Ergeb
 | 2 | [Workflow-Template-Registry](phase-2-workflow-registry.md) | heikel | complete |
 | 3 | [Trigger-Flow (Fire-and-Forget)](phase-3-trigger-flow.md) | heikel | complete |
 | 4 | [Galerie-Run-Leiste (Armed-Slots, Batch)](phase-4-run-leiste.md) | heikel | complete |
-| 5 | [Import als Edit (on demand)](phase-5-import-edit.md) | standard | pending |
+| 5 | [Import als Edit (on demand)](phase-5-import-edit.md) | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -41,11 +41,28 @@ Photofant **triggert** Workflows, ComfyUI **führt aus**. Fire-and-Forget: Ergeb
 
 ## Summary
 
+Alle 5 Phasen complete (2026-06-21). ComfyUI-Integration vollständig: Settings + Verbindungstest (Ph1), Workflow-Template-Registry mit Introspektion + Validierung (Ph2), Fire-and-Forget-Trigger mit Job-Queue + SSE (Ph3), Galerie-Run-Leiste mit Armed-Slots und Batch (Ph4), Import-als-Edit-Dialog mit Results-Listing und `Version(type="comfyui")` (Ph5).
+
 ## Files touched
+
+**Backend:** `comfyui/client.py`, `api/comfyui.py`, `api/settings.py`, `tests/test_comfyui_import.py` (neu), `tests/test_comfyui.py`, `tests/test_comfyui_workflows.py`, `tests/test_comfyui_trigger.py`
+
+**Frontend:** `models/comfyui-workflow.model.ts`, `models/index.ts`, `services/comfyui.service.ts`, `ui/comfyui-import-dialog/` (3 neue Dateien), `ui/index.ts`, `features/galerie/lightbox/lightbox.ts`, `features/galerie/lightbox/lightbox.html`, `features/galerie/run-bar/run-bar.ts`, `features/galerie/run-bar/run-bar.html`, `features/galerie/run-bar/run-bar.scss`, `store/comfyui/`
+
+**Docs:** `docs/planning/2026-06-15_p08b-comfyui-integration/` (alle Phasen-Dateien), `docs/decisions/ADR-003-comfyui-koexistenz.md`
 
 ## Commits
 
+feat(p8b): Phase 1 — Verbindung & Settings (ADR-003)
+feat(p8b): Phase 2 — Workflow-Template-Registry
+feat(p8b): Phase 3 — Trigger-Flow (Fire-and-Forget)
+feat(p8b): Phase 4 — Galerie-Run-Leiste (Armed-Slots, Batch)
+feat(p8b): Phase 5 — Import als Edit (on demand)
+
 ## Deviations from plan
+
+- Import läuft nicht über den P8-Hook `POST /api/assets/{id}/versions/import` (erwartet multipart-Upload), sondern über eigenen `POST /api/comfyui/results/import` — schreibt direkt in `personX/edits/`, legt `Version(type="comfyui")` an, dasselbe Thumbnail-Ergebnis.
+- `runWorkflow` gibt nur `job_id` zurück (kein `prompt_id`); Import-Flow nutzt output_dir-Scan als primären Pfad + optionalen History-Lookup per `prompt_id`.
 
 ## Follow-ups
 
