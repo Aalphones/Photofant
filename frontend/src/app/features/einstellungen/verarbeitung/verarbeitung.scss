@@ -21,6 +21,17 @@
 .verarbeitung__slider-gruppe { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; width: 200px; }
 .verarbeitung__slider-wert { font-size: 12px; color: var(--text-3); white-space: nowrap; }
 .verarbeitung__slider { width: 200px; accent-color: var(--accent); cursor: pointer; }
+.verarbeitung__btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  background: var(--accent); color: var(--bg);
+  border-radius: var(--radius-s);
+  font-size: 13px; font-weight: 600;
+  white-space: nowrap; flex-shrink: 0;
+  transition: background .12s, opacity .12s;
+}
+.verarbeitung__btn:hover:not(:disabled) { background: var(--accent-press); }
+.verarbeitung__btn:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 860px) {
   .verarbeitung__zeile { flex-wrap: wrap; gap: 8px; }
   .verarbeitung__zeile-steuerung { width: 100%; }

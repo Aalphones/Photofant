@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, linkedSignal } from '@angular/core';
 import { Store } from '@ngrx/store';
 import type { ProcessingConfig } from '@photofant/models';
-import { modelsActions, modelsSelectors } from '@photofant/store';
+import { modelsActions, modelsSelectors, personsActions, personsSelectors } from '@photofant/store';
 
 @Component({
   selector: 'pf-einstellungen-verarbeitung',
@@ -14,6 +14,7 @@ export class Verarbeitung {
   private readonly store = inject(Store);
 
   readonly processingConfig = this.store.selectSignal(modelsSelectors.selectProcessingConfig);
+  protected readonly isClustering = this.store.selectSignal(personsSelectors.selectIsClustering);
 
   // linkedSignal: zeigt Store-Wert an, akzeptiert aber temporäre User-Eingaben während des Ziehens
   protected readonly dupeThresholdDisplay = linkedSignal(() => this.processingConfig().dupeThreshold);
@@ -23,7 +24,8 @@ export class Verarbeitung {
     if (value <= 4) { return `${value} — nur fast identische Bilder`; }
     if (value <= 9) { return `${value} — geringe Toleranz`; }
     if (value <= 14) { return `${value} — mittlere Empfindlichkeit`; }
-    return `${value} — hohe Toleranz`;
+    if (value <= 20) { return `${value} — hohe Toleranz`; }
+    return `${value} — sehr hohe Toleranz (mehr Fehlalarme möglich)`;
   });
 
   constructor() {
@@ -63,7 +65,11 @@ export class Verarbeitung {
 
   onDupeThresholdChange(target: HTMLInputElement): void {
     const raw = parseInt(target.value, 10);
-    const clamped = Math.min(20, Math.max(0, isNaN(raw) ? 10 : raw));
+    const clamped = Math.min(32, Math.max(0, isNaN(raw) ? 10 : raw));
     this.patchProcessingConfig({ dupeThreshold: clamped });
+  }
+
+  onTriggerClustering(): void {
+    this.store.dispatch(personsActions.triggerClustering());
   }
 }

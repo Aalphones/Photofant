@@ -38,3 +38,7 @@ export interface FaceImportResult {
 export interface PersonImportResponse {
   job_id: string;
 }
+
+export interface ClusterResult {
+  job_id: string;
+}

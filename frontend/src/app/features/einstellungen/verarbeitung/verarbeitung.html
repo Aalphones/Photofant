@@ -57,7 +57,7 @@
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">
     <div class="verarbeitung__zeile-inhalt">
       <div class="verarbeitung__zeile-titel">Ähnlichkeitsschwelle</div>
-      <div class="verarbeitung__zeile-sub">0 = nur identische Bilder · 20 = sehr ähnliche Bilder einschließen</div>
+      <div class="verarbeitung__zeile-sub">0 = nur identische Bilder · 32 = auch deutlich ähnliche Bilder einschließen</div>
     </div>
     <div class="verarbeitung__zeile-steuerung">
       <div class="verarbeitung__slider-gruppe">
@@ -66,13 +66,41 @@
           class="verarbeitung__slider"
           type="range"
           min="0"
-          max="20"
+          max="32"
           step="1"
           [value]="processingConfig().dupeThreshold"
           (input)="onDupeThresholdInput($any($event.target))"
           (change)="onDupeThresholdChange($any($event.target))"
         >
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="verarbeitung__gruppen-label">Gesichtserkennung</div>
+<div class="verarbeitung__gruppe">
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Personen-Clustering starten</div>
+      <div class="verarbeitung__zeile-sub">
+        Gruppiert alle erkannten Gesichter nach Ähnlichkeit und legt automatisch
+        Personen-Cluster an. Anschließend in der Personen-Ansicht benennen,
+        zusammenführen oder aufteilen. Fortschritt läuft im Job-Dock.
+      </div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <button
+        class="verarbeitung__btn"
+        [disabled]="isClustering()"
+        (click)="onTriggerClustering()"
+      >
+        @if (isClustering()) {
+          <span class="spinner"></span>
+          Läuft…
+        } @else {
+          Clustering starten
+        }
+      </button>
     </div>
   </div>
 </div>

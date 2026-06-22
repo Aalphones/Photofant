@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
+  ClusterResult,
   FaceImportResult,
   FaceMatch,
   MergeResult,
@@ -59,6 +60,10 @@ export class PersonService {
       formData.append('files', file, file.name);
     }
     return this.http.post<FaceImportResult[]>('/api/faces/import', formData);
+  }
+
+  triggerClustering(): Observable<ClusterResult> {
+    return this.http.post<ClusterResult>('/api/faces/cluster', null);
   }
 
   searchDuplicates(personId: number, threshold = 10): Observable<PersonDupePair[]> {

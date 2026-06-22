@@ -5,6 +5,7 @@ import { personsActions } from './persons.actions';
 
 export interface PersonsState extends EntityState<PersonDto> {
   isLoading: boolean;
+  isClustering: boolean;
   error: string | null;
 }
 
@@ -20,6 +21,7 @@ const adapter: EntityAdapter<PersonDto> = createEntityAdapter<PersonDto>({
 
 const initialState: PersonsState = adapter.getInitialState({
   isLoading: false,
+  isClustering: false,
   error: null,
 });
 
@@ -45,6 +47,20 @@ export const personsFeature = createFeature({
     ),
     on(personsActions.renamePersonFailure, (state: PersonsState, { error }) => ({
       ...state,
+      error,
+    })),
+    on(personsActions.triggerClustering, (state: PersonsState) => ({
+      ...state,
+      isClustering: true,
+      error: null,
+    })),
+    on(personsActions.triggerClusteringSuccess, (state: PersonsState) => ({
+      ...state,
+      isClustering: false,
+    })),
+    on(personsActions.triggerClusteringFailure, (state: PersonsState, { error }) => ({
+      ...state,
+      isClustering: false,
       error,
     })),
   ),

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, map, of, switchMap, mergeMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { PersonDto, MergeResult, SplitResult } from '@photofant/models';
+import type { ClusterResult, PersonDto, MergeResult, SplitResult } from '@photofant/models';
 import { PersonService } from '@photofant/services';
 import { personsActions } from './persons.actions';
 
@@ -78,6 +78,20 @@ export class PersonsEffects {
     this.actions$.pipe(
       ofType(personsActions.splitPersonSuccess),
       map(() => personsActions.loadPersons()),
+    )
+  );
+
+  readonly triggerClustering$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(personsActions.triggerClustering),
+      switchMap(() =>
+        this.personService.triggerClustering().pipe(
+          map((result: ClusterResult) => personsActions.triggerClusteringSuccess({ result })),
+          catchError((error: HttpErrorResponse) =>
+            of(personsActions.triggerClusteringFailure({ error: error.message }))
+          ),
+        )
+      ),
     )
   );
 }
