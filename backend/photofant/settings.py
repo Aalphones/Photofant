@@ -148,7 +148,7 @@ def save_settings(settings: AppSettings) -> None:
     path = get_settings_path()
     tmp_path = path.parent / (path.name + ".tmp")
     tmp_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8")
-    tmp_path.rename(path)
+    tmp_path.replace(path)
 
 
 def patch_settings(partial: dict[str, Any]) -> AppSettings:

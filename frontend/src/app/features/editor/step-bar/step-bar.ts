@@ -1,11 +1,9 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { EditorStep } from '@photofant/models';
-import { Icon } from '@photofant/ui';
 
 @Component({
   selector: 'pf-step-bar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon],
   templateUrl: './step-bar.html',
   styleUrl: './step-bar.scss',
 })
