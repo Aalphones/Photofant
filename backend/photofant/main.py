@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from photofant.api import (
     assets,
+    auth,
     caption_presets,
     classify,
     collections,
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.include_router(auth.router, prefix="/api")
     app.include_router(health.router, prefix="/api")
     app.include_router(info.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")

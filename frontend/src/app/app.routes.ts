@@ -1,14 +1,22 @@
 import { Routes } from '@angular/router';
 import { Shell } from './shell/shell';
+import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   {
+    path: 'entsperren',
+    loadComponent: () =>
+      import('./features/unlock/unlock').then((m) => m.Unlock),
+  },
+  {
     path: 'editor/:kind/:id',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./features/editor/editor').then((m) => m.Editor),
   },
   {
     path: '',
+    canActivate: [authGuard],
     component: Shell,
     children: [
       { path: '', redirectTo: 'galerie', pathMatch: 'full' },

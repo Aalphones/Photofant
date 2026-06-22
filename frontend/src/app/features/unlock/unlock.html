@@ -1,0 +1,38 @@
+<div class="unlock__card">
+
+  <div class="unlock__icon">
+    <pf-icon name="shield" [size]="28" />
+  </div>
+
+  <h1 class="unlock__title">Photofant</h1>
+  <p class="unlock__subtitle">Bitte gib das Passwort ein, um fortzufahren.</p>
+
+  <form class="unlock__form" [formGroup]="form" (ngSubmit)="submit()">
+    <input
+      class="unlock__input"
+      [class.unlock__input--fehler]="hasError()"
+      type="password"
+      formControlName="password"
+      placeholder="Passwort"
+      autocomplete="current-password"
+      autofocus
+    />
+
+    @if (hasError()) {
+      <p class="unlock__fehler">Falsches Passwort.</p>
+    }
+
+    <button
+      class="unlock__button"
+      type="submit"
+      [disabled]="form.invalid || isLoading()"
+    >
+      @if (isLoading()) {
+        Wird geprüft…
+      } @else {
+        Entsperren
+      }
+    </button>
+  </form>
+
+</div>

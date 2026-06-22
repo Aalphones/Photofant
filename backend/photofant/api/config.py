@@ -26,8 +26,10 @@ class ConfigPatchRequest(BaseModel):
 
 @router.get("", response_model=ConfigResponse)
 def get_config() -> ConfigResponse:
-    """Return all settings with defaults filled in."""
-    return ConfigResponse(data=dict(load_settings()))
+    """Return all settings with defaults filled in. Password is never exposed."""
+    data = dict(load_settings())
+    data.pop("password", None)
+    return ConfigResponse(data=data)
 
 
 @router.patch("", response_model=ConfigResponse)

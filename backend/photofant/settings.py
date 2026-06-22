@@ -30,6 +30,7 @@ class AppSettings(TypedDict):
     db_path: str | None
     cache_db_path: str | None
     models_dir: str | None
+    password: str | None
     auto_tag: bool
     auto_caption: bool
     auto_embed: bool
@@ -57,6 +58,7 @@ SETTINGS_DEFAULTS: AppSettings = {
     "db_path": None,
     "cache_db_path": None,
     "models_dir": None,
+    "password": None,
     "auto_tag": True,
     "auto_caption": True,
     "auto_embed": True,
@@ -94,6 +96,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "db_path": (str, type(None)),
     "cache_db_path": (str, type(None)),
     "models_dir": (str, type(None)),
+    "password": (str, type(None)),
     "auto_tag": bool,
     "auto_caption": bool,
     "auto_embed": bool,
