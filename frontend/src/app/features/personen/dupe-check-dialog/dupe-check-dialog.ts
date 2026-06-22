@@ -10,8 +10,10 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Store } from '@ngrx/store';
 import type { PersonDto, PersonDupePair } from '@photofant/models';
 import { PersonService } from '@photofant/services';
+import { modelsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
 @Component({
@@ -24,6 +26,8 @@ import { Icon } from '@photofant/ui';
 export class DupeCheckDialog implements OnInit {
   private readonly personService = inject(PersonService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject(Store);
+  private readonly processingConfig = this.store.selectSignal(modelsSelectors.selectProcessingConfig);
 
   readonly person = input.required<PersonDto>();
   readonly close = output<void>();
@@ -48,7 +52,7 @@ export class DupeCheckDialog implements OnInit {
     this.phase.set('loading');
     this.error.set(null);
     this.personService
-      .searchDuplicates(this.person().id)
+      .searchDuplicates(this.person().id, this.processingConfig().dupeThreshold)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (pairs: PersonDupePair[]) => {

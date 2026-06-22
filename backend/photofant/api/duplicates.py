@@ -22,7 +22,7 @@ router = APIRouter(prefix="/duplicates")
 
 DbSession = Annotated[Session, Depends(get_session)]
 
-_MAX_THRESHOLD = 20
+_MAX_THRESHOLD = 32
 _DEFAULT_THRESHOLD = 10
 
 
