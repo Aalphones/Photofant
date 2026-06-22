@@ -10,10 +10,14 @@ from sqlalchemy.orm import Session
 
 
 def compute_phash(path: Path) -> int:
-    """Open image at path, compute 64-bit DHash, return as integer."""
+    """Open image at path, compute 64-bit DHash, return as signed int64."""
     img = Image.open(path).convert("RGB")
     dhash = imagehash.dhash(img, hash_size=8)
-    return int(str(dhash), 16)
+    value = int(str(dhash), 16)
+    # SQLite stores signed int64 only — wrap values with the high bit set
+    if value >= 2**63:
+        value -= 2**64
+    return value
 
 
 def hamming_distance(a: int, b: int) -> int:
