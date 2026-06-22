@@ -57,12 +57,12 @@ export const galleryFeature = createFeature({
     on(galleryActions.reset, (state: GalleryState) =>
       adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null, faceItems: [], faceTotal: 0 })
     ),
-    on(galleryActions.loadFacesPageSuccess, (state: GalleryState, { items, total, page, pageSize }) => ({
+    on(galleryActions.loadFacesPageSuccess, (state: GalleryState, { items, total, page }) => ({
       ...state,
       faceItems: page === 1 ? items : [...state.faceItems, ...items],
       faceTotal: total,
       page,
-      pageSize,
+      // pageSize deliberately NOT updated here — face page size must not overwrite asset page size
       isLoading: false,
       error: null,
     })),

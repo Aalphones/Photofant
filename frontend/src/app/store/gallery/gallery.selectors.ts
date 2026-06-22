@@ -95,9 +95,11 @@ const selectFetchParams = createSelector(
     ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, mediaType, q, qMode })
 );
 
+const FACE_PAGE_SIZE = 500;
+
 const selectFaceHasMore = createSelector(
-  selectFaceTotal, selectPage, selectPageSize,
-  (total: number, page: number, pageSize: number) => total > page * pageSize,
+  selectFaceTotal, selectPage,
+  (total: number, page: number) => total > page * FACE_PAGE_SIZE,
 );
 
 const selectLightboxAsset = createSelector(
