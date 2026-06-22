@@ -133,6 +133,10 @@ export class AssetService {
     return this.http.patch<AssetDto>(`/api/assets/${id}/original`, { original_id: originalId });
   }
 
+  bulkTrash(assetIds: number[]): Observable<void> {
+    return this.http.post<void>('/api/assets/bulk-trash', { asset_ids: assetIds });
+  }
+
   bulkEdit(assetIds: number[], op: string, params: Record<string, unknown>): Observable<{ job_id: string }> {
     return this.http.post<{ job_id: string }>('/api/assets/bulk-edit', {
       asset_ids: assetIds,

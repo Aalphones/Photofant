@@ -65,6 +65,12 @@
   }
 
   <div class="bulkbar__divider"></div>
+  <button class="bulkbar__action bulkbar__action--danger" (click)="moveToTrash()">
+    <pf-icon name="trash" [size]="15" />
+    Papierkorb
+  </button>
+
+  <div class="bulkbar__divider"></div>
   <button class="bulkbar__close" (click)="onClose()" aria-label="Auswahl aufheben">
     <pf-icon name="x" [size]="16" />
   </button>

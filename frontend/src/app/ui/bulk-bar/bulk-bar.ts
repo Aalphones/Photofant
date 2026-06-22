@@ -30,6 +30,7 @@ export class BulkBar {
   readonly rerunAction = output<void>();
   readonly editAction = output<void>();
   readonly dupeScanAction = output<void>();
+  readonly trashAction = output<void>();
 
   protected readonly showTagInput = signal(false);
   protected readonly tagInput = signal('');
@@ -86,5 +87,9 @@ export class BulkBar {
 
   protected triggerDupeScan(): void {
     this.dupeScanAction.emit();
+  }
+
+  protected moveToTrash(): void {
+    this.trashAction.emit();
   }
 }

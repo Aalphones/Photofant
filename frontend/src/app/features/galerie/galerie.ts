@@ -211,6 +211,17 @@ export class Galerie {
     this.showBulkEditDialog.set(false);
   }
 
+  protected onBulkTrash(): void {
+    const ids = this.selectedIds();
+    if (!ids.length) { return; }
+    this.store.dispatch(galleryActions.clearSelection());
+    this.assetService.bulkTrash(ids)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.store.dispatch(galleryActions.reset());
+      });
+  }
+
   // --- Workflow-Modus ---
 
   protected onEscape(): void {

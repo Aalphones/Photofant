@@ -842,6 +842,25 @@ async def import_as_version(
 
 # ── Bulk-Edit endpoint ────────────────────────────────────────────────────────
 
+class BulkTrashRequest(BaseModel):
+    asset_ids: list[int]
+
+
+@router.post("/bulk-trash", status_code=204)
+async def bulk_trash_assets(body: BulkTrashRequest, session: DbSession) -> Response:
+    """Soft-delete a selection of assets (moves them to trash)."""
+    if not body.asset_ids:
+        raise HTTPException(status_code=422, detail="asset_ids must not be empty")
+    data_root = get_data_root()
+    for asset_id in body.asset_ids:
+        row = _active_row(session, asset_id)
+        if row is None:
+            continue
+        _, instance = row
+        await moves.soft_delete(session, instance, data_root)
+    return Response(status_code=204)
+
+
 class BulkEditRequest(BaseModel):
     asset_ids: list[int]
     op: str
