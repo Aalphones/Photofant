@@ -43,8 +43,6 @@ _SCRFD_STRIDES = (8, 16, 32)
 _SCRFD_NUM_ANCHORS = 2
 
 _DET_INPUT_SIZE = 640
-_IOU_THRESHOLD = 0.45
-_CONF_THRESHOLD = 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +82,8 @@ def _decode_scrfd_outputs(
     input_height: int,
     input_width: int,
     scale: float,
+    conf_threshold: float = 0.5,
+    iou_threshold: float = 0.45,
 ) -> list[dict]:
     """Decode multi-scale SCRFD outputs into BBox + landmark dicts.
 
@@ -130,7 +130,7 @@ def _decode_scrfd_outputs(
             )
             continue
 
-        mask = scores >= _CONF_THRESHOLD
+        mask = scores >= conf_threshold
         if not np.any(mask):
             continue
 
@@ -168,7 +168,7 @@ def _decode_scrfd_outputs(
     landmarks_arr = np.concatenate(all_landmarks, axis=0) if all_landmarks else None
 
     # NMS
-    keep = _nms(bboxes, scores_arr, _IOU_THRESHOLD)
+    keep = _nms(bboxes, scores_arr, iou_threshold)
 
     results: list[dict] = []
     for index in keep:
@@ -338,12 +338,16 @@ class BuffaloLEngine:
             log.exception("embed_crop failed")
             return None
 
-    def detect(self, image: np.ndarray) -> list[dict]:
+    def detect(
+        self,
+        image: np.ndarray,
+        conf_threshold: float = 0.5,
+        iou_threshold: float = 0.45,
+    ) -> list[dict]:
         """Return one dict per face: {bbox, score, age, embedding, landmarks}."""
         from photofant.inference.session_manager import session_manager
 
         blob, scale = _make_scrfd_blob(image)
-        input_height, input_width = image.shape[:2]
 
         # --- detection ---
         det_session = session_manager.acquire_session(self._det_path)
@@ -356,7 +360,12 @@ class BuffaloLEngine:
             session_manager.release_session(self._det_path)
 
         face_dicts = _decode_scrfd_outputs(
-            det_outputs, _DET_INPUT_SIZE, _DET_INPUT_SIZE, scale,
+            det_outputs,
+            _DET_INPUT_SIZE,
+            _DET_INPUT_SIZE,
+            scale,
+            conf_threshold=conf_threshold,
+            iou_threshold=iou_threshold,
         )
         if not face_dicts:
             return []

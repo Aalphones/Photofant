@@ -24,7 +24,6 @@ from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
 log = logging.getLogger(__name__)
 
-_FACE_PADDING_DEFAULT = 40   # px, overridable in settings later
 _CROP_JPEG_QUALITY = 92
 
 
@@ -119,6 +118,7 @@ def _run_incremental_match(face_id: int) -> None:
 def _run_face_job(asset_id: int, asset_path: str) -> None:
     from photofant.config import get_data_root
     from photofant.inference.adapters.buffalo_l import resolve_buffalo_l
+    from photofant.settings import load_settings
 
     engine = resolve_buffalo_l()
     if engine is None:
@@ -126,13 +126,18 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         _mark_done(asset_id)
         return
 
+    settings = load_settings()
+    padding = int(settings.get('face_crop_padding', 40))
+    conf_threshold = float(settings.get('face_det_conf_threshold', 0.5))
+    iou_threshold = float(settings.get('face_det_iou_threshold', 0.45))
+
     from PIL import Image as PILImage
 
     image_pil = PILImage.open(asset_path).convert("RGB")
     image = np.array(image_pil, dtype=np.uint8)
 
     try:
-        faces = engine.detect(image)
+        faces = engine.detect(image, conf_threshold=conf_threshold, iou_threshold=iou_threshold)
     except Exception:
         log.exception("buffalo_l detection failed for asset %d", asset_id)
         _mark_done(asset_id)
@@ -160,7 +165,7 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         age = face_dict.get("age")
         embedding = face_dict.get("embedding")
 
-        crop_np = _crop_square(image, bbox, _FACE_PADDING_DEFAULT)
+        crop_np = _crop_square(image, bbox, padding)
         crop_filename = f"{asset_id}_{face_index}.jpg"
         crop_path = faces_dir / crop_filename
 
@@ -179,7 +184,7 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
                 person_id=unknown_person_id,
                 crop_path=str(crop_path.resolve()),
                 bbox={"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3]},
-                padding=_FACE_PADDING_DEFAULT,
+                padding=padding,
                 embedding=_embedding_to_bytes(embedding),
                 phash=crop_phash,
                 score=score,
