@@ -14,11 +14,14 @@ interface StepOption {
   desc: string;
 }
 
+const DEFAULT_STEPS: readonly ClassifyStep[] = ['heuristics', 'tags', 'caption', 'embedding'];
+
 const ALL_STEPS: StepOption[] = [
   { key: 'heuristics', label: 'Qualität',    desc: 'Auflösung + Schärfe → quality_score' },
   { key: 'tags',       label: 'Tags',        desc: 'WD14-Tagger (auto-Tags mit Konfidenz)' },
   { key: 'caption',    label: 'Caption',     desc: 'Florence-2 Bildbeschreibung' },
   { key: 'embedding',  label: 'Embedding',   desc: 'CLIP-Vektor für Ähnlichkeitssuche' },
+  { key: 'faces',      label: 'Gesichter',   desc: 'Gesichtserkennung neu starten — löscht vorhandene Erkennungen' },
 ];
 
 @Component({
@@ -35,7 +38,7 @@ export class RerunDialog {
   readonly cancel = output<void>();
 
   protected readonly STEPS = ALL_STEPS;
-  protected readonly selected = signal<Set<ClassifyStep>>(new Set(ALL_STEPS.map((step: StepOption) => step.key)));
+  protected readonly selected = signal<Set<ClassifyStep>>(new Set(DEFAULT_STEPS));
   protected readonly selectedPresetId = signal<number | null>(null);
 
   protected readonly selectedSteps = computed((): ClassifyStep[] =>

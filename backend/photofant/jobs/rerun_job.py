@@ -19,13 +19,14 @@ from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
 log = logging.getLogger(__name__)
 
-ClassifyStep = Literal["tags", "caption", "embedding", "heuristics"]
+ClassifyStep = Literal["tags", "caption", "embedding", "heuristics", "faces"]
 
 _STEP_FLAGS: dict[str, str] = {
     "tags": "tags_done",
     "caption": "caption_done",
     "embedding": "embedding_done",
     "heuristics": "heuristics_done",
+    "faces": "faces_done",
 }
 
 
@@ -44,6 +45,55 @@ def _resolve_assets(
             query = query.where(Asset.id.in_(asset_ids))
         rows = session.execute(query).all()
     return [(int(row[0]), str(row[1]), str(row[2])) for row in rows]
+
+
+def _delete_existing_faces(asset_id: int) -> None:
+    """Remove all derived Face rows (+ crops, vector index, thumbnails) for an asset.
+
+    Leaves manual_original faces untouched (they have asset_id=None anyway).
+    Call this before re-running face detection to avoid duplicates.
+    """
+    from pathlib import Path
+
+    from photofant.db.cache import delete_thumbnails, get_cache_db_path
+    from photofant.db.face_vector_index import delete_embedding
+    from photofant.db.models import Face
+
+    with SessionLocal() as session:
+        faces = (
+            session.query(Face)
+            .filter(Face.asset_id == asset_id)
+            .filter(Face.origin != "manual_original")
+            .all()
+        )
+        if not faces:
+            return
+
+        cache_db = get_cache_db_path()
+        for face in faces:
+            # crop file
+            crop = Path(face.crop_path)
+            if crop.exists():
+                try:
+                    crop.unlink()
+                except OSError:
+                    log.warning("Could not delete face crop %s", crop)
+            # vector index
+            try:
+                delete_embedding(session, face.id)
+            except Exception:
+                log.exception("Vector index delete failed for face %d", face.id)
+            # thumbnail cache
+            try:
+                delete_thumbnails(cache_db, face.id, target_kind="face")
+            except Exception:
+                log.exception("Thumbnail delete failed for face %d", face.id)
+
+        for face in faces:
+            session.delete(face)
+        session.commit()
+
+    log.info("Deleted %d existing face(s) for asset %d before re-extraction", len(faces), asset_id)
 
 
 def _reset_ledger_flags(content_hash: str, steps: list[ClassifyStep]) -> None:
@@ -66,6 +116,7 @@ async def run_rerun_job(
 ) -> None:
     from photofant.jobs.caption_job import _run_caption_with_preset
     from photofant.jobs.embedding_job import _run_embedding
+    from photofant.jobs.face_job import _run_face_job
     from photofant.jobs.heuristics_job import _run_heuristics
     from photofant.jobs.tagging_job import _run_tagging
 
@@ -85,6 +136,9 @@ async def run_rerun_job(
             await asyncio.to_thread(_run_caption_with_preset, asset_id, asset_path, caption_preset_id, True)
         if "embedding" in steps:
             await asyncio.to_thread(_run_embedding, asset_id, asset_path)
+        if "faces" in steps:
+            await asyncio.to_thread(_delete_existing_faces, asset_id)
+            await asyncio.to_thread(_run_face_job, asset_id, asset_path)
 
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
 
