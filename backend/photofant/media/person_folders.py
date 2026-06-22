@@ -141,8 +141,13 @@ def rename_person_folder(
     new_dir = data_root / new_folder_name
 
     if not old_dir.exists():
-        ensure_person_folder(data_root, person)
-        return 0
+        # Fallback: legacy person_{id} folder (created before named-folder convention)
+        legacy_dir = data_root / f"person_{person.id}"
+        if legacy_dir.exists() and legacy_dir != new_dir:
+            old_dir = legacy_dir
+        else:
+            ensure_person_folder(data_root, person)
+            return 0
 
     if new_dir.exists():
         log.warning(
@@ -337,8 +342,8 @@ def materialize_assignment(
 
         try:
             final = _safe_copy(source_path, dest)
-        except FileNotFoundError:
-            log.error("Cannot copy for asset %d — source missing: %s", asset_id, source_path)
+        except OSError:
+            log.error("Cannot copy for asset %d — file error: %s", asset_id, source_path)
             return None
 
         new_instance = AssetInstance(
@@ -489,8 +494,8 @@ def reassign_face(
     try:
         final = _safe_move(old_crop, new_crop)
         face.crop_path = str(final.resolve())
-    except FileNotFoundError:
-        log.warning("Face crop %s missing during reassign — path not updated", old_crop)
+    except OSError:
+        log.warning("Face crop move failed during reassign for face %d — path not updated", face_id)
 
     materialize_assignment(session, asset_id, new_person_id, data_root, fixed=True)
 
