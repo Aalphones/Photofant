@@ -1,15 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { Collection, Density, GroupKey, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
-import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, presetsSelectors } from '@photofant/store';
+import type { Collection, Density, GroupKey, PersonDto, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
+import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, personsSelectors, presetsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
 interface FilterChip {
-  kind: 'source' | 'qualityMin' | 'tag' | 'collection';
+  kind: 'source' | 'qualityMin' | 'tag' | 'collection' | 'person';
   chipKey: string;
   label: string;
   id?: number;
   value?: string;
+  thumbnailUrl?: string;
 }
 
 @Component({
@@ -39,8 +40,10 @@ export class SubToolbar {
   protected readonly qualityMin = this.store.selectSignal(filtersSelectors.qualityMin);
   protected readonly tagIds     = this.store.selectSignal(filtersSelectors.tagIds);
   protected readonly collectionId = this.store.selectSignal(filtersSelectors.collectionId);
+  protected readonly personId     = this.store.selectSignal(filtersSelectors.personId);
   protected readonly collections  = this.store.selectSignal(collectionsSelectors.selectAll);
-  protected readonly facets     = this.store.selectSignal(gallerySelectors.selectFacets);
+  protected readonly persons      = this.store.selectSignal(personsSelectors.selectAll);
+  protected readonly facets       = this.store.selectSignal(gallerySelectors.selectFacets);
 
   protected readonly SOURCE_LABELS: Record<string, string> = {
     original: 'Original',
@@ -65,6 +68,19 @@ export class SubToolbar {
     if (collectionId != null) {
       const collection = this.collections().find((c: Collection) => c.id === collectionId);
       result.push({ kind: 'collection', chipKey: 'Album', label: collection?.name ?? `${collectionId}`, id: collectionId });
+    }
+    const personId = this.personId();
+    if (personId != null) {
+      const person = this.persons().find((p: PersonDto) => p.id === personId);
+      const label = person?.name ?? `Person #${personId}`;
+      const portraitFaceId = person?.portrait_face_id;
+      result.push({
+        kind: 'person',
+        chipKey: 'Person',
+        label,
+        id: personId,
+        ...(portraitFaceId != null ? { thumbnailUrl: `/api/faces/${portraitFaceId}/thumbnail` } : {}),
+      });
     }
     return result;
   });
@@ -94,6 +110,8 @@ export class SubToolbar {
       this.store.dispatch(filtersActions.setTagIds({ tagIds: next }));
     } else if (chip.kind === 'collection') {
       this.store.dispatch(filtersActions.setCollectionId({ collectionId: null }));
+    } else if (chip.kind === 'person') {
+      this.store.dispatch(filtersActions.setPersonId({ personId: null }));
     }
   }
 

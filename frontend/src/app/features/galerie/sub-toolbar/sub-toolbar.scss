@@ -52,8 +52,17 @@
   flex-shrink: 0;
 }
 
-.subbar__chip-key   { color: var(--text-3); }
-.subbar__chip-label { color: var(--text-2); }
+.subbar__chip-key    { color: var(--text-3); }
+.subbar__chip-label  { color: var(--text-2); }
+
+.subbar__chip-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
 
 .subbar__chip-x {
   display: flex;

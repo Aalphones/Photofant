@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, injec
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { collectionsActions, collectionsSelectors, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
+import { collectionsActions, collectionsSelectors, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, personsActions, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
 import { AssetService, ClassifyService, ComfyUIService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
@@ -42,6 +42,7 @@ export class Galerie {
   private readonly filterQualityMin   = this.store.selectSignal(filtersSelectors.qualityMin);
   private readonly filterTagIds       = this.store.selectSignal(filtersSelectors.tagIds);
   private readonly filterCollectionId = this.store.selectSignal(filtersSelectors.collectionId);
+  private readonly filterPersonId     = this.store.selectSignal(filtersSelectors.personId);
   private readonly filterSort         = this.store.selectSignal(filtersSelectors.sort);
   private readonly filterOrder        = this.store.selectSignal(filtersSelectors.order);
 
@@ -86,11 +87,16 @@ export class Galerie {
     const urlQMin    = parseFloat(qp.get('q_min') ?? '0') || 0;
     const urlTagIds  = (qp.get('tags') ?? '').split(',').map(Number).filter((n: number) => n > 0);
     const urlCollection = Number(qp.get('collection') ?? '') || 0;
+    const urlPersonId   = Number(qp.get('person') ?? '') || 0;
 
     if (urlSources.length) this.store.dispatch(filtersActions.setSources({ sources: urlSources }));
     if (urlQMin > 0)       this.store.dispatch(filtersActions.setQualityMin({ qualityMin: urlQMin }));
     if (urlTagIds.length)  this.store.dispatch(filtersActions.setTagIds({ tagIds: urlTagIds }));
     if (urlCollection > 0) this.store.dispatch(filtersActions.setCollectionId({ collectionId: urlCollection }));
+    if (urlPersonId > 0) {
+      this.store.dispatch(filtersActions.setPersonId({ personId: urlPersonId }));
+      this.store.dispatch(personsActions.loadPersons());
+    }
 
     this.store.dispatch(collectionsActions.load());
     this.store.dispatch(galleryActions.requestPage());
@@ -102,15 +108,17 @@ export class Galerie {
       const qualityMin   = this.filterQualityMin();
       const tagIds       = this.filterTagIds();
       const collectionId = this.filterCollectionId();
+      const personId     = this.filterPersonId();
       const sort         = this.filterSort();
       const order        = this.filterOrder();
 
-      if (sources.length)     params['sources']    = sources.join(',');
-      if (qualityMin > 0)     params['q_min']      = String(qualityMin);
-      if (tagIds.length)      params['tags']       = tagIds.join(',');
+      if (sources.length)       params['sources']    = sources.join(',');
+      if (qualityMin > 0)       params['q_min']      = String(qualityMin);
+      if (tagIds.length)        params['tags']       = tagIds.join(',');
       if (collectionId != null) params['collection'] = String(collectionId);
-      if (sort !== 'date')    params['sort']       = sort;
-      if (order !== 'desc')   params['order']      = order;
+      if (personId != null)     params['person']     = String(personId);
+      if (sort !== 'date')      params['sort']       = sort;
+      if (order !== 'desc')     params['order']      = order;
 
       void this.router.navigate([], {
         queryParams: params,

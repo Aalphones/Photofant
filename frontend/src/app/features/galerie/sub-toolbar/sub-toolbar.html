@@ -11,6 +11,9 @@
     <span class="subbar__div"></span>
     @for (chip of chips(); track chip.label) {
       <span class="subbar__chip">
+        @if (chip.thumbnailUrl) {
+          <img class="subbar__chip-avatar" [src]="chip.thumbnailUrl" alt="" />
+        }
         <span class="subbar__chip-key">{{ chip.chipKey }}:</span>
         <span class="subbar__chip-label">{{ chip.label }}</span>
         <button class="subbar__chip-x" (click)="removeChip(chip)" [attr.aria-label]="'Filter entfernen: ' + chip.label">
