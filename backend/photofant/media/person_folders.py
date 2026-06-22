@@ -514,7 +514,10 @@ def reassign_face(
                     AssetInstance.deleted_at.is_(None),
                 )
             )
-            if old_instance and not old_instance.fixed_person:
+            if old_instance:
+                # Remove regardless of fixed_person — if the last face for this
+                # asset was manually moved away from old_person, the instance is
+                # orphaned and the user's intent is clear.
                 old_path = Path(old_instance.path)
                 if old_path.exists():
                     old_path.unlink()
