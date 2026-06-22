@@ -22,6 +22,7 @@ const ALL_STEPS: StepOption[] = [
   { key: 'caption',    label: 'Caption',     desc: 'Florence-2 Bildbeschreibung' },
   { key: 'embedding',  label: 'Embedding',   desc: 'CLIP-Vektor für Ähnlichkeitssuche' },
   { key: 'faces',      label: 'Gesichter',   desc: 'Gesichtserkennung neu starten — löscht vorhandene Erkennungen' },
+  { key: 'phash',      label: 'Ähnlichkeit', desc: 'Bild-Fingerabdruck berechnen — ermöglicht „Ähnliche Bilder" und Duplikat-Erkennung' },
 ];
 
 @Component({

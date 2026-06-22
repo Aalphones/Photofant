@@ -9,17 +9,21 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Literal
 
 from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-from photofant.db.models import Asset, AssetInstance, ProcessingLedger
+from photofant.db.models import Asset, AssetInstance, ProcessingLedger, ReviewItem
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
+from photofant.media.phash import compute_phash, find_similar
 
 log = logging.getLogger(__name__)
 
-ClassifyStep = Literal["tags", "caption", "embedding", "heuristics", "faces"]
+ClassifyStep = Literal["tags", "caption", "embedding", "heuristics", "faces", "phash"]
 
 _STEP_FLAGS: dict[str, str] = {
     "tags": "tags_done",
@@ -108,6 +112,40 @@ def _reset_ledger_flags(content_hash: str, steps: list[ClassifyStep]) -> None:
         session.commit()
 
 
+def _run_phash(asset_id: int, asset_path: str) -> None:
+    from photofant.settings import load_settings
+
+    settings = load_settings()
+    dupe_threshold = settings["dupe_threshold"]
+
+    with SessionLocal() as session:
+        asset = session.get(Asset, asset_id)
+        if asset is None:
+            log.warning("pHash rerun: asset %d not found", asset_id)
+            return
+
+        phash_val = compute_phash(Path(asset_path))
+        asset.phash = phash_val
+
+        similar = find_similar(session, phash_val, asset_id, dupe_threshold)
+        for other_id, distance in similar:
+            asset_a_id = min(asset_id, other_id)
+            asset_b_id = max(asset_id, other_id)
+            stmt = sqlite_insert(ReviewItem).values(
+                type="dupe_candidate",
+                asset_a_id=asset_a_id,
+                asset_b_id=asset_b_id,
+                phash_distance=distance,
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            ).on_conflict_do_nothing()
+            session.execute(stmt)
+
+        session.commit()
+
+    if similar:
+        log.info("pHash rerun: %d dupe candidate(s) found for asset %d", len(similar), asset_id)
+
+
 async def run_rerun_job(
     status: JobStatus,
     asset_ids: list[int] | Literal["all"],
@@ -139,6 +177,8 @@ async def run_rerun_job(
         if "faces" in steps:
             await asyncio.to_thread(_delete_existing_faces, asset_id)
             await asyncio.to_thread(_run_face_job, asset_id, asset_path)
+        if "phash" in steps:
+            await asyncio.to_thread(_run_phash, asset_id, asset_path)
 
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
 
