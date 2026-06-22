@@ -82,6 +82,9 @@ export class Galerie {
     if (this.mediaType() === 'faces') {
       return !this.isLoading() && this.faceItems().length === 0;
     }
+    if (this.mediaType() === 'all') {
+      return !this.isLoading() && this.groups().length === 0 && this.faceItems().length === 0;
+    }
     return !this.isLoading() && this.groups().length === 0;
   });
 
@@ -145,6 +148,10 @@ export class Galerie {
     if (!this.isLoading() && this.faceHasMore()) {
       this.store.dispatch(galleryActions.requestNextPage());
     }
+  }
+
+  protected onFacePreviewLoadMore(): void {
+    // Preview in 'all' mode is fixed to 12 items — no pagination
   }
 
   protected onOpenFace(event: { faceId: number; assetId: number | null }): void {

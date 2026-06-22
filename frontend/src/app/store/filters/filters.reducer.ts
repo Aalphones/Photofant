@@ -29,7 +29,7 @@ const initialState: FiltersState = {
   collectionId: null,
   personId: null,
   framings: [],
-  mediaType: 'all',
+  mediaType: 'photos',
 };
 
 export const filtersFeature = createFeature({

@@ -48,6 +48,14 @@
         (loadMore)="onFaceLoadMore()"
       />
     } @else {
+      @if (mediaType() === 'all' && faceItems().length > 0) {
+        <pf-face-grid
+          [faceItems]="faceItems()"
+          [isLoading]="false"
+          (openFace)="onOpenFace($event)"
+          (loadMore)="onFacePreviewLoadMore()"
+        />
+      }
       <pf-galerie-grid
         [groups]="groups()"
         [density]="density()"
