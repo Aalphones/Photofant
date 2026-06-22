@@ -102,6 +102,23 @@ class SessionManager:
         if count:
             log.info("Evicted %d ONNX session(s) at shutdown", count)
 
+    def shutdown(self) -> None:
+        """Wait for running inference threads, evict all sessions, free VRAM.
+
+        Called once at process exit. Waits for the executor to drain so that
+        thread-local session references are released before the Python GC runs.
+        After this call the executor and session cache are both unusable.
+        """
+        import gc
+
+        self._executor.shutdown(wait=True, cancel_futures=True)
+        with self._lock:
+            count = len(self._sessions)
+            self._sessions.clear()
+        if count:
+            log.info("Evicted %d ONNX session(s) at shutdown", count)
+        gc.collect()
+
     @property
     def executor(self) -> ThreadPoolExecutor:
         """Shared ThreadPoolExecutor for CPU-bound inference calls."""

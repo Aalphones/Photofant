@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -40,17 +42,29 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger(__name__)
 
 
+async def _idle_eviction_loop() -> None:
+    """Evict ONNX and generative sessions that have exceeded their idle timeout."""
+    while True:
+        await asyncio.sleep(60)
+        session_manager.evict_idle()
+        generative_engine.evict_idle()
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     log.info("Starting Photofant backend")
     ensure_settings_file()
     load_manifest()  # validate manifest.json at startup; logs errors, never crashes
     job_queue.start()
+    eviction_task = asyncio.create_task(_idle_eviction_loop())
     yield
     log.info("Shutting down Photofant backend")
+    eviction_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await eviction_task
     await job_queue.stop()
     generative_engine.unload()
-    session_manager.evict_all()
+    session_manager.shutdown()
 
 
 def create_app() -> FastAPI:

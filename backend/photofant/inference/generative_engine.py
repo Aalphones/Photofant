@@ -183,6 +183,8 @@ class GenerativeEngine:
         if self._current is None:
             return
 
+        import gc
+
         model_id = self._current.model_id
         del self._current.pipeline
         self._current = None
@@ -194,6 +196,7 @@ class GenerativeEngine:
         except ImportError:
             pass
 
+        gc.collect()
         log.info("Evicted generative pipeline: %s", model_id)
 
     def _load_component_model(
