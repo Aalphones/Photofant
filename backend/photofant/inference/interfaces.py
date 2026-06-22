@@ -75,3 +75,47 @@ class FaceEngine(Protocol):
     def detect(self, image: np.ndarray) -> list[dict]:
         """Return a list of face dicts (bbox, embedding, …)."""
         ...
+
+
+# ---------------------------------------------------------------------------
+# Generative protocols (P9, ADR-002 — torch/diffusers)
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class Upscaler(Protocol):
+    """Upscales an image to higher resolution."""
+
+    def upscale(self, image: np.ndarray, params: dict) -> np.ndarray:
+        """Return the upscaled image as uint8 RGB array (H', W', 3).
+
+        params: model-specific parameters (scale_factor, tile_size, …).
+        """
+        ...
+
+
+@runtime_checkable
+class ImageEditor(Protocol):
+    """Applies a prompt-guided edit to an image (img2img / Flux-Edit)."""
+
+    def edit(self, image: np.ndarray, prompt: str, params: dict) -> np.ndarray:
+        """Return the edited image as uint8 RGB array (H, W, 3).
+
+        params: strength, steps, guidance_scale, seed, …
+        """
+        ...
+
+
+@runtime_checkable
+class Inpainter(Protocol):
+    """Fills a masked region of an image guided by a prompt."""
+
+    def inpaint(
+        self, image: np.ndarray, mask: np.ndarray, prompt: str, params: dict
+    ) -> np.ndarray:
+        """Return the inpainted image as uint8 RGB array (H, W, 3).
+
+        mask: uint8 single-channel array (H, W) — 255 = region to fill.
+        params: strength, steps, guidance_scale, seed, …
+        """
+        ...

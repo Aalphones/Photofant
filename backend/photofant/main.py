@@ -17,6 +17,7 @@ from photofant.api import (
     duplicates,
     edit_sessions,
     faces,
+    generative,
     health,
     info,
     jobs,
@@ -29,6 +30,7 @@ from photofant.api import (
     tags,
     trash,
 )
+from photofant.inference.generative_engine import generative_engine
 from photofant.inference.session_manager import session_manager
 from photofant.jobs.queue import job_queue
 from photofant.models.loader import load_manifest
@@ -47,6 +49,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     log.info("Shutting down Photofant backend")
     await job_queue.stop()
+    generative_engine.unload()
     session_manager.evict_all()
 
 
@@ -80,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(edit_sessions.versions_router, prefix="/api")
     app.include_router(comfyui.settings_router, prefix="/api")
     app.include_router(comfyui.comfyui_router, prefix="/api")
+    app.include_router(generative.router, prefix="/api")
     return app
 
 

@@ -133,6 +133,78 @@
       "size_bytes": 184549376,
       "license_note": "Apache 2.0",
       "tier": "core"
+    },
+    {
+      "id": "flux2-klein-9b",
+      "role": "editor",
+      "name": "FLUX.2 klein 9B",
+      "variant": "bf16",
+      "format": "safetensors",
+      "caption_mode": null,
+      "hf_repo": null,
+      "files": [],
+      "size_bytes": 19541405696,
+      "license_note": "FLUX.2 — non-commercial use only",
+      "requires_license_ack": true,
+      "tier": "generativ",
+      "capabilities": {
+        "operations": ["edit", "inpaint"],
+        "component_model": true,
+        "components": {
+          "transformer": {"label": "Diffusion-Modell (Transformer)", "required": true},
+          "text_encoder": {"label": "Text-Encoder", "required": true},
+          "vae": {"label": "VAE", "required": true}
+        },
+        "variants": [
+          {"name": "bf16", "size_gb": 18.2, "vram_gb": 29},
+          {"name": "fp8", "size_gb": 9, "vram_gb": 24},
+          {"name": "gguf-q4", "size_gb": null, "vram_gb": null}
+        ]
+      }
+    },
+    {
+      "id": "seedvr2-3b",
+      "role": "upscaler",
+      "name": "SeedVR2 3B",
+      "variant": "fp16",
+      "format": "safetensors",
+      "caption_mode": null,
+      "hf_repo": null,
+      "files": [],
+      "size_bytes": 6656409600,
+      "license_note": "Apache 2.0",
+      "tier": "generativ",
+      "capabilities": {
+        "operations": ["upscale"],
+        "component_model": false,
+        "variants": [
+          {"name": "fp16", "size_gb": 6.2, "vram_gb": 16},
+          {"name": "fp8", "size_gb": 3.4, "vram_gb": 12},
+          {"name": "gguf-q4", "size_gb": 1.9, "vram_gb": 8}
+        ]
+      }
+    },
+    {
+      "id": "seedvr2-7b",
+      "role": "upscaler",
+      "name": "SeedVR2 7B",
+      "variant": "fp16",
+      "format": "safetensors",
+      "caption_mode": null,
+      "hf_repo": null,
+      "files": [],
+      "size_bytes": 15569256448,
+      "license_note": "Apache 2.0",
+      "tier": "generativ",
+      "capabilities": {
+        "operations": ["upscale"],
+        "component_model": false,
+        "variants": [
+          {"name": "fp16", "size_gb": 14.5, "vram_gb": 20},
+          {"name": "fp8", "size_gb": 8.2, "vram_gb": 16},
+          {"name": "gguf-q4", "size_gb": 4.6, "vram_gb": 12}
+        ]
+      }
     }
   ]
 }

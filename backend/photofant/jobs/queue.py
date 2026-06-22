@@ -40,6 +40,7 @@ class JobKind(StrEnum):
     CLUSTERING = "clustering"
     BULK_EDIT = "bulk_edit"
     COMFYUI_RUN = "comfyui_run"
+    INSTALL_GENERATIVE = "install_generative"
 
 
 @dataclass

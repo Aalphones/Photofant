@@ -17,7 +17,7 @@ Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, 
 | Frontend | Angular 19.2 + Tailwind v4 (Tokens) + NgRx 19 classic |
 | Backend | Python + FastAPI + Uvicorn |
 | DB | SQLite + Alembic, `sqlite-vec` |
-| Inferenz | ONNX Runtime (Core) · torch/diffusers (generativ, gated) |
+| Inferenz | ONNX Runtime (Core) · torch/diffusers (generativ, gated, ADR-002) · ComfyUI-Trigger (P8b, ADR-003) |
 | Pakete | `uv` (Backend) · `npm` (Frontend) |
 
 ## Konventionen
