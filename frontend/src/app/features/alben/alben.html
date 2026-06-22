@@ -13,7 +13,7 @@
           } @else {
             @for (asset of members().slice(0, 4); track asset.id) {
               <div class="album-cover__cell">
-                <img [src]="thumbnailUrl(asset.id)" alt="" loading="lazy" />
+                <img [src]="thumbnailUrl(asset)" alt="" loading="lazy" />
               </div>
             }
           }
@@ -62,7 +62,7 @@
         <div class="member-grid">
           @for (asset of members(); track asset.id) {
             <div class="tile">
-              <img [src]="thumbnailUrl(asset.id)" alt="" loading="lazy" />
+              <img [src]="thumbnailUrl(asset)" alt="" loading="lazy" />
             </div>
           }
         </div>

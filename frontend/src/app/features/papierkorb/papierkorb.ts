@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
+import type { AssetDto } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { trashActions, trashSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
@@ -40,8 +41,8 @@ export class Papierkorb {
     this.store.dispatch(trashActions.load());
   }
 
-  protected thumbnailUrl(id: number): string {
-    return this.assetService.thumbnailUrl(id, 256);
+  protected thumbnailUrl(asset: AssetDto): string {
+    return this.assetService.thumbnailUrl(asset.id, 256, asset.content_hash);
   }
 
   protected onRestore(id: number): void {

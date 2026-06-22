@@ -20,7 +20,7 @@
 <div class="trash-list">
   @for (asset of items(); track asset.id) {
     <div class="trash-row">
-      <img class="trash-thumb" [src]="thumbnailUrl(asset.id)" [alt]="'Bild ' + asset.id" loading="lazy" />
+      <img class="trash-thumb" [src]="thumbnailUrl(asset)" [alt]="'Bild ' + asset.id" loading="lazy" />
       <div class="trash-meta">
         <span class="trash-id">#{{ asset.id }}</span>
         <span class="trash-sub">{{ formatDate(asset.created_at ?? asset.imported_at) }} · {{ formatBytes(asset.file_size) }}</span>

@@ -51,9 +51,10 @@ export class GalerieCell {
     this.aspectRatio() * this.baseHeight()
   );
 
-  protected readonly thumbnailSrc = computed((): string =>
-    this.assetService.thumbnailUrl(this.asset().id, DENSITY_THUMB_SIZE[this.density()])
-  );
+  protected readonly thumbnailSrc = computed((): string => {
+    const asset: AssetDto = this.asset();
+    return this.assetService.thumbnailUrl(asset.id, DENSITY_THUMB_SIZE[this.density()], asset.content_hash);
+  });
 
   protected readonly badgeLabel = computed((): string =>
     sourceLabel(this.asset().source)

@@ -116,8 +116,11 @@ export class Alben {
     this.back();
   }
 
-  protected thumbnailUrl(assetId: number): string {
-    return this.assetService.thumbnailUrl(assetId, 256);
+  protected thumbnailUrl(assetOrId: AssetDto | number): string {
+    if (typeof assetOrId === 'number') {
+      return this.assetService.thumbnailUrl(assetOrId, 256);
+    }
+    return this.assetService.thumbnailUrl(assetOrId.id, 256, assetOrId.content_hash);
   }
 
   protected isSmart(collection: Collection): boolean {

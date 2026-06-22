@@ -117,8 +117,9 @@ export class AssetService {
     return this.http.post<{ job_id: string }>('/api/assets/scan', {});
   }
 
-  thumbnailUrl(id: number, size: 256 | 512 | 1024 = 256): string {
-    return `/api/assets/${id}/thumbnail?size=${size}`;
+  thumbnailUrl(id: number, size: 256 | 512 | 1024 = 256, contentHash?: string): string {
+    const v = contentHash ? `&v=${contentHash.slice(0, 8)}` : '';
+    return `/api/assets/${id}/thumbnail?size=${size}${v}`;
   }
 
   fileUrl(id: number): string {
