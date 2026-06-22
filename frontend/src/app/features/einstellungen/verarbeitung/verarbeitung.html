@@ -81,26 +81,77 @@
 <div class="verarbeitung__gruppe">
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">
     <div class="verarbeitung__zeile-inhalt">
-      <div class="verarbeitung__zeile-titel">Personen-Clustering starten</div>
+      <div class="verarbeitung__zeile-titel">Auto-Zuordnung ab</div>
       <div class="verarbeitung__zeile-sub">
-        Gruppiert alle erkannten Gesichter nach Ähnlichkeit und legt automatisch
-        Personen-Cluster an. Anschließend in der Personen-Ansicht benennen,
-        zusammenführen oder aufteilen. Fortschritt läuft im Job-Dock.
+        Liegt die Ähnlichkeit zu einer bekannten Person über diesem Wert, wird das Gesicht
+        sofort automatisch zugeordnet — kein manueller Schritt nötig.
+        Höher = konservativer (weniger Auto-Zuordnungen, weniger Fehler).
       </div>
     </div>
     <div class="verarbeitung__zeile-steuerung">
-      <button
-        class="verarbeitung__btn"
-        [disabled]="isClustering()"
-        (click)="onTriggerClustering()"
-      >
-        @if (isClustering()) {
-          <span class="spinner"></span>
-          Läuft…
-        } @else {
-          Clustering starten
-        }
-      </button>
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ faceAutoThresholdLabel() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          [value]="processingConfig().faceAutoThreshold"
+          (input)="onFaceAutoThresholdInput($any($event.target))"
+          (change)="onFaceAutoThresholdChange($any($event.target))"
+        >
+      </div>
+    </div>
+  </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Review-Queue ab</div>
+      <div class="verarbeitung__zeile-sub">
+        Liegt die Ähnlichkeit zwischen diesem und dem Auto-Zuordnungs-Wert, landet das
+        Gesicht in der Review-Queue zur manuellen Prüfung. Darunter bleibt es unbekannt.
+        Sollte immer kleiner als „Auto-Zuordnung ab" sein.
+      </div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ faceReviewThresholdLabel() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          [value]="processingConfig().faceReviewThreshold"
+          (input)="onFaceReviewThresholdInput($any($event.target))"
+          (change)="onFaceReviewThresholdChange($any($event.target))"
+        >
+      </div>
+    </div>
+  </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Mindestgröße Cluster (Neu-Gruppierung)</div>
+      <div class="verarbeitung__zeile-sub">
+        Wie viele Gesichter mindestens in einer Gruppe liegen müssen, damit beim
+        Personen-Clustering eine neue Person angelegt wird. Kleinere Gruppen werden
+        als Rauschen verworfen und bleiben unbekannt.
+      </div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ faceMinClusterSizeLabel() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="1"
+          max="20"
+          step="1"
+          [value]="processingConfig().faceMinClusterSize"
+          (input)="onFaceMinClusterSizeInput($any($event.target))"
+          (change)="onFaceMinClusterSizeChange($any($event.target))"
+        >
+      </div>
     </div>
   </div>
 </div>

@@ -3,6 +3,7 @@
 .backup-wartung__kopf { margin-bottom: 22px; }
 .backup-wartung__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
 .backup-wartung__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+.backup-wartung__gruppen-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 0 2px 8px; }
 .backup-wartung__gruppe { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
 .backup-wartung__zeile { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .backup-wartung__zeile:last-child { border-bottom: none; }
