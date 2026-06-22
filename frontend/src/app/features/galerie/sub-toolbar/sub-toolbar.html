@@ -39,19 +39,6 @@
     }
   </div>
 
-  <!-- Grouping segment -->
-  <div class="subbar__seg">
-    @for (item of GROUPS; track item.key) {
-      <button
-        class="subbar__seg-btn"
-        [class.subbar__seg-btn--on]="group() === item.key"
-        (click)="setGroup(item.key)"
-      >
-        {{ item.label }}
-      </button>
-    }
-  </div>
-
   <!-- Sort -->
   <button class="subbar__btn" (click)="cycleSortKey()">
     <pf-icon name="sort" [size]="15" />
