@@ -1,6 +1,6 @@
 # P12 — Gesichtserkennung: Konfigurierbare Parameter
 
-**Status:** pending
+**Status:** complete
 
 Schwellwerte und Parameter der Gesichtserkennung sind derzeit größtenteils
 hardcoded. Dieser Plan überführt alle sechs relevanten Tunables in
@@ -13,8 +13,8 @@ Sliders, Zahleneingaben und Erklärungen ohne Fachbegriffe.
 
 | Phase | Thema | Tier | Status |
 |---|---|---|---|
-| 1 | Backend: Settings + Codepfade | standard | pending |
-| 2 | Frontend: ProcessingConfig + UI | standard | pending |
+| 1 | Backend: Settings + Codepfade | standard | complete |
+| 2 | Frontend: ProcessingConfig + UI | standard | complete |
 
 ---
 
@@ -120,19 +120,19 @@ Sliders, Zahleneingaben und Erklärungen ohne Fachbegriffe.
 
 ### Abnahme-Kriterien
 
-- [ ] `ProcessingConfig` + Defaults enthalten alle 6 neuen Felder
-- [ ] Store liest alle 6 aus der API-Response, schreibt per PATCH zurück
-- [ ] Einstellungsseite → Gesichtserkennung zeigt 3 neue Untergruppen:
+- [x] `ProcessingConfig` + Defaults enthalten alle 6 neuen Felder
+- [x] Store liest alle 6 aus der API-Response, schreibt per PATCH zurück
+- [x] Einstellungsseite → Gesichtserkennung zeigt 3 neue Untergruppen:
   Detektion (2 Slider), Zuschnitt (1 Zahleneingabe), Personen-Zuordnung (2 Slider + 1 Zahleneingabe)
-- [ ] Jede Steuerung hat eine Erklärung ohne Fachbegriffe
-- [ ] Slider-Beschriftung zeigt Live-Wert + kontextuellen Hinweis (analog `dupeThresholdLabel`)
-- [ ] Warnhinweis wenn `faceReviewThreshold >= faceAutoThreshold`
+- [x] Jede Steuerung hat eine Erklärung ohne Fachbegriffe
+- [x] Slider-Beschriftung zeigt Live-Wert + kontextuellen Hinweis (analog `dupeThresholdLabel`)
+- [x] Warnhinweis wenn `faceReviewThreshold >= faceAutoThreshold`
 
 ### Checkliste
 
 #### config.model.ts
 
-- [ ] `ProcessingConfig` — 6 neue Felder ergänzen (alle `number`):
+- [x] `ProcessingConfig` — 6 neue Felder ergänzen (alle `number`):
   ```typescript
   faceDetConfThreshold: number   // 0.1–0.9
   faceDetIouThreshold:  number   // 0.1–0.9
@@ -141,13 +141,13 @@ Sliders, Zahleneingaben und Erklärungen ohne Fachbegriffe.
   faceReviewThreshold:  number   // 0.2–0.85
   faceMinClusterSize:   number   // 2–20
   ```
-- [ ] `PROCESSING_CONFIG_DEFAULTS` ergänzen:
+- [x] `PROCESSING_CONFIG_DEFAULTS` ergänzen:
   `faceDetConfThreshold: 0.5`, `faceDetIouThreshold: 0.45`, `faceCropPadding: 40`,
   `faceAutoThreshold: 0.6`, `faceReviewThreshold: 0.45`, `faceMinClusterSize: 3`
 
 #### models.effects.ts
 
-- [ ] `PROCESSING_CONFIG_KEY_MAP` — 6 neue Einträge:
+- [x] `PROCESSING_CONFIG_KEY_MAP` — 6 neue Einträge:
   ```typescript
   faceDetConfThreshold: 'face_det_conf_threshold',
   faceDetIouThreshold:  'face_det_iou_threshold',
@@ -156,27 +156,27 @@ Sliders, Zahleneingaben und Erklärungen ohne Fachbegriffe.
   faceReviewThreshold:  'face_review_threshold',
   faceMinClusterSize:   'face_min_cluster_size',
   ```
-- [ ] `extractProcessingConfig` — 6 neue Felder lesen (alle `Number(...)` mit Fallback auf Default)
+- [x] `extractProcessingConfig` — 6 neue Felder lesen (alle `Number(...)` mit Fallback auf Default)
 
 #### verarbeitung.ts
 
-- [ ] 4 `linkedSignal`s für Slider-Live-Anzeige (analog `dupeThresholdDisplay`):
+- [x] 4 `linkedSignal`s für Slider-Live-Anzeige (analog `dupeThresholdDisplay`):
   ```typescript
   readonly faceDetConfDisplay    = linkedSignal(() => this.processingConfig().faceDetConfThreshold);
   readonly faceDetIouDisplay     = linkedSignal(() => this.processingConfig().faceDetIouThreshold);
   readonly faceAutoDisplay       = linkedSignal(() => this.processingConfig().faceAutoThreshold);
   readonly faceReviewDisplay     = linkedSignal(() => this.processingConfig().faceReviewThreshold);
   ```
-- [ ] 4 `computed` Beschriftungen:
+- [x] 4 `computed` Beschriftungen:
   - `faceDetConfLabel` — z. B. `0.3 — sehr sensibel (mehr Fehlalarme)` · `0.5 — ausgewogen` · `0.8 — nur eindeutige Gesichter`
   - `faceDetIouLabel` — z. B. `0.3 — streng (nur getrennte Rahmen)` · `0.45 — Standard` · `0.7 — viel Überlappung erlaubt`
   - `faceAutoLabel` — z. B. `0.5 — viele Auto-Zuweisungen` · `0.6 — ausgewogen` · `0.85 — nur sichere Treffer`
   - `faceReviewLabel` — z. B. `0.3 — große Review-Queue` · `0.45 — mittlere Grauzone` · `0.6 — wenig Vorschläge`
-- [ ] `reviewBelowAutoWarning = computed((): boolean => this.processingConfig().faceReviewThreshold >= this.processingConfig().faceAutoThreshold)`
-- [ ] Handler für 4 Slider (je `onInput` + `onChange`):
+- [x] `reviewBelowAutoWarning = computed((): boolean => this.processingConfig().faceReviewThreshold >= this.processingConfig().faceAutoThreshold)`
+- [x] Handler für 4 Slider (je `onInput` + `onChange`):
   `onFaceDetConfInput/Change`, `onFaceDetIouInput/Change`,
   `onFaceAutoInput/Change`, `onFaceReviewInput/Change`
-- [ ] Handler für 2 Zahleneingaben (je `onChange`):
+- [x] Handler für 2 Zahleneingaben (je `onChange`):
   `onFaceCropPaddingChange` (0–150, clamp), `onFaceMinClusterSizeChange` (2–20, clamp)
 
 #### verarbeitung.html — Sektion Gesichtserkennung
@@ -224,7 +224,7 @@ Bestehende Zeile "Personen-Clustering starten" bleibt. Davor 3 neue Untergruppen
 
 ---
 
-## Finale Abnahme-Kriterien
+## Finale Abnahme-Kriterien (User-Smoke)
 
 - [ ] Erkennungsschwelle verringern → mehr Gesichter in Testbild erkannt
 - [ ] Crop-Padding erhöhen → gespeicherter Ausschnitt zeigt mehr Kontext
@@ -235,8 +235,8 @@ Bestehende Zeile "Personen-Clustering starten" bleibt. Davor 3 neue Untergruppen
 
 ## Archiv-Footer
 
-**Summary:** —
-**Files touched:** —
-**Commits:** —
-**Deviations:** —
+**Summary:** Alle 6 Gesichtserkennung-Tunables in settings.json + Einstellungsseite. Neue Untergruppen Detektion, Zuschnitt, Personen-Zuordnung. Slider mit Live-Labels + Warnhinweis.
+**Files touched:** `backend/photofant/settings.py`, `backend/photofant/inference/adapters/buffalo_l.py`, `backend/photofant/jobs/face_job.py`, `frontend/src/app/models/config.model.ts`, `frontend/src/app/store/models/models.effects.ts`, `frontend/src/app/features/einstellungen/verarbeitung/verarbeitung.ts`, `.html`, `.scss`
+**Commits:** feat(face): make detection thresholds and crop padding configurable via settings + feat(settings): add face detection und crop padding controls to Verarbeitung page
+**Deviations:** faceMinClusterSize von Slider zu Zahleneingabe geändert (Plan sah Zahleneingabe vor, Slider war Legacy); Slider-Ranges der bestehenden Auto/Review-Threshold-Slider eingeschränkt (0.4–0.95 / 0.2–0.85 statt 0–1)
 **Follow-ups:** —

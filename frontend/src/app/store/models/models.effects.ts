@@ -12,30 +12,36 @@ import { modelsActions } from './models.actions';
 import { modelsSelectors } from './models.selectors';
 
 const PROCESSING_CONFIG_KEY_MAP: Record<keyof ProcessingConfig, string> = {
-  autoTag:             'auto_tag',
-  autoCaption:         'auto_caption',
-  autoEmbed:           'auto_embed',
-  minProbability:      'min_probability',
-  maxTags:             'max_tags',
-  blurThreshold:       'blur_threshold',
-  dupeThreshold:       'dupe_threshold',
-  faceAutoThreshold:   'face_auto_threshold',
-  faceReviewThreshold: 'face_review_threshold',
-  faceMinClusterSize:  'face_min_cluster_size',
+  autoTag:              'auto_tag',
+  autoCaption:          'auto_caption',
+  autoEmbed:            'auto_embed',
+  minProbability:       'min_probability',
+  maxTags:              'max_tags',
+  blurThreshold:        'blur_threshold',
+  dupeThreshold:        'dupe_threshold',
+  faceDetConfThreshold: 'face_det_conf_threshold',
+  faceDetIouThreshold:  'face_det_iou_threshold',
+  faceCropPadding:      'face_crop_padding',
+  faceAutoThreshold:    'face_auto_threshold',
+  faceReviewThreshold:  'face_review_threshold',
+  faceMinClusterSize:   'face_min_cluster_size',
 };
 
 function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfig {
   return {
-    autoTag:             Boolean(data['auto_tag']              ?? PROCESSING_CONFIG_DEFAULTS.autoTag),
-    autoCaption:         Boolean(data['auto_caption']          ?? PROCESSING_CONFIG_DEFAULTS.autoCaption),
-    autoEmbed:           Boolean(data['auto_embed']            ?? PROCESSING_CONFIG_DEFAULTS.autoEmbed),
-    minProbability:      Number(data['min_probability']        ?? PROCESSING_CONFIG_DEFAULTS.minProbability),
-    maxTags:             Number(data['max_tags']               ?? PROCESSING_CONFIG_DEFAULTS.maxTags),
-    blurThreshold:       Number(data['blur_threshold']         ?? PROCESSING_CONFIG_DEFAULTS.blurThreshold),
-    dupeThreshold:       Number(data['dupe_threshold']         ?? PROCESSING_CONFIG_DEFAULTS.dupeThreshold),
-    faceAutoThreshold:   Number(data['face_auto_threshold']    ?? PROCESSING_CONFIG_DEFAULTS.faceAutoThreshold),
-    faceReviewThreshold: Number(data['face_review_threshold']  ?? PROCESSING_CONFIG_DEFAULTS.faceReviewThreshold),
-    faceMinClusterSize:  Number(data['face_min_cluster_size']  ?? PROCESSING_CONFIG_DEFAULTS.faceMinClusterSize),
+    autoTag:              Boolean(data['auto_tag']                  ?? PROCESSING_CONFIG_DEFAULTS.autoTag),
+    autoCaption:          Boolean(data['auto_caption']              ?? PROCESSING_CONFIG_DEFAULTS.autoCaption),
+    autoEmbed:            Boolean(data['auto_embed']                ?? PROCESSING_CONFIG_DEFAULTS.autoEmbed),
+    minProbability:       Number(data['min_probability']            ?? PROCESSING_CONFIG_DEFAULTS.minProbability),
+    maxTags:              Number(data['max_tags']                   ?? PROCESSING_CONFIG_DEFAULTS.maxTags),
+    blurThreshold:        Number(data['blur_threshold']             ?? PROCESSING_CONFIG_DEFAULTS.blurThreshold),
+    dupeThreshold:        Number(data['dupe_threshold']             ?? PROCESSING_CONFIG_DEFAULTS.dupeThreshold),
+    faceDetConfThreshold: Number(data['face_det_conf_threshold']    ?? PROCESSING_CONFIG_DEFAULTS.faceDetConfThreshold),
+    faceDetIouThreshold:  Number(data['face_det_iou_threshold']     ?? PROCESSING_CONFIG_DEFAULTS.faceDetIouThreshold),
+    faceCropPadding:      Number(data['face_crop_padding']          ?? PROCESSING_CONFIG_DEFAULTS.faceCropPadding),
+    faceAutoThreshold:    Number(data['face_auto_threshold']        ?? PROCESSING_CONFIG_DEFAULTS.faceAutoThreshold),
+    faceReviewThreshold:  Number(data['face_review_threshold']      ?? PROCESSING_CONFIG_DEFAULTS.faceReviewThreshold),
+    faceMinClusterSize:   Number(data['face_min_cluster_size']      ?? PROCESSING_CONFIG_DEFAULTS.faceMinClusterSize),
   };
 }
 

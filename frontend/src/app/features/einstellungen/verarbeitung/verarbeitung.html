@@ -77,11 +77,88 @@
   </div>
 </div>
 
-<div class="verarbeitung__gruppen-label">Gesichtserkennung</div>
+<div class="verarbeitung__gruppen-label">Detektion</div>
 <div class="verarbeitung__gruppe">
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">
     <div class="verarbeitung__zeile-inhalt">
-      <div class="verarbeitung__zeile-titel">Auto-Zuordnung ab</div>
+      <div class="verarbeitung__zeile-titel">Erkennungsschwelle</div>
+      <div class="verarbeitung__zeile-sub">
+        Wie sicher das Modell sein muss, um ein Gesicht zu melden.
+        Niedriger → mehr Treffer, mehr Fehlalarme.
+        Höher → nur eindeutige Gesichter.
+      </div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ faceDetConfLabel() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="0.10"
+          max="0.90"
+          step="0.05"
+          [value]="processingConfig().faceDetConfThreshold"
+          (input)="onFaceDetConfInput($any($event.target))"
+          (change)="onFaceDetConfChange($any($event.target))"
+        >
+      </div>
+    </div>
+  </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Überlappungsfilter</div>
+      <div class="verarbeitung__zeile-sub">
+        Werden zwei Erkennungsrahmen als zu ähnlich eingestuft, bleibt nur der bessere.
+        Höherer Wert → mehr Überlappung wird toleriert.
+      </div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ faceDetIouLabel() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="0.10"
+          max="0.90"
+          step="0.05"
+          [value]="processingConfig().faceDetIouThreshold"
+          (input)="onFaceDetIouInput($any($event.target))"
+          (change)="onFaceDetIouChange($any($event.target))"
+        >
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="verarbeitung__gruppen-label">Zuschnitt</div>
+<div class="verarbeitung__gruppe">
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Rand um Gesicht</div>
+      <div class="verarbeitung__zeile-sub">
+        Pixel-Abstand rund um den erkannten Bereich.
+        Mehr → mehr Kontext (Haare, Schultern sichtbar), weniger Zoom.
+      </div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <input
+        class="verarbeitung__zahleneingabe"
+        type="number"
+        min="0"
+        max="150"
+        step="5"
+        [value]="processingConfig().faceCropPadding"
+        (change)="onFaceCropPaddingChange($any($event.target))"
+      >
+    </div>
+  </div>
+</div>
+
+<div class="verarbeitung__gruppen-label">Personen-Zuordnung</div>
+<div class="verarbeitung__gruppe">
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Automatisch zuweisen ab</div>
       <div class="verarbeitung__zeile-sub">
         Liegt die Ähnlichkeit zu einer bekannten Person über diesem Wert, wird das Gesicht
         sofort automatisch zugeordnet — kein manueller Schritt nötig.
@@ -94,9 +171,9 @@
         <input
           class="verarbeitung__slider"
           type="range"
-          min="0"
-          max="1"
-          step="0.01"
+          min="0.40"
+          max="0.95"
+          step="0.05"
           [value]="processingConfig().faceAutoThreshold"
           (input)="onFaceAutoThresholdInput($any($event.target))"
           (change)="onFaceAutoThresholdChange($any($event.target))"
@@ -106,12 +183,16 @@
   </div>
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">
     <div class="verarbeitung__zeile-inhalt">
-      <div class="verarbeitung__zeile-titel">Review-Queue ab</div>
+      <div class="verarbeitung__zeile-titel">Zur Prüfung vorschlagen ab</div>
       <div class="verarbeitung__zeile-sub">
-        Liegt die Ähnlichkeit zwischen diesem und dem Auto-Zuordnungs-Wert, landet das
-        Gesicht in der Review-Queue zur manuellen Prüfung. Darunter bleibt es unbekannt.
-        Sollte immer kleiner als „Auto-Zuordnung ab" sein.
+        Liegt die Ähnlichkeit in diesem Bereich, landet das Gesicht in der Review-Queue.
+        Muss kleiner sein als „Automatisch zuweisen ab".
       </div>
+      @if (reviewBelowAutoWarning()) {
+        <div class="verarbeitung__warnung">
+          Dieser Wert liegt über „Automatisch zuweisen" — die Review-Queue hat keinen Effekt.
+        </div>
+      }
     </div>
     <div class="verarbeitung__zeile-steuerung">
       <div class="verarbeitung__slider-gruppe">
@@ -119,9 +200,9 @@
         <input
           class="verarbeitung__slider"
           type="range"
-          min="0"
-          max="1"
-          step="0.01"
+          min="0.20"
+          max="0.85"
+          step="0.05"
           [value]="processingConfig().faceReviewThreshold"
           (input)="onFaceReviewThresholdInput($any($event.target))"
           (change)="onFaceReviewThresholdChange($any($event.target))"
@@ -131,27 +212,21 @@
   </div>
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">
     <div class="verarbeitung__zeile-inhalt">
-      <div class="verarbeitung__zeile-titel">Mindestgröße Cluster (Neu-Gruppierung)</div>
+      <div class="verarbeitung__zeile-titel">Mindest-Cluster-Größe</div>
       <div class="verarbeitung__zeile-sub">
-        Wie viele Gesichter mindestens in einer Gruppe liegen müssen, damit beim
-        Personen-Clustering eine neue Person angelegt wird. Kleinere Gruppen werden
-        als Rauschen verworfen und bleiben unbekannt.
+        Wie viele Gesichter eine Gruppe mindestens haben muss, damit das Clustering daraus eine Person anlegt.
       </div>
     </div>
     <div class="verarbeitung__zeile-steuerung">
-      <div class="verarbeitung__slider-gruppe">
-        <span class="verarbeitung__slider-wert">{{ faceMinClusterSizeLabel() }}</span>
-        <input
-          class="verarbeitung__slider"
-          type="range"
-          min="1"
-          max="20"
-          step="1"
-          [value]="processingConfig().faceMinClusterSize"
-          (input)="onFaceMinClusterSizeInput($any($event.target))"
-          (change)="onFaceMinClusterSizeChange($any($event.target))"
-        >
-      </div>
+      <input
+        class="verarbeitung__zahleneingabe"
+        type="number"
+        min="2"
+        max="20"
+        step="1"
+        [value]="processingConfig().faceMinClusterSize"
+        (change)="onFaceMinClusterSizeChange($any($event.target))"
+      >
     </div>
   </div>
 </div>

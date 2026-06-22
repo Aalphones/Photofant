@@ -22,6 +22,9 @@ export interface ProcessingConfig {
   maxTags: number;
   blurThreshold: number;
   dupeThreshold: number;
+  faceDetConfThreshold: number;
+  faceDetIouThreshold: number;
+  faceCropPadding: number;
   faceAutoThreshold: number;
   faceReviewThreshold: number;
   faceMinClusterSize: number;
@@ -35,9 +38,12 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   maxTags: 30,
   blurThreshold: 200.0,
   dupeThreshold: 10,
+  faceDetConfThreshold: 0.5,
+  faceDetIouThreshold: 0.45,
+  faceCropPadding: 40,
   faceAutoThreshold: 0.6,
   faceReviewThreshold: 0.45,
-  faceMinClusterSize: 2,
+  faceMinClusterSize: 3,
 };
 
 export interface ShortcutBinding {

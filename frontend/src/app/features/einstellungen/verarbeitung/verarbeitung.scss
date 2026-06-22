@@ -32,6 +32,15 @@
 }
 .verarbeitung__btn:hover:not(:disabled) { background: var(--accent-press); }
 .verarbeitung__btn:disabled { opacity: .5; cursor: not-allowed; }
+.verarbeitung__warnung {
+  margin-top: 6px;
+  padding: 5px 8px;
+  border-radius: var(--radius-s);
+  background: color-mix(in oklch, var(--warn) 14%, transparent);
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.4;
+}
 @media (max-width: 860px) {
   .verarbeitung__zeile { flex-wrap: wrap; gap: 8px; }
   .verarbeitung__zeile-steuerung { width: 100%; }
