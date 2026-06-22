@@ -32,19 +32,35 @@ def _now_utc() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _crop_with_padding(
+def _crop_square(
     image: np.ndarray,
     bbox: list[float],
     padding: int,
 ) -> np.ndarray:
-    """Crop face region from image with extra padding on each side."""
-    height, width = image.shape[:2]
+    """Crop face as a 1:1 square centered on bbox + padding.
+
+    Out-of-bounds regions are filled with black so the output is always square.
+    """
+    img_h, img_w = image.shape[:2]
     x1, y1, x2, y2 = (int(round(v)) for v in bbox)
-    x1 = max(0, x1 - padding)
-    y1 = max(0, y1 - padding)
-    x2 = min(width, x2 + padding)
-    y2 = min(height, y2 + padding)
-    return image[y1:y2, x1:x2]
+    cx = (x1 + x2) // 2
+    cy = (y1 + y2) // 2
+    half = max(x2 - x1, y2 - y1) // 2 + padding
+    side = 2 * half
+
+    src_x1 = max(0, cx - half)
+    src_y1 = max(0, cy - half)
+    src_x2 = min(img_w, cx + half)
+    src_y2 = min(img_h, cy + half)
+
+    dst_x = src_x1 - (cx - half)
+    dst_y = src_y1 - (cy - half)
+
+    canvas = np.zeros((side, side, 3), dtype=np.uint8)
+    canvas[dst_y : dst_y + (src_y2 - src_y1), dst_x : dst_x + (src_x2 - src_x1)] = (
+        image[src_y1:src_y2, src_x1:src_x2]
+    )
+    return canvas
 
 
 def _save_crop(crop: np.ndarray, dest: Path) -> None:
@@ -144,7 +160,7 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         age = face_dict.get("age")
         embedding = face_dict.get("embedding")
 
-        crop_np = _crop_with_padding(image, bbox, _FACE_PADDING_DEFAULT)
+        crop_np = _crop_square(image, bbox, _FACE_PADDING_DEFAULT)
         crop_filename = f"{asset_id}_{face_index}.jpg"
         crop_path = faces_dir / crop_filename
 
