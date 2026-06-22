@@ -52,5 +52,10 @@
   <div class="dock-foot">
     <pf-icon name="info" [size]="13" />
     Verarbeitung läuft lokal · offline · einmal pro Bild
+    @if (hasDoneJobs()) {
+      <button class="dock-clear" (click)="clearDone.emit()" type="button">
+        Queue bereinigen
+      </button>
+    }
   </div>
 </div>

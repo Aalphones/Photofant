@@ -23,7 +23,7 @@
 </div>
 
 @if (isDockOpen()) {
-  <pf-job-dock [jobs]="allJobs()" (close)="closeDock()" />
+  <pf-job-dock [jobs]="allJobs()" (close)="closeDock()" (clearDone)="clearDoneJobs()" />
 }
 
 <!-- Global DnD overlay pill -->

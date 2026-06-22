@@ -7,8 +7,9 @@ export const jobsActions = createActionGroup({
     'Load Stream':  emptyProps(),
     'Upsert Job':   props<{ job: Job }>(),
     'Stream Error': props<{ error: string }>(),
-    'Toggle Dock':  emptyProps(),
-    'Close Dock':   emptyProps(),
-    'Trigger Demo': emptyProps(),
+    'Toggle Dock':     emptyProps(),
+    'Close Dock':      emptyProps(),
+    'Clear Done Jobs': emptyProps(),
+    'Trigger Demo':    emptyProps(),
   },
 });

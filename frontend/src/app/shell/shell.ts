@@ -133,6 +133,10 @@ export class Shell {
     this.store.dispatch(jobsActions.closeDock());
   }
 
+  protected clearDoneJobs(): void {
+    this.store.dispatch(jobsActions.clearDoneJobs());
+  }
+
   protected openImport(): void {
     this.droppedFiles.set([]);
     this.isImportOpen.set(true);

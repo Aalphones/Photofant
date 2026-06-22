@@ -67,6 +67,23 @@
   gap: 8px;
 }
 
+.dock-clear {
+  margin-left: auto;
+  padding: 3px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--surface);
+    color: var(--text-1);
+  }
+}
+
 .job {
   padding: 10px 11px;
   border-radius: 9px;

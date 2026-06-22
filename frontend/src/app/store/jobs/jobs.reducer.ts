@@ -28,6 +28,12 @@ export const jobsFeature = createFeature({
       ...state,
       isDockOpen: false,
     })),
+    on(jobsActions.clearDoneJobs, (state: JobsState) =>
+      adapter.removeMany(
+        (job: Job) => job.state === 'done',
+        state,
+      )
+    ),
   ),
   extraSelectors: ({ selectJobsState }) => ({
     ...adapter.getSelectors(selectJobsState),
