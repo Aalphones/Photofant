@@ -353,6 +353,7 @@ export class Lightbox {
     if (asset == null) { return; }
     const assetAsSummary: AssetSummary = {
       id: asset.id,
+      content_hash: asset.content_hash,
       width: asset.width,
       height: asset.height,
       format: asset.format,

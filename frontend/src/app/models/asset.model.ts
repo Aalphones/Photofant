@@ -62,6 +62,7 @@ export interface AssetDto {
 
 export interface SimilarAsset {
   id: number;
+  content_hash: string;
   width: number | null;
   height: number | null;
   format: string | null;
