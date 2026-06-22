@@ -604,6 +604,42 @@ pf-zoom-stage {
   color: var(--text-2);
 }
 
+.face-matches__search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.face-matches__search-icon {
+  color: var(--text-3);
+  flex: none;
+}
+
+.face-matches__search {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: var(--text-1);
+
+  &::placeholder { color: var(--text-3); }
+}
+
+.face-matches__avatar--placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+  border-radius: 50%;
+}
+
 .face-matches__empty {
   padding: 12px 10px;
   font-size: 12px;

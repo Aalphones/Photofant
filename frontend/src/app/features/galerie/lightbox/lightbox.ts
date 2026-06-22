@@ -18,7 +18,7 @@ import { AssetService, ClassifyService, PersonService, TagService } from '@photo
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
-import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare';
 
@@ -134,6 +134,19 @@ export class Lightbox {
   protected readonly faceMatchesLoading = signal(false);
   protected readonly creatingNewPerson  = signal(false);
   protected readonly newPersonName      = signal('');
+  protected readonly personSearchQuery  = signal('');
+
+  private readonly allPersons = this.store.selectSignal(personsSelectors.selectAll);
+
+  protected readonly personSearchResults = computed((): PersonDto[] => {
+    const query = this.personSearchQuery().trim().toLowerCase();
+    if (query.length === 0) { return []; }
+    return this.allPersons()
+      .filter((person: PersonDto) =>
+        !person.is_unknown && person.name != null && person.name.toLowerCase().includes(query)
+      )
+      .slice(0, 15);
+  });
 
   // ── Computed display ─────────────────────────────────────────────────────
 
@@ -236,6 +249,7 @@ export class Lightbox {
       this.faceMatches.set([]);
       this.creatingNewPerson.set(false);
       this.newPersonName.set('');
+      this.personSearchQuery.set('');
     });
 
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -398,11 +412,14 @@ export class Lightbox {
     if (this.selectedFace()?.id === face.id) {
       this.selectedFace.set(null);
       this.faceMatches.set([]);
+      this.personSearchQuery.set('');
       return;
     }
     this.selectedFace.set(face);
     this.faceMatchesLoading.set(true);
     this.faceMatches.set([]);
+    this.personSearchQuery.set('');
+    this.store.dispatch(personsActions.loadPersons());
     this.personService.getFaceMatches(face.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

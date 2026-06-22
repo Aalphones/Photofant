@@ -256,11 +256,55 @@
                 <span class="face-matches__title">Person zuweisen</span>
               </div>
 
+              <!-- Personensuche -->
+              <div class="face-matches__search-wrap">
+                <pf-icon name="search" [size]="12" class="face-matches__search-icon" />
+                <input
+                  class="face-matches__search"
+                  [value]="personSearchQuery()"
+                  (input)="personSearchQuery.set($any($event.target).value)"
+                  placeholder="Person suchen…"
+                  aria-label="Person suchen"
+                />
+              </div>
+
               @if (faceMatchesLoading()) {
                 <div class="face-matches__empty">Lade Matches…</div>
+              } @else if (personSearchQuery().trim().length > 0) {
+                <!-- Suchergebnisse aus allen Personen -->
+                @if (personSearchResults().length === 0) {
+                  <div class="face-matches__empty">Keine Person gefunden.</div>
+                } @else {
+                  <div class="face-matches__list">
+                    @for (person of personSearchResults(); track person.id) {
+                      <button
+                        class="face-matches__row"
+                        (click)="assignFaceToPerson(selectedFace()!.id, person.id)"
+                        [title]="'Zuweisen zu ' + (person.name ?? 'Person #' + person.id)"
+                      >
+                        @if (person.portrait_face_id != null) {
+                          <img
+                            class="face-matches__avatar"
+                            [src]="'/api/faces/' + person.portrait_face_id + '/thumbnail'"
+                            alt=""
+                          />
+                        } @else {
+                          <div class="face-matches__avatar face-matches__avatar--placeholder">
+                            {{ (person.name || '?')[0].toUpperCase() }}
+                          </div>
+                        }
+                        <div class="face-matches__info">
+                          <span class="face-matches__name">{{ person.name ?? 'Person #' + person.id }}</span>
+                        </div>
+                      </button>
+                    }
+                  </div>
+                }
               } @else if (faceMatches().length === 0) {
+                <!-- Top-Matches: keine gefunden -->
                 <div class="face-matches__empty">Keine Matches gefunden.</div>
               } @else {
+                <!-- Top-Matches -->
                 <div class="face-matches__list">
                   @for (match of faceMatches(); track match.person_id) {
                     <button
@@ -312,7 +356,7 @@
               } @else {
                 <button class="face-matches__new-btn" (click)="startCreatePerson()">
                   <pf-icon name="plus" [size]="13" />
-                  Neuer Person anlegen
+                  Neue Person anlegen
                 </button>
               }
             </div>
