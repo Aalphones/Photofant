@@ -1,10 +1,11 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
   ClusterResult,
   FaceImportResult,
   FaceMatch,
+  FacesPage,
   MergeResult,
   PersonDto,
   PersonDupePair,
@@ -72,6 +73,20 @@ export class PersonService {
 
   searchDuplicates(personId: number, threshold = 10): Observable<PersonDupePair[]> {
     return this.http.post<PersonDupePair[]>('/api/duplicates/search', { person_id: personId, threshold });
+  }
+
+  listFacesGallery(params: { page: number; page_size: number; person_id?: number }): Observable<FacesPage> {
+    let httpParams = new HttpParams()
+      .set('page', params.page)
+      .set('page_size', params.page_size);
+    if (params.person_id != null) {
+      httpParams = httpParams.set('person_id', params.person_id);
+    }
+    return this.http.get<FacesPage>('/api/faces/gallery', { params: httpParams });
+  }
+
+  faceGalleryThumbnailUrl(faceId: number): string {
+    return `/api/faces/${faceId}/thumbnail`;
   }
 
   portraitUrl(faceId: number): string {

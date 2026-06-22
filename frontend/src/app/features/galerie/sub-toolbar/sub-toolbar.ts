@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { Collection, Density, GroupKey, PersonDto, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
+import type { Collection, Density, GroupKey, MediaType, PersonDto, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
+import { MEDIA_TYPES } from '@photofant/models';
 import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, personsSelectors, presetsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
@@ -44,6 +45,16 @@ export class SubToolbar {
   protected readonly collections  = this.store.selectSignal(collectionsSelectors.selectAll);
   protected readonly persons      = this.store.selectSignal(personsSelectors.selectAll);
   protected readonly facets       = this.store.selectSignal(gallerySelectors.selectFacets);
+
+  protected readonly mediaType = this.store.selectSignal(filtersSelectors.mediaType);
+
+  protected readonly MEDIA_TYPE_LABELS: Record<MediaType, string> = {
+    all:    'Alles',
+    photos: 'Fotos',
+    faces:  'Gesichter',
+  };
+
+  protected readonly MEDIA_TYPE_LIST: MediaType[] = [...MEDIA_TYPES];
 
   protected readonly SOURCE_LABELS: Record<string, string> = {
     original: 'Original',
@@ -145,6 +156,10 @@ export class SubToolbar {
 
   protected setDensity(density: Density): void {
     this.store.dispatch(filtersActions.setDensity({ density }));
+  }
+
+  protected setMediaType(mediaType: MediaType): void {
+    this.store.dispatch(filtersActions.setMediaType({ mediaType }));
   }
 
   protected sortLabel(): string {

@@ -4,8 +4,8 @@ import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { AssetDto, AssetsPage, Job } from '@photofant/models';
-import { AssetService, SettingsService } from '@photofant/services';
+import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job } from '@photofant/models';
+import { AssetService, PersonService, SettingsService } from '@photofant/services';
 import { filtersActions } from '../filters/filters.actions';
 import { searchActions } from '../search/search.actions';
 import { jobsActions } from '../jobs/jobs.actions';
@@ -17,6 +17,7 @@ export class GalleryEffects {
   private readonly actions$ = inject(Actions);
   private readonly store = inject(Store);
   private readonly assetService = inject(AssetService);
+  private readonly personService = inject(PersonService);
   private readonly settingsService = inject(SettingsService);
 
   readonly initDensity$ = createEffect(() =>
@@ -47,6 +48,7 @@ export class GalleryEffects {
         filtersActions.setCollectionId,
         filtersActions.setPersonId,
         filtersActions.setFramings,
+        filtersActions.setMediaType,
         filtersActions.clearAllFilters,
         searchActions.setQuery,
         searchActions.setMode,
@@ -60,8 +62,26 @@ export class GalleryEffects {
     this.actions$.pipe(
       ofType(galleryActions.requestPage, galleryActions.requestNextPage, galleryActions.reset),
       concatLatestFrom(() => this.store.select(gallerySelectors.selectFetchParams)),
-      switchMap(([, params]) =>
-        this.assetService.listAssets({
+      switchMap(([, params]) => {
+        if (params.mediaType === 'faces') {
+          const faceParams: { page: number; page_size: number; person_id?: number } = {
+            page: params.page,
+            page_size: params.pageSize,
+          };
+          if (params.personId != null) { faceParams.person_id = params.personId; }
+          return this.personService.listFacesGallery(faceParams).pipe(
+            map((result: FacesPage) => galleryActions.loadFacesPageSuccess({
+              items: result.items,
+              total: result.total,
+              page: result.page,
+              pageSize: result.page_size,
+            })),
+            catchError((error: HttpErrorResponse) =>
+              of(galleryActions.loadPageFailure({ error: error.message }))
+            ),
+          );
+        }
+        return this.assetService.listAssets({
           page: params.page,
           page_size: params.pageSize,
           sort: params.sort,
@@ -85,8 +105,8 @@ export class GalleryEffects {
           catchError((error: HttpErrorResponse) =>
             of(galleryActions.loadPageFailure({ error: error.message }))
           ),
-        )
-      ),
+        );
+      }),
     )
   );
 
@@ -139,6 +159,21 @@ export class GalleryEffects {
         this.assetService.setFavourite(id, value).pipe(
           map((asset: AssetDto) => galleryActions.toggleFavouriteSuccess({ asset })),
           catchError(() => of(galleryActions.toggleFavouriteFailure({ id, previous: !value }))),
+        )
+      ),
+    )
+  );
+
+  readonly openFaceLightbox$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(galleryActions.openFaceLightbox),
+      mergeMap(({ assetId }) =>
+        this.assetService.getAsset(assetId).pipe(
+          mergeMap((detail: AssetDetailDto) => [
+            galleryActions.injectAsset({ asset: detail }),
+            galleryActions.openLightbox({ id: assetId }),
+          ]),
+          catchError(() => EMPTY),
         )
       ),
     )

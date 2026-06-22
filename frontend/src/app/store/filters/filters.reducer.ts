@@ -1,5 +1,5 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { Density, GroupKey, SortKey, SortOrder } from '@photofant/models';
+import type { Density, GroupKey, MediaType, SortKey, SortOrder } from '@photofant/models';
 import { filtersActions } from './filters.actions';
 
 interface FiltersState {
@@ -14,6 +14,7 @@ interface FiltersState {
   collectionId: number | null;
   personId: number | null;
   framings: string[];
+  mediaType: MediaType;
 }
 
 const initialState: FiltersState = {
@@ -28,6 +29,7 @@ const initialState: FiltersState = {
   collectionId: null,
   personId: null,
   framings: [],
+  mediaType: 'all',
 };
 
 export const filtersFeature = createFeature({
@@ -74,6 +76,10 @@ export const filtersFeature = createFeature({
     on(filtersActions.setFramings, (state: FiltersState, { framings }) => ({
       ...state,
       framings,
+    })),
+    on(filtersActions.setMediaType, (state: FiltersState, { mediaType }) => ({
+      ...state,
+      mediaType,
     })),
     on(filtersActions.clearAllFilters, (state: FiltersState) => ({
       ...state,

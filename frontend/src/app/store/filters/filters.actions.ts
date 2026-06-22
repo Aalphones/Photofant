@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { Density, GroupKey, SortKey, SortOrder } from '@photofant/models';
+import type { Density, GroupKey, MediaType, SortKey, SortOrder } from '@photofant/models';
 
 export const filtersActions = createActionGroup({
   source: 'Filters',
@@ -14,6 +14,7 @@ export const filtersActions = createActionGroup({
     'Set Collection Id': props<{ collectionId: number | null }>(),
     'Set Person Id':     props<{ personId: number | null }>(),
     'Set Framings':      props<{ framings: string[] }>(),
+    'Set Media Type':    props<{ mediaType: MediaType }>(),
     'Clear All Filters': emptyProps(),
   },
 });

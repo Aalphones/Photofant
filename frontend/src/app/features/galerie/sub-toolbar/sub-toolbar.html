@@ -26,6 +26,19 @@
 </div>
 
 <div class="subbar__tools">
+  <!-- Media type segment: Alles | Fotos | Gesichter -->
+  <div class="subbar__seg">
+    @for (type of MEDIA_TYPE_LIST; track type) {
+      <button
+        class="subbar__seg-btn"
+        [class.subbar__seg-btn--on]="mediaType() === type"
+        (click)="setMediaType(type)"
+      >
+        {{ MEDIA_TYPE_LABELS[type] }}
+      </button>
+    }
+  </div>
+
   <!-- Grouping segment -->
   <div class="subbar__seg">
     @for (item of GROUPS; track item.key) {

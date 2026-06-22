@@ -5,6 +5,7 @@ import { Store } from '@ngrx/store';
 import { collectionsActions, collectionsSelectors, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, personsActions, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
 import { AssetService, ClassifyService, ComfyUIService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
+import { FaceGrid } from './face-grid/face-grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
 import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
@@ -16,7 +17,7 @@ import type { BulkEditPayload, RerunPayload } from '@photofant/ui';
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
+  imports: [SubToolbar, GalerieGrid, FaceGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
   host: { '(document:keydown.escape)': 'onEscape()' },
@@ -37,6 +38,9 @@ export class Galerie {
   protected readonly lightboxId    = this.store.selectSignal(gallerySelectors.selectLightboxId);
   protected readonly selectionMode = this.store.selectSignal(gallerySelectors.selectSelectionMode);
   protected readonly selectedIds   = this.store.selectSignal(gallerySelectors.selectSelectedIds);
+  protected readonly mediaType     = this.store.selectSignal(filtersSelectors.mediaType);
+  protected readonly faceItems     = this.store.selectSignal(gallerySelectors.selectFaceItems);
+  protected readonly faceHasMore   = this.store.selectSignal(gallerySelectors.selectFaceHasMore);
 
   private readonly filterSources      = this.store.selectSignal(filtersSelectors.sources);
   private readonly filterQualityMin   = this.store.selectSignal(filtersSelectors.qualityMin);
@@ -74,9 +78,12 @@ export class Galerie {
     return this.activeWorkflows().find((workflow) => workflow.id === workflowId) ?? null;
   });
 
-  protected readonly isEmpty = computed((): boolean =>
-    !this.isLoading() && this.groups().length === 0
-  );
+  protected readonly isEmpty = computed((): boolean => {
+    if (this.mediaType() === 'faces') {
+      return !this.isLoading() && this.faceItems().length === 0;
+    }
+    return !this.isLoading() && this.groups().length === 0;
+  });
 
   protected readonly selectedCount = computed((): number => this.selectedIds().length);
 
@@ -131,6 +138,18 @@ export class Galerie {
   protected onLoadMore(): void {
     if (!this.isLoading() && this.hasMore()) {
       this.store.dispatch(galleryActions.requestNextPage());
+    }
+  }
+
+  protected onFaceLoadMore(): void {
+    if (!this.isLoading() && this.faceHasMore()) {
+      this.store.dispatch(galleryActions.requestNextPage());
+    }
+  }
+
+  protected onOpenFace(event: { faceId: number; assetId: number | null }): void {
+    if (event.assetId != null) {
+      this.store.dispatch(galleryActions.openFaceLightbox({ assetId: event.assetId }));
     }
   }
 

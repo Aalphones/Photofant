@@ -1,5 +1,6 @@
 """Face API — thumbnails, matches, clustering, manual assignment, and direct import.
 
+GET   /faces/gallery              → Paginated face-crop gallery
 GET   /faces/{face_id}/thumbnail  → JPEG-Thumbnail (256 px) aus Cache-DB
 GET   /faces/{face_id}/matches    → Top 10 disjunkte Personen (Cosine-Score)
 POST  /faces/cluster              → Initial-Clustering (HDBSCAN) als Job
@@ -15,7 +16,7 @@ from pathlib import Path
 from typing import Annotated
 
 import numpy as np
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -58,6 +59,71 @@ class FaceImportResultDto(BaseModel):
     face_id: int
     person_id: int | None
     has_embedding: bool
+
+
+class FaceGalleryItemDto(BaseModel):
+    id: int
+    asset_id: int | None
+    person_id: int | None
+    person_name: str | None
+    thumbnail_url: str
+    score: float | None
+    age: int | None
+    is_upscaled: bool
+    origin: str | None
+    created_at: datetime | None
+
+
+class FacesGalleryPage(BaseModel):
+    items: list[FaceGalleryItemDto]
+    total: int
+    page: int
+    page_size: int
+
+
+@router.get("/gallery", response_model=FacesGalleryPage)
+async def list_faces_gallery(
+    session: DbSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=200)] = 50,
+    person_id: int | None = None,
+) -> FacesGalleryPage:
+    query = session.query(Face)
+    if person_id is not None:
+        query = query.filter(Face.person_id == person_id)
+
+    total = query.count()
+    faces = (
+        query
+        .order_by(Face.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    person_ids = {face.person_id for face in faces if face.person_id is not None}
+    person_names: dict[int, str] = {}
+    if person_ids:
+        persons = session.query(Person).filter(Person.id.in_(person_ids)).all()
+        person_names = {p.id: p.name for p in persons if p.name is not None}
+
+    items = [
+        FaceGalleryItemDto(
+            id=face.id,
+            asset_id=face.asset_id,
+            person_id=face.person_id,
+            person_name=person_names.get(face.person_id) if face.person_id is not None else None,
+            thumbnail_url=f"/api/faces/{face.id}/thumbnail",
+            score=face.score,
+            age=face.age,
+            is_upscaled=face.is_upscaled,
+            origin=face.origin,
+            created_at=face.created_at,
+        )
+        for face in faces
+    ]
+
+    return FacesGalleryPage(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/{face_id}/thumbnail")

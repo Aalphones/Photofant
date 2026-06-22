@@ -12,6 +12,7 @@ const {
   selectCollectionId,
   selectPersonId,
   selectFramings,
+  selectMediaType,
 } = filtersFeature;
 
 export const filtersSelectors = {
@@ -26,4 +27,5 @@ export const filtersSelectors = {
   collectionId: selectCollectionId,
   personId:     selectPersonId,
   framings:     selectFramings,
+  mediaType:    selectMediaType,
 };

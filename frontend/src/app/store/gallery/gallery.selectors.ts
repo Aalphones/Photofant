@@ -17,6 +17,8 @@ const {
   selectFacets,
   selectSelectionMode,
   selectSelectedIds,
+  selectFaceItems,
+  selectFaceTotal,
 } = galleryFeature;
 
 function formatMonthLabel(dateStr: string | null): string {
@@ -87,9 +89,15 @@ const selectFetchParams = createSelector(
   filtersFeature.selectSort, filtersFeature.selectOrder, filtersFeature.selectFavourite,
   filtersFeature.selectSources, filtersFeature.selectQualityMin, filtersFeature.selectTagIds,
   filtersFeature.selectCollectionId, filtersFeature.selectPersonId, filtersFeature.selectFramings,
+  filtersFeature.selectMediaType,
   searchFeature.selectQ, searchFeature.selectMode,
-  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, q, qMode) =>
-    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, q, qMode })
+  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, mediaType, q, qMode) =>
+    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, mediaType, q, qMode })
+);
+
+const selectFaceHasMore = createSelector(
+  selectFaceTotal, selectPage, selectPageSize,
+  (total: number, page: number, pageSize: number) => total > page * pageSize,
 );
 
 const selectLightboxAsset = createSelector(
@@ -147,4 +155,7 @@ export const gallerySelectors = {
   selectSelectionMode,
   selectSelectedIds,
   selectPersonNameMap,
+  selectFaceItems,
+  selectFaceTotal,
+  selectFaceHasMore,
 };

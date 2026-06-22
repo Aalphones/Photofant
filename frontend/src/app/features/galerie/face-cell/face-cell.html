@@ -1,0 +1,24 @@
+<div class="face-cell__img-wrap" [style.width.px]="cellSize()" [style.height.px]="cellSize()">
+  <img
+    class="face-cell__img"
+    [src]="face().thumbnail_url"
+    [alt]="label()"
+    loading="lazy"
+    draggable="false"
+  />
+</div>
+
+<div class="face-cell__veil"></div>
+
+<div class="face-cell__info">
+  <span class="face-cell__name">{{ label() }}</span>
+  @if (scorePercent()) {
+    <span class="face-cell__score">{{ scorePercent() }}</span>
+  }
+</div>
+
+@if (face().is_upscaled) {
+  <div class="face-cell__badge face-cell__badge--upscaled">
+    <pf-icon name="sparkle" [size]="10" />
+  </div>
+}

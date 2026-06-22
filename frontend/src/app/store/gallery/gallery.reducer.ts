@@ -1,6 +1,6 @@
 import { createEntityAdapter, type EntityAdapter, type EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { AssetDto, Facets } from '@photofant/models';
+import type { AssetDto, Facets, FaceGalleryItemDto } from '@photofant/models';
 import { galleryActions } from './gallery.actions';
 
 const PAGE_SIZE = 50;
@@ -16,6 +16,8 @@ export interface GalleryState extends EntityState<AssetDto> {
   facets: Facets | null;
   selectionMode: boolean;
   selectedIds: number[];
+  faceItems: FaceGalleryItemDto[];
+  faceTotal: number;
 }
 
 const adapter: EntityAdapter<AssetDto> = createEntityAdapter<AssetDto>({
@@ -33,6 +35,8 @@ const initialState: GalleryState = adapter.getInitialState({
   facets: null,
   selectionMode: false,
   selectedIds: [],
+  faceItems: [],
+  faceTotal: 0,
 });
 
 export const galleryFeature = createFeature({
@@ -51,8 +55,17 @@ export const galleryFeature = createFeature({
       error: null,
     })),
     on(galleryActions.reset, (state: GalleryState) =>
-      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null })
+      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null, faceItems: [], faceTotal: 0 })
     ),
+    on(galleryActions.loadFacesPageSuccess, (state: GalleryState, { items, total, page, pageSize }) => ({
+      ...state,
+      faceItems: page === 1 ? items : [...state.faceItems, ...items],
+      faceTotal: total,
+      page,
+      pageSize,
+      isLoading: false,
+      error: null,
+    })),
     on(galleryActions.loadPageSuccess, (state: GalleryState, { items, total, page, pageSize, facets }) => {
       const next = adapter.addMany(items, { ...state, total, page, pageSize, isLoading: false, error: null, lightboxPendingNext: false, facets });
       if (state.lightboxPendingNext && items.length > 0) {
@@ -65,6 +78,9 @@ export const galleryFeature = createFeature({
       isLoading: false,
       error,
     })),
+    on(galleryActions.injectAsset, (state: GalleryState, { asset }) =>
+      adapter.upsertOne(asset, state)
+    ),
     on(galleryActions.openLightbox, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),
     on(galleryActions.closeLightbox, (state: GalleryState) => ({ ...state, lightboxId: null, lightboxPendingNext: false })),
     on(galleryActions.lightboxGoTo, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),

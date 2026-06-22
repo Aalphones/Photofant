@@ -1,0 +1,83 @@
+:host {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-2, #1e1e1e);
+
+  &:hover .face-cell__veil {
+    opacity: 1;
+  }
+
+  &:hover .face-cell__info {
+    opacity: 1;
+  }
+}
+
+.face-cell__img-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.face-cell__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.face-cell__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.65) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.face-cell__info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.face-cell__name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.face-cell__score {
+  font-size: 10px;
+  color: rgba(255,255,255,.7);
+  flex-shrink: 0;
+}
+
+.face-cell__badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+
+  &--upscaled {
+    background: rgba(99, 102, 241, .85);
+    color: #fff;
+  }
+}

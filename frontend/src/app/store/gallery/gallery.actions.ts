@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { AssetDto, Facets } from '@photofant/models';
+import type { AssetDto, Facets, FaceGalleryItemDto } from '@photofant/models';
 
 export const galleryActions = createActionGroup({
   source: 'Gallery',
@@ -8,8 +8,12 @@ export const galleryActions = createActionGroup({
     'Request Next Page':         emptyProps(),
     'Reset':                     emptyProps(),
     'Load Page Success':         props<{ items: AssetDto[]; total: number; page: number; pageSize: number; facets: Facets }>(),
+    'Load Faces Page Success':   props<{ items: FaceGalleryItemDto[]; total: number; page: number; pageSize: number }>(),
     'Load Page Failure':         props<{ error: string }>(),
     'Open Lightbox':             props<{ id: number }>(),
+    // Opens the parent asset lightbox from face-gallery mode (fetches asset first)
+    'Open Face Lightbox':        props<{ assetId: number }>(),
+    'Inject Asset':              props<{ asset: AssetDto }>(),
     'Close Lightbox':            emptyProps(),
     'Lightbox Go To':            props<{ id: number }>(),
     'Lightbox Next':             emptyProps(),

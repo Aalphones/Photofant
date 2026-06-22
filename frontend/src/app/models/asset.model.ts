@@ -1,6 +1,9 @@
 export const SEARCH_MODES = ['tags', 'caption', 'semantic'] as const;
 export type SearchMode = (typeof SEARCH_MODES)[number];
 
+export const MEDIA_TYPES = ['all', 'photos', 'faces'] as const;
+export type MediaType = (typeof MEDIA_TYPES)[number];
+
 export interface TagListItem {
   id: number;
   name: string;
@@ -109,4 +112,24 @@ export interface AssetsPage {
 export interface AssetGroup {
   label: string;
   assets: AssetDto[];
+}
+
+export interface FaceGalleryItemDto {
+  id: number;
+  asset_id: number | null;
+  person_id: number | null;
+  person_name: string | null;
+  thumbnail_url: string;
+  score: number | null;
+  age: number | null;
+  is_upscaled: boolean;
+  origin: string | null;
+  created_at: string | null;
+}
+
+export interface FacesPage {
+  items: FaceGalleryItemDto[];
+  total: number;
+  page: number;
+  page_size: number;
 }

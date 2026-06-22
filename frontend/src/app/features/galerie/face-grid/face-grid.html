@@ -1,0 +1,27 @@
+@if (!isLoading() && faceItems().length === 0) {
+  <div class="face-grid__empty">
+    <p>Keine Gesichter gefunden.</p>
+  </div>
+}
+
+<div class="face-grid__tiles">
+  @for (face of faceItems(); track face.id) {
+    <pf-face-cell
+      [face]="face"
+      [cellSize]="CELL_SIZE"
+      (openFace)="onOpenFace($event)"
+    />
+  }
+
+  @if (isLoading()) {
+    @for (index of [].constructor(skeletonCount); track $index) {
+      <div
+        class="face-grid__skeleton"
+        [style.width.px]="CELL_SIZE"
+        [style.height.px]="CELL_SIZE"
+      ></div>
+    }
+  }
+</div>
+
+<div #loadSentinel class="face-grid__sentinel"></div>
