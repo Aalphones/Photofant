@@ -490,7 +490,7 @@ def _load_asset_faces(session: Session, asset_id: int) -> list[FaceDto]:
             id=face.id,
             asset_id=face.asset_id,
             person_id=face.person_id,
-            crop_url=f"/api/faces/{face.id}/thumbnail",
+            crop_url=f"/faces/{face.id}/thumbnail",
             score=face.score,
             age=face.age,
             bbox=face.bbox,
