@@ -26,9 +26,20 @@ log = logging.getLogger(__name__)
 _PERSON_SUBFOLDERS = ["photos", "favourites", "faces", "edits"]
 
 
+def _sanitize_folder_name(name: str) -> str:
+    """Strip filesystem-invalid characters from a name for use as a folder name."""
+    invalid = set(r'\/:*?"<>|')
+    sanitized = "".join(c for c in name if c not in invalid and ord(c) >= 32)
+    return sanitized.strip(". ")
+
+
 def person_folder_name(person: Person) -> str:
     if person.is_unknown:
         return "_unknown"
+    if person.name:
+        sanitized = _sanitize_folder_name(person.name)
+        if sanitized:
+            return sanitized
     return f"person_{person.id}"
 
 
@@ -39,9 +50,15 @@ def ensure_person_folder(data_root: Path, person: Person) -> Path:
     return folder
 
 
-def person_id_from_path(file_path: Path, data_root: Path) -> int | None:
-    """Extract person DB id from a file path inside a person_{id}/ folder.
+def person_id_from_path(
+    file_path: Path,
+    data_root: Path,
+    session: Session | None = None,
+) -> int | None:
+    """Extract the person DB id from a file path inside a person folder.
 
+    Handles both legacy person_{id}/ folders and current named folders.
+    Pass a session to resolve named folders via the DB.
     Returns None for _unknown/ or paths outside person folders.
     """
     try:
@@ -54,15 +71,31 @@ def person_id_from_path(file_path: Path, data_root: Path) -> int | None:
         return None
 
     folder = parts[0]
+
+    # Legacy format: person_{id}/
     if folder.startswith("person_"):
         try:
             return int(folder[7:])
         except ValueError:
-            return None
+            pass
+
+    # Named folder: look up by sanitized person name
+    if session is not None:
+        persons = session.scalars(
+            select(Person).where(Person.is_unknown.is_(False), Person.name.isnot(None))
+        ).all()
+        for person in persons:
+            if person_folder_name(person) == folder:
+                return person.id
+
     return None
 
 
-def is_importable_person_subfolder(file_path: Path, data_root: Path) -> bool:
+def is_importable_person_subfolder(
+    file_path: Path,
+    data_root: Path,
+    session: Session | None = None,
+) -> bool:
     """True if the file sits in a person folder's photos/ or favourites/ dir."""
     try:
         relative = file_path.resolve().relative_to(data_root.resolve())
@@ -73,7 +106,79 @@ def is_importable_person_subfolder(file_path: Path, data_root: Path) -> bool:
     if len(parts) < 3:
         return False
 
-    return parts[0].startswith("person_") and parts[1] in ("photos", "favourites")
+    folder = parts[0]
+    subfolder = parts[1]
+
+    if subfolder not in ("photos", "favourites"):
+        return False
+
+    # Legacy format: person_{id}/
+    if folder.startswith("person_"):
+        return True
+
+    # Named folder: verify via DB
+    if session is not None:
+        return person_id_from_path(file_path, data_root, session) is not None
+
+    return False
+
+
+def rename_person_folder(
+    session: Session,
+    person: Person,
+    old_folder_name: str,
+    data_root: Path,
+) -> int:
+    """Rename a person's folder on disk and update all path references in the DB.
+
+    Returns the number of updated path entries (instances + face crops).
+    """
+    new_folder_name = person_folder_name(person)
+    if old_folder_name == new_folder_name:
+        return 0
+
+    old_dir = data_root / old_folder_name
+    new_dir = data_root / new_folder_name
+
+    if not old_dir.exists():
+        ensure_person_folder(data_root, person)
+        return 0
+
+    if new_dir.exists():
+        log.warning(
+            "Cannot rename person folder %s → %s: target already exists",
+            old_folder_name, new_folder_name,
+        )
+        return 0
+
+    old_dir.rename(new_dir)
+    log.info("Renamed person folder %s → %s", old_folder_name, new_folder_name)
+
+    old_prefix = str(old_dir.resolve())
+    new_prefix = str(new_dir.resolve())
+    updated = 0
+
+    instances = session.scalars(
+        select(AssetInstance).where(
+            AssetInstance.person_id == person.id,
+            AssetInstance.deleted_at.is_(None),
+        )
+    ).all()
+    for instance in instances:
+        if instance.path.startswith(old_prefix):
+            instance.path = new_prefix + instance.path[len(old_prefix):]
+            updated += 1
+
+    faces = session.scalars(
+        select(Face).where(Face.person_id == person.id)
+    ).all()
+    for face in faces:
+        if face.crop_path.startswith(old_prefix):
+            face.crop_path = new_prefix + face.crop_path[len(old_prefix):]
+            updated += 1
+
+    session.flush()
+    return updated
 
 
 # ── crash-safe file helpers ──────────────────────────────────────────────

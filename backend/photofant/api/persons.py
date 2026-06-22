@@ -180,7 +180,17 @@ async def rename_person(person_id: int, body: RenameRequest, session: DbSession)
     new_name = body.name.strip()
     if not new_name:
         raise HTTPException(status_code=422, detail="Name must not be empty")
+
+    from photofant.config import get_data_root
+    from photofant.media.person_folders import person_folder_name, rename_person_folder
+
+    old_folder_name = person_folder_name(person)
     person.name = new_name
+    session.flush()
+
+    data_root = get_data_root()
+    await asyncio.to_thread(rename_person_folder, session, person, old_folder_name, data_root)
+
     session.commit()
     session.refresh(person)
     log.info("Renamed person %d to %r", person_id, person.name)

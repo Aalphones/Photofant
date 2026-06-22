@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from photofant.db.models import Asset, AssetInstance, Face, Person
-from photofant.media.person_folders import merge_persons, split_faces
+from photofant.media.person_folders import merge_persons, person_folder_name, split_faces
 
 _asset_counter = 0
 
@@ -15,7 +15,7 @@ def _create_person(session: Session, name: str, data_root: Path) -> Person:
     person = Person(name=name, is_unknown=False)
     session.add(person)
     session.flush()
-    folder = data_root / f"person_{person.id}"
+    folder = data_root / person_folder_name(person)
     for sub in ("photos", "favourites", "faces", "edits"):
         (folder / sub).mkdir(parents=True, exist_ok=True)
     return person
@@ -45,7 +45,7 @@ def _create_instance(
     *,
     filename: str | None = None,
 ) -> AssetInstance:
-    folder = data_root / f"person_{person.id}" / "photos"
+    folder = data_root / person_folder_name(person) / "photos"
     fname = filename or f"asset_{asset.id}.png"
     file_path = folder / fname
     file_path.write_bytes(b"image-bytes")
@@ -68,7 +68,7 @@ def _create_face(
     *,
     filename: str | None = None,
 ) -> Face:
-    folder = data_root / f"person_{person.id}" / "faces"
+    folder = data_root / person_folder_name(person) / "faces"
     fname = filename or f"face_{asset.id}_{person.id}.jpg"
     crop_path = folder / fname
     crop_path.write_bytes(b"crop-bytes")
@@ -160,6 +160,7 @@ def test_merge_deduplicates_shared_asset(db_session: Session, tmp_path: Path) ->
 def test_merge_source_folder_removed(db_session: Session, tmp_path: Path) -> None:
     person_a = _create_person(db_session, "Alice", tmp_path)
     person_b = _create_person(db_session, "Bob", tmp_path)
+    source_folder = person_folder_name(person_a)
 
     asset = _create_asset(db_session)
     _create_instance(db_session, asset, person_a, tmp_path)
@@ -168,8 +169,7 @@ def test_merge_source_folder_removed(db_session: Session, tmp_path: Path) -> Non
     merge_persons(db_session, person_a.id, person_b.id, tmp_path)
     db_session.commit()
 
-    source_dir = tmp_path / f"person_{person_a.id}"
-    assert not source_dir.exists()
+    assert not (tmp_path / source_folder).exists()
 
 
 # ── split_faces ────────────────────────────────────────────────────────────

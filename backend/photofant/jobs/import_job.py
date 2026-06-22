@@ -328,8 +328,9 @@ def _import_to_person(
 async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     """Find image files under scan_root that are not yet in the DB, then import them.
 
-    Person-folder awareness (FS-Drop, §6.1a): files found in person_{id}/photos/
-    or person_{id}/favourites/ are imported with fixed_person=True for that person.
+    Person-folder awareness (FS-Drop, §6.1a): files found in a person folder's
+    photos/ or favourites/ subdir are imported with fixed_person=True for that person.
+    Supports both legacy person_{id}/ folders and current named-person folders.
     """
     from photofant.media.person_folders import is_importable_person_subfolder, person_id_from_path
     from photofant.settings import load_settings
@@ -337,30 +338,36 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     settings = load_settings()
     dupe_threshold = settings["dupe_threshold"]
 
-    with SessionLocal() as session:
-        known_paths: set[str] = {
-            str(row[0]) for row in session.execute(select(AssetInstance.path)).all()
-        }
-
     candidates: list[Path] = []
     for extension in SUPPORTED_EXTENSIONS:
         candidates.extend(scan_root.rglob(f"*{extension}"))
         candidates.extend(scan_root.rglob(f"*{extension.upper()}"))
 
-    new_paths = [
-        path for path in candidates
-        if str(path.resolve()) not in known_paths and _is_scannable(path, scan_root)
-    ]
-    log.info("Scan found %d new files under %s", len(new_paths), scan_root)
+    # Resolve person assignments and filter new paths while the session is open,
+    # so named-folder lookups can use the DB.
+    path_assignments: list[tuple[Path, int | None]] = []
+    with SessionLocal() as session:
+        known_paths: set[str] = {
+            str(row[0]) for row in session.execute(select(AssetInstance.path)).all()
+        }
+        new_paths = [
+            path for path in candidates
+            if str(path.resolve()) not in known_paths and _is_scannable(path, scan_root)
+        ]
+        log.info("Scan found %d new files under %s", len(new_paths), scan_root)
 
-    if not new_paths:
+        for file_path in new_paths:
+            pid = person_id_from_path(file_path, scan_root, session)
+            importable = pid is not None and is_importable_person_subfolder(file_path, scan_root, session)
+            path_assignments.append((file_path, pid if importable else None))
+
+    if not path_assignments:
         return
 
     imported_items: list[tuple[int, str]] = []
-    total = len(new_paths)
-    for index, file_path in enumerate(new_paths):
-        pid = person_id_from_path(file_path, scan_root)
-        if pid is not None and is_importable_person_subfolder(file_path, scan_root):
+    total = len(path_assignments)
+    for index, (file_path, pid) in enumerate(path_assignments):
+        if pid is not None:
             result = await asyncio.to_thread(_import_to_person, file_path, pid, dupe_threshold)
         else:
             result = await asyncio.to_thread(_import_single, file_path, dupe_threshold)
