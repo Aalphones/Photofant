@@ -156,3 +156,38 @@
 
   &:hover:not(&--on) { background: var(--surface-hover); color: var(--text-2); }
 }
+
+@media (max-width: 640px) {
+  :host {
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 0;
+    gap: 0;
+  }
+
+  .subbar__left {
+    padding: 0 12px;
+    height: 38px;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex: none;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  .subbar__tools {
+    padding: 0 12px;
+    height: 40px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  /* Icon-only für Sort, Auswählen, Run */
+  .subbar__btn span:not(.subbar__order) { display: none; }
+}
