@@ -1,85 +1,195 @@
-"""Caption job — runs Florence-2 inference and persists a caption for one asset.
+"""Caption job — runs captioner inference and persists a caption for one asset.
 
 One job per asset; controlled by ProcessingLedger.caption_done (run exactly once).
-The active captioner's default preset supplies the task token / generation knobs;
-its id is stamped onto the asset for provenance (Konzept §12.6).
+Dispatches to the correct captioner based on the active model's caption_mode:
+  - task_token  → Florence-2 (ONNX, lightweight, default)
+  - instruct    → Qwen2.5-VL (transformers, heavy, VRAM-gated)
+  - instruct_guided → JoyCaption (transformers, heavy, VRAM-gated)
 """
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
 from photofant.db.models import Asset, CaptionPreset, ModelRegistry, ProcessingLedger
 from photofant.db.session import SessionLocal
-from photofant.inference.caption_config import default_task_token_config
+from photofant.inference.caption_config import (
+    CaptionMode,
+    default_instruct_config,
+    default_instruct_guided_config,
+    default_task_token_config,
+)
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
 log = logging.getLogger(__name__)
 
-_CAPTIONER_MANIFEST_ID = "florence-2-base"
+
+@dataclass
+class _CaptionerInfo:
+    model_db_id: int
+    manifest_id: str
+    caption_mode: str
 
 
-def _resolve_default_preset() -> tuple[int | None, dict]:  # type: ignore[type-arg]
-    """Return (preset_id, config) for the captioner's default preset.
+# ---------------------------------------------------------------------------
+# Active-captioner resolution
+# ---------------------------------------------------------------------------
 
-    Prefers a preset bound to the active captioner, then a model-agnostic default,
-    then the built-in task_token defaults (preset_id = None).
+
+def _resolve_active_captioner() -> _CaptionerInfo | None:
+    """Return info about the active captioner, preferring heavy models over Florence."""
+    with SessionLocal() as session:
+        rows = (
+            session.query(ModelRegistry)
+            .filter(ModelRegistry.caption_mode.isnot(None), ModelRegistry.enabled.is_(True))
+            .all()
+        )
+        if not rows:
+            return None
+        # Prefer heavy captioners over Florence (heavy means non-task_token).
+        heavy = [row for row in rows if row.caption_mode != CaptionMode.TASK_TOKEN]
+        selected = heavy[0] if heavy else rows[0]
+        return _CaptionerInfo(
+            model_db_id=selected.id,
+            manifest_id=selected.manifest_id,
+            caption_mode=selected.caption_mode or CaptionMode.TASK_TOKEN,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Preset resolution
+# ---------------------------------------------------------------------------
+
+
+def _resolve_default_preset(model_db_id: int | None, caption_mode: str) -> tuple[int | None, dict[str, Any]]:
+    """Return (preset_id, config) for the active captioner.
+
+    Priority:
+    1. Model-specific is_default preset
+    2. Global (model_id=NULL) is_default preset with compatible config structure
+    3. Built-in default for the caption_mode
     """
     with SessionLocal() as session:
-        model = (
-            session.query(ModelRegistry)
-            .filter_by(manifest_id=_CAPTIONER_MANIFEST_ID, enabled=True)
-            .first()
-        )
-        model_id = model.id if model is not None else None
-
         query = session.query(CaptionPreset).filter_by(is_default=True)
-        preset = None
-        if model_id is not None:
-            preset = query.filter_by(model_id=model_id).first()
-        if preset is None:
-            preset = query.filter(CaptionPreset.model_id.is_(None)).first()
 
-        if preset is not None:
-            return preset.id, dict(preset.config)
+        if model_db_id is not None:
+            preset = query.filter_by(model_id=model_db_id).first()
+            if preset is not None:
+                return preset.id, dict(preset.config)
 
-    return None, default_task_token_config()
+        # Global fallback — only use it if config structure matches the mode.
+        global_presets = query.filter(CaptionPreset.model_id.is_(None)).all()
+        for preset in global_presets:
+            config = dict(preset.config)
+            if _config_matches_mode(config, caption_mode):
+                return preset.id, config
+
+    return None, _built_in_default_config(caption_mode)
 
 
-def _resolve_preset_by_id(preset_id: int) -> tuple[int | None, dict]:  # type: ignore[type-arg]
-    """Return (preset_id, config) for a specific preset; falls back to default if not found."""
+def _config_matches_mode(config: dict[str, Any], caption_mode: str) -> bool:
+    """Heuristic: check if a config blob belongs to the given caption_mode."""
+    if caption_mode == CaptionMode.TASK_TOKEN:
+        return "task_token" in config
+    if caption_mode == CaptionMode.INSTRUCT:
+        return "system_prompt" in config
+    if caption_mode == CaptionMode.INSTRUCT_GUIDED:
+        return "caption_type" in config
+    return False
+
+
+def _built_in_default_config(caption_mode: str) -> dict[str, Any]:
+    if caption_mode == CaptionMode.INSTRUCT:
+        return default_instruct_config()
+    if caption_mode == CaptionMode.INSTRUCT_GUIDED:
+        return default_instruct_guided_config()
+    return default_task_token_config()
+
+
+def _resolve_preset_by_id(preset_id: int, caption_mode: str) -> tuple[int | None, dict[str, Any]]:
+    """Return (preset_id, config) for a specific preset; falls back to default on miss."""
     with SessionLocal() as session:
         preset = session.get(CaptionPreset, preset_id)
         if preset is None:
             log.warning("Caption preset %d not found — falling back to default", preset_id)
-            return _resolve_default_preset()
+            return _resolve_default_preset(None, caption_mode)
         return preset.id, dict(preset.config)
 
 
-def _run_caption_with_preset(
-    asset_id: int, asset_path: str, override_preset_id: int | None = None, force: bool = False
-) -> None:
-    """Blocking: run Florence-2 inference + persist the caption for one asset.
+# ---------------------------------------------------------------------------
+# Captioner dispatch
+# ---------------------------------------------------------------------------
 
-    If override_preset_id is given, that preset is used instead of the default.
-    If force is True, a manually edited caption is overwritten and caption_edited is reset.
-    """
+
+def _run_captioner(
+    manifest_id: str,
+    caption_mode: str,
+    image: np.ndarray,
+    preset_config: dict[str, Any],
+) -> str:
+    """Dispatch to the correct captioner implementation."""
+    if caption_mode == CaptionMode.TASK_TOKEN:
+        from photofant.inference.adapters.florence2 import resolve_florence_captioner
+        captioner = resolve_florence_captioner()
+        if captioner is None:
+            log.info("Florence-2 not enabled — skipping caption")
+            return ""
+        return captioner.caption(image, preset_config)
+
+    if caption_mode == CaptionMode.INSTRUCT:
+        from photofant.inference.adapters.qwen_vl import resolve_qwen_captioner
+        captioner = resolve_qwen_captioner()
+        if captioner is None:
+            log.info("Qwen2.5-VL not enabled — skipping caption")
+            return ""
+        return captioner.caption(image, preset_config)
+
+    if caption_mode == CaptionMode.INSTRUCT_GUIDED:
+        from photofant.inference.adapters.joycaption import resolve_joycaption
+        captioner = resolve_joycaption()
+        if captioner is None:
+            log.info("JoyCaption not enabled — skipping caption")
+            return ""
+        return captioner.caption(image, preset_config)
+
+    log.warning("Unknown caption_mode %r for model %s — skipping", caption_mode, manifest_id)
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# Core caption run
+# ---------------------------------------------------------------------------
+
+
+def _run_caption_with_preset(
+    asset_id: int,
+    asset_path: str,
+    override_preset_id: int | None = None,
+    force: bool = False,
+) -> None:
+    """Blocking: resolve the active captioner, run inference, persist the caption."""
     from PIL import Image as PILImage
 
-    from photofant.inference.adapters.florence2 import resolve_florence_captioner
-
-    captioner = resolve_florence_captioner()
-    if captioner is None:
-        log.info("Florence-2 not enabled — skipping caption for asset %d", asset_id)
+    # Find the active captioner (heavy preferred over Florence).
+    active_model = _resolve_active_captioner()
+    if active_model is None:
+        log.info("No captioner model enabled — skipping caption for asset %d", asset_id)
         return
 
-    if override_preset_id is not None:
-        preset_id, preset_config = _resolve_preset_by_id(override_preset_id)
-    else:
-        preset_id, preset_config = _resolve_default_preset()
+    manifest_id: str = active_model.manifest_id
+    caption_mode: str = active_model.caption_mode
+    model_db_id: int = active_model.model_db_id
 
-    # Respect manually edited captions — do not overwrite
+    # Preset resolution.
+    if override_preset_id is not None:
+        preset_id, preset_config = _resolve_preset_by_id(override_preset_id, caption_mode)
+    else:
+        preset_id, preset_config = _resolve_default_preset(model_db_id, caption_mode)
+
+    # Respect manually edited captions — do not overwrite.
     with SessionLocal() as session:
         asset_check = session.get(Asset, asset_id)
         if asset_check is None:
@@ -90,7 +200,10 @@ def _run_caption_with_preset(
             return
 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
-    caption = captioner.caption(image, preset_config)
+    caption = _run_captioner(manifest_id, caption_mode, image, preset_config)
+
+    if not caption:
+        return
 
     with SessionLocal() as session:
         asset = session.get(Asset, asset_id)
@@ -99,7 +212,7 @@ def _run_caption_with_preset(
             return
 
         asset.caption = caption
-        asset.captioner = _CAPTIONER_MANIFEST_ID
+        asset.captioner = manifest_id
         asset.caption_preset_id = preset_id
         if force:
             asset.caption_edited = False
@@ -110,17 +223,16 @@ def _run_caption_with_preset(
 
         session.commit()
 
-    # Caption changed → keep smart-album membership in sync (covers initial import + rerun)
+    # Caption changed → keep smart-album membership in sync.
     from photofant.collections import engine
 
     with SessionLocal() as session:
         engine.evaluate_asset(session, asset_id)
 
-    log.info("Captioned asset %d (%d chars, preset %s)", asset_id, len(caption), preset_id)
+    log.info("Captioned asset %d (%d chars, preset %s, model %s)", asset_id, len(caption), preset_id, manifest_id)
 
 
 def _run_caption(asset_id: int, asset_path: str) -> None:
-    """Blocking: run Florence-2 inference + persist the caption for one asset."""
     _run_caption_with_preset(asset_id, asset_path)
 
 

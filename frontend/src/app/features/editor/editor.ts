@@ -200,7 +200,7 @@ export class Editor {
     this.maskDataUrl.set(dataUrl);
   }
 
-  protected onBrushSizeChange(size: number): void {
+  protected onBrushSizeChange(_size: number): void {
     // propagated to mask overlay via input binding
   }
 

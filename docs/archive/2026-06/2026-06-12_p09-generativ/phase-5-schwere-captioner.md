@@ -1,6 +1,6 @@
 # P9 · Phase 5 — Schwere Captioner
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: **complete** (2026-06-23)
 
 ## Kontext (vorher lesen)
 
@@ -17,9 +17,24 @@
 
 ## Checkliste
 
-- [ ] Captioner-Implementierungen (Qwen instruct, JoyCaption guided-Prompt-Builder)
-- [ ] Capabilities-Descriptoren + Manifest-Einträge
-- [ ] Seed-Presets + Modus-Validierung der Preset-Configs
-- [ ] Doc-Update: routes.md, README Features-Stand
+- [x] Captioner-Implementierungen (Qwen instruct, JoyCaption guided-Prompt-Builder)
+- [x] Capabilities-Descriptoren + Manifest-Einträge
+- [x] Seed-Presets + Modus-Validierung der Preset-Configs
+- [x] Doc-Update: routes.md, README Features-Stand
 
 ## Report-Back
+
+**Status: complete (2026-06-23)**
+
+Neue Dateien:
+- `backend/photofant/inference/adapters/qwen_vl.py` — Qwen2.5-VL-7B-Instruct Adapter (`instruct`)
+- `backend/photofant/inference/adapters/joycaption.py` — JoyCaption Alpha Two Adapter (`instruct_guided`)
+- `backend/alembic/versions/0021_seed_heavy_captioner_presets.py` — Seed-Presets (je 2 pro Modell)
+
+Geänderte Dateien:
+- `caption_config.py` — Validatoren für `instruct` + `instruct_guided` freigeschaltet
+- `generative_engine.py` — `load_transformers_model()` für reine transformers-Modelle
+- `caption_job.py` — Multi-Captioner-Dispatch; heavy Captioner werden bevorzugt
+- `manifest.json` — Einträge für `qwen2-5-vl-7b` und `joycaption-alpha-two` inkl. Capabilities-Descriptor
+
+FINDING aus Phase 1 ([x]) eingearbeitet: GenerativeEngine unterstützt jetzt auch reine transformers-Modelle.

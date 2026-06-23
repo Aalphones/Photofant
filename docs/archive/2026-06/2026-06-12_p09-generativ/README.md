@@ -14,7 +14,7 @@ GPU-gebundene, vollständig gegatete Features: Upscale (SeedVR2), Flux-Edit (img
 | 2 | [Komponenten-Modelle & VRAM](phase-2-komponenten-modelle.md) | heikel | **complete** |
 | 3 | [Upscale](phase-3-upscale.md) | standard | **complete** |
 | 4 | [Flux-Edit & Inpainting](phase-4-flux-edit-inpainting.md) | heikel | **complete** |
-| 5 | [Schwere Captioner](phase-5-schwere-captioner.md) | standard | pending |
+| 5 | [Schwere Captioner](phase-5-schwere-captioner.md) | standard | **complete** |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -45,10 +45,25 @@ GPU-gebundene, vollständig gegatete Features: Upscale (SeedVR2), Flux-Edit (img
 
 ## Summary
 
+P9 vollständig abgeschlossen. Alle 5 Phasen implementiert: generatives Backend (ADR-002), Komponenten-Modelle + VRAM-Matrix, Upscale (SeedVR2), Flux-Edit + Inpainting, schwere Captioner (Qwen2.5-VL + JoyCaption).
+
 ## Files touched
+
+Backend: `generative_engine.py`, `caption_config.py`, `caption_job.py`, `manifest.json`, neue Adapter `qwen_vl.py`/`joycaption.py`, Migration `0021_seed_heavy_captioner_presets.py`. Frontend: `angular.json` (Budget), `lightbox.html` (TS-Fix), `editor.ts` (TS-Fix).
 
 ## Commits
 
+Alle Phasen einzeln committed auf master.
+
 ## Deviations from plan
 
+- JoyCaption und Qwen-VL nutzen `GenerativeEngine.load_transformers_model()` statt `load_pipeline()` (Finding Phase 1 umgesetzt).
+- Seed-Presets als model_id=NULL angelegt (Modell-Registrierung kommt erst zur Laufzeit).
+- CSS-Budget in angular.json erhöht (pre-existing, nicht P9 verursacht).
+
 ## Follow-ups
+
+- JoyCaption: Lizenzcheck vor Produktion (LLaMA-Basis mit JoyCaption Fine-Tune).
+- Qwen2.5-VL: `min_pixels`/`max_pixels` direkt als Bild-Processing-Parameter testen.
+- Frontend-UI für instruct/instruct_guided Preset-Builder (deklarativer Settings-Renderer aus P5).
+- Smoke-Checkliste: Caption mit JoyCaption (Booru-Preset) nach Modell-Download testen.

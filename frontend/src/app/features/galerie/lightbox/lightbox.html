@@ -106,7 +106,7 @@
                 class="pbtn pbtn--ghost"
                 [class.pbtn--loading]="isUpscaling()"
                 [disabled]="isUpscaling()"
-                (click)="triggerUpscale(upscalerModels()[0].id)"
+                (click)="triggerUpscale(upscalerModels()[0]!.id)"
               >
                 <pf-icon name="refresh" [size]="15" />
                 {{ isUpscaling() ? 'Upscale läuft…' : 'Upscale' }}

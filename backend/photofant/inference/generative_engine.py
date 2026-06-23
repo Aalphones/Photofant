@@ -75,6 +75,73 @@ class GenerativeEngine:
                 return None
             return self._current.model_id
 
+    def load_transformers_model(
+        self,
+        model_id: str,
+        model_path: str,
+        *,
+        model_class_name: str = "AutoModelForCausalLM",
+        torch_dtype: str = "float16",
+        device: str = "cuda",
+        extra_model_kwargs: dict[str, Any] | None = None,
+    ) -> tuple[Any, Any]:
+        """Load a transformers model + processor pair, evicting any current pipeline.
+
+        Used for heavy captioners (Qwen2.5-VL, JoyCaption) that are pure
+        transformers models rather than diffusers pipelines. Returns (model, processor).
+        VRAM coordination is the same as for diffusers: one model at a time.
+        """
+        availability = check_generative_available()
+        if availability is not GenerativeAvailability.AVAILABLE:
+            raise RuntimeError(
+                f"Generative dependencies not available ({availability}). "
+                "Install with: uv pip install photofant[generative]"
+            )
+
+        import torch
+        import transformers
+
+        _set_offline_env()
+
+        dtype_map = {
+            "float16": torch.float16,
+            "bfloat16": torch.bfloat16,
+            "float32": torch.float32,
+        }
+        resolved_dtype = dtype_map.get(torch_dtype, torch.float16)
+
+        model_cls = getattr(transformers, model_class_name, None)
+        if model_cls is None:
+            from transformers import AutoModelForCausalLM
+            model_cls = AutoModelForCausalLM
+
+        with self._lock:
+            self._evict_locked()
+
+        log.info("Loading transformers model: %s (%s)", model_id, model_class_name)
+
+        model_kwargs: dict[str, Any] = {
+            "torch_dtype": resolved_dtype,
+            **(extra_model_kwargs or {}),
+        }
+
+        model = model_cls.from_pretrained(model_path, **model_kwargs)
+        model = model.to(device)
+        model.eval()
+
+        from transformers import AutoProcessor
+        processor = AutoProcessor.from_pretrained(model_path)
+
+        with self._lock:
+            self._current = _PipelineEntry(
+                pipeline=(model, processor),
+                model_id=model_id,
+                pipeline_type=f"transformers:{model_class_name}",
+            )
+
+        log.info("Transformers model ready: %s", model_id)
+        return model, processor
+
     def load_pipeline(
         self,
         model_id: str,
