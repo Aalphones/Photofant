@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { ModelDto, CapabilitiesDto, ProcessingConfig, ShortcutConfig } from '@photofant/models';
+import type { ModelDto, CapabilitiesDto, ProcessingConfig, ShortcutConfig, VramResponse } from '@photofant/models';
 
 export const modelsActions = createActionGroup({
   source: 'Models',
@@ -23,9 +23,13 @@ export const modelsActions = createActionGroup({
     'Download Model Success':    props<{ jobId: string; manifestId: string }>(),
     'Download Model Failure':    props<{ manifestId: string; error: string }>(),
     'Register Local':            props<{ manifestId: string; path: string }>(),
-    'Register Local Success':    props<{ model: ModelDto }>(),
+    'Register Local Components': props<{ manifestId: string; components: Record<string, string> }>(),
+    'Register Local Success':    props<{ model: ModelDto; warnings: string[] }>(),
     'Register Local Failure':    props<{ manifestId: string; error: string; code: string }>(),
     'Clear Bind Error':          emptyProps(),
+    'Load Vram':                 emptyProps(),
+    'Load Vram Success':         props<{ vram: VramResponse }>(),
+    'Load Vram Failure':         props<{ error: string }>(),
     'Download Job Completed':    props<{ manifestId: string }>(),
     'Download Job Failed':       props<{ manifestId: string; error: string }>(),
     'Delete Model':              props<{ manifestId: string }>(),

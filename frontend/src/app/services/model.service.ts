@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
-import type { ModelDto, CapabilitiesDto } from '@photofant/models';
+import type { ModelDto, CapabilitiesDto, VramResponse, RegisterLocalResponse } from '@photofant/models';
 
 interface ConfigResponse {
   data: Record<string, unknown>;
@@ -52,11 +52,22 @@ export class ModelService {
     );
   }
 
-  registerLocal(manifestId: string, path: string): Observable<ModelDto> {
-    return this.http.post<ModelDto>('/api/models/register-local', {
+  registerLocal(manifestId: string, path: string): Observable<RegisterLocalResponse> {
+    return this.http.post<RegisterLocalResponse>('/api/models/register-local', {
       manifest_id: manifestId,
       path,
     });
+  }
+
+  registerLocalComponents(manifestId: string, components: Record<string, string>): Observable<RegisterLocalResponse> {
+    return this.http.post<RegisterLocalResponse>('/api/models/register-local', {
+      manifest_id: manifestId,
+      components,
+    });
+  }
+
+  loadVram(): Observable<VramResponse> {
+    return this.http.get<VramResponse>('/api/models/vram');
   }
 
   deleteModel(manifestId: string): Observable<DeleteResponse> {

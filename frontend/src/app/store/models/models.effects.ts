@@ -197,7 +197,7 @@ export class ModelsEffects {
       ofType(modelsActions.registerLocal),
       switchMap(({ manifestId, path }) =>
         this.modelService.registerLocal(manifestId, path).pipe(
-          map((model) => modelsActions.registerLocalSuccess({ model })),
+          map((response) => modelsActions.registerLocalSuccess({ model: response.model, warnings: response.warnings })),
           catchError((error: HttpErrorResponse) => {
             const detail = error.error as { code?: string } | null;
             return of(modelsActions.registerLocalFailure({
@@ -206,6 +206,39 @@ export class ModelsEffects {
               code: detail?.code ?? 'UNKNOWN',
             }));
           }),
+        )
+      ),
+    )
+  );
+
+  readonly registerLocalComponents$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(modelsActions.registerLocalComponents),
+      switchMap(({ manifestId, components }) =>
+        this.modelService.registerLocalComponents(manifestId, components).pipe(
+          map((response) => modelsActions.registerLocalSuccess({ model: response.model, warnings: response.warnings })),
+          catchError((error: HttpErrorResponse) => {
+            const detail = error.error as { code?: string } | null;
+            return of(modelsActions.registerLocalFailure({
+              manifestId,
+              error: error.message,
+              code: detail?.code ?? 'UNKNOWN',
+            }));
+          }),
+        )
+      ),
+    )
+  );
+
+  readonly loadVram$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(modelsActions.loadVram),
+      switchMap(() =>
+        this.modelService.loadVram().pipe(
+          map((vram) => modelsActions.loadVramSuccess({ vram })),
+          catchError((error: HttpErrorResponse) =>
+            of(modelsActions.loadVramFailure({ error: error.message }))
+          ),
         )
       ),
     )

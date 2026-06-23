@@ -151,9 +151,13 @@
         "operations": ["edit", "inpaint"],
         "component_model": true,
         "components": {
-          "transformer": {"label": "Diffusion-Modell (Transformer)", "required": true},
-          "text_encoder": {"label": "Text-Encoder", "required": true},
-          "vae": {"label": "VAE", "required": true}
+          "transformer": {"label": "Diffusion-Modell (Transformer)", "required": true, "formats": ["safetensors", "gguf"]},
+          "text_encoder": {"label": "Text-Encoder", "required": true, "formats": ["safetensors", "gguf"]},
+          "vae": {"label": "VAE", "required": true, "formats": ["safetensors"]}
+        },
+        "expected_families": {
+          "text_encoder": "t5",
+          "vae": "flux-ae"
         },
         "variants": [
           {"name": "bf16", "size_gb": 18.2, "vram_gb": 29},

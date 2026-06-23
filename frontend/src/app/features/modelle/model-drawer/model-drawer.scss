@@ -192,6 +192,17 @@
   color: var(--text-2);
 }
 
+.md-kv__comp {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 11.5px;
+
+  dt { color: var(--text-3); font-family: var(--mono); }
+  dd { margin: 0; }
+}
+
 .md-dr-foot {
   flex: none;
   display: flex;

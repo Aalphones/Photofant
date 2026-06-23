@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { KeyValuePipe } from '@angular/common';
 import { Icon } from '@photofant/ui';
 import { ROLE_META, STATUS_META, formatModelSize } from '@photofant/models';
 import type { ModelView } from '@photofant/models';
@@ -6,7 +7,7 @@ import type { ModelView } from '@photofant/models';
 @Component({
   selector: 'pf-model-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon],
+  imports: [Icon, KeyValuePipe],
   templateUrl: './model-drawer.html',
   styleUrl: './model-drawer.scss',
 })
@@ -28,6 +29,10 @@ export class ModelDrawer {
   );
   protected readonly isUnavailable = computed(() =>
     this.model().status === 'missing' || this.model().status === 'available'
+  );
+  protected readonly hasComponents = computed(() =>
+    this.model().components !== null && this.model().components !== undefined
+      && Object.keys(this.model().components!).length > 0
   );
 
   protected formatSize(bytes: number | null): string {

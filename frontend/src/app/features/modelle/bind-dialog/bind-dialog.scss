@@ -144,6 +144,35 @@
 .bd-error__msg  { font-weight: 600; line-height: 1.4; }
 .bd-error__hint { color: var(--text-3); margin-top: 3px; font-size: 11px; b { font-weight: 600; color: var(--text-2); } }
 
+.bd-warning {
+  display: flex;
+  gap: 9px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  background: oklch(0.800 0.130 75 / .12);
+  color: oklch(0.85 0.10 75);
+  line-height: 1.4;
+
+  pf-icon { flex: none; margin-top: 1px; color: var(--warn); }
+}
+
+.bd-comp-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  background: oklch(0.74 0.12 215 / .10);
+  color: oklch(0.82 0.08 215);
+  line-height: 1.4;
+
+  pf-icon { flex: none; margin-top: 1px; }
+}
+
+.bd-req { color: var(--warn); font-weight: 700; }
+
 .bd-validating {
   display: inline-flex;
   align-items: center;

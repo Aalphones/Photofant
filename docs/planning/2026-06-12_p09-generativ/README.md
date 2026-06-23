@@ -11,7 +11,7 @@ GPU-gebundene, vollständig gegatete Features: Upscale (SeedVR2), Flux-Edit (img
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
 | 1 | [Generatives Backend (ADR)](phase-1-generatives-backend.md) | heikel | **complete** |
-| 2 | [Komponenten-Modelle & VRAM](phase-2-komponenten-modelle.md) | heikel | pending |
+| 2 | [Komponenten-Modelle & VRAM](phase-2-komponenten-modelle.md) | heikel | **complete** |
 | 3 | [Upscale](phase-3-upscale.md) | standard | pending |
 | 4 | [Flux-Edit & Inpainting](phase-4-flux-edit-inpainting.md) | heikel | pending |
 | 5 | [Schwere Captioner](phase-5-schwere-captioner.md) | standard | pending |

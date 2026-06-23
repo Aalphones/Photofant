@@ -19,7 +19,13 @@
     <div class="md-sys__ico"><pf-icon name="cpu" [size]="14" /></div>
     <div>
       <div class="md-sys__key">GPU</div>
-      <div class="md-sys__val">Wird erkannt …</div>
+      <div class="md-sys__val">
+        @if (vram()?.gpu?.name) {
+          {{ vram()!.gpu.name }} · {{ vram()!.gpu.vram_gb }} GB VRAM
+        } @else {
+          Keine GPU erkannt
+        }
+      </div>
     </div>
   </div>
   <div class="md-sys">
@@ -96,6 +102,7 @@
   <pf-download-dialog
     [model]="downloadTarget()!"
     [modelsDir]="modelsDir()"
+    [vram]="vram()"
     (confirm)="onDownloadConfirm($event)"
     (cancel)="downloadTarget.set(null)"
   />
@@ -105,8 +112,10 @@
   <pf-bind-dialog
     [model]="bindTarget()!"
     [bindError]="bindError()"
+    [bindWarnings]="bindWarnings()"
     [isPending]="isPendingBind(bindTarget()!.id)"
     (confirm)="onBindConfirm($event)"
+    (confirmComponents)="onBindComponentsConfirm($event)"
     (cancel)="onBindCancel()"
   />
 }

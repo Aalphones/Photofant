@@ -16,8 +16,8 @@ diffusers (in-process) gewinnt auf ganzer Linie für den P9-Pfad:
 
 Entscheidung dokumentiert in ADR-002.
 
-- [ ] → Phase 2: `ModelRegistry.components` existiert bereits in der DB — die Komponenten-Picker-UI muss das Map-Format `{"transformer": "...", "text_encoder": "...", "vae": "..."}` rendern.
-- [ ] → Phase 2: VRAM-Erkennung braucht `torch.cuda.get_device_properties()` — setzt voraus, dass die generative Gruppe installiert ist. Fallback: VRAM = unknown, keine Empfehlung.
+- [x] → Phase 2: `ModelRegistry.components` existiert bereits in der DB — die Komponenten-Picker-UI muss das Map-Format `{"transformer": "...", "text_encoder": "...", "vae": "..."}` rendern.
+- [x] → Phase 2: VRAM-Erkennung braucht `torch.cuda.get_device_properties()` — setzt voraus, dass die generative Gruppe installiert ist. Fallback: VRAM = unknown, keine Empfehlung.
 - [ ] → Phase 3: SeedVR2 hat keine offizielle diffusers-Pipeline — muss als Custom-Pipeline implementiert oder über ein Community-Package geladen werden. Recherche in Phase 3.
 - [ ] → Phase 4: Flux-Edit braucht `FluxImg2ImgPipeline` (diffusers). Inpainting braucht `FluxInpaintPipeline`. Beide existieren in diffusers ≥0.31.
 - [ ] → Phase 5: JoyCaption und Qwen-VL sind keine diffusers-Pipelines, sondern transformers-Modelle. Die GenerativeEngine muss auch reine transformers-Pipelines laden können (AutoModelForCausalLM + AutoProcessor).

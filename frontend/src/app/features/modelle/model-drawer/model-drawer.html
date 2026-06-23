@@ -58,8 +58,20 @@
           </span>
         </dd>
         @if (isInstalled()) {
-          <dt>Pfad</dt>
-          <dd class="md-kv__path">{{ model().path ?? 'in-place' }}</dd>
+          @if (hasComponents()) {
+            <dt>Komponenten</dt>
+            <dd>
+              <dl class="md-kv__comp">
+                @for (entry of model().components! | keyvalue; track entry.key) {
+                  <dt>{{ entry.key }}</dt>
+                  <dd class="md-kv__path">{{ entry.value }}</dd>
+                }
+              </dl>
+            </dd>
+          } @else {
+            <dt>Pfad</dt>
+            <dd class="md-kv__path">{{ model().path ?? 'in-place' }}</dd>
+          }
           <dt>Verwaltung</dt>
           <dd>{{ model().managed ? 'Managed (App)' : 'In-Place (extern)' }}</dd>
         }

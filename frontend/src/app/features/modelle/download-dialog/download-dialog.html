@@ -23,6 +23,37 @@
       </div>
     </div>
 
+    @if (variants().length > 0) {
+      <div class="dl-field">
+        <div class="dl-field-lbl">Variante</div>
+        <div class="dl-variants">
+          @for (variant of variants(); track variant.name) {
+            <button
+              class="dl-variant"
+              [class.selected]="activeVariant() === variant.name"
+              [class.recommended]="recommendedVariant() === variant.name"
+              (click)="selectVariant(variant.name)"
+            >
+              <div class="dl-variant__name">{{ variant.name }}</div>
+              <div class="dl-variant__meta">
+                @if (variant.size_gb !== null) { {{ variant.size_gb }} GB }
+                @if (variant.vram_gb !== null) { · {{ variant.vram_gb }} GB VRAM }
+              </div>
+              @if (recommendedVariant() === variant.name) {
+                <span class="dl-variant__rec">empfohlen</span>
+              }
+            </button>
+          }
+        </div>
+        @if (recommendedVariant() !== null && vram()?.gpu?.name) {
+          <div class="dl-variant-hint">
+            <pf-icon name="info" [size]="12" />
+            Empfehlung basiert auf {{ vram()!.gpu.name }} ({{ vram()!.gpu.vram_gb }} GB VRAM)
+          </div>
+        }
+      </div>
+    }
+
     <div class="dl-field">
       <div class="dl-field-lbl">Dateigröße</div>
       <div class="dl-size">{{ formatSize(model().size_bytes) }}</div>

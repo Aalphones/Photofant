@@ -59,6 +59,8 @@ class ModelErrorCode(StrEnum):
     INCOMPLETE = "MODEL_INCOMPLETE"
     LOAD_FAILED = "MODEL_LOAD_FAILED"
     HASH_MISMATCH = "MODEL_HASH_MISMATCH"
+    COMPONENT_MISMATCH = "MODEL_COMPONENT_MISMATCH"
+    VRAM_EXCEEDED = "MODEL_VRAM_EXCEEDED"
 
 
 class ModelFileFormat(StrEnum):
@@ -138,6 +140,20 @@ def spec_for(entry: ManifestEntry) -> ValidationSpec:
             role=entry.role,
             required_filenames=("config.json",),
             required_globs=("*.onnx",),
+        )
+
+    if entry.format == "safetensors":
+        return ValidationSpec(
+            layout=ModelLayout.FOLDER,
+            expected_format=ModelFileFormat.SAFETENSORS,
+            role=entry.role,
+        )
+
+    if entry.format == "gguf":
+        return ValidationSpec(
+            layout=ModelLayout.SINGLE_FILE,
+            expected_format=ModelFileFormat.GGUF,
+            role=entry.role,
         )
 
     # Plain "onnx": always a folder named after the manifest_id — consistent with
@@ -255,14 +271,22 @@ def _locate_primary(path: Path, spec: ValidationSpec) -> Path | None:
     if spec.layout is ModelLayout.SINGLE_FILE:
         return path
 
-    # Prefer a declared .onnx companion by exact name, else the first one found.
+    # Prefer a declared companion by exact name.
     for filename in spec.required_filenames:
-        if filename.lower().endswith(".onnx"):
+        suffix = Path(filename).suffix.lower()
+        if suffix in (".onnx", ".safetensors", ".gguf"):
             candidate = path / filename
             if candidate.is_file():
                 return candidate
 
-    matches = sorted(path.rglob("*.onnx"))
+    # Search by expected format extension.
+    ext_map: dict[ModelFileFormat, str] = {
+        ModelFileFormat.ONNX: "*.onnx",
+        ModelFileFormat.SAFETENSORS: "*.safetensors",
+        ModelFileFormat.GGUF: "*.gguf",
+    }
+    glob_pattern = ext_map.get(spec.expected_format, f"*.{spec.expected_format}")
+    matches = sorted(path.rglob(glob_pattern))
     return matches[0] if matches else None
 
 
@@ -375,6 +399,14 @@ def _stage_completeness(path: Path, spec: ValidationSpec) -> None:
 
 def _stage_loadability(primary: Path, spec: ValidationSpec) -> None:
     """Stage 5: probe-load without running inference."""
+    if spec.expected_format is ModelFileFormat.SAFETENSORS:
+        _probe_safetensors(primary)
+        return
+
+    if spec.expected_format is ModelFileFormat.GGUF:
+        _probe_gguf(primary)
+        return
+
     if spec.expected_format is not ModelFileFormat.ONNX:
         return
 
@@ -392,7 +424,6 @@ def _stage_loadability(primary: Path, spec: ValidationSpec) -> None:
     if session is not None:
         return
 
-    # No onnxruntime: fall back to a protobuf-header sniff.
     if not _looks_like_onnx_protobuf(primary):
         raise ModelValidationError(
             ModelErrorCode.LOAD_FAILED,
@@ -400,6 +431,68 @@ def _stage_loadability(primary: Path, spec: ValidationSpec) -> None:
             found="Bytes, die nicht wie ein ONNX-Modell aussehen",
             next_step="Datei evtl. beschädigt oder kein echtes ONNX-Modell.",
         )
+
+
+def _probe_safetensors(path: Path) -> None:
+    """Verify the safetensors header is parseable."""
+    try:
+        with open(path, "rb") as file_handle:
+            raw = file_handle.read(8)
+            if len(raw) < 8:
+                raise ModelValidationError(
+                    ModelErrorCode.LOAD_FAILED,
+                    expected="eine gültige safetensors-Datei",
+                    found="Datei zu klein für einen gültigen Header",
+                    next_step="Datei evtl. beschädigt.",
+                )
+            header_length = int.from_bytes(raw, "little")
+            if header_length <= 0 or header_length > _SAFETENSORS_MAX_HEADER:
+                raise ModelValidationError(
+                    ModelErrorCode.LOAD_FAILED,
+                    expected="einen gültigen safetensors-Header",
+                    found=f"Header-Länge {header_length} außerhalb des gültigen Bereichs",
+                    next_step="Datei evtl. beschädigt oder kein echtes safetensors-Modell.",
+                )
+            header_bytes = file_handle.read(min(header_length, 1024))
+            if not header_bytes.startswith(b"{"):
+                raise ModelValidationError(
+                    ModelErrorCode.LOAD_FAILED,
+                    expected="JSON-Header in der safetensors-Datei",
+                    found="kein JSON-Header gefunden",
+                    next_step="Datei evtl. beschädigt.",
+                )
+    except ModelValidationError:
+        raise
+    except OSError as error:
+        raise ModelValidationError(
+            ModelErrorCode.LOAD_FAILED,
+            expected="eine lesbare safetensors-Datei",
+            found=f"Lesefehler: {error}",
+            next_step="Dateizugriff prüfen.",
+        ) from error
+
+
+def _probe_gguf(path: Path) -> None:
+    """Verify the GGUF magic header."""
+    try:
+        with open(path, "rb") as file_handle:
+            magic = file_handle.read(4)
+            if magic != _GGUF_MAGIC:
+                raise ModelValidationError(
+                    ModelErrorCode.LOAD_FAILED,
+                    expected="eine gültige GGUF-Datei (Magic: GGUF)",
+                    found=f"Magic-Bytes: {magic!r}",
+                    next_step="Datei evtl. beschädigt oder kein echtes GGUF-Modell.",
+                )
+    except ModelValidationError:
+        raise
+    except OSError as error:
+        raise ModelValidationError(
+            ModelErrorCode.LOAD_FAILED,
+            expected="eine lesbare GGUF-Datei",
+            found=f"Lesefehler: {error}",
+            next_step="Dateizugriff prüfen.",
+        ) from error
 
 
 def validate_in_place(entry: ManifestEntry, raw_path: str) -> InPlaceValidation:
@@ -415,11 +508,10 @@ def validate_in_place(entry: ManifestEntry, raw_path: str) -> InPlaceValidation:
 
     primary = _locate_primary(path, spec)
     if primary is None:
-        # Folder present but holds no weight file → an incompleteness, reported as such.
         raise ModelValidationError(
             ModelErrorCode.INCOMPLETE,
-            expected="eine ONNX-Gewichtsdatei im Ordner",
-            found="keine `.onnx`-Datei im gewählten Ordner",
+            expected="eine Gewichtsdatei im Ordner",
+            found="keine passende Datei im gewählten Ordner",
             next_step="Den korrekten Modell-Ordner wählen.",
         )
 
@@ -431,3 +523,163 @@ def validate_in_place(entry: ManifestEntry, raw_path: str) -> InPlaceValidation:
     sha256 = compute_sha256(primary)
     log.info("In-place validation passed for %r at %s (sha256=%s…)", entry.id, path, sha256[:8])
     return InPlaceValidation(primary_path=primary, sha256=sha256, detected_format=spec.expected_format)
+
+
+# ---------------------------------------------------------------------------
+# Component-model validation (Konzept §12.1, §12.2a Stufe 4+6)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ComponentValidation:
+    """Result of validating all components of a component model."""
+
+    component_hashes: dict[str, str]
+    warnings: list[str]
+
+
+def _validate_single_component(
+    component_key: str,
+    raw_path: str,
+    spec_info: dict[str, Any],
+) -> str:
+    """Validate one component path. Returns sha256 on success."""
+    path = Path(raw_path)
+
+    if not path.exists():
+        raise ModelValidationError(
+            ModelErrorCode.NOT_FOUND,
+            expected=f'Komponente "{spec_info.get("label", component_key)}"',
+            found=f"nichts unter `{path}`",
+            next_step="Pfad prüfen oder neu auswählen.",
+        )
+
+    accepted_formats = spec_info.get("formats", ["safetensors", "gguf"])
+
+    if path.is_file():
+        detected = detect_format(path)
+        if detected.value not in accepted_formats:
+            raise ModelValidationError(
+                ModelErrorCode.WRONG_FORMAT,
+                expected=f"Format {', '.join(accepted_formats)} für {spec_info.get('label', component_key)}",
+                found=f"`{path.suffix}` ({detected})",
+                next_step=f"Eine Datei im Format {' oder '.join(accepted_formats)} wählen.",
+            )
+        return compute_sha256(path)
+
+    if path.is_dir():
+        weight_files = (
+            list(path.rglob("*.safetensors"))
+            + list(path.rglob("*.gguf"))
+            + list(path.rglob("*.bin"))
+        )
+        if not weight_files:
+            raise ModelValidationError(
+                ModelErrorCode.INCOMPLETE,
+                expected=f"Gewichtsdateien im Ordner für {spec_info.get('label', component_key)}",
+                found="keine Gewichtsdateien gefunden",
+                next_step="Den korrekten Ordner für diese Komponente wählen.",
+            )
+        primary = sorted(weight_files)[0]
+        return compute_sha256(primary)
+
+    raise ModelValidationError(
+        ModelErrorCode.NOT_FOUND,
+        expected=f"Datei oder Ordner für {spec_info.get('label', component_key)}",
+        found=f"unbekannter Dateityp unter `{path}`",
+        next_step="Pfad prüfen.",
+    )
+
+
+def _detect_component_family(component_path: Path) -> str | None:
+    """Best-effort family detection from config.json or directory name."""
+    config_path = None
+    if component_path.is_dir():
+        config_path = component_path / "config.json"
+    elif component_path.is_file() and component_path.parent.name != "":
+        config_path = component_path.parent / "config.json"
+
+    if config_path is not None and config_path.is_file():
+        try:
+            import json
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            model_type = config.get("model_type", "")
+            if model_type:
+                return str(model_type).lower()
+        except Exception:  # noqa: BLE001
+            pass
+
+    folder_name = (
+        component_path.name if component_path.is_dir() else component_path.parent.name
+    ).lower()
+
+    family_hints = {
+        "t5": "t5",
+        "clip": "clip",
+        "flux": "flux",
+        "ae": "flux-ae",
+        "vae": "vae",
+        "sdxl": "sdxl",
+    }
+    for hint, family in family_hints.items():
+        if hint in folder_name:
+            return family
+    return None
+
+
+def validate_component_model(
+    entry: ManifestEntry,
+    components: dict[str, str],
+) -> ComponentValidation:
+    """Validate all components of a component model.
+
+    Checks completeness (all required parts present), validates each path,
+    and emits family-compatibility warnings (§19.7 — warning, not gate).
+    """
+    if not entry.is_component_model:
+        raise ValueError(f"{entry.id} is not a component model")
+
+    required_keys = [
+        key for key, spec in entry.components_spec.items() if spec.get("required", False)
+    ]
+    missing = [key for key in required_keys if key not in components or not components[key].strip()]
+    if missing:
+        labels = [
+            entry.components_spec.get(key, {}).get("label", key) for key in missing
+        ]
+        raise ModelValidationError(
+            ModelErrorCode.INCOMPLETE,
+            expected=f"alle Pflichtkomponenten: {', '.join(labels)}",
+            found=f"es fehlen: {', '.join(labels)}",
+            next_step="Alle Pflichtteile müssen gesetzt sein, damit das Feature aktiv werden kann.",
+        )
+
+    component_hashes: dict[str, str] = {}
+    for component_key, raw_path in components.items():
+        if not raw_path.strip():
+            continue
+        spec_info = entry.components_spec.get(component_key, {"label": component_key})
+        sha256 = _validate_single_component(component_key, raw_path.strip(), spec_info)
+        component_hashes[component_key] = sha256
+
+    warnings: list[str] = []
+    expected_families = entry.expected_families
+    for component_key, expected_family in expected_families.items():
+        raw_path = components.get(component_key, "").strip()
+        if not raw_path:
+            continue
+        detected_family = _detect_component_family(Path(raw_path))
+        if detected_family is not None and expected_family.lower() not in detected_family:
+            label = entry.components_spec.get(component_key, {}).get("label", component_key)
+            warnings.append(
+                f'{label}: erwartet Familie "{expected_family}", '
+                f'erkannt "{detected_family}". Output kann fehlerhaft sein.'
+            )
+
+    log.info(
+        "Component validation passed for %r: %d components, %d warnings",
+        entry.id,
+        len(component_hashes),
+        len(warnings),
+    )
+    return ComponentValidation(component_hashes=component_hashes, warnings=warnings)

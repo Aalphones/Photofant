@@ -16,6 +16,8 @@ const {
   selectDownloadJobIds,
   selectPendingBinds,
   selectBindError,
+  selectBindWarnings,
+  selectVram,
   selectError,
 } = modelsFeature;
 
@@ -72,6 +74,8 @@ export const modelsSelectors = {
   selectDownloadJobIds,
   selectPendingBinds,
   selectBindError,
+  selectBindWarnings,
+  selectVram,
   selectError,
   selectModelViews,
   selectModelsByTier,

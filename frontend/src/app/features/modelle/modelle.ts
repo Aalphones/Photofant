@@ -39,11 +39,15 @@ export class Modelle {
   protected readonly tiers: ModelTier[] = MODEL_TIERS;
   protected readonly tierMeta = TIER_META;
 
+  readonly vram = this.store.selectSignal(modelsSelectors.selectVram);
+  readonly bindWarnings = this.store.selectSignal(modelsSelectors.selectBindWarnings);
+
   constructor() {
     effect(() => {
       this.store.dispatch(modelsActions.loadModels());
       this.store.dispatch(modelsActions.loadCapabilities());
       this.store.dispatch(modelsActions.loadConfig());
+      this.store.dispatch(modelsActions.loadVram());
     }, { allowSignalWrites: false });
   }
 
@@ -71,7 +75,7 @@ export class Modelle {
     this.store.dispatch(modelsActions.deleteModel({ manifestId: model.id }));
   }
 
-  protected onDownloadConfirm(event: { model: ModelView; licenseAck: boolean }): void {
+  protected onDownloadConfirm(event: { model: ModelView; licenseAck: boolean; variant: string | null }): void {
     this.downloadTarget.set(null);
     this.store.dispatch(modelsActions.downloadModel({
       manifestId: event.model.id,
@@ -83,6 +87,13 @@ export class Modelle {
     this.store.dispatch(modelsActions.registerLocal({
       manifestId: event.model.id,
       path: event.path,
+    }));
+  }
+
+  protected onBindComponentsConfirm(event: { model: ModelView; components: Record<string, string> }): void {
+    this.store.dispatch(modelsActions.registerLocalComponents({
+      manifestId: event.model.id,
+      components: event.components,
     }));
   }
 

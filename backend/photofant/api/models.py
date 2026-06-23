@@ -20,8 +20,10 @@ from photofant.models.loader import ManifestEntry, get_manifest_entry, load_mani
 from photofant.models.validation import (
     ModelErrorCode,
     ModelValidationError,
+    validate_component_model,
     validate_in_place,
 )
+from photofant.models.vram import detect_gpu, recommend_variant
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +46,7 @@ class ModelDto(BaseModel):
     variant: str | None
     format: str
     path: str | None
+    components: dict[str, Any] | None = None
     sha256: str | None
     managed: bool
     enabled: bool
@@ -61,6 +64,10 @@ class CapabilitiesDto(BaseModel):
     captioning: bool
     semantic_search: bool
     rembg: bool
+    upscale: bool
+    flux_edit: bool
+    inpaint: bool
+    heavy_caption: bool
 
 
 def _derive_status(entry: ManifestEntry, row: ModelRegistry | None) -> ModelStatus:
@@ -69,6 +76,14 @@ def _derive_status(entry: ManifestEntry, row: ModelRegistry | None) -> ModelStat
         return ModelStatus.MISSING
 
     if not row.managed:
+        if entry.is_component_model:
+            components = row.components or {}
+            required = [
+                key for key, spec in entry.components_spec.items()
+                if spec.get("required", False)
+            ]
+            if not all(components.get(key) for key in required):
+                return ModelStatus.MISSING
         return ModelStatus.INPLACE
 
     path_str = row.path
@@ -104,6 +119,7 @@ def list_models(session: DbSession) -> list[ModelDto]:
             variant=entry.variant,
             format=entry.format,
             path=row.path if row else None,
+            components=row.components if row else None,
             sha256=row.sha256 if row else None,
             managed=row.managed if row else True,
             enabled=row.enabled if row else False,
@@ -169,60 +185,133 @@ async def scan_models(session: DbSession) -> ScanResponse:
 
 class RegisterLocalRequest(BaseModel):
     manifest_id: str
-    path: str
+    path: str | None = None
+    components: dict[str, str] | None = None
 
 
-@router.post("/register-local", response_model=ModelDto)
-async def register_local(body: RegisterLocalRequest, session: DbSession) -> ModelDto:
+class ComponentWarningResponse(BaseModel):
+    model: ModelDto
+    warnings: list[str]
+
+
+@router.post("/register-local", response_model=ComponentWarningResponse)
+async def register_local(body: RegisterLocalRequest, session: DbSession) -> ComponentWarningResponse:
     """Bind an already-present file/folder to a manifest slot without copying it.
 
     Runs the §12.2a validation pipeline first; only on success is a `managed = 0`
     registry row written. A failed validation returns a structured 422 and leaves
     both the DB and the filesystem untouched.
+
+    For component models (e.g. Flux), `components` is a map of component paths.
+    For single-file/folder models, `path` is the file/folder path.
     """
     entry = get_manifest_entry(body.manifest_id)
     if entry is None:
         raise HTTPException(status_code=404, detail={"code": ModelErrorCode.NOT_FOUND})
 
-    try:
-        validation = await asyncio.to_thread(validate_in_place, entry, body.path)
-    except ModelValidationError as error:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": error.code,
-                "expected": error.expected,
-                "found": error.found,
-                "next_step": error.next_step,
-            },
-        ) from error
+    warnings: list[str] = []
 
-    row = session.query(ModelRegistry).filter(ModelRegistry.manifest_id == entry.id).first()
-    if row is None:
-        row = ModelRegistry(manifest_id=entry.id)
-        session.add(row)
+    if entry.is_component_model:
+        if not body.components:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": ModelErrorCode.INCOMPLETE,
+                    "expected": "Komponenten-Map mit Pfaden",
+                    "found": "keine Komponenten angegeben",
+                    "next_step": "Pfade für alle Komponenten (Transformer, Text-Encoder, VAE) angeben.",
+                },
+            )
+        try:
+            comp_result = await asyncio.to_thread(
+                validate_component_model, entry, body.components,
+            )
+        except ModelValidationError as error:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": error.code,
+                    "expected": error.expected,
+                    "found": error.found,
+                    "next_step": error.next_step,
+                },
+            ) from error
 
-    row.role = entry.role
-    row.name = entry.name
-    row.variant = entry.variant
-    row.format = entry.format
-    row.path = body.path
-    row.sha256 = validation.sha256
-    row.managed = False
-    row.enabled = True
-    row.caption_mode = entry.caption_mode
-    row.capabilities = entry.capabilities
-    session.commit()
-    session.refresh(row)
+        warnings = comp_result.warnings
+        sha256 = next(iter(comp_result.component_hashes.values()), None)
 
-    log.info("Registered in-place model %s at %s", entry.id, body.path)
-    return ModelDto(
+        row = session.query(ModelRegistry).filter(ModelRegistry.manifest_id == entry.id).first()
+        if row is None:
+            row = ModelRegistry(manifest_id=entry.id)
+            session.add(row)
+
+        row.role = entry.role
+        row.name = entry.name
+        row.variant = entry.variant
+        row.format = entry.format
+        row.path = None
+        row.components = body.components
+        row.sha256 = sha256
+        row.managed = False
+        row.enabled = True
+        row.caption_mode = entry.caption_mode
+        row.capabilities = entry.capabilities
+        session.commit()
+        session.refresh(row)
+
+        log.info("Registered component model %s with %d components", entry.id, len(body.components))
+    else:
+        if not body.path:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": ModelErrorCode.NOT_FOUND,
+                    "expected": "Pfad zur Datei oder zum Ordner",
+                    "found": "kein Pfad angegeben",
+                    "next_step": "Einen Pfad angeben.",
+                },
+            )
+        try:
+            validation = await asyncio.to_thread(validate_in_place, entry, body.path)
+        except ModelValidationError as error:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": error.code,
+                    "expected": error.expected,
+                    "found": error.found,
+                    "next_step": error.next_step,
+                },
+            ) from error
+
+        row = session.query(ModelRegistry).filter(ModelRegistry.manifest_id == entry.id).first()
+        if row is None:
+            row = ModelRegistry(manifest_id=entry.id)
+            session.add(row)
+
+        row.role = entry.role
+        row.name = entry.name
+        row.variant = entry.variant
+        row.format = entry.format
+        row.path = body.path
+        row.sha256 = validation.sha256
+        row.managed = False
+        row.enabled = True
+        row.caption_mode = entry.caption_mode
+        row.capabilities = entry.capabilities
+        session.commit()
+        session.refresh(row)
+
+        log.info("Registered in-place model %s at %s", entry.id, body.path)
+
+    dto = ModelDto(
         id=entry.id,
         role=entry.role,
         name=entry.name,
         variant=entry.variant,
         format=entry.format,
         path=row.path,
+        components=row.components,
         sha256=row.sha256,
         managed=row.managed,
         enabled=row.enabled,
@@ -233,6 +322,7 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Mode
         caption_mode=entry.caption_mode,
         capabilities=entry.capabilities,
     )
+    return ComponentWarningResponse(model=dto, warnings=warnings)
 
 
 class DeleteResponse(BaseModel):
@@ -292,4 +382,49 @@ def get_capabilities(session: DbSession) -> CapabilitiesDto:
         captioning="captioner" in enabled_roles,
         semantic_search="semantic_search" in enabled_roles,
         rembg="rembg" in enabled_roles,
+        upscale="upscaler" in enabled_roles,
+        flux_edit="editor" in enabled_roles,
+        inpaint="editor" in enabled_roles,
+        heavy_caption="heavy_captioner" in enabled_roles,
     )
+
+
+class GpuInfoDto(BaseModel):
+    name: str | None
+    vram_gb: float | None
+    vram_bytes: int | None
+
+
+class VramRecommendation(BaseModel):
+    model_id: str
+    recommended_variant: str | None
+
+
+class VramResponse(BaseModel):
+    gpu: GpuInfoDto
+    recommendations: list[VramRecommendation]
+
+
+@router.get("/vram", response_model=VramResponse)
+async def get_vram() -> VramResponse:
+    """Detect GPU VRAM and recommend variants for all generative models."""
+    gpu_info = await asyncio.to_thread(detect_gpu)
+
+    gpu_dto = GpuInfoDto(
+        name=gpu_info.name if gpu_info else None,
+        vram_gb=gpu_info.vram_gb if gpu_info else None,
+        vram_bytes=gpu_info.vram_bytes if gpu_info else None,
+    )
+
+    recommendations: list[VramRecommendation] = []
+    manifest_entries = load_manifest()
+    for entry in manifest_entries:
+        if entry.tier != "generativ" or not entry.variants:
+            continue
+        variant = recommend_variant(gpu_dto.vram_gb, entry.variants)
+        recommendations.append(VramRecommendation(
+            model_id=entry.id,
+            recommended_variant=variant,
+        ))
+
+    return VramResponse(gpu=gpu_dto, recommendations=recommendations)

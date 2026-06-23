@@ -31,7 +31,20 @@ export type {
 } from './collection.model';
 export { COLLECTION_KINDS, MATCH_MODES, TRIGGER_TYPES } from './collection.model';
 
-export type { ModelDto, ModelView, ModelStatus, ModelTier, CapabilitiesDto, ModelBindError } from './model.model';
+export type {
+  ModelDto,
+  ModelView,
+  ModelStatus,
+  ModelTier,
+  CapabilitiesDto,
+  ModelBindError,
+  GpuInfoDto,
+  VramRecommendation,
+  VramResponse,
+  ComponentSpec,
+  VariantSpec,
+  RegisterLocalResponse,
+} from './model.model';
 
 export type { AssetSummary, DupePair, DupeResolution, FaceReviewItem, FaceReviewAction, MergeResult, SplitResult } from './review.model';
 export { DUPE_RESOLUTIONS, FACE_REVIEW_ACTIONS } from './review.model';

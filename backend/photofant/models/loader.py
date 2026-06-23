@@ -13,7 +13,7 @@ MANIFEST_PATH = Path(__file__).parent / "manifest.json"
 _REQUIRED_FIELDS: frozenset[str] = frozenset({"id", "role", "name", "format", "tier"})
 _VALID_ROLES: frozenset[str] = frozenset({
     "face", "tagger", "captioner", "semantic_search", "rembg",
-    "upscaler", "editor", "heavy_captioner",
+    "upscaler", "editor", "heavy_captioner", "inpainter",
 })
 
 # Module-level cache — loaded once per process.
@@ -38,6 +38,11 @@ class ManifestEntry:
         self.license_note: str | None = raw.get("license_note")
         self.requires_license_ack: bool = bool(raw.get("requires_license_ack", False))
         self.tier: str = raw["tier"]
+        caps = self.capabilities or {}
+        self.is_component_model: bool = bool(caps.get("component_model", False))
+        self.components_spec: dict[str, dict[str, Any]] = caps.get("components", {})
+        self.variants: list[dict[str, Any]] = caps.get("variants", [])
+        self.expected_families: dict[str, str] = caps.get("expected_families", {})
 
 
 def load_manifest() -> list[ManifestEntry]:

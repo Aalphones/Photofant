@@ -1,5 +1,5 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { ModelDto, CapabilitiesDto, ModelBindError, ProcessingConfig, ShortcutConfig } from '@photofant/models';
+import type { ModelDto, CapabilitiesDto, ModelBindError, ProcessingConfig, ShortcutConfig, VramResponse } from '@photofant/models';
 import { PROCESSING_CONFIG_DEFAULTS } from '@photofant/models';
 import { modelsActions } from './models.actions';
 
@@ -16,6 +16,8 @@ export interface ModelsState {
   downloadJobIds: Record<string, string>;
   pendingBinds: string[];
   bindError: ModelBindError | null;
+  bindWarnings: string[];
+  vram: VramResponse | null;
   error: string | null;
 }
 
@@ -32,6 +34,8 @@ const initialState: ModelsState = {
   downloadJobIds: {},
   pendingBinds: [],
   bindError: null,
+  bindWarnings: [],
+  vram: null,
   error: null,
 };
 
@@ -105,14 +109,22 @@ export const modelsFeature = createFeature({
       ...state,
       pendingBinds: [...state.pendingBinds, manifestId],
       bindError: null,
+      bindWarnings: [],
     })),
-    on(modelsActions.registerLocalSuccess, (state: ModelsState, { model }) => ({
+    on(modelsActions.registerLocalComponents, (state: ModelsState, { manifestId }) => ({
+      ...state,
+      pendingBinds: [...state.pendingBinds, manifestId],
+      bindError: null,
+      bindWarnings: [],
+    })),
+    on(modelsActions.registerLocalSuccess, (state: ModelsState, { model, warnings }) => ({
       ...state,
       pendingBinds: state.pendingBinds.filter((id: string) => id !== model.id),
       models: state.models.map((existing: ModelDto) =>
         existing.id === model.id ? model : existing
       ),
       bindError: null,
+      bindWarnings: warnings,
     })),
     on(modelsActions.registerLocalFailure, (state: ModelsState, { manifestId, error, code }) => ({
       ...state,
@@ -120,7 +132,10 @@ export const modelsFeature = createFeature({
       bindError: { manifestId, code, message: error },
     })),
     on(modelsActions.clearBindError, (state: ModelsState) =>
-      ({ ...state, bindError: null })
+      ({ ...state, bindError: null, bindWarnings: [] })
+    ),
+    on(modelsActions.loadVramSuccess, (state: ModelsState, { vram }) =>
+      ({ ...state, vram })
     ),
 
     on(modelsActions.deleteModelSuccess, (state: ModelsState, { manifestId }) => ({

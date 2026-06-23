@@ -15,25 +15,55 @@
   </div>
 
   <div class="bd-body">
-    <div class="bd-field">
-      <label class="bd-field-lbl" for="bd-path">Pfad zur Datei oder zum Ordner</label>
-      <div class="bd-path-row">
-        <pf-icon name="folder" [size]="15" class="bd-path-icon" />
-        <input
-          id="bd-path"
-          class="bd-input"
-          type="text"
-          placeholder="/pfad/zum/modell"
-          [(ngModel)]="path"
-          [disabled]="isPending()"
-          (keydown.enter)="handleConfirm()"
-        />
+    @if (isComponentModel()) {
+      <div class="bd-comp-info">
+        <pf-icon name="info" [size]="13" />
+        Komponenten-Modell: Jede Komponente einzeln auswählen. Pfade dürfen an verschiedenen Orten liegen.
       </div>
-      <div class="bd-path-hint">
-        Einzeldatei (.onnx, .safetensors) oder Ordner (Diffusers-Layout, buffalo_l-Bundle).
-        Die Datei wird weder kopiert noch verändert.
+
+      @for (entry of componentSpecs(); track entry.key) {
+        <div class="bd-field">
+          <label class="bd-field-lbl" [for]="'bd-comp-' + entry.key">
+            {{ entry.spec.label }}
+            @if (entry.spec.required) {
+              <span class="bd-req">*</span>
+            }
+          </label>
+          <div class="bd-path-row">
+            <pf-icon name="folder" [size]="15" class="bd-path-icon" />
+            <input
+              [id]="'bd-comp-' + entry.key"
+              class="bd-input"
+              type="text"
+              [placeholder]="'/pfad/zu/' + entry.key"
+              [ngModel]="componentPaths()[entry.key] ?? ''"
+              (ngModelChange)="updateComponentPath(entry.key, $event)"
+              [disabled]="isPending()"
+            />
+          </div>
+        </div>
+      }
+    } @else {
+      <div class="bd-field">
+        <label class="bd-field-lbl" for="bd-path">Pfad zur Datei oder zum Ordner</label>
+        <div class="bd-path-row">
+          <pf-icon name="folder" [size]="15" class="bd-path-icon" />
+          <input
+            id="bd-path"
+            class="bd-input"
+            type="text"
+            placeholder="/pfad/zum/modell"
+            [(ngModel)]="path"
+            [disabled]="isPending()"
+            (keydown.enter)="handleConfirm()"
+          />
+        </div>
+        <div class="bd-path-hint">
+          Einzeldatei (.onnx, .safetensors) oder Ordner (Diffusers-Layout, buffalo_l-Bundle).
+          Die Datei wird weder kopiert noch verändert.
+        </div>
       </div>
-    </div>
+    }
 
     @if (errorMessage()) {
       <div class="bd-error">
@@ -44,6 +74,13 @@
             Erwartet: Format passend zu <b>{{ model().role }}</b> · Pfad prüfen und erneut versuchen.
           </div>
         </div>
+      </div>
+    }
+
+    @for (warning of bindWarnings(); track warning) {
+      <div class="bd-warning">
+        <pf-icon name="alertTriangle" [size]="14" />
+        <div>{{ warning }}</div>
       </div>
     }
 

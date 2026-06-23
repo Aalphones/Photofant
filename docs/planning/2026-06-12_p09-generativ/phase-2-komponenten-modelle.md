@@ -1,6 +1,6 @@
 # P9 · Phase 2 — Komponenten-Modelle & VRAM
 
-> Rating: **heikel** (P4-Validierung wird um die fehleranfälligste Variante erweitert) · Status: pending
+> Rating: **heikel** (P4-Validierung wird um die fehleranfälligste Variante erweitert) · Status: **done**
 
 ## Kontext (vorher lesen)
 
@@ -18,11 +18,28 @@
 
 ## Checkliste
 
-- [ ] Validator-Erweiterung (Komponenten-Rollen, Familien-Heuristik aus Manifest)
-- [ ] Manifest-Einträge (Quellen, Hashes, Varianten, VRAM-Werte aus §12.3/§12.4)
-- [ ] VRAM-Detection + Empfehlungs-Logik
-- [ ] Bind-Dialog-Erweiterung (Mehrfach-Picker) + Download-Dialog (Varianten-Wahl)
-- [ ] Tests: Vollständigkeits-Gate, Mismatch-Warnung
-- [ ] Doc-Update: routes.md, README Modell-Sektion
+- [x] Validator-Erweiterung (Komponenten-Rollen, Familien-Heuristik aus Manifest)
+- [x] Manifest-Einträge (Quellen, Hashes, Varianten, VRAM-Werte aus §12.3/§12.4)
+- [x] VRAM-Detection + Empfehlungs-Logik
+- [x] Bind-Dialog-Erweiterung (Mehrfach-Picker) + Download-Dialog (Varianten-Wahl)
+- [x] Tests: Vollständigkeits-Gate, Mismatch-Warnung
+- [x] Doc-Update: routes.md, README Modell-Sektion
 
 ## Report-Back
+
+### 2026-06-23 — Phase 2 abgeschlossen
+
+**Backend:**
+- `validation.py`: Komponenten-Validierung (`validate_component_model`), Familien-Erkennung, safetensors/gguf-Probes
+- `vram.py`: GPU-Erkennung (torch.cuda + nvidia-smi Fallback), Varianten-Empfehlung
+- `api/models.py`: `register-local` akzeptiert `path` oder `components`, gibt `{model, warnings[]}` zurück; neuer `GET /api/models/vram`
+- `loader.py`: ManifestEntry parst `component_model`, `components`, `variants`, `expected_families`
+- `manifest.json`: Flux-Einträge mit Komponenten-Specs, Varianten, erwarteten Familien
+- 16 Backend-Tests bestanden (5 neue Komponenten-Tests)
+
+**Frontend:**
+- Bind-Dialog: Erkennt Komponenten-Modelle, zeigt Multi-Picker, Warnungen, Completeness-Gate
+- Download-Dialog: Varianten-Auswahl mit VRAM-basierter Empfehlung
+- Model-Drawer: Zeigt Komponenten-Pfade statt Einzel-Pfad
+- Modelle-Shell: GPU-Systembar, VRAM-Dispatch, neue Actions/Effects/Selectors
+- Types: `VramResponse`, `VariantSpec`, `ComponentSpec`, `RegisterLocalResponse`

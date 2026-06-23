@@ -10,6 +10,7 @@ export interface ModelDto {
   variant: string | null;
   format: string;
   path: string | null;
+  components: Record<string, string> | null;
   sha256: string | null;
   managed: boolean;
   enabled: boolean;
@@ -33,6 +34,43 @@ export interface CapabilitiesDto {
   captioning: boolean;
   semantic_search: boolean;
   rembg: boolean;
+  upscale: boolean;
+  flux_edit: boolean;
+  inpaint: boolean;
+  heavy_caption: boolean;
+}
+
+export interface GpuInfoDto {
+  name: string | null;
+  vram_gb: number | null;
+  vram_bytes: number | null;
+}
+
+export interface VramRecommendation {
+  model_id: string;
+  recommended_variant: string | null;
+}
+
+export interface VramResponse {
+  gpu: GpuInfoDto;
+  recommendations: VramRecommendation[];
+}
+
+export interface ComponentSpec {
+  label: string;
+  required: boolean;
+  formats?: string[];
+}
+
+export interface VariantSpec {
+  name: string;
+  size_gb: number | null;
+  vram_gb: number | null;
+}
+
+export interface RegisterLocalResponse {
+  model: ModelDto;
+  warnings: string[];
 }
 
 export interface ModelBindError {
@@ -67,16 +105,32 @@ export const MODEL_ENRICHMENT: Record<string, { tier: ModelTier; desc: string; l
     desc: 'Hintergrundentfernung. Benötigt für Freisteller und saubere Gesichtsextraktion.',
     licenseNc: false,
   },
+  'flux2-klein-9b': {
+    tier: 'generativ',
+    desc: 'Generatives Editing & Inpainting. Komponenten-Modell: Transformer, Text-Encoder und VAE einzeln wählbar.',
+    licenseNc: true,
+  },
+  'seedvr2-3b': {
+    tier: 'generativ',
+    desc: 'Upscaler (3B). Schnell, moderater VRAM-Bedarf. Ideal für fp8/GGUF auf Consumer-GPUs.',
+    licenseNc: false,
+  },
+  'seedvr2-7b': {
+    tier: 'generativ',
+    desc: 'Upscaler (7B). Bessere Qualität, höherer VRAM-Bedarf. fp8-Variante empfohlen.',
+    licenseNc: false,
+  },
 };
 
 export const ROLE_META: Record<string, { icon: string; label: string }> = {
-  face:            { icon: 'face',    label: 'Face-Analyse' },
-  tagger:          { icon: 'tag',     label: 'Tagger' },
-  captioner:       { icon: 'text',    label: 'Captioner' },
-  semantic_search: { icon: 'search',  label: 'Semantische Suche' },
-  rembg:           { icon: 'layers',  label: 'Hintergrund' },
-  upscale:         { icon: 'refresh', label: 'Upscale' },
-  edit:            { icon: 'pencil',  label: 'Generatives Editing' },
+  face:             { icon: 'face',    label: 'Face-Analyse' },
+  tagger:           { icon: 'tag',     label: 'Tagger' },
+  captioner:        { icon: 'text',    label: 'Captioner' },
+  semantic_search:  { icon: 'search',  label: 'Semantische Suche' },
+  rembg:            { icon: 'layers',  label: 'Hintergrund' },
+  upscaler:         { icon: 'refresh', label: 'Upscale' },
+  editor:           { icon: 'pencil',  label: 'Generatives Editing' },
+  heavy_captioner:  { icon: 'text',    label: 'Schwerer Captioner' },
 };
 
 export const STATUS_META: Record<ModelStatus, { label: string; dot: boolean }> = {
@@ -101,6 +155,8 @@ export const ERROR_CODE_MESSAGES: Record<string, string> = {
   MODEL_INCOMPLETE:   'Modell unvollständig — alle Pflicht-Komponenten müssen gesetzt sein.',
   MODEL_LOAD_FAILED:  'Datei ließ sich nicht laden (beschädigt oder inkompatibles Format).',
   MODEL_HASH_MISMATCH:'Prüfsumme weicht vom Manifest ab — Download evtl. unvollständig.',
+  MODEL_COMPONENT_MISMATCH: 'Komponente passt nicht zur erwarteten Familie — Output kann fehlerhaft sein.',
+  MODEL_VRAM_EXCEEDED: 'Variante übersteigt den erkannten VRAM — eine kleinere Variante empfohlen.',
   LICENSE_ACK_REQUIRED: 'Bitte die Lizenzbedingungen bestätigen, bevor der Download gestartet werden kann.',
 };
 

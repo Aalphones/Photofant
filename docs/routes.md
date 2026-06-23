@@ -218,16 +218,17 @@ interface MaintenanceStatus {
 | `/einstellungen` (capabilities) | `GET` | `/api/models/capabilities` | — | `CapabilitiesDto` |
 | `/einstellungen` (download) | `POST` | `/api/models/{manifest_id}/download` | `{ license_ack?: bool }` | `{ job_id: string }` |
 | `/einstellungen` (scan) | `POST` | `/api/models/scan` | — | `{ registered: ScanResult[] }` |
-| `/einstellungen` (in-place) | `POST` | `/api/models/register-local` | `{ manifest_id: string, path: string }` | `ModelDto` |
+| `/einstellungen` (in-place) | `POST` | `/api/models/register-local` | `{ manifest_id: string, path?: string, components?: Record<string, string> }` | `RegisterLocalResponse` |
+| `/einstellungen` (VRAM) | `GET` | `/api/models/vram` | — | `VramResponse` |
 | `/einstellungen` (remove) | `DELETE` | `/api/models/{manifest_id}` | — | `{ deleted: bool, file_removed: bool }` |
 
 ```typescript
 interface ModelDto {
   id: string;
-  role: 'face' | 'tagger' | 'captioner' | 'semantic_search' | 'rembg';
+  role: 'face' | 'tagger' | 'captioner' | 'semantic_search' | 'rembg' | 'upscaler' | 'editor' | 'heavy_captioner' | 'inpainter';
   name: string;
   variant: string | null;
-  format: 'onnx' | 'onnx_bundle' | 'onnx_folder';
+  format: 'onnx' | 'onnx_bundle' | 'onnx_folder' | 'safetensors' | 'gguf';
   path: string | null;
   sha256: string | null;
   managed: boolean;
@@ -236,6 +237,7 @@ interface ModelDto {
   status: 'active' | 'available' | 'missing' | 'inplace';
   size_bytes: number | null;
   license_note: string | null;
+  components: Record<string, string> | null;  // Komponenten-Modelle: Key→Pfad-Map
 }
 
 interface CapabilitiesDto {
@@ -244,6 +246,30 @@ interface CapabilitiesDto {
   captioning: boolean;
   semantic_search: boolean;
   rembg: boolean;
+  upscale: boolean;
+  flux_edit: boolean;
+  inpaint: boolean;
+  heavy_caption: boolean;
+}
+
+interface RegisterLocalResponse {
+  model: ModelDto;
+  warnings: string[];   // z.B. Familien-Mismatch, VRAM-Warnung
+}
+
+interface VramResponse {
+  gpu: GpuInfoDto | null;
+  recommendations: VramRecommendation[];
+}
+
+interface GpuInfoDto {
+  name: string;
+  vram_gb: number;
+}
+
+interface VramRecommendation {
+  model_id: string;
+  recommended_variant: string | null;
 }
 
 interface ScanResult {
@@ -338,7 +364,9 @@ interface ModelValidationDetail {
     | 'MODEL_WRONG_FORMAT'   // Magic-Bytes/Endung passen nicht (onnx erwartet, gguf/safetensors gefunden); auch Datei↔Ordner-Verwechslung
     | 'MODEL_WRONG_ROLE'     // ONNX-Graph passt nicht zur Slot-Rolle (nur wenn onnxruntime verfügbar)
     | 'MODEL_INCOMPLETE'     // Ordner-Modell: Pflicht-Begleitdatei fehlt (z.B. selected_tags.csv, config.json)
-    | 'MODEL_LOAD_FAILED';   // Probe-Load scheitert (ONNX-Session bzw. Protobuf-Header)
+    | 'MODEL_LOAD_FAILED'    // Probe-Load scheitert (ONNX-Session bzw. Protobuf-Header)
+    | 'MODEL_COMPONENT_MISMATCH'  // Komponenten-Modell: Familien-Mismatch (warning, kein Hard-Gate)
+    | 'MODEL_VRAM_EXCEEDED';      // VRAM-Budget überschritten (warning, kein Hard-Gate)
   expected: string;
   found: string;
   next_step: string;
