@@ -1,6 +1,6 @@
 # P9 · Phase 4 — Flux-Edit & Inpainting
 
-> Rating: **heikel** (img2img-Parameterraum + Masken-UI + Template-System) · Status: pending
+> Rating: **heikel** (img2img-Parameterraum + Masken-UI + Template-System) · Status: **complete**
 
 ## Kontext (vorher lesen)
 
@@ -17,11 +17,11 @@
 
 ## Checkliste
 
-- [ ] img2img-Pfad über die GenerativeEngine (Flux-Komponenten aus Phase 2)
-- [ ] prompt_template-Migration + CRUD + `promptTemplates`-Slice
-- [ ] Flux-Tool-Panel (Prompt, Template-Picker, Params, Seed-Lock)
-- [ ] Masken-Layer im Editor + Inpaint-Endpoint
-- [ ] Bulk-Verdrahtung (ohne Inpaint)
-- [ ] Doc-Update: routes.md, docs/models.md (prompt_template)
+- [x] img2img-Pfad über die GenerativeEngine (Flux-Komponenten aus Phase 2)
+- [x] prompt_template-Migration + CRUD + `promptTemplates`-Slice
+- [x] Flux-Tool-Panel (Prompt, Template-Picker, Params, Seed-Lock)
+- [x] Masken-Layer im Editor + Inpaint-Endpoint
+- [x] Bulk-Verdrahtung (ohne Inpaint)
+- [x] Doc-Update: routes.md, docs/models.md (prompt_template)
 
 ## Report-Back

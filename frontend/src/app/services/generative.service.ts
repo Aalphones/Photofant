@@ -49,4 +49,35 @@ export class GenerativeService {
   unloadGenerative(): Observable<{ message: string }> {
     return this.http.post<{ message: string }>('/api/generative/unload', {});
   }
+
+  fluxEdit(assetId: number, request: FluxEditRequest): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>(`/api/assets/${assetId}/flux-edit`, request);
+  }
+
+  bulkFluxEdit(request: BulkFluxEditRequest): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>('/api/assets/bulk-flux-edit', request);
+  }
+
+  inpaint(assetId: number, request: InpaintRequest): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>(`/api/assets/${assetId}/inpaint`, request);
+  }
+}
+
+export interface FluxEditRequest {
+  prompt?: string | null;
+  template_id?: number | null;
+  params?: Record<string, unknown>;
+}
+
+export interface BulkFluxEditRequest {
+  asset_ids: number[];
+  prompt?: string | null;
+  template_id?: number | null;
+  params?: Record<string, unknown>;
+}
+
+export interface InpaintRequest {
+  mask: string;
+  prompt?: string;
+  params?: Record<string, unknown>;
 }

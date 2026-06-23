@@ -42,6 +42,8 @@ class JobKind(StrEnum):
     COMFYUI_RUN = "comfyui_run"
     INSTALL_GENERATIVE = "install_generative"
     UPSCALE = "upscale"
+    FLUX_EDIT = "flux_edit"
+    INPAINT = "inpaint"
 
 
 @dataclass

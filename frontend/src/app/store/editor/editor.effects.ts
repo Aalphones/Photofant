@@ -5,7 +5,8 @@ import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, EMPTY, map, of, switchMap, concatMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { ApplyStepResponse, CreateSessionResponse, EditorStep, RollbackResponse } from '@photofant/models';
-import { EditSessionService } from '@photofant/services';
+import { EditSessionService, GenerativeService } from '@photofant/services';
+import type { FluxEditRequest, InpaintRequest } from '@photofant/services';
 import { editorActions } from './editor.actions';
 import { editorSelectors } from './editor.selectors';
 
@@ -14,6 +15,7 @@ export class EditorEffects {
   private readonly actions$ = inject(Actions);
   private readonly store = inject(Store);
   private readonly editSessionService = inject(EditSessionService);
+  private readonly generativeService = inject(GenerativeService);
 
   readonly onInit$ = createEffect(() =>
     this.actions$.pipe(
@@ -67,6 +69,44 @@ export class EditorEffects {
         return this.editSessionService.rollback(sessionKey, toSeq).pipe(
           map((response: RollbackResponse) => editorActions.rollbackSuccess({ seq: response.seq })),
           catchError(() => of(editorActions.rollbackSuccess({ seq: toSeq }))),
+        );
+      }),
+    )
+  );
+
+  readonly onFluxEdit$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(editorActions.fluxEdit),
+      concatLatestFrom(() => this.store.select(editorSelectors.selectTargetId)),
+      concatMap(([{ prompt, templateId, params }, targetId]) => {
+        if (targetId == null) { return EMPTY; }
+        const request: FluxEditRequest = {
+          prompt,
+          template_id: templateId,
+          params,
+        };
+        return this.generativeService.fluxEdit(targetId, request).pipe(
+          map((response: { job_id: string }) => editorActions.fluxEditSuccess({ jobId: response.job_id })),
+          catchError((error: HttpErrorResponse) =>
+            of(editorActions.fluxEditFailure({ error: error.message }))
+          ),
+        );
+      }),
+    )
+  );
+
+  readonly onInpaint$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(editorActions.inpaint),
+      concatLatestFrom(() => this.store.select(editorSelectors.selectTargetId)),
+      concatMap(([{ mask, prompt, params }, targetId]) => {
+        if (targetId == null) { return EMPTY; }
+        const request: InpaintRequest = { mask, prompt, params };
+        return this.generativeService.inpaint(targetId, request).pipe(
+          map((response: { job_id: string }) => editorActions.inpaintSuccess({ jobId: response.job_id })),
+          catchError((error: HttpErrorResponse) =>
+            of(editorActions.inpaintFailure({ error: error.message }))
+          ),
         );
       }),
     )

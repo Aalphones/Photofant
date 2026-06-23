@@ -2,7 +2,7 @@ import { createSelector } from '@ngrx/store';
 import type { EditorStep } from '@photofant/models';
 import { editorFeature } from './editor.reducer';
 
-const { selectSessionKey, selectSteps, selectCurrentSeq, selectOriginalPreviewUrl, selectApplying, selectError, selectTargetId } = editorFeature;
+const { selectSessionKey, selectSteps, selectCurrentSeq, selectOriginalPreviewUrl, selectApplying, selectError, selectTargetId, selectGenerating, selectGenerativeJobId } = editorFeature;
 
 const selectCurrentPreviewUrl = createSelector(
   selectSteps,
@@ -41,4 +41,6 @@ export const editorSelectors = {
   selectApplying,
   selectError,
   selectTargetId,
+  selectGenerating,
+  selectGenerativeJobId,
 };

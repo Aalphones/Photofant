@@ -12,6 +12,12 @@ export const editorActions = createActionGroup({
     'Apply Step Failure': props<{ error: string }>(),
     'Rollback': props<{ toSeq: number }>(),
     'Rollback Success': props<{ seq: number }>(),
+    'Flux Edit': props<{ prompt: string; templateId: number | null; params: Record<string, unknown> }>(),
+    'Flux Edit Success': props<{ jobId: string }>(),
+    'Flux Edit Failure': props<{ error: string }>(),
+    'Inpaint': props<{ mask: string; prompt: string; params: Record<string, unknown> }>(),
+    'Inpaint Success': props<{ jobId: string }>(),
+    'Inpaint Failure': props<{ error: string }>(),
     'Close': emptyProps(),
   },
 });

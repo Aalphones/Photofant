@@ -27,6 +27,7 @@ from photofant.api import (
     maintenance,
     models,
     persons,
+    prompt_templates,
     review,
     review_queue,
     search,
@@ -110,6 +111,7 @@ def create_app() -> FastAPI:
     app.include_router(comfyui.settings_router, prefix="/api")
     app.include_router(comfyui.comfyui_router, prefix="/api")
     app.include_router(generative.router, prefix="/api")
+    app.include_router(prompt_templates.router, prefix="/api")
     return app
 
 

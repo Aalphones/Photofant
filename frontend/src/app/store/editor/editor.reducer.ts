@@ -10,6 +10,8 @@ export interface EditorState {
   steps: EditorStep[];
   currentSeq: number;
   applying: boolean;
+  generating: boolean;
+  generativeJobId: string | null;
   error: string | null;
 }
 
@@ -21,6 +23,8 @@ const initialState: EditorState = {
   steps: [],
   currentSeq: 0,
   applying: false,
+  generating: false,
+  generativeJobId: null,
   error: null,
 };
 
@@ -88,6 +92,44 @@ export const editorFeature = createFeature({
       steps: state.steps.filter((s: EditorStep) => s.seq <= seq),
       currentSeq: seq,
       applying: false,
+    })),
+
+    on(editorActions.fluxEdit, (state: EditorState): EditorState => ({
+      ...state,
+      generating: true,
+      generativeJobId: null,
+      error: null,
+    })),
+
+    on(editorActions.fluxEditSuccess, (state: EditorState, { jobId }): EditorState => ({
+      ...state,
+      generating: false,
+      generativeJobId: jobId,
+    })),
+
+    on(editorActions.fluxEditFailure, (state: EditorState, { error }): EditorState => ({
+      ...state,
+      generating: false,
+      error,
+    })),
+
+    on(editorActions.inpaint, (state: EditorState): EditorState => ({
+      ...state,
+      generating: true,
+      generativeJobId: null,
+      error: null,
+    })),
+
+    on(editorActions.inpaintSuccess, (state: EditorState, { jobId }): EditorState => ({
+      ...state,
+      generating: false,
+      generativeJobId: jobId,
+    })),
+
+    on(editorActions.inpaintFailure, (state: EditorState, { error }): EditorState => ({
+      ...state,
+      generating: false,
+      error,
     })),
 
     on(editorActions.close, (): EditorState => initialState),

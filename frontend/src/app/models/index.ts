@@ -91,3 +91,10 @@ export type {
   MaintenanceStatus,
 } from './maintenance.model';
 export { ISSUE_KINDS, REPAIR_ACTIONS, REBUILD_TARGETS } from './maintenance.model';
+
+export type {
+  PromptTemplateDto,
+  PromptTemplateParams,
+  CreatePromptTemplateRequest,
+  UpdatePromptTemplateRequest,
+} from './prompt-template.model';

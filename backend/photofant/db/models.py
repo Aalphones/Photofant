@@ -212,6 +212,16 @@ class Version(Base):
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class PromptTemplate(Base):
+    __tablename__ = "prompt_template"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    params: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class ComfyUIWorkflow(Base):
     __tablename__ = "comfyui_workflow"
 

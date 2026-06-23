@@ -656,6 +656,75 @@ interface PersonDupePair {
 
 **Rebuild-Target `faces`:** `POST /api/maintenance/rebuild` mit `{ target: "faces" }` re-extrahiert alle abgeleiteten Face-Crops aus den Quell-Bildern (BBox + Padding). Faces mit `origin = manual_original` bleiben unberührt.
 
+## Prompt-Templates (P9 Phase 4)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/einstellungen` | `GET` | `/api/prompt-templates` | — | `PromptTemplateDto[]` |
+| `/einstellungen` | `POST` | `/api/prompt-templates` | `CreatePromptTemplateRequest` | `PromptTemplateDto` (201) |
+| `/einstellungen` | `PATCH` | `/api/prompt-templates/{id}` | `UpdatePromptTemplateRequest` | `PromptTemplateDto` |
+| `/einstellungen` | `DELETE` | `/api/prompt-templates/{id}` | — | 204 |
+
+```typescript
+interface PromptTemplateDto {
+  id: number;
+  name: string;
+  prompt: string;
+  params: PromptTemplateParams | null;
+  created_at: string | null;
+}
+
+interface PromptTemplateParams {
+  strength?: number;
+  steps?: number;
+  guidance?: number;
+  seed?: number;
+}
+
+interface CreatePromptTemplateRequest {
+  name: string;
+  prompt: string;
+  params?: PromptTemplateParams;
+}
+
+interface UpdatePromptTemplateRequest {
+  name?: string;
+  prompt?: string;
+  params?: PromptTemplateParams;
+}
+```
+
+## Flux-Edit & Inpaint (P9 Phase 4)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| Editor (Flux-Edit) | `POST` | `/api/assets/{id}/flux-edit` | `FluxEditRequest` | `{ job_id: string }` (202) |
+| Editor (Bulk Flux-Edit) | `POST` | `/api/assets/bulk-flux-edit` | `BulkFluxEditRequest` | `{ job_id: string }` (202) |
+| Editor (Inpaint) | `POST` | `/api/assets/{id}/inpaint` | `InpaintRequest` | `{ job_id: string }` (202) |
+
+```typescript
+interface FluxEditRequest {
+  prompt?: string | null;
+  template_id?: number | null;
+  params?: Record<string, unknown>;   // strength, steps, guidance, seed
+}
+
+interface BulkFluxEditRequest {
+  asset_ids: number[];
+  prompt?: string | null;
+  template_id?: number | null;
+  params?: Record<string, unknown>;
+}
+
+interface InpaintRequest {
+  mask: string;        // Base64-encoded PNG
+  prompt?: string;
+  params?: Record<string, unknown>;   // strength, steps, guidance
+}
+```
+
+Flux-Edit erstellt eine neue Version (`type=flux_edit`, `is_current=true`); Seed wird in `version.params` gespeichert. Inpaint erstellt eine Version (`type=inpaint`). Beide nutzen die Job-Queue; Fortschritt via `/api/jobs/stream`. `{person}`-Platzhalter im Prompt wird serverseitig durch den Personnamen des Assets ersetzt.
+
 ## Job-Stream
 
 | Trigger | Endpoint | Protokoll |

@@ -1,0 +1,112 @@
+<div class="flux2-panel__scroll">
+
+  <!-- Templates -->
+  <div class="flux2-panel__section">
+    <div class="flux2-panel__label">Templates</div>
+    <div class="flux2-panel__template-grid">
+      @for (template of templates(); track template.id) {
+        <button
+          class="flux2-panel__template"
+          [class.flux2-panel__template--active]="selectedTemplateId() === template.id"
+          (click)="applyTemplate(template)"
+        >
+          <div class="flux2-panel__template-name">{{ template.name }}</div>
+          <div class="flux2-panel__template-prompt">{{ template.prompt }}</div>
+          @if (template.params; as params) {
+            <div class="flux2-panel__template-meta">
+              @if (params.strength != null) {
+                <span>str {{ params.strength }}</span>
+              }
+              @if (params.steps != null) {
+                <span>s{{ params.steps }}</span>
+              }
+              @if (params.guidance != null) {
+                <span>cfg{{ params.guidance }}</span>
+              }
+            </div>
+          }
+        </button>
+      } @empty {
+        <div class="flux2-panel__empty">
+          Noch keine Templates — unter Einstellungen → Bearbeitung anlegen.
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Prompt -->
+  <div class="flux2-panel__section">
+    <div class="flux2-panel__label">Prompt</div>
+    <textarea
+      class="flux2-panel__textarea"
+      rows="4"
+      [value]="prompt()"
+      placeholder="Beschreibe den gewünschten Edit … {person} wird durch den Namen ersetzt."
+      (input)="onPromptInput($event)"
+    ></textarea>
+  </div>
+
+  <!-- Parameters -->
+  <div class="flux2-panel__section">
+    <div class="flux2-panel__label">Parameter</div>
+
+    <div class="flux2-panel__ctrl">
+      <div class="flux2-panel__ctrl-row">
+        <span class="flux2-panel__ctrl-label">Stärke</span>
+        <span class="flux2-panel__ctrl-value">{{ strength().toFixed(2) }}</span>
+      </div>
+      <input type="range" [min]="0.1" [max]="0.99" [step]="0.01" [value]="strength()" (input)="onStrengthChange($event)" />
+    </div>
+
+    <div class="flux2-panel__ctrl">
+      <div class="flux2-panel__ctrl-row">
+        <span class="flux2-panel__ctrl-label">Schritte</span>
+        <span class="flux2-panel__ctrl-value">{{ steps() }}</span>
+      </div>
+      <input type="range" [min]="10" [max]="50" [step]="1" [value]="steps()" (input)="onStepsChange($event)" />
+    </div>
+
+    <div class="flux2-panel__ctrl">
+      <div class="flux2-panel__ctrl-row">
+        <span class="flux2-panel__ctrl-label">CFG-Skala</span>
+        <span class="flux2-panel__ctrl-value">{{ guidance().toFixed(1) }}</span>
+      </div>
+      <input type="range" [min]="1" [max]="15" [step]="0.5" [value]="guidance()" (input)="onGuidanceChange($event)" />
+    </div>
+
+    <div class="flux2-panel__ctrl">
+      <div class="flux2-panel__ctrl-row">
+        <span class="flux2-panel__ctrl-label">Seed</span>
+        <span class="flux2-panel__ctrl-value">{{ seed() === -1 ? 'Zufällig' : seed() }}</span>
+      </div>
+      <div class="flux2-panel__seed-row">
+        <input
+          type="number"
+          class="flux2-panel__seed-input"
+          [value]="seed()"
+          [min]="-1"
+          (input)="onSeedInput($event)"
+        />
+        <button class="flux2-panel__seed-reset" (click)="resetSeed()" title="Zufällig">
+          <pf-icon name="refresh" [size]="14" />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate button -->
+  <button
+    class="flux2-panel__generate"
+    [disabled]="!canGenerate()"
+    (click)="onGenerate()"
+  >
+    @if (generating()) {
+      <div class="flux2-panel__spinner"></div>
+      Wird generiert …
+    } @else {
+      <pf-icon name="pencil" [size]="15" />
+      Edit generieren
+    }
+  </button>
+
+</div>

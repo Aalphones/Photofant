@@ -54,21 +54,62 @@
     <!-- Left: Tool panel -->
     <div class="ed-left">
       <div class="ed-tool-tabs">
-        <div class="ed-tool-tab on">
+        <div
+          class="ed-tool-tab"
+          [class.on]="activeTool() === 'basis'"
+          (click)="setTool('basis')"
+        >
           <pf-icon name="crop" [size]="18" /> Basis
         </div>
+        @if (hasFluxEdit()) {
+          <div
+            class="ed-tool-tab"
+            [class.on]="activeTool() === 'flux2'"
+            (click)="setTool('flux2')"
+          >
+            <pf-icon name="pencil" [size]="18" /> Flux
+          </div>
+        }
+        @if (hasInpaint()) {
+          <div
+            class="ed-tool-tab"
+            [class.on]="activeTool() === 'inpaint'"
+            (click)="setTool('inpaint')"
+          >
+            <pf-icon name="pencil" [size]="18" /> Inpaint
+          </div>
+        }
       </div>
 
-      <pf-basis-panel
-        [cropActive]="cropActive()"
-        [cropRect]="cropRect()"
-        [cropRatio]="cropRatio()"
-        [capabilities]="capabilities()"
-        (applyOp)="onApplyOp($event)"
-        (activateCrop)="onActivateCrop()"
-        (deactivateCrop)="onDeactivateCrop()"
-        (cropRatioChange)="onCropRatioChange($event)"
-      />
+      @switch (activeTool()) {
+        @case ('basis') {
+          <pf-basis-panel
+            [cropActive]="cropActive()"
+            [cropRect]="cropRect()"
+            [cropRatio]="cropRatio()"
+            [capabilities]="capabilities()"
+            (applyOp)="onApplyOp($event)"
+            (activateCrop)="onActivateCrop()"
+            (deactivateCrop)="onDeactivateCrop()"
+            (cropRatioChange)="onCropRatioChange($event)"
+          />
+        }
+        @case ('flux2') {
+          <pf-flux2-panel
+            [generating]="generating()"
+            [capabilities]="capabilities()"
+            (fluxEdit)="onFluxEdit($event)"
+          />
+        }
+        @case ('inpaint') {
+          <pf-inpaint-panel
+            [generating]="generating()"
+            [maskDataUrl]="maskDataUrl()"
+            (inpaint)="onInpaint($event)"
+            (clearMask)="onClearMask()"
+          />
+        }
+      }
     </div>
 
     <!-- Center: Canvas -->
@@ -109,6 +150,14 @@
             [ratio]="cropRatio()"
             [rect]="cropRect()"
             (rectChange)="onCropRectChange($event)"
+          />
+        }
+
+        @if (isInpaintMode() && displayImageUrl()) {
+          <pf-mask-overlay
+            #maskOverlay
+            [imageUrl]="displayImageUrl()"
+            (maskChanged)="onMaskChanged($event)"
           />
         }
       </div>

@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -16,6 +17,11 @@ import type { CropRatio, CropRect, EditorTargetKind } from '@photofant/models';
 import { ZoomStage } from '../galerie/lightbox/zoom-stage';
 import { BasisPanel } from './basis-panel/basis-panel';
 import type { OpEvent } from './basis-panel/basis-panel';
+import { Flux2Panel } from './flux2-panel/flux2-panel';
+import type { FluxEditEvent } from './flux2-panel/flux2-panel';
+import { InpaintPanel } from './inpaint-panel/inpaint-panel';
+import type { InpaintEvent } from './inpaint-panel/inpaint-panel';
+import { MaskOverlay } from './mask-overlay/mask-overlay';
 import { CropOverlay } from './crop-overlay/crop-overlay';
 import { StepBar } from './step-bar/step-bar';
 import { SaveModal } from './save-modal/save-modal';
@@ -24,7 +30,7 @@ import type { SaveMode } from './save-modal/save-modal';
 @Component({
   selector: 'pf-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, ZoomStage, BasisPanel, CropOverlay, StepBar, SaveModal],
+  imports: [Icon, ZoomStage, BasisPanel, Flux2Panel, InpaintPanel, MaskOverlay, CropOverlay, StepBar, SaveModal],
   templateUrl: './editor.html',
   styleUrl: './editor.scss',
 })
@@ -45,10 +51,19 @@ export class Editor {
   protected readonly hasUnsavedSteps = this.store.selectSignal(editorSelectors.selectHasUnsavedSteps);
   protected readonly capabilities = this.store.selectSignal(modelsSelectors.selectCapabilities);
 
+  protected readonly generating = this.store.selectSignal(editorSelectors.selectGenerating);
+
   protected readonly histOpen = signal(true);
   protected readonly showSaveModal = signal(false);
-  protected readonly activeTool = signal<'basis'>('basis');
+  protected readonly activeTool = signal<'basis' | 'flux2' | 'inpaint'>('basis');
   protected readonly compareMode = signal(false);
+  protected readonly maskDataUrl = signal<string | null>(null);
+
+  protected readonly maskOverlayRef = viewChild<MaskOverlay>('maskOverlay');
+
+  protected readonly hasFluxEdit = computed((): boolean => this.capabilities()?.flux_edit === true);
+  protected readonly hasInpaint = computed((): boolean => this.capabilities()?.inpaint === true);
+  protected readonly isInpaintMode = computed((): boolean => this.activeTool() === 'inpaint');
 
   protected readonly cropActive = signal(false);
   protected readonly cropRect = signal<CropRect>({ x: 0, y: 0, w: 100, h: 100 });
@@ -155,5 +170,42 @@ export class Editor {
   protected onSave(mode: SaveMode): void {
     this.showSaveModal.set(false);
     console.info('[Editor] Save requested:', mode);
+  }
+
+  protected setTool(tool: 'basis' | 'flux2' | 'inpaint'): void {
+    this.activeTool.set(tool);
+    if (tool !== 'inpaint') {
+      this.maskDataUrl.set(null);
+      this.maskOverlayRef()?.clearMask();
+    }
+  }
+
+  protected onFluxEdit(event: FluxEditEvent): void {
+    this.store.dispatch(editorActions.fluxEdit({
+      prompt: event.prompt,
+      templateId: event.templateId,
+      params: event.params,
+    }));
+  }
+
+  protected onInpaint(event: InpaintEvent): void {
+    this.store.dispatch(editorActions.inpaint({
+      mask: event.mask,
+      prompt: event.prompt,
+      params: event.params,
+    }));
+  }
+
+  protected onMaskChanged(dataUrl: string | null): void {
+    this.maskDataUrl.set(dataUrl);
+  }
+
+  protected onBrushSizeChange(size: number): void {
+    // propagated to mask overlay via input binding
+  }
+
+  protected onClearMask(): void {
+    this.maskOverlayRef()?.clearMask();
+    this.maskDataUrl.set(null);
   }
 }

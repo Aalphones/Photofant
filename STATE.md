@@ -1,13 +1,14 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p09-generativ/`
-**Phase:** 4/5 — Flux-Edit & Inpainting (pending)
-**Nächster Schritt:** FluxImg2ImgPipeline-Integration, Prompt-Templates, Inpainting-Editor
+**Phase:** 5/5 — Schwere Captioner (pending)
+**Nächster Schritt:** Phase 5 starten (Heavy Captioner)
 
 **Abgeschlossen:**
 - P9 Phase 1: Generatives Backend (ADR-002) — complete (2026-06-22)
 - P9 Phase 2: Komponenten-Modelle & VRAM — complete (2026-06-23)
 - P9 Phase 3: Upscale — complete (2026-06-23)
+- P9 Phase 4: Flux-Edit & Inpainting — complete (2026-06-23)
 - P12: Konfigurierbare Gesichtserkennung-Parameter — complete (2026-06-22)
 
 **Backlog-Pläne (größere Features):**

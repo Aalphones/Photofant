@@ -327,7 +327,7 @@ Saved edit versions per asset_instance or face. Exactly one of `instance_id`/`fa
 | `id` | INTEGER PK | |
 | `instance_id` | INTEGER FK → `asset_instance.id` | gesetzt: Edit eines Fotos; XOR mit `face_id` |
 | `face_id` | INTEGER FK → `face.id` | gesetzt: Edit eines Faces; XOR mit `instance_id` |
-| `type` | TEXT | `crop \| rotate \| mirror \| pad \| rembg \| convert \| smart_crop \| import \| edit` |
+| `type` | TEXT | `crop \| rotate \| mirror \| pad \| rembg \| convert \| smart_crop \| import \| edit \| upscale \| flux_edit \| inpaint` |
 | `parent_id` | INTEGER FK → `version.id` | Edit eines Edits → Kette; NULL = erste Version |
 | `path` | TEXT | Datei in `personX/edits/`, nicht null |
 | `is_current` | BOOLEAN | `0` default; genau eine Version pro instance/face ist `1` |
@@ -338,11 +338,21 @@ Indexes: `ix_version_instance_id`, `ix_version_face_id`. Check constraint: `ck_v
 
 ---
 
+### `prompt_template` (migration 0020)
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `name` | TEXT | nicht null; Anzeigename |
+| `prompt` | TEXT | nicht null; `{person}` als Platzhalter |
+| `params` | JSON | `{ strength?, steps?, guidance?, seed? }` — nullable |
+| `created_at` | DATETIME | UTC naive |
+
+Seed-Daten (migration 0020): 'Portrait verbessern', 'Anime-Stil', 'Hintergrund entfernen'.
+
 ## Upcoming tables (planned)
 
-| Table | Migration | Plan |
-|---|---|---|
-| `prompt_template` | tbd | P9 |
+*(keine offenen Tabellen)*
 
 ---
 
