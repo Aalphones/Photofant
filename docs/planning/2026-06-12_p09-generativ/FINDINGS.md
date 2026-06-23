@@ -18,6 +18,6 @@ Entscheidung dokumentiert in ADR-002.
 
 - [x] → Phase 2: `ModelRegistry.components` existiert bereits in der DB — die Komponenten-Picker-UI muss das Map-Format `{"transformer": "...", "text_encoder": "...", "vae": "..."}` rendern.
 - [x] → Phase 2: VRAM-Erkennung braucht `torch.cuda.get_device_properties()` — setzt voraus, dass die generative Gruppe installiert ist. Fallback: VRAM = unknown, keine Empfehlung.
-- [ ] → Phase 3: SeedVR2 hat keine offizielle diffusers-Pipeline — muss als Custom-Pipeline implementiert oder über ein Community-Package geladen werden. Recherche in Phase 3.
+- [x] → Phase 3: SeedVR2 hat keine offizielle diffusers-Pipeline — als `SeedVR2Upscaler` implementiert mit drei Backends (seedvr2 pkg → spandrel → PIL Lanczos). Lädt nicht über GenerativeEngine.load_pipeline, koordiniert VRAM trotzdem über `generative_engine.unload()`.
 - [ ] → Phase 4: Flux-Edit braucht `FluxImg2ImgPipeline` (diffusers). Inpainting braucht `FluxInpaintPipeline`. Beide existieren in diffusers ≥0.31.
 - [ ] → Phase 5: JoyCaption und Qwen-VL sind keine diffusers-Pipelines, sondern transformers-Modelle. Die GenerativeEngine muss auch reine transformers-Pipelines laden können (AutoModelForCausalLM + AutoProcessor).

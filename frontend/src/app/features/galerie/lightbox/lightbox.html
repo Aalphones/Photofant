@@ -99,6 +99,35 @@
             </button>
           </div>
         }
+        @if (canUpscale()) {
+          <div class="pbtn-row">
+            @if (upscalerModels().length === 1) {
+              <button
+                class="pbtn pbtn--ghost"
+                [class.pbtn--loading]="isUpscaling()"
+                [disabled]="isUpscaling()"
+                (click)="triggerUpscale(upscalerModels()[0].id)"
+              >
+                <pf-icon name="refresh" [size]="15" />
+                {{ isUpscaling() ? 'Upscale läuft…' : 'Upscale' }}
+              </button>
+            } @else {
+              <select
+                class="pbtn pbtn--ghost pbtn--select"
+                [disabled]="isUpscaling()"
+                (change)="triggerUpscale($any($event.target).value || undefined)"
+              >
+                <option value="">Upscale mit Modell…</option>
+                @for (model of upscalerModels(); track model.id) {
+                  <option [value]="model.id">{{ model.name }}</option>
+                }
+              </select>
+            }
+          </div>
+          @if (upscaleError()) {
+            <div class="upscale-error">{{ upscaleError() }}</div>
+          }
+        }
       </div>
 
       <!-- Metadaten -->

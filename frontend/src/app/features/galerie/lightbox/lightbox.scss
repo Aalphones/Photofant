@@ -403,6 +403,30 @@ pf-zoom-stage {
   cursor: not-allowed;
 }
 
+// Loading state for async actions (e.g. upscale)
+.pbtn--loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+// Select-styled as a button (model picker)
+.pbtn--select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 1.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+}
+
+// Upscale error message
+.upscale-error {
+  font-size: 11px;
+  color: var(--accent-danger, #e05);
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
 // ── Similar Overlay ──────────────────────────────────────────────────────────
 
 .similar-scrim {

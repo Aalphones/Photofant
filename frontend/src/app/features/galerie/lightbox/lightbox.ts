@@ -13,12 +13,12 @@ import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetSummary, ComfyUIImportResponse, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
-import { AssetService, ClassifyService, PersonService, TagService } from '@photofant/services';
+import type { AssetDto, AssetSummary, ComfyUIImportResponse, DupePair, DupeResolution, FaceDto, FaceMatch, ModelDto, PersonDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
+import { AssetService, ClassifyService, GenerativeService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
-import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, modelsSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare';
 
@@ -68,22 +68,28 @@ function formatDate(dateStr: string | null): string {
   styleUrl: './lightbox.scss',
 })
 export class Lightbox {
-  private readonly store            = inject(Store);
-  private readonly router           = inject(Router);
-  private readonly assetService     = inject(AssetService);
-  private readonly tagService       = inject(TagService);
-  private readonly classifyService  = inject(ClassifyService);
-  private readonly shortcutService  = inject(ShortcutService);
-  private readonly document        = inject(DOCUMENT);
-  private readonly personService    = inject(PersonService);
-  private readonly destroyRef      = inject(DestroyRef);
+  private readonly store              = inject(Store);
+  private readonly router             = inject(Router);
+  private readonly assetService       = inject(AssetService);
+  private readonly tagService         = inject(TagService);
+  private readonly classifyService    = inject(ClassifyService);
+  private readonly shortcutService    = inject(ShortcutService);
+  private readonly generativeService  = inject(GenerativeService);
+  private readonly document           = inject(DOCUMENT);
+  private readonly personService      = inject(PersonService);
+  private readonly destroyRef         = inject(DestroyRef);
 
   protected readonly showRerunDialog = signal(false);
   protected readonly showComfyuiImportDialog = signal(false);
 
+  protected readonly isUpscaling  = signal(false);
+  protected readonly upscaleError = signal<string | null>(null);
+
   protected readonly asset    = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
   protected readonly presets  = this.store.selectSignal(presetsSelectors.selectPresets);
-  protected readonly comfyuiConfig = this.store.selectSignal(comfyuiSelectors.selectConfig);
+  protected readonly comfyuiConfig    = this.store.selectSignal(comfyuiSelectors.selectConfig);
+  protected readonly capabilities     = this.store.selectSignal(modelsSelectors.selectCapabilities);
+  protected readonly allModels        = this.store.selectSignal(modelsSelectors.selectModels);
   protected readonly hasPrev  = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
   protected readonly hasNext  = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
 
@@ -197,6 +203,16 @@ export class Lightbox {
 
   protected readonly hasPHash = computed((): boolean =>
     this.asset()?.has_phash ?? false
+  );
+
+  protected readonly upscalerModels = computed((): ModelDto[] =>
+    this.allModels().filter((model: ModelDto) =>
+      model.role === 'upscaler' && (model.status === 'active' || model.status === 'inplace')
+    )
+  );
+
+  protected readonly canUpscale = computed((): boolean =>
+    (this.capabilities()?.upscale ?? false) && this.upscalerModels().length > 0
   );
 
   protected readonly faces = computed((): FaceDto[] => this.detail()?.faces ?? []);
@@ -582,5 +598,29 @@ export class Lightbox {
 
   protected closeComfyuiImportDialog(): void {
     this.showComfyuiImportDialog.set(false);
+  }
+
+  // ── Upscale ───────────────────────────────────────────────────────────────
+
+  protected triggerUpscale(modelId?: string): void {
+    const asset: AssetDto | null = this.asset();
+    if (asset == null || this.isUpscaling()) { return; }
+
+    this.isUpscaling.set(true);
+    this.upscaleError.set(null);
+
+    this.generativeService.upscaleAsset(asset.id, { model_id: modelId ?? null })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isUpscaling.set(false);
+          this.reloadTrigger.update((count: number) => count + 1);
+        },
+        error: (err: unknown) => {
+          this.isUpscaling.set(false);
+          const message = err instanceof Error ? err.message : 'Upscale fehlgeschlagen';
+          this.upscaleError.set(message);
+        },
+      });
   }
 }

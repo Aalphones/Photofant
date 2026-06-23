@@ -847,6 +847,76 @@ async def import_as_version(
     return VersionImportResponse(version=version_dto)
 
 
+# ── Upscale endpoint ─────────────────────────────────────────────────────────
+
+
+class UpscaleRequest(BaseModel):
+    model_id: str | None = None
+    params: dict[str, Any] = {}  # type: ignore[type-arg]
+
+
+class UpscaleStarted(BaseModel):
+    job_id: str
+
+
+@router.post("/{asset_id}/upscale", response_model=UpscaleStarted, status_code=202)
+async def upscale_asset(asset_id: int, body: UpscaleRequest, session: DbSession) -> UpscaleStarted:
+    """Queue a GPU upscale job for one asset. Result stored as a new version (type=upscale)."""
+    from photofant.inference.generative_engine import GenerativeAvailability, check_generative_available
+
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    availability = check_generative_available()
+    if availability is not GenerativeAvailability.AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Generative Abhängigkeiten nicht installiert "
+                f"({availability}). Zuerst installieren unter Einstellungen → Modelle."
+            ),
+        )
+
+    from photofant.jobs.upscale_job import enqueue_upscale
+
+    status = await enqueue_upscale(asset_id, body.model_id, body.params)
+    return UpscaleStarted(job_id=status.id)
+
+
+# ── Bulk-Upscale endpoint ─────────────────────────────────────────────────────
+
+
+class BulkUpscaleRequest(BaseModel):
+    asset_ids: list[int]
+    model_id: str | None = None
+    params: dict[str, Any] = {}  # type: ignore[type-arg]
+
+
+@router.post("/bulk-upscale", response_model=JobStarted, status_code=202)
+async def bulk_upscale_assets(body: BulkUpscaleRequest) -> JobStarted:
+    """Queue upscale jobs for multiple assets (one job per asset, serial)."""
+    from photofant.inference.generative_engine import GenerativeAvailability, check_generative_available
+
+    if not body.asset_ids:
+        raise HTTPException(status_code=422, detail="asset_ids must not be empty")
+
+    availability = check_generative_available()
+    if availability is not GenerativeAvailability.AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Generative Abhängigkeiten nicht installiert "
+                f"({availability}). Zuerst installieren unter Einstellungen → Modelle."
+            ),
+        )
+
+    from photofant.jobs.bulk_edit_job import enqueue_bulk_edit
+
+    status = await enqueue_bulk_edit(body.asset_ids, "upscale", {"model_id": body.model_id, **body.params})
+    return JobStarted(job_id=status.id)
+
+
 # ── Bulk-Edit endpoint ────────────────────────────────────────────────────────
 
 class BulkTrashRequest(BaseModel):

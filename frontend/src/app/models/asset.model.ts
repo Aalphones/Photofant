@@ -44,6 +44,18 @@ export interface Facets {
   framings?: FacetItem[];
 }
 
+export interface VersionDto {
+  id: number;
+  type: string | null;
+  parent_id: number | null;
+  path: string;
+  is_current: boolean;
+  params: Record<string, unknown> | null;
+  created_at: string | null;
+  thumbnail_url: string;
+  res: { width: number; height: number } | null;
+}
+
 export interface AssetDto {
   id: number;
   content_hash: string;

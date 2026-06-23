@@ -292,6 +292,8 @@ interface ScanResult {
 | Versionen (Re-Import) | `POST` | `/api/assets/{id}/versions/import` | `multipart/form-data; file` | `{ version: VersionDto }` (201) |
 | Versionen (Thumbnail) | `GET` | `/api/versions/{id}/thumbnail` | `size` (256\|512\|1024) | JPEG blob |
 | Versionen (Datei) | `GET` | `/api/versions/{id}/file` | — | Original-Datei |
+| Upscale (Einzelbild) | `POST` | `/api/assets/{id}/upscale` | `{ model_id?: string, params?: object }` | `{ job_id }` (202) — Queue-Job; Ergebnis als neue Version (`type=upscale`, `is_current=true`) |
+| Upscale (Bulk) | `POST` | `/api/assets/bulk-upscale` | `{ asset_ids: number[], model_id?: string, params?: object }` | `{ job_id }` (202) |
 
 ```typescript
 interface CreateSessionResponse { session_key: string; original_preview_url: string; }

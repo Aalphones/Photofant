@@ -1,6 +1,6 @@
 # P9 · Phase 3 — Upscale
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -17,10 +17,18 @@
 
 ## Checkliste
 
-- [ ] SeedVR2-Integration (Variante nach Registry, GGUF/fp8-Ladepfad aus ADR-002)
-- [ ] Endpoint + Job (Serien-Schutz, Fortschritt)
-- [ ] Dedupe-Regel scharf schalten (P8-Flagge)
-- [ ] Editor-Tool + Bulk-Verdrahtung
-- [ ] Doc-Update: routes.md
+- [x] SeedVR2-Integration (Variante nach Registry — seedvr2 pkg → spandrel → PIL Lanczos fallback)
+- [x] Endpoint + Job (`POST /api/assets/{id}/upscale` + `upscale_job.py`, Generative-Availability-Check)
+- [x] Dedupe-Regel scharf schalten — `_apply_face_dedupe_upscale_rule` setzt `origin_type='superseded_by_upscale'` auf alten Face-Crops
+- [x] Editor-Tool + Bulk-Verdrahtung (Lightbox-Button + `POST /api/assets/bulk-upscale`)
+- [x] Doc-Update: routes.md
 
 ## Report-Back
+
+- `backend/photofant/inference/seedvr2_upscaler.py` — SeedVR2Upscaler (drei Backends: seedvr2 pkg / spandrel / PIL Lanczos)
+- `backend/photofant/jobs/upscale_job.py` — Queue-Job, Version-Erstellung, Face-Dedupe-Regel
+- `backend/photofant/api/assets.py` — `POST /{id}/upscale` + `POST /bulk-upscale`
+- `backend/photofant/media/ops.py` — `upscale`-Op für Bulk-Edit-Strecke
+- `backend/photofant/jobs/queue.py` — `UPSCALE` JobKind
+- `frontend/src/app/services/generative.service.ts` — GenerativeService
+- `frontend/src/app/features/galerie/lightbox/lightbox.ts+html+scss` — Upscale-Button (capabilities-gegated)
