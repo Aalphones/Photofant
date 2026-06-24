@@ -58,6 +58,10 @@ class JobStatus:
 
 CoroFactory = Callable[["JobStatus"], Coroutine[Any, Any, None]]
 
+# Job kinds that bypass the sequential queue and run as independent concurrent tasks.
+# Add a kind here when it is I/O-bound and must never block other queue entries.
+_PARALLEL_KINDS: frozenset[JobKind] = frozenset({JobKind.DOWNLOAD})
+
 
 @dataclass
 class _Job:
@@ -71,6 +75,7 @@ class JobQueue:
         self._jobs: dict[str, JobStatus] = {}
         self._subscribers: list[asyncio.Queue[JobStatus]] = []
         self._worker_task: asyncio.Task[None] | None = None
+        self._parallel_tasks: set[asyncio.Task[None]] = set()
 
     def start(self) -> None:
         self._worker_task = asyncio.create_task(self._worker())
@@ -80,6 +85,10 @@ class JobQueue:
             self._worker_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._worker_task
+        for task in list(self._parallel_tasks):
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
     def subscribe(self) -> asyncio.Queue[JobStatus]:
         queue: asyncio.Queue[JobStatus] = asyncio.Queue()
@@ -97,8 +106,13 @@ class JobQueue:
         job_id = str(uuid.uuid4())
         status = JobStatus(id=job_id, kind=kind, label=label)
         self._jobs[job_id] = status
-        await self._queue.put(_Job(status=status, coro_factory=coro_factory))
         self._notify(status)
+        if kind in _PARALLEL_KINDS:
+            task = asyncio.create_task(self._run_parallel(status, coro_factory))
+            self._parallel_tasks.add(task)
+            task.add_done_callback(self._parallel_tasks.discard)
+        else:
+            await self._queue.put(_Job(status=status, coro_factory=coro_factory))
         return status
 
     def update(self, status: JobStatus, progress: float, state: JobState, error: str | None = None) -> None:
@@ -110,6 +124,15 @@ class JobQueue:
     def _notify(self, status: JobStatus) -> None:
         for subscriber in self._subscribers:
             subscriber.put_nowait(status)
+
+    async def _run_parallel(self, status: JobStatus, coro_factory: CoroFactory) -> None:
+        self.update(status, progress=0.0, state=JobState.RUNNING)
+        try:
+            await coro_factory(status)
+            self.update(status, progress=1.0, state=JobState.DONE)
+        except Exception as exc:
+            log.exception("Parallel job %s failed", status.id)
+            self.update(status, progress=status.progress, state=JobState.ERROR, error=str(exc))
 
     async def _worker(self) -> None:
         while True:
