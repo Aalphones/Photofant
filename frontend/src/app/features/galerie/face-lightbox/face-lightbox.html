@@ -1,0 +1,159 @@
+<div class="fl-scrim" (click)="close.emit()"></div>
+
+<div class="fl" role="dialog" aria-modal="true" aria-label="Gesicht bearbeiten">
+
+  <button
+    class="fl-nav fl-nav--prev"
+    [disabled]="!hasPrev()"
+    (click)="prev.emit()"
+    aria-label="Vorheriges Gesicht"
+  >
+    <pf-icon name="arrowLeft" [size]="22" />
+  </button>
+
+  <div class="fl-dialog">
+
+    <button class="fl-close" (click)="close.emit()" aria-label="Schließen">
+      <pf-icon name="x" [size]="16" />
+    </button>
+
+    <!-- Linke Spalte: Bild + Aktionen -->
+    <div class="fl-image-col">
+      <div class="fl-image-wrap">
+        <img
+          class="fl-face-img"
+          [src]="faceItem().thumbnail_url"
+          [alt]="displayName() ?? 'Gesicht'"
+        />
+      </div>
+
+      @if (displayName()) {
+        <div class="fl-assigned-name">{{ displayName() }}</div>
+      } @else {
+        <div class="fl-assigned-name fl-assigned-name--none">Keine Person zugewiesen</div>
+      }
+
+      <div class="fl-image-actions">
+        @if (faceItem().asset_id != null) {
+          <button class="fl-action-btn" (click)="openAsset.emit(faceItem().asset_id!)">
+            <pf-icon name="gallery" [size]="14" />
+            Zum Bild
+          </button>
+        }
+        <button class="fl-action-btn fl-action-btn--danger" (click)="deleteFace()">
+          <pf-icon name="trash" [size]="14" />
+          Löschen
+        </button>
+      </div>
+    </div>
+
+    <!-- Rechte Spalte: Person zuweisen -->
+    <div class="fl-panel-col">
+      <div class="fl-panel-title">Person zuweisen</div>
+
+      <div class="fl-search-wrap">
+        <pf-icon name="search" [size]="13" class="fl-search-icon" />
+        <input
+          class="fl-search"
+          [value]="personSearchQuery()"
+          (input)="personSearchQuery.set($any($event.target).value)"
+          placeholder="Person suchen…"
+          aria-label="Person suchen"
+        />
+      </div>
+
+      @if (faceMatchesLoading()) {
+        <div class="fl-empty">Lade Matches…</div>
+      } @else if (personSearchQuery().trim().length > 0) {
+        @if (personSearchResults().length === 0) {
+          <div class="fl-empty">Keine Person gefunden.</div>
+        } @else {
+          <div class="fl-list">
+            @for (person of personSearchResults(); track person.id) {
+              <button
+                class="fl-person-row"
+                (click)="assignFaceToPerson(person.id, person.name)"
+                [title]="'Zuweisen zu ' + (person.name ?? 'Person #' + person.id)"
+              >
+                @if (person.portrait_face_id != null) {
+                  <img
+                    class="fl-avatar"
+                    [src]="'/api/faces/' + person.portrait_face_id + '/thumbnail'"
+                    alt=""
+                  />
+                } @else {
+                  <div class="fl-avatar fl-avatar--placeholder">
+                    {{ (person.name || '?')[0]?.toUpperCase() }}
+                  </div>
+                }
+                <span class="fl-person-row__name">{{ person.name ?? 'Person #' + person.id }}</span>
+              </button>
+            }
+          </div>
+        }
+      } @else if (faceMatches().length === 0) {
+        <div class="fl-empty">Keine Matches gefunden.</div>
+      } @else {
+        <div class="fl-list">
+          @for (match of faceMatches(); track match.person_id) {
+            <button
+              class="fl-person-row"
+              (click)="assignFaceToPerson(match.person_id, match.person_name)"
+              [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
+            >
+              <img
+                class="fl-avatar"
+                [src]="'/api/faces/' + match.best_face_id + '/thumbnail'"
+                alt=""
+              />
+              <div class="fl-person-row__info">
+                <span class="fl-person-row__name">{{ match.person_name ?? 'Person #' + match.person_id }}</span>
+                <span class="fl-person-row__score">{{ matchScorePercent(match.score) }}%</span>
+              </div>
+            </button>
+          }
+        </div>
+      }
+
+      @if (creatingNewPerson()) {
+        <div class="fl-create">
+          <input
+            class="fl-create__input"
+            [value]="newPersonName()"
+            (input)="newPersonName.set($any($event.target).value)"
+            (keydown)="onNewPersonKeyDown($event)"
+            placeholder="Name der neuen Person…"
+            autofocus
+          />
+          <button
+            class="fl-create__confirm"
+            (click)="confirmCreatePerson()"
+            [disabled]="!newPersonName().trim()"
+            aria-label="Bestätigen"
+          >
+            <pf-icon name="check" [size]="13" />
+          </button>
+          <button class="fl-create__cancel" (click)="cancelCreatePerson()" aria-label="Abbrechen">
+            <pf-icon name="x" [size]="13" />
+          </button>
+        </div>
+      } @else {
+        <button class="fl-create-btn" (click)="startCreatePerson()">
+          <pf-icon name="plus" [size]="13" />
+          Neue Person anlegen
+        </button>
+      }
+    </div>
+
+  </div>
+
+  <button
+    class="fl-nav fl-nav--next"
+    [disabled]="!hasNext()"
+    (click)="next.emit()"
+    aria-label="Nächstes Gesicht"
+  >
+    <pf-icon name="arrowRight" [size]="22" />
+  </button>
+
+</div>
