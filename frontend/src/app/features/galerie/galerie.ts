@@ -138,6 +138,9 @@ export class Galerie {
   protected readonly selectedCount = computed((): number => this.selectedIds().length);
 
   constructor() {
+    // Always clear favourite filter when entering gallery — Favoriten-View locks it to true
+    this.store.dispatch(filtersActions.setFavourite({ favourite: null }));
+
     // URL → store: apply filter params from URL on load
     const qp = this.route.snapshot.queryParamMap;
     const urlSources = (qp.get('sources') ?? '').split(',').filter(Boolean);
