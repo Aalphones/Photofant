@@ -19,10 +19,11 @@ import numpy as np
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
-from photofant.db.models import Face, Person
+from photofant.db.models import AssetInstance, Face, Person
 from photofant.db.session import get_session
 from photofant.media.thumbnails import generate_thumbnail
 
@@ -347,7 +348,31 @@ async def delete_face(face_id: int, session: DbSession) -> None:
         except OSError:
             log.warning("Could not delete crop file for face %d: %s", face_id, crop_path)
 
+    old_person_id = face.person_id
     session.delete(face)
+
+    # If this was the last face for the old person in this asset, remove their instance.
+    if asset_id is not None and old_person_id is not None:
+        remaining_faces: int = session.scalar(
+            select(func.count())
+            .select_from(Face)
+            .where(Face.asset_id == asset_id, Face.person_id == old_person_id)
+        ) or 0
+        if remaining_faces == 0:
+            old_instance = session.scalar(
+                select(AssetInstance).where(
+                    AssetInstance.asset_id == asset_id,
+                    AssetInstance.person_id == old_person_id,
+                    AssetInstance.deleted_at.is_(None),
+                )
+            )
+            if old_instance:
+                old_path = Path(old_instance.path)
+                if old_path.exists():
+                    old_path.unlink()
+                    log.info("Removed orphaned instance file %s", old_path)
+                session.delete(old_instance)
+
     session.commit()
 
     if asset_id is not None:
