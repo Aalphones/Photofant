@@ -2,13 +2,18 @@
 
 🚧 Aktive Arbeit → STATE.md
 
-Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, Tagging/Captioning, semantische Suche, Editor, Trainingssets. Zur Laufzeit vollständig offline.
+Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, Tagging/Captioning, semantische Suche, Editor, generative Bearbeitung (Upscale/Flux/Inpaint) inkl. ComfyUI-Anbindung, Trainingssets. Zur Laufzeit vollständig offline.
+
+## Code finden — erst hier, dann greppen
+
+[docs/code-map.md](docs/code-map.md) bildet **Feature → Dateien** über Frontend + Backend ab. Bevor du Grep/Glob über die Codebase laufen lässt: dort nachschlagen. Die Namen laufen parallel — `features/<x>/` · `store/<x>/` · `services/<x>.service.ts` · `api/<x>.py` · `jobs/<x>_job.py`. Routen-Details: [docs/routes.md](docs/routes.md), DB-Felder: [docs/models.md](docs/models.md).
 
 ## Einstieg (in dieser Reihenfolge lesen)
 
-1. [docs/PROJECT.md](docs/PROJECT.md) — Ziel, Scope, Stack, Meilensteine
-2. [docs/Konzept-Photofant.md](docs/Konzept-Photofant.md) — Voll-Spezifikation (Datenmodell, API, Pipeline, Modelle); bei Widerspruch gewinnt das Konzept
-3. [docs/design/README.md](docs/design/README.md) — UI-Referenz; die HTML-Prototypen in `docs/design/` sind High-Fidelity, Pixel-Treue ist das Ziel
+1. [docs/PROJECT.md](docs/PROJECT.md) — Ziel, Scope, Stack, Stand
+2. [docs/code-map.md](docs/code-map.md) — Feature → Dateien (Navigations-Index)
+3. [docs/Konzept-Photofant.md](docs/Konzept-Photofant.md) — Voll-Spezifikation (Datenmodell, API, Pipeline, Modelle); bei Widerspruch gewinnt das Konzept
+4. [docs/design/README.md](docs/design/README.md) — UI-Referenz; die HTML-Prototypen in `docs/design/` sind High-Fidelity, Pixel-Treue ist das Ziel
 
 ## Stack
 
@@ -34,10 +39,10 @@ Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, 
 
 ## Planung
 
-- Aktive Pläne: `docs/planning/` (Meilensteine aus PROJECT.md sind die Phasen-Kandidaten)
-- Entscheidungen (ADRs): `docs/decisions/`
-- Archiv: `docs/archive/`
-- [Design-Reconciliation](docs/design-reconciliation.md) — View-für-View-Abgleich Mockup vs. Impl (aktiv bis Plan `2026-06-19_design-angleichung` archiviert)
+- Aktive Pläne (Backlog): `docs/planning/` — aktuell P10 Trainingssets, P11 Duale Duplikaterkennung, P13 Person-Bulk-Import
+- Entscheidungen (ADRs): `docs/decisions/` (001–006)
+- Archiv (umgesetzte Pläne): `docs/archive/`
+- [Design-Reconciliation](docs/design-reconciliation.md) — View-für-View-Abgleich Mockup vs. Impl
 
 ## CI
 

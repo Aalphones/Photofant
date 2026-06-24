@@ -4,7 +4,7 @@
 
 ## Ziel & Vision
 
-Photofant („vergisst nie") ist eine lokal laufende, private Foto-Verwaltung nach Google-Fotos-Vorbild für eigene Bildsammlungen — insbesondere KI-generierte und fotografische Assets. Bilder werden einmalig verarbeitet (Gesichter, Tags, Captions, Embeddings), pro Person als echte Kopie im Dateisystem abgelegt und sind danach vollständig durchsuchbar. Zur Laufzeit findet kein Netzwerkverkehr statt; Single-User, keine Authentifizierung.
+Photofant („vergisst nie") ist eine lokal laufende, private Foto-Verwaltung nach Google-Fotos-Vorbild für eigene Bildsammlungen — insbesondere KI-generierte und fotografische Assets. Bilder werden einmalig verarbeitet (Gesichter, Tags, Captions, Embeddings), pro Person als echte Kopie im Dateisystem abgelegt und sind danach vollständig durchsuchbar. Zur Laufzeit findet kein Netzwerkverkehr statt; Single-User (optionales lokales Passwort-Schloss, kein Multi-User).
 
 ## Scope
 
@@ -19,7 +19,7 @@ Photofant („vergisst nie") ist eine lokal laufende, private Foto-Verwaltung na
 ## Nicht-Ziele
 
 - Keine NSFW-, Stil- oder automatische Outfit-Klassifizierung.
-- Kein Multi-User, keine Authentifizierung, kein Cloud-Sync, keine Internetdienste zur Laufzeit.
+- Kein Multi-User, keine Benutzerkonten, kein Cloud-Sync, keine Internetdienste zur Laufzeit. (Ein **optionales lokales Passwort-Schloss** — ein Passwort, Unlock-Screen — ist eingebaut; das ersetzt kein Multi-User-Auth.)
 - Keine Sidecar-Metadaten im Dateisystem (DB ist alleinige Wahrheit; Verlust-Risiko bewusst akzeptiert).
 - Keine Modell-Binaries im Repository.
 
@@ -27,13 +27,13 @@ Photofant („vergisst nie") ist eine lokal laufende, private Foto-Verwaltung na
 
 | Layer | Choice |
 |---|---|
-| Frontend | Angular (aktuelles Major, bei Stage 0 pinnen) |
+| Frontend | Angular 19.2 |
 | Styling | Tailwind CSS v4 als Token-Quelle (`@theme`), BEM + komponenten-scoped SCSS |
 | State | NgRx classic (Store/Effects/Entity) für Server-State, Signals lokal |
 | Backend | Python + FastAPI + Uvicorn |
 | DB | SQLite + Alembic, `sqlite-vec` für Vektorsuche |
 | Inferenz Core | ONNX Runtime (`buffalo_l`, WD14, Florence-2, CLIP/SigLIP, rembg) |
-| Inferenz generativ | torch/diffusers oder ComfyUI-Backend (gated, optional) |
+| Inferenz generativ | torch/diffusers (in-process, ADR-002) **und** ComfyUI-Trigger (ADR-003) — beide gated/optional |
 | Paketverwaltung | `uv` (Backend), `npm` (Frontend) |
 
 Begründungen: Angular + NgRx ist die Konzept-Entscheidung (Sektion 15 ist darauf ausgelegt); die React-Prototypen in `docs/design/` dienen nur als visuelle Referenz. Tailwind liefert die Design-Tokens, die Prototyp-CSS (`docs/design/styles.css`) ist deren kanonische Quelle.
@@ -46,28 +46,41 @@ Begründungen: Angular + NgRx ist die Konzept-Entscheidung (Sektion 15 ist darau
 - **UI blockiert nie:** Alles potenziell Langsame läuft über die In-Process-Job-Queue (SSE-Fortschritt).
 - **GPU optional:** Core-Features laufen notfalls auf CPU; generative Features sind vollständig gated.
 
-## Meilensteine (Plan-Backlog)
+## Stand & Meilensteine
 
-Vollständig ausgeplant in `docs/planning/` — Umsetzung in dieser Reihenfolge, Abweichungen unten vermerkt:
+Code-Einstieg pro Feature: [code-map.md](code-map.md). Umgesetzte Pläne liegen in `docs/archive/2026-06/`, offene im Backlog `docs/planning/`.
 
-| # | Plan | Stage | Hängt ab von |
-|---|---|---|---|
-| P1 | [Stage-0-Fundament](planning/2026-06-12_p01-stage0-fundament/README.md) | 0 | — |
-| P2 | [Galerie-MVP](planning/2026-06-12_p02-galerie-mvp/README.md) | 1 | P1 |
-| P3 | [Datensicherheit](planning/2026-06-12_p03-datensicherheit/README.md) | Querschnitt | P2 |
-| P4 | [Modell-Management](planning/2026-06-12_p04-modell-management/README.md) | 2a | P1 (parallel zu P2/P3 möglich) |
-| P5 | [Klassifizierung](planning/2026-06-12_p05-klassifizierung/README.md) | 2b | P2, P4 |
-| P6 | [Suche & Alben](planning/2026-06-12_p06-suche-und-alben/README.md) | 2c | P5 |
-| P7 | [Personen & Faces](planning/2026-06-12_p07-personen/README.md) | 3 | P2, P4 |
-| P8 | [Editor CPU](planning/2026-06-12_p08-editor-cpu/README.md) | 4 | P2, P4 — **vor P7 vorziehbar** |
-| P8b | [ComfyUI-Integration](planning/2026-06-15_p08b-comfyui-integration/README.md) | 5 | P2, P4, P8 — **koexistiert mit P9**, optional/parkbar |
-| P9 | [Generativ (in-process)](planning/2026-06-12_p09-generativ/README.md) | 5 | P8 — **optional/parkbar** |
-| P10 | [Trainingssets & Export](planning/2026-06-12_p10-trainingssets-export/README.md) | 6 | P5, P6 |
+**Umgesetzt:**
 
-Scope-Abweichung vom Konzept: Komponenten-Modelle (Flux) + VRAM-Matrix sind von Stage 2 nach P9 verschoben (gebraucht erst dort); Framing-Heuristik liefert P7 nach (braucht Face-BBox).
+| Stage | Feature |
+|---|---|
+| 0 | Fundament — Backend- + Frontend-Skeleton, CI |
+| 1 | Galerie-MVP — Import (Single/Bulk/FS-Scan), Grid, Lightbox, Favoriten, Papierkorb, Shortcuts |
+| Querschnitt | Datensicherheit — DB-Backup, FS↔DB-Reconciliation, Rebuild |
+| 2a | Modell-Management — Download/In-Place, VRAM-Varianten, Feature-Gating |
+| 2b | Klassifizierung — WD14-Tags, Florence-2-Captions, CLIP-Embeddings, Heuristik-Pipeline |
+| 2c | Suche & Alben — Tag/Caption/semantische Suche, Tag-Verwaltung, Smart-Alben |
+| 3 | Personen & Faces — `buffalo_l`, Clustering, Review-Queue, Merge/Split, Face-Import |
+| 4 | Editor (CPU) — Crop/Rotate/Mirror/Convert/rembg, Versionierung |
+| 5 | Generativ — Upscale, Flux-Edit, Inpainting; schwere Captioner (Qwen2.5-VL, JoyCaption) |
+| 5 | ComfyUI-Trigger-Integration — Verbindung, Workflow-Registry, Run-Leiste, Import |
+| — | Einstellungen-Shell, `settings.json`-Infrastruktur, Duplikaterkennung (pHash), konfigurierbare Face-Parameter, Design-Angleichung |
 
-## Offene Fragen
+**Backlog** (`docs/planning/`):
 
-- Generatives Backend: **diffusers oder ComfyUI?** → ADR-002 (P9 Phase 1) bleibt für den in-process-Pfad; der **koexistierende ComfyUI-Trigger-Pfad** (Fire-and-Forget) wird separat in **P8b** umgesetzt und in ADR-003 dokumentiert.
-- Vektorsuche: **`sqlite-vec` oder FAISS?** → wird als ADR-001 in P5 Phase 4 entschieden (Spike, Default-Empfehlung `sqlite-vec`).
-- Angular-Major und Test-Runner → werden in P1 gepinnt.
+| Plan | Inhalt |
+|---|---|
+| P10 | Trainingssets & Export — Statistiken, Caption-Tools, Train/Val-Split, Sidecar-`.txt`-Export |
+| P11 | Duale Duplikaterkennung — zweites Verfahren neben pHash |
+| P13 | Person-Bulk-Import |
+
+## Entscheidungen
+
+Architektur-Fragen sind als ADRs entschieden — Details in `docs/decisions/`:
+
+- **ADR-001** Vektor-Backend → `sqlite-vec`
+- **ADR-002** Generatives Backend → torch/diffusers in-process
+- **ADR-003** ComfyUI-Trigger-Integration (koexistiert mit ADR-002)
+- **ADR-004** Einstellungen-Shell (Master-Detail)
+- **ADR-005** Tag-Verwaltung in den Einstellungen verortet
+- **ADR-006** pHash-Duplikaterkennung

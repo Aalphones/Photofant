@@ -8,9 +8,11 @@ Der Stack: Angular-Frontend, FastAPI-Backend, SQLite als Index. ML-Modelle (Gesi
 
 ## Status
 
-Stage-0-Skeleton. Backend (FastAPI + SQLite) und Frontend (Angular 19 + NgRx) laufen und sind verbunden. Weitere Feature-Arbeit folgt schrittweise.
+Aktiv in Entwicklung — die Kern-Features stehen: Galerie & Lightbox, Personen-Erkennung mit Review-Queue, automatisches Tagging & Captioning, semantische Suche, Smart-Alben, Bild-Editor (CPU), generative Bearbeitung (Upscale/Edit/Inpainting, GPU-gebunden) inkl. ComfyUI-Anbindung, Modell-Management, Duplikaterkennung und Wartung (Backup, Reconcile).
 
-Die vollständige Spezifikation steht in [docs/Konzept-Photofant.md](docs/Konzept-Photofant.md), die UI-Prototypen in [docs/design/](docs/design/).
+Im Backlog: Trainingsset-Export, duale Duplikaterkennung, Person-Bulk-Import.
+
+Die vollständige Spezifikation steht in [docs/Konzept-Photofant.md](docs/Konzept-Photofant.md), die UI-Prototypen in [docs/design/](docs/design/), eine Code-Landkarte in [docs/code-map.md](docs/code-map.md).
 
 ## Quickstart
 
