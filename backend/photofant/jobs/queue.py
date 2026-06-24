@@ -44,6 +44,7 @@ class JobKind(StrEnum):
     UPSCALE = "upscale"
     FLUX_EDIT = "flux_edit"
     INPAINT = "inpaint"
+    EXPORT = "export"
 
 
 @dataclass

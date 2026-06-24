@@ -19,6 +19,7 @@ from photofant.api import (
     config,
     duplicates,
     edit_sessions,
+    export,
     faces,
     generative,
     health,
@@ -118,6 +119,7 @@ def create_app() -> FastAPI:
     app.include_router(comfyui.comfyui_router, prefix="/api")
     app.include_router(generative.router, prefix="/api")
     app.include_router(prompt_templates.router, prefix="/api")
+    app.include_router(export.router, prefix="/api")
     return app
 
 

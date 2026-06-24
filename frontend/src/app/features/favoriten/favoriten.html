@@ -1,0 +1,65 @@
+<pf-sub-toolbar
+  [selectionMode]="selectionMode()"
+  [workflowMode]="false"
+  (railToggle)="railOpen.set(!railOpen())"
+  (selToggle)="toggleSelectionMode()"
+/>
+
+<div class="favoriten__toolbar-extra">
+  <button class="favoriten__export-btn" (click)="showExportDialog.set(true)">
+    <pf-icon name="download" [size]="15" />
+    Exportieren
+  </button>
+</div>
+
+<div class="favoriten__body">
+  @if (railOpen()) {
+    <pf-filter-rail (close)="railOpen.set(false)" />
+  }
+
+  <div class="favoriten__main">
+    @if (isEmpty()) {
+      <div class="favoriten__empty">
+        <div class="favoriten__empty-icon">
+          <pf-icon name="star" [size]="40" />
+        </div>
+        <h2 class="favoriten__empty-title">Noch keine Favoriten</h2>
+        <p class="favoriten__empty-sub">Bilder in der Galerie mit dem Stern-Button als Favorit markieren.</p>
+      </div>
+    } @else {
+      <pf-galerie-grid
+        [groups]="groups()"
+        [density]="density()"
+        [isLoading]="isLoading()"
+        [selectionMode]="selectionMode()"
+        [selectedIds]="selectedIds()"
+        [isArmed]="false"
+        (openAsset)="onOpenAsset($event)"
+        (selectAll)="onSelectAll($event)"
+        (rangeSelect)="onRangeSelect($event)"
+        (loadMore)="onLoadMore()"
+      />
+    }
+  </div>
+</div>
+
+@if (lightboxId() != null) {
+  <pf-lightbox />
+}
+
+@if (selectedCount() > 0) {
+  <pf-bulk-bar
+    [count]="selectedCount()"
+    [albums]="albums()"
+    (close)="onBulkClose()"
+    (trashAction)="onBulkTrash()"
+  />
+}
+
+@if (showExportDialog()) {
+  <pf-export-dialog
+    [filters]="exportFilters()"
+    [albums]="albums()"
+    (close)="showExportDialog.set(false)"
+  />
+}

@@ -21,3 +21,5 @@ export type { TestConnectionResponse } from './comfyui.service';
 export { GenerativeService } from './generative.service';
 export type { GenerativeStatus, UpscaleStarted, FluxEditRequest, BulkFluxEditRequest, InpaintRequest } from './generative.service';
 export { PromptTemplateService } from './prompt-template.service';
+export { ExportService } from './export.service';
+export type { ExportFilterParams, ExportRandomParams, ExportJobStarted } from './export.service';

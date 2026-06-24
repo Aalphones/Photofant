@@ -1,0 +1,152 @@
+<div class="ed-scrim" (click)="handleScrimClick()"></div>
+
+<div class="ed-modal" (click)="$event.stopPropagation()">
+
+  <div class="ed-head">
+    <div class="ed-head__icon">
+      <pf-icon name="download" [size]="18" />
+    </div>
+    <div class="ed-head__info">
+      <div class="ed-title">Favoriten exportieren</div>
+      <div class="ed-sub">Kopiert Dateien in den _export-Ordner neben deiner Bibliothek</div>
+    </div>
+    <button class="ed-close" (click)="close.emit()" aria-label="Schließen">
+      <pf-icon name="x" [size]="17" />
+    </button>
+  </div>
+
+  <div class="ed-body">
+
+    <!-- Im Dateisystem anzeigen -->
+    <div class="ed-section">
+      <div class="ed-section__label">Ordner öffnen</div>
+      <button class="ed-action-row" (click)="onReveal()">
+        <div class="ed-action-row__icon">
+          <pf-icon name="folder" [size]="16" />
+        </div>
+        <div class="ed-action-row__info">
+          <div class="ed-action-row__title">Im Dateisystem anzeigen</div>
+          <div class="ed-action-row__desc">_export-Ordner im Explorer öffnen</div>
+        </div>
+        <pf-icon name="arrowRight" [size]="14" />
+      </button>
+    </div>
+
+    <!-- Aktuellen Filter exportieren -->
+    <div class="ed-section">
+      <div class="ed-section__label">Aktueller Filter</div>
+      <label class="ed-checkbox-row">
+        <div class="ed-chk" [class.ed-chk--on]="includeVersions" (click)="includeVersions = !includeVersions">
+          @if (includeVersions) {
+            <pf-icon name="check" [size]="11" />
+          }
+        </div>
+        <span class="ed-checkbox-row__label">Auch Ableitungen (Originals + KI-Varianten) einschließen</span>
+      </label>
+      <button class="ed-action-row" (click)="onExportFilter()" [disabled]="isBusy()">
+        <div class="ed-action-row__icon">
+          <pf-icon name="filter" [size]="16" />
+        </div>
+        <div class="ed-action-row__info">
+          <div class="ed-action-row__title">Filter exportieren</div>
+          <div class="ed-action-row__desc">Alle Favoriten des aktiven Filters als Job starten</div>
+        </div>
+        @if (isBusy()) {
+          <pf-icon name="refresh" [size]="14" />
+        } @else {
+          <pf-icon name="arrowRight" [size]="14" />
+        }
+      </button>
+    </div>
+
+    <!-- Alle Favoriten nach Person -->
+    <div class="ed-section">
+      <div class="ed-section__label">Alle Favoriten</div>
+      <button class="ed-action-row" (click)="onExportByPerson()" [disabled]="isBusy()">
+        <div class="ed-action-row__icon">
+          <pf-icon name="people" [size]="16" />
+        </div>
+        <div class="ed-action-row__info">
+          <div class="ed-action-row__title">Nach Person sortiert exportieren</div>
+          <div class="ed-action-row__desc">Erstellt Unterordner pro Person (alle Favoriten)</div>
+        </div>
+        @if (isBusy()) {
+          <pf-icon name="refresh" [size]="14" />
+        } @else {
+          <pf-icon name="arrowRight" [size]="14" />
+        }
+      </button>
+    </div>
+
+    <!-- Zufalls-Export -->
+    <div class="ed-section">
+      <div class="ed-section__label">Zufalls-Export</div>
+      <div class="ed-random-row">
+        <div class="ed-field">
+          <label class="ed-field__lbl" for="ed-rand-count">Sets</label>
+          <input
+            class="ed-field__input"
+            id="ed-rand-count"
+            type="number"
+            min="1"
+            max="100"
+            [(ngModel)]="randomCount"
+          />
+        </div>
+        <div class="ed-random-row__sep">×</div>
+        <div class="ed-field">
+          <label class="ed-field__lbl" for="ed-rand-images">Bilder pro Set</label>
+          <input
+            class="ed-field__input"
+            id="ed-rand-images"
+            type="number"
+            min="1"
+            max="10000"
+            [(ngModel)]="randomImages"
+          />
+        </div>
+        <button
+          class="md-btn primary"
+          (click)="onExportRandom()"
+          [disabled]="isBusy()"
+        >
+          <pf-icon name="sort" [size]="14" />
+          Starten
+        </button>
+      </div>
+      <div class="ed-hint">Distinct ohne Duplikate innerhalb eines Sets; Dateiname enthält Personenname.</div>
+    </div>
+
+    <!-- Album exportieren -->
+    @if (albums().length > 0) {
+      <div class="ed-section">
+        <div class="ed-section__label">Album exportieren</div>
+        <div class="ed-album-row">
+          <select
+            class="ed-album-select"
+            (change)="selectedAlbumId = +$any($event.target).value || null"
+          >
+            <option value="">Album wählen…</option>
+            @for (album of albums(); track album.id) {
+              <option [value]="album.id">{{ album.name }}</option>
+            }
+          </select>
+          <button
+            class="md-btn primary"
+            (click)="onExportAlbum()"
+            [disabled]="isBusy() || selectedAlbumId == null"
+          >
+            <pf-icon name="download" [size]="14" />
+            Exportieren
+          </button>
+        </div>
+      </div>
+    }
+
+  </div>
+
+  @if (toast()) {
+    <div class="ed-toast">{{ toast() }}</div>
+  }
+
+</div>

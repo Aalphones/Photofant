@@ -340,6 +340,16 @@ async def add_items(collection_id: int, body: AddItemsRequest, session: DbSessio
     return Response(status_code=204)
 
 
+@router.post("/{collection_id}/export", response_model=JobStarted, status_code=202)
+async def export_collection(collection_id: int, session: DbSession) -> JobStarted:
+    """Copy all items in the collection to a dated export folder (background job)."""
+    from photofant.jobs.export_job import enqueue_export_collection
+
+    collection = _get_collection_or_404(session, collection_id)
+    status = await enqueue_export_collection(collection_id, collection.name)
+    return JobStarted(job_id=status.id)
+
+
 @router.delete("/{collection_id}/items/{asset_id}", status_code=204)
 async def remove_item(collection_id: int, asset_id: int, session: DbSession) -> Response:
     item = (
