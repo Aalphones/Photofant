@@ -1,6 +1,6 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { DatePipe } from '@angular/common';
 import type {
   DriftFile,
   IssueKind,
@@ -59,127 +59,6 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
           <div class="stat-sub">ab P7</div>
         </div>
       </div>
-
-      <!-- FS↔DB-Abgleich -->
-      <section class="section">
-        <h2 class="section-heading">FS&#8596;DB-Abgleich</h2>
-
-        <div class="card">
-          <div class="card-row">
-            <div>
-              <div class="card-label">Dateisystem mit Datenbank abgleichen</div>
-              <div class="card-desc">
-                Findet verwaiste Dateien (auf der Platte, nicht in der DB),
-                fehlende Dateien (in der DB, nicht auf der Platte) und Pfad-Drift
-                nach manuellen Verschiebungen.
-              </div>
-            </div>
-            <button class="btn-primary" [disabled]="isScanning()" (click)="triggerReconcile()">
-              @if (isScanning()) {
-                <span class="spinner"></span>
-                Scan läuft…
-              } @else {
-                Scan starten
-              }
-            </button>
-          </div>
-
-          @if (error()) {
-            <div class="error-banner">{{ error() }}</div>
-          }
-
-          @if (report(); as rep) {
-            @if (rep.generated_at) {
-              <div class="scan-status">
-                Letzter Scan: {{ rep.generated_at | date:'dd.MM.yyyy HH:mm' }} ·
-                @if (issueTotal() === 0) {
-                  <span class="status-good">Alles konsistent</span>
-                } @else {
-                  <span class="status-warn">{{ issueTotal() }} Abweichung(en)</span>
-                }
-              </div>
-            }
-
-            @if (issueTotal() > 0) {
-              <div class="rec-tabs">
-                <button class="rec-tab" [class.on]="activeTab() === 'orphan'" (click)="setTab('orphan')">
-                  Verwaist <span class="tab-badge">{{ rep.orphaned_files.length }}</span>
-                </button>
-                <button class="rec-tab" [class.on]="activeTab() === 'missing'" (click)="setTab('missing')">
-                  Fehlend <span class="tab-badge err">{{ rep.missing_files.length }}</span>
-                </button>
-                <button class="rec-tab" [class.on]="activeTab() === 'drift'" (click)="setTab('drift')">
-                  Pfad-Drift <span class="tab-badge">{{ rep.path_drift.length }}</span>
-                </button>
-              </div>
-
-              <div class="rec-issues">
-                @switch (activeTab()) {
-                  @case ('orphan') {
-                    @for (orphan of rep.orphaned_files; track orphan.path) {
-                      <div class="rec-issue">
-                        <div class="ri-body">
-                          <div class="ri-path">{{ orphan.path }}</div>
-                          <div class="ri-meta">
-                            <span class="rec-badge orphan">Verwaist</span>
-                            <span>{{ formatSize(orphan.size) }}</span>
-                            <span>{{ orphan.detail }}</span>
-                          </div>
-                        </div>
-                        <div class="ri-acts">
-                          <button class="btn-ghost-sm" [disabled]="isRepairing()" (click)="indexOrphan(orphan)">Indizieren</button>
-                          <button class="btn-danger-sm" [disabled]="isRepairing()" (click)="trashOrphan(orphan)">Papierkorb</button>
-                        </div>
-                      </div>
-                    } @empty {
-                      <p class="rec-empty">Keine verwaisten Dateien.</p>
-                    }
-                  }
-                  @case ('missing') {
-                    @for (missing of rep.missing_files; track missing.instance_id) {
-                      <div class="rec-issue">
-                        <div class="ri-body">
-                          <div class="ri-path">{{ missing.path }}</div>
-                          <div class="ri-meta">
-                            <span class="rec-badge missing">Fehlend</span>
-                            <span>{{ missing.person_name ?? '_unknown' }}</span>
-                            <span>{{ missing.detail }}</span>
-                          </div>
-                        </div>
-                        <div class="ri-acts">
-                          <button class="btn-ghost-sm" [disabled]="isRepairing()" (click)="markMissing(missing)">Als fehlend markieren</button>
-                          <button class="btn-danger-sm" [disabled]="isRepairing()" (click)="trashMissing(missing)">DB-Eintrag löschen</button>
-                        </div>
-                      </div>
-                    } @empty {
-                      <p class="rec-empty">Keine fehlenden Dateien.</p>
-                    }
-                  }
-                  @case ('drift') {
-                    @for (drift of rep.path_drift; track drift.instance_id) {
-                      <div class="rec-issue">
-                        <div class="ri-body">
-                          <div class="ri-path">{{ drift.found_path }}</div>
-                          <div class="ri-meta">
-                            <span class="rec-badge drift">Pfad-Drift</span>
-                            <span>{{ drift.person_name ?? '_unknown' }}</span>
-                            <span>DB: {{ drift.db_path }}</span>
-                          </div>
-                        </div>
-                        <div class="ri-acts">
-                          <button class="btn-ghost-sm" [disabled]="isRepairing()" (click)="fixDrift(drift)">Pfad korrigieren</button>
-                        </div>
-                      </div>
-                    } @empty {
-                      <p class="rec-empty">Kein Pfad-Drift.</p>
-                    }
-                  }
-                }
-              </div>
-            }
-          }
-        </div>
-      </section>
 
       <!-- Cache & Thumbnails -->
       <section class="section">
