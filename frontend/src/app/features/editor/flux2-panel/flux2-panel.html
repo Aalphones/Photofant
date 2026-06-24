@@ -63,7 +63,7 @@
         <span class="flux2-panel__ctrl-label">Schritte</span>
         <span class="flux2-panel__ctrl-value">{{ steps() }}</span>
       </div>
-      <input type="range" [min]="10" [max]="50" [step]="1" [value]="steps()" (input)="onStepsChange($event)" />
+      <input type="range" [min]="1" [max]="4" [step]="1" [value]="steps()" (input)="onStepsChange($event)" />
     </div>
 
     <div class="flux2-panel__ctrl">
@@ -71,7 +71,7 @@
         <span class="flux2-panel__ctrl-label">CFG-Skala</span>
         <span class="flux2-panel__ctrl-value">{{ guidance().toFixed(1) }}</span>
       </div>
-      <input type="range" [min]="1" [max]="15" [step]="0.5" [value]="guidance()" (input)="onGuidanceChange($event)" />
+      <input type="range" [min]="1" [max]="4" [step]="0.5" [value]="guidance()" (input)="onGuidanceChange($event)" />
     </div>
 
     <div class="flux2-panel__ctrl">

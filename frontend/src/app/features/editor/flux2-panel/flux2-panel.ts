@@ -37,8 +37,8 @@ export class Flux2Panel {
   protected readonly templates = this.store.selectSignal(promptTemplateSelectors.selectTemplates);
   protected readonly prompt = signal('');
   protected readonly strength = signal(0.65);
-  protected readonly steps = signal(20);
-  protected readonly guidance = signal(7.5);
+  protected readonly steps = signal(4);
+  protected readonly guidance = signal(1);
   protected readonly seed = signal(-1);
   protected readonly selectedTemplateId = signal<number | null>(null);
 
