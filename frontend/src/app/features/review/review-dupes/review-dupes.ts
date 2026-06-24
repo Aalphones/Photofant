@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, OnInit, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Icon } from '@photofant/ui';
 import { reviewActions, reviewSelectors } from '@photofant/store';
@@ -21,6 +21,19 @@ export class ReviewDupes implements OnInit {
   protected readonly isLoading = this.store.selectSignal(reviewSelectors.selectIsLoading);
   protected readonly comparePair = signal<DupePair | null>(null);
 
+  private readonly resolvingId = signal<number | null>(null);
+
+  constructor() {
+    effect(() => {
+      const id = this.resolvingId();
+      const pairs = this.pairs();
+      if (id !== null && !pairs.some((pair: DupePair) => pair.id === id)) {
+        this.resolvingId.set(null);
+        this.comparePair.set(pairs[0] ?? null);
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.store.dispatch(reviewActions.loadDupePairs());
   }
@@ -34,6 +47,7 @@ export class ReviewDupes implements OnInit {
   }
 
   protected onResolve(event: { pair: DupePair; resolution: DupeResolution }): void {
+    this.resolvingId.set(event.pair.id);
     this.store.dispatch(
       reviewActions.resolveDupePair({ itemId: event.pair.id, resolution: event.resolution }),
     );

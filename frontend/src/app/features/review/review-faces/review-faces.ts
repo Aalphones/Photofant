@@ -106,8 +106,10 @@ export class ReviewFaces implements OnInit {
   private advanceToNext(): void {
     const total = this.items().length;
     const current = this.currentIndex();
-    if (current + 1 < total) {
-      this.currentIndex.set(current + 1);
+    // After the resolved item is removed, the next item slides into position `current`.
+    // Only step back if we're at the last item to avoid going out of bounds.
+    if (current >= total - 1 && current > 0) {
+      this.currentIndex.set(current - 1);
     }
   }
 }
