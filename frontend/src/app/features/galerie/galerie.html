@@ -49,6 +49,14 @@
         (loadMore)="onFaceLoadMore()"
       />
     } @else {
+      @if (standaloneFaceItems().length > 0) {
+        <pf-face-grid
+          [faceItems]="standaloneFaceItems()"
+          [isLoading]="false"
+          (openFace)="onOpenFace($event)"
+          (loadMore)="onFaceLoadMore()"
+        />
+      }
       <pf-galerie-grid
         [groups]="groups()"
         [density]="density()"

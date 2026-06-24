@@ -67,7 +67,7 @@ export class GalleryEffects {
         if (params.mediaType === 'faces') {
           const faceParams: { page: number; page_size: number; person_id?: number } = {
             page: params.page,
-            page_size: params.pageSize,
+            page_size: 500,
           };
           if (params.personId != null) { faceParams.person_id = params.personId; }
           return this.personService.listFacesGallery(faceParams).pipe(
@@ -109,7 +109,9 @@ export class GalleryEffects {
           ),
         );
 
-        // In 'all' mode, fetch faces for the current asset page after assets are loaded
+        // In 'all' mode, fetch all faces (linked + standalone) once on first page.
+        // This covers both inline face crops (via facesMap, asset_id != null)
+        // and standalone face images imported without an asset (asset_id == null).
         if (params.mediaType === 'all') {
           return assetFetch$.pipe(
             mergeMap((assetAction: Action) => {
@@ -117,21 +119,20 @@ export class GalleryEffects {
                 return of(assetAction);
               }
               const successAction = assetAction as ReturnType<typeof galleryActions.loadPageSuccess>;
-              const assetIds = successAction.items.map((item: AssetDto) => item.id);
-              if (assetIds.length === 0) {
+              // Only fetch faces on the first page load; they cover all assets.
+              if (successAction.page !== 1) {
                 return of(assetAction);
               }
-              const faceParams: { page: number; page_size: number; person_id?: number; asset_ids: number[] } = {
-                page: successAction.page,
+              const faceParams: { page: number; page_size: number; person_id?: number } = {
+                page: 1,
                 page_size: 500,
-                asset_ids: assetIds,
               };
               if (params.personId != null) { faceParams.person_id = params.personId; }
               const faceFetch$ = this.personService.listFacesGallery(faceParams).pipe(
                 map((result: FacesPage) => galleryActions.loadFacesPageSuccess({
                   items: result.items,
                   total: result.total,
-                  page: successAction.page,
+                  page: 1,
                   pageSize: result.page_size,
                 })),
                 catchError(() => EMPTY),

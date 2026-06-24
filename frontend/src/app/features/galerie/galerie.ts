@@ -100,6 +100,13 @@ export class Galerie {
     return map;
   });
 
+  protected readonly standaloneFaceItems = computed((): FaceGalleryItemDto[] => {
+    if (this.mediaType() !== 'all') {
+      return [];
+    }
+    return this.faceItems().filter((face: FaceGalleryItemDto) => face.asset_id === null);
+  });
+
   protected readonly isEmpty = computed((): boolean => {
     if (this.mediaType() === 'faces') {
       return !this.isLoading() && this.faceItems().length === 0;
