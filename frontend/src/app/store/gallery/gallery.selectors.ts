@@ -18,6 +18,7 @@ const {
   selectFacets,
   selectSelectionMode,
   selectSelectedIds,
+  selectAnchorId,
   selectFaceItems,
   selectFaceTotal,
 } = galleryFeature;
@@ -176,6 +177,7 @@ export const gallerySelectors = {
   selectLightboxNavContext,
   selectSelectionMode,
   selectSelectedIds,
+  selectAnchorId,
   selectPersonNameMap,
   selectFaceItems,
   selectFaceTotal,

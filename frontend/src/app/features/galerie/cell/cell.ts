@@ -39,8 +39,9 @@ export class GalerieCell {
   readonly selectionMode = input<boolean>(false);
   readonly isArmed       = input<boolean>(false);
 
-  readonly openAsset  = output<number>();
-  readonly batchBind  = output<number>();
+  readonly openAsset    = output<number>();
+  readonly batchBind    = output<number>();
+  readonly rangeSelect  = output<number>();
 
   protected readonly aspectRatio = computed((): number => {
     const { width, height } = this.asset();
@@ -72,12 +73,20 @@ export class GalerieCell {
       } else {
         this.openAsset.emit(this.asset().id);
       }
-    } else if (this.selectionMode() || event.ctrlKey || event.metaKey) {
-      event.stopPropagation();
-      this.store.dispatch(galleryActions.toggleSelected({ id: this.asset().id }));
-    } else {
-      this.openAsset.emit(this.asset().id);
+      return;
     }
+
+    if (this.selectionMode() || event.ctrlKey || event.metaKey) {
+      event.stopPropagation();
+      if (event.shiftKey) {
+        this.rangeSelect.emit(this.asset().id);
+      } else {
+        this.store.dispatch(galleryActions.toggleSelected({ id: this.asset().id }));
+      }
+      return;
+    }
+
+    this.openAsset.emit(this.asset().id);
   }
 
   protected onPickClick(event: MouseEvent): void {

@@ -41,6 +41,7 @@ export class ReviewUnknown {
   protected readonly pageSize = 48;
 
   protected readonly selected = signal<Set<number>>(new Set());
+  private readonly anchorId = signal<number | null>(null);
 
   protected readonly selectedCount = computed(() => this.selected().size);
 
@@ -103,7 +104,16 @@ export class ReviewUnknown {
     return this.selected().has(faceId);
   }
 
-  protected toggleSelect(faceId: number): void {
+  protected onCellClick(event: MouseEvent, faceId: number): void {
+    if (event.shiftKey && this.anchorId() !== null) {
+      this.doRangeSelect(faceId);
+    } else {
+      this.toggleSelect(faceId);
+    }
+  }
+
+  private toggleSelect(faceId: number): void {
+    this.anchorId.set(faceId);
     this.selected.update((sel: Set<number>) => {
       const next = new Set(sel);
       if (next.has(faceId)) {
@@ -115,7 +125,27 @@ export class ReviewUnknown {
     });
   }
 
+  private doRangeSelect(targetId: number): void {
+    const anchorId = this.anchorId();
+    if (anchorId === null) {
+      this.toggleSelect(targetId);
+      return;
+    }
+    const faces = this.faces();
+    const anchorIndex = faces.findIndex((face: FaceGalleryItemDto) => face.id === anchorId);
+    const targetIndex = faces.findIndex((face: FaceGalleryItemDto) => face.id === targetId);
+    if (anchorIndex === -1 || targetIndex === -1) {
+      this.toggleSelect(targetId);
+      return;
+    }
+    const start = Math.min(anchorIndex, targetIndex);
+    const end = Math.max(anchorIndex, targetIndex);
+    const rangeIds = faces.slice(start, end + 1).map((face: FaceGalleryItemDto) => face.id);
+    this.selected.set(new Set(rangeIds));
+  }
+
   protected toggleAll(): void {
+    this.anchorId.set(null);
     const faceList = this.faces();
     const sel = this.selected();
     if (faceList.every((face: FaceGalleryItemDto) => sel.has(face.id))) {
@@ -142,6 +172,7 @@ export class ReviewUnknown {
     forkJoin(requests).subscribe({
       next: () => {
         this.selected.set(new Set());
+        this.anchorId.set(null);
         this.showAssignPanel.set(false);
         this.loadFacesForPage(this.page());
       },
@@ -156,6 +187,7 @@ export class ReviewUnknown {
     forkJoin(requests).subscribe({
       next: () => {
         this.selected.set(new Set());
+        this.anchorId.set(null);
         this.loadFacesForPage(this.page());
       },
     });
@@ -164,6 +196,7 @@ export class ReviewUnknown {
   protected goPage(page: number): void {
     if (page < 1 || page > this.totalPages()) return;
     this.selected.set(new Set());
+    this.anchorId.set(null);
     this.loadFacesForPage(page);
   }
 }

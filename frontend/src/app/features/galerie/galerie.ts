@@ -39,6 +39,8 @@ export class Galerie {
   protected readonly lightboxId    = this.store.selectSignal(gallerySelectors.selectLightboxId);
   protected readonly selectionMode = this.store.selectSignal(gallerySelectors.selectSelectionMode);
   protected readonly selectedIds   = this.store.selectSignal(gallerySelectors.selectSelectedIds);
+  private readonly allAssets       = this.store.selectSignal(gallerySelectors.selectAll);
+  private readonly anchorId        = this.store.selectSignal(gallerySelectors.selectAnchorId);
   protected readonly mediaType     = this.store.selectSignal(filtersSelectors.mediaType);
   protected readonly faceItems     = this.store.selectSignal(gallerySelectors.selectFaceItems);
   protected readonly faceHasMore   = this.store.selectSignal(gallerySelectors.selectFaceHasMore);
@@ -190,6 +192,25 @@ export class Galerie {
 
   protected onSelectAll(ids: number[]): void {
     this.store.dispatch(galleryActions.selectAll({ ids }));
+  }
+
+  protected onRangeSelect(targetId: number): void {
+    const anchorId = this.anchorId();
+    if (anchorId === null) {
+      this.store.dispatch(galleryActions.toggleSelected({ id: targetId }));
+      return;
+    }
+    const assets = this.allAssets();
+    const anchorIndex = assets.findIndex((asset) => asset.id === anchorId);
+    const targetIndex = assets.findIndex((asset) => asset.id === targetId);
+    if (anchorIndex === -1 || targetIndex === -1) {
+      this.store.dispatch(galleryActions.toggleSelected({ id: targetId }));
+      return;
+    }
+    const start = Math.min(anchorIndex, targetIndex);
+    const end = Math.max(anchorIndex, targetIndex);
+    const rangeIds = assets.slice(start, end + 1).map((asset) => asset.id);
+    this.store.dispatch(galleryActions.selectRange({ ids: rangeIds }));
   }
 
   protected onBulkClose(): void {

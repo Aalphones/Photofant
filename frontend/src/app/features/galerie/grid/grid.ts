@@ -36,11 +36,12 @@ export class GalerieGrid {
 
   readonly facesMap   = input<Map<number, FaceGalleryItemDto[]>>(new Map());
 
-  readonly openAsset  = output<number>();
-  readonly openFace   = output<{ faceId: number; assetId: number | null }>();
-  readonly selectAll  = output<number[]>();
-  readonly loadMore   = output<void>();
-  readonly batchBind  = output<number>();
+  readonly openAsset    = output<number>();
+  readonly openFace     = output<{ faceId: number; assetId: number | null }>();
+  readonly selectAll    = output<number[]>();
+  readonly loadMore     = output<void>();
+  readonly batchBind    = output<number>();
+  readonly rangeSelect  = output<number>();
 
   private readonly sentinel = viewChild.required<ElementRef<HTMLDivElement>>('loadSentinel');
 
@@ -89,6 +90,10 @@ export class GalerieGrid {
 
   protected onBatchBind(id: number): void {
     this.batchBind.emit(id);
+  }
+
+  protected onRangeSelect(id: number): void {
+    this.rangeSelect.emit(id);
   }
 
   protected onSelectAll(ids: number[]): void {

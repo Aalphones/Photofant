@@ -32,6 +32,7 @@ export const galleryActions = createActionGroup({
     'Disable Selection Mode':    emptyProps(),
     'Toggle Selected':           props<{ id: number }>(),
     'Select All':                props<{ ids: number[] }>(),
+    'Select Range':              props<{ ids: number[] }>(),
     'Clear Selection':           emptyProps(),
   },
 });

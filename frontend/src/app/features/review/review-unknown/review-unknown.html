@@ -21,7 +21,7 @@
 
         <div class="ru__assign-wrap">
           <button class="ru__btn-primary" (click)="openAssignPanel()">
-            <pf-icon name="person" [size]="14" />
+            <pf-icon name="user" [size]="14" />
             Person zuweisen
           </button>
 
@@ -69,7 +69,7 @@
       <div
         class="ru__cell"
         [class.ru__cell--selected]="isSelected(face.id)"
-        (click)="toggleSelect(face.id)"
+        (click)="onCellClick($event, face.id)"
       >
         <img class="ru__thumb" [src]="face.thumbnail_url" alt="" loading="lazy" />
         <div class="ru__check">

@@ -28,6 +28,7 @@
           [isArmed]="isArmed()"
           (openAsset)="onOpenAsset($event)"
           (batchBind)="onBatchBind($event)"
+          (rangeSelect)="onRangeSelect($event)"
         />
         @for (face of facesForAsset(asset.id); track face.id) {
           <div

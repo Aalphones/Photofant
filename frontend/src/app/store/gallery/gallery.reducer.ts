@@ -17,6 +17,7 @@ export interface GalleryState extends EntityState<AssetDto> {
   facets: Facets | null;
   selectionMode: boolean;
   selectedIds: number[];
+  anchorId: number | null;
   faceItems: FaceGalleryItemDto[];
   faceTotal: number;
 }
@@ -37,6 +38,7 @@ const initialState: GalleryState = adapter.getInitialState({
   facets: null,
   selectionMode: false,
   selectedIds: [],
+  anchorId: null,
   faceItems: [],
   faceTotal: 0,
 });
@@ -105,24 +107,27 @@ export const galleryFeature = createFeature({
     }),
     // Selection
     on(galleryActions.enableSelectionMode, (state: GalleryState) => ({
-      ...state, selectionMode: true,
+      ...state, selectionMode: true, anchorId: null,
     })),
     on(galleryActions.disableSelectionMode, (state: GalleryState) => ({
-      ...state, selectionMode: false, selectedIds: [],
+      ...state, selectionMode: false, selectedIds: [], anchorId: null,
     })),
     on(galleryActions.toggleSelected, (state: GalleryState, { id }) => {
       const isSelected = state.selectedIds.includes(id);
       const selectedIds = isSelected
         ? state.selectedIds.filter((existingId: number) => existingId !== id)
         : [...state.selectedIds, id];
-      return { ...state, selectedIds };
+      return { ...state, selectedIds, anchorId: id };
     }),
     on(galleryActions.selectAll, (state: GalleryState, { ids }) => {
       const merged = Array.from(new Set([...state.selectedIds, ...ids]));
       return { ...state, selectedIds: merged };
     }),
+    on(galleryActions.selectRange, (state: GalleryState, { ids }) => ({
+      ...state, selectedIds: ids,
+    })),
     on(galleryActions.clearSelection, (state: GalleryState) => ({
-      ...state, selectedIds: [], selectionMode: false,
+      ...state, selectedIds: [], selectionMode: false, anchorId: null,
     })),
   ),
   extraSelectors: ({ selectGalleryState }) => ({
