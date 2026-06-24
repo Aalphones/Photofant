@@ -11,7 +11,7 @@ import { Store } from '@ngrx/store';
 import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
 import type { PersonDto, TagListItem } from '@photofant/models';
 import { TagService } from '@photofant/services';
-import { filtersActions, personsSelectors, searchActions } from '@photofant/store';
+import { filtersActions, personsActions, personsSelectors, searchActions } from '@photofant/store';
 import { Icon } from '../icon/icon';
 
 interface AutocompleteItem {
@@ -88,6 +88,8 @@ export class SearchBox {
   });
 
   constructor() {
+    this.store.dispatch(personsActions.loadPersons());
+
     this.queryInput$.pipe(
       debounceTime(300),
       distinctUntilChanged(),
