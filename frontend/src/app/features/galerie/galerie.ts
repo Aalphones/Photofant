@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, injec
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { collectionsActions, collectionsSelectors, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, personsActions, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
+import { collectionsActions, collectionsSelectors, comfyuiActions, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, personsActions, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
 import { AssetService, ClassifyService, ComfyUIService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { FaceGrid } from './face-grid/face-grid';
@@ -312,6 +312,7 @@ export class Galerie {
     if (this.workflowMode()) {
       this.resetWorkflowMode();
     } else {
+      this.store.dispatch(comfyuiActions.loadWorkflows());
       this.workflowMode.set(true);
     }
   }
