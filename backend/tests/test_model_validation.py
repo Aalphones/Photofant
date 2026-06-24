@@ -79,8 +79,8 @@ def _component_entry() -> ManifestEntry:
                 "vae": {"label": "VAE", "required": True, "formats": ["safetensors"]},
             },
             "expected_families": {
-                "text_encoder": "t5",
-                "vae": "flux-ae",
+                "text_encoder": "qwen",
+                "vae": "flux",
             },
             "variants": [
                 {"name": "bf16", "size_gb": 18.2, "vram_gb": 29},
