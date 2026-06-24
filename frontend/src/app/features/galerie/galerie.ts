@@ -185,6 +185,12 @@ export class Galerie {
     }
   }
 
+  protected onBindFace(event: { faceId: number; assetId: number | null }): void {
+    if (event.assetId != null) {
+      this.onBindAsset(event.assetId);
+    }
+  }
+
   protected onOpenAsset(id: number): void {
     this.store.dispatch(galleryActions.openLightbox({ id }));
   }

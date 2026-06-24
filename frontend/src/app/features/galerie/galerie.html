@@ -45,7 +45,7 @@
       <pf-face-grid
         [faceItems]="faceItems()"
         [isLoading]="isLoading()"
-        (openFace)="onOpenFace($event)"
+        (openFace)="isArmed() ? onBindFace($event) : onOpenFace($event)"
         (loadMore)="onFaceLoadMore()"
       />
     } @else {
@@ -53,7 +53,7 @@
         <pf-face-grid
           [faceItems]="standaloneFaceItems()"
           [isLoading]="false"
-          (openFace)="onOpenFace($event)"
+          (openFace)="isArmed() ? onBindFace($event) : onOpenFace($event)"
           (loadMore)="onFaceLoadMore()"
         />
       }
@@ -70,7 +70,7 @@
         (selectAll)="onSelectAll($event)"
         (rangeSelect)="onRangeSelect($event)"
         (loadMore)="onLoadMore()"
-        (openFace)="onOpenFace($event)"
+        (openFace)="isArmed() ? onBindFace($event) : onOpenFace($event)"
       />
     }
   </div>
