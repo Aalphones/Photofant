@@ -141,7 +141,7 @@ export class ReviewUnknown {
     const start = Math.min(anchorIndex, targetIndex);
     const end = Math.max(anchorIndex, targetIndex);
     const rangeIds = faces.slice(start, end + 1).map((face: FaceGalleryItemDto) => face.id);
-    this.selected.set(new Set(rangeIds));
+    this.selected.update((existing: Set<number>) => new Set([...existing, ...rangeIds]));
   }
 
   protected toggleAll(): void {

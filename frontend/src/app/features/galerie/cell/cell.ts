@@ -76,7 +76,7 @@ export class GalerieCell {
       return;
     }
 
-    if (this.selectionMode() || event.ctrlKey || event.metaKey) {
+    if (this.selectionMode() || event.ctrlKey || event.metaKey || event.shiftKey) {
       event.stopPropagation();
       if (event.shiftKey) {
         this.rangeSelect.emit(this.asset().id);
