@@ -322,6 +322,40 @@ async def import_faces_direct(
     return results
 
 
+@router.delete("/{face_id}", status_code=204)
+async def delete_face(face_id: int, session: DbSession) -> None:
+    """Delete a face: removes DB row, crop file, and vector index entry.
+
+    If the face belonged to an asset, smart-album re-evaluation is triggered.
+    """
+    from photofant.db.face_vector_index import delete_embedding
+
+    face = session.get(Face, face_id)
+    if face is None:
+        raise HTTPException(status_code=404, detail="Face not found")
+
+    asset_id: int | None = face.asset_id
+
+    # Remove from vector index before deleting the DB row
+    delete_embedding(session, face_id)
+
+    # Remove crop file from disk
+    crop_path = Path(face.crop_path)
+    if crop_path.exists():
+        try:
+            crop_path.unlink()
+        except OSError:
+            log.warning("Could not delete crop file for face %d: %s", face_id, crop_path)
+
+    session.delete(face)
+    session.commit()
+
+    if asset_id is not None:
+        from photofant.jobs.collections_job import enqueue_reevaluate_assets
+
+        await enqueue_reevaluate_assets([asset_id])
+
+
 @router.post("/cluster")
 async def trigger_clustering() -> ClusterResultDto:
     """Trigger initial HDBSCAN clustering over all face embeddings."""

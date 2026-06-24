@@ -422,6 +422,21 @@ export class Lightbox {
     this.showSimilarOverlay.set(false);
   }
 
+  // ── Face deletion ─────────────────────────────────────────────────────────
+
+  protected deleteFaceFromAsset(face: FaceDto): void {
+    this.selectedFace.set(null);
+    this.faceMatches.set([]);
+    this.personService.deleteFace(face.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => { this.reloadTrigger.update((count: number) => count + 1); },
+        error: (err: unknown) => {
+          console.error('[Lightbox] Face deletion failed:', err);
+        },
+      });
+  }
+
   // ── Face matches (person assignment) ──────────────────────────────────────
 
   protected toggleFaceMatches(face: FaceDto): void {

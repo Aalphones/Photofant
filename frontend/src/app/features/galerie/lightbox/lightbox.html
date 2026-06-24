@@ -283,6 +283,14 @@
             <div class="face-matches">
               <div class="face-matches__head">
                 <span class="face-matches__title">Person zuweisen</span>
+                <button
+                  class="face-matches__delete"
+                  (click)="deleteFaceFromAsset(selectedFace()!)"
+                  title="Gesicht löschen"
+                  aria-label="Gesicht löschen"
+                >
+                  <pf-icon name="trash" [size]="13" />
+                </button>
               </div>
 
               <!-- Personensuche -->

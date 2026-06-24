@@ -79,6 +79,10 @@ export class PersonService {
     return this.http.post<PersonDupePair[]>('/api/duplicates/search', { person_id: personId, threshold });
   }
 
+  deleteFace(faceId: number): Observable<void> {
+    return this.http.delete<void>(`/api/faces/${faceId}`);
+  }
+
   listFacesGallery(params: { page: number; page_size: number; person_id?: number; asset_ids?: number[] }): Observable<FacesPage> {
     let httpParams = new HttpParams()
       .set('page', params.page)
