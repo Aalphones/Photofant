@@ -26,6 +26,7 @@ class TagListItem(BaseModel):
     name: str
     count: int
     alias_of: int | None = None
+    aliases: list[str] = []  # names of tags that point to this one via alias_of
 
 
 class RenameTagRequest(BaseModel):
@@ -35,6 +36,10 @@ class RenameTagRequest(BaseModel):
 class MergeTagsRequest(BaseModel):
     from_ids: list[int]
     into_id: int
+
+
+class SetTagAliasesRequest(BaseModel):
+    names: list[str]
 
 
 class BulkTagRequest(BaseModel):
@@ -64,7 +69,7 @@ async def list_tags(
     session: DbSession,
     query: str | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=200)] = 20,
+    page_size: Annotated[int, Query(ge=1, le=2000)] = 20,
 ) -> list[TagListItem]:
     q = (
         session.query(Tag.id, Tag.name, Tag.alias_of, func.count(AssetTag.id).label("cnt"))
@@ -79,7 +84,22 @@ async def list_tags(
         .limit(page_size)
         .all()
     )
-    return [TagListItem(id=row.id, name=row.name, count=row.cnt, alias_of=row.alias_of) for row in rows]
+    # Build alias map in one extra query (all aliases, no page limit)
+    alias_rows = session.query(Tag.alias_of, Tag.name).filter(Tag.alias_of.isnot(None)).all()
+    aliases_by_canonical: dict[int, list[str]] = {}
+    for alias_row in alias_rows:
+        aliases_by_canonical.setdefault(alias_row.alias_of, []).append(alias_row.name)
+
+    return [
+        TagListItem(
+            id=row.id,
+            name=row.name,
+            count=row.cnt,
+            alias_of=row.alias_of,
+            aliases=aliases_by_canonical.get(row.id, []),
+        )
+        for row in rows
+    ]
 
 
 @router.post("/merge", status_code=204)
@@ -167,6 +187,78 @@ async def bulk_tag(body: BulkTagRequest, session: DbSession) -> Response:
 
     # Tags changed on these assets → re-evaluate them against smart albums
     await enqueue_reevaluate_assets(body.asset_ids)
+    return Response(status_code=204)
+
+
+@router.put("/{tag_id}/aliases", status_code=204)
+async def set_tag_aliases(tag_id: int, body: SetTagAliasesRequest, session: DbSession) -> Response:
+    """Replace the full alias set of a canonical tag.
+
+    Each name in `names` becomes an alias pointing to `tag_id`.
+    Existing aliases not in `names` are de-aliased (alias_of cleared).
+    Asset rows of newly-aliased tags are re-pointed to the canonical.
+    """
+    canonical = session.get(Tag, tag_id)
+    if canonical is None:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    if canonical.alias_of is not None:
+        raise HTTPException(status_code=400, detail="Cannot set aliases on an alias tag")
+
+    normalized_names = list(dict.fromkeys(
+        name for raw in body.names
+        if (name := raw.strip().lower().replace(" ", "_")) and name != canonical.name
+    ))
+
+    existing_aliases = session.query(Tag).filter_by(alias_of=tag_id).all()
+    existing_alias_names = {t.name for t in existing_aliases}
+
+    affected_asset_ids: set[int] = set()
+
+    for name in normalized_names:
+        if name in existing_alias_names:
+            continue  # Already an alias of this canonical
+        alias_tag = session.query(Tag).filter_by(name=name).first()
+        if alias_tag is None:
+            alias_tag = Tag(name=name, alias_of=tag_id)
+            session.add(alias_tag)
+            session.flush()
+            continue
+        if alias_tag.id == tag_id:
+            continue
+        if alias_tag.alias_of is not None and alias_tag.alias_of != tag_id:
+            log.warning("Tag %s is already an alias of %d — skipping", name, alias_tag.alias_of)
+            continue
+        # Re-point existing AssetTags from the alias to the canonical (same as merge)
+        for row in session.query(AssetTag).filter_by(tag_id=alias_tag.id).all():
+            affected_asset_ids.add(row.asset_id)
+            existing_in_canonical = (
+                session.query(AssetTag).filter_by(asset_id=row.asset_id, tag_id=tag_id).first()
+            )
+            if existing_in_canonical is None:
+                row.tag_id = tag_id
+            else:
+                if row.kind == "manual":
+                    existing_in_canonical.kind = "manual"
+                if row.score is not None and (
+                    existing_in_canonical.score is None or row.score > existing_in_canonical.score
+                ):
+                    existing_in_canonical.score = row.score
+                session.delete(row)
+        alias_tag.alias_of = tag_id
+        log.info("Aliased tag %d (%s) → %d (%s)", alias_tag.id, name, tag_id, canonical.name)
+
+    # De-alias tags no longer in the requested set
+    requested_set = set(normalized_names)
+    for alias_tag in existing_aliases:
+        if alias_tag.name not in requested_set:
+            alias_tag.alias_of = None
+            log.info("De-aliased tag %d (%s) from %d (%s)", alias_tag.id, alias_tag.name, tag_id, canonical.name)
+
+    session.commit()
+
+    if affected_asset_ids:
+        await enqueue_reevaluate_assets(sorted(affected_asset_ids))
+
     return Response(status_code=204)
 
 

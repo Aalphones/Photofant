@@ -37,4 +37,8 @@ export class TagService {
   bulkTag(request: BulkTagRequest): Observable<void> {
     return this.http.post<void>('/api/tags/bulk', request);
   }
+
+  setTagAliases(id: number, names: string[]): Observable<void> {
+    return this.http.put<void>(`/api/tags/${id}/aliases`, { names });
+  }
 }

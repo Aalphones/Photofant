@@ -31,6 +31,15 @@ export class Tags {
     const ids = this.tagMergeSelected();
     return this.allTagsList().filter((tag: TagListItem) => ids.has(tag.id));
   });
+  readonly editingAliasTagId = signal<number | null>(null);
+  readonly aliasDraftText = signal<string>('');
+  readonly tagNameById = computed((): Map<number, string> => {
+    const map = new Map<number, string>();
+    for (const tag of this.allTagsList()) {
+      map.set(tag.id, tag.name);
+    }
+    return map;
+  });
 
   constructor() {
     effect(() => {
@@ -100,5 +109,31 @@ export class Tags {
 
   clearTagMergeSelection(): void {
     this.tagMergeSelected.set(new Set());
+  }
+
+  startAliasEdit(tag: TagListItem): void {
+    if (tag.alias_of != null) { return; }
+    this.editingAliasTagId.set(tag.id);
+    this.aliasDraftText.set(tag.aliases.join(', '));
+  }
+
+  confirmAliasEdit(): void {
+    const id = this.editingAliasTagId();
+    if (id == null) { return; }
+    const names = this.aliasDraftText()
+      .split(',')
+      .map((name: string) => name.trim())
+      .filter((name: string) => name.length > 0);
+    this.store.dispatch(tagsActions.setAliases({ id, names }));
+    this.editingAliasTagId.set(null);
+  }
+
+  cancelAliasEdit(): void {
+    this.editingAliasTagId.set(null);
+  }
+
+  onAliasKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') { this.confirmAliasEdit(); }
+    else if (event.key === 'Escape') { this.cancelAliasEdit(); }
   }
 }

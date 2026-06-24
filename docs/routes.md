@@ -22,15 +22,16 @@
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| Suche (Autocomplete) / `/einstellungen` (Tags-Sektion) | `GET` | `/api/tags` | `query` (optional, LIKE-Filter), `page` (default 1), `page_size` (1–200, default 20) | `TagListItem[]` |
+| Suche (Autocomplete) / `/einstellungen` (Tags-Sektion) | `GET` | `/api/tags` | `query` (optional, LIKE-Filter), `page` (default 1), `page_size` (1–2000, default 20) | `TagListItem[]` |
 | `/einstellungen` (Tags-Sektion, Umbenennen) | `PATCH` | `/api/tags/{id}` | `{ name: string }` | `TagListItem` (409 wenn Name belegt) |
 | `/einstellungen` (Tags-Sektion, Merge) | `POST` | `/api/tags/merge` | `{ from_ids: number[], into_id: number }` | `204` — from_ids werden Aliase von into_id |
+| `/einstellungen` (Tags-Sektion, Aliase setzen) | `PUT` | `/api/tags/{id}/aliases` | `{ names: string[] }` | `204` — setzt Alias-Set des kanonischen Tags; Tags im Set werden per `alias_of` verknüpft, entfernte Aliase werden de-aliased |
 | `/galerie` (Bulk-Tag via BulkBar) | `POST` | `/api/tags/bulk` | `{ asset_ids: number[], add: string[], remove: number[] }` | `204` |
 | Lightbox (Tag-Edit) | `PATCH` | `/api/assets/{id}/tags` | `{ add: string[], remove: number[] }` | `AssetDetailDto` |
 | Lightbox (Caption-Edit) | `PATCH` | `/api/assets/{id}/caption` | `{ caption: string }` | `AssetDetailDto` — setzt `caption_edited=true` |
 
 ```typescript
-interface TagListItem { id: number; name: string; count: number; alias_of: number | null; }
+interface TagListItem { id: number; name: string; count: number; alias_of: number | null; aliases: string[]; }
 ```
 
 **Alias-Auflösung:** Filter-Rail (`tags[]=`) und Tag-Suche (`q_mode=tags`) lösen Aliase auf — ein Tag mit `alias_of=X` findet Bilder, die mit X getaggt sind, und umgekehrt. `POST /api/tags/merge` setzt `alias_of` und re-pointet alle `asset_tag`-Zeilen auf den Ziel-Tag.

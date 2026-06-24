@@ -33,8 +33,8 @@
     <div class="tags-list-head">
       <span></span>
       <span>Name</span>
-      <span class="tags-list-head__anzahl">Verwendungen</span>
-      <span class="tags-list-head__alias">Alias</span>
+      <span class="tags-list-head__anzahl">Verwendet</span>
+      <span class="tags-list-head__alias">Aliase (kommagetrennt)</span>
       <span></span>
     </div>
 
@@ -78,9 +78,36 @@
 
         <span class="tags-count">{{ tag.count }}</span>
 
-        <span class="tags-alias">
-          @if (tag.alias_of != null) { → #{{ tag.alias_of }} }
-        </span>
+        <div class="tags-alias-col">
+          @if (tag.alias_of != null) {
+            <span class="tags-alias-pointer">→ {{ (tagNameById().get(tag.alias_of) ?? '#' + tag.alias_of).replaceAll('_', ' ') }}</span>
+          } @else if (editingAliasTagId() === tag.id) {
+            <input
+              class="tags-alias-input"
+              [value]="aliasDraftText()"
+              (input)="aliasDraftText.set($any($event.target).value)"
+              (keydown)="onAliasKeyDown($event)"
+              (blur)="confirmAliasEdit()"
+              placeholder="alias1, alias2, …"
+              autofocus
+            />
+          } @else {
+            <span
+              class="tags-alias-chips"
+              [class.tags-alias-chips--empty]="tag.aliases.length === 0"
+              (click)="startAliasEdit(tag)"
+              title="Klicken zum Bearbeiten"
+            >
+              @if (tag.aliases.length > 0) {
+                @for (alias of tag.aliases; track alias) {
+                  <span class="tags-alias-chip">{{ alias.replaceAll('_', ' ') }}</span>
+                }
+              } @else {
+                <span class="tags-alias-none">—</span>
+              }
+            </span>
+          }
+        </div>
 
         <div class="tags-actions">
           <button

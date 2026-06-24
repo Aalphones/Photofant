@@ -60,6 +60,27 @@ export class TagsEffects {
     )
   );
 
+  readonly setAliases$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(tagsActions.setAliases),
+      mergeMap(({ id, names }) =>
+        this.tagService.setTagAliases(id, names).pipe(
+          map(() => tagsActions.setAliasesSuccess()),
+          catchError((error: HttpErrorResponse) =>
+            of(tagsActions.setAliasesFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly reloadAfterSetAliases$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(tagsActions.setAliasesSuccess),
+      map(() => tagsActions.load()),
+    )
+  );
+
   readonly bulkTag$ = createEffect(() =>
     this.actions$.pipe(
       ofType(tagsActions.bulkTag),
