@@ -58,11 +58,14 @@ def _hf_snapshot_sync(
     hf_repo: str,
     local_dir: Path,
     allow_patterns: list[str] | None = None,
+    model_format: str | None = None,
 ) -> None:
     """Download a HuggingFace repo snapshot to local_dir (blocking).
 
     If allow_patterns is given (from the manifest), only those files are fetched.
-    Otherwise a coarse ignore list strips non-ONNX weight formats.
+    For onnx_folder models without allow_patterns, a coarse ignore list strips
+    non-ONNX weight formats. For safetensors models no ignore list is applied
+    because the weights ARE safetensors files.
     """
     from huggingface_hub import snapshot_download
 
@@ -71,7 +74,8 @@ def _hf_snapshot_sync(
     if allow_patterns:
         kwargs["allow_patterns"] = allow_patterns
         log.info("HuggingFace snapshot (allow_patterns=%s): %s → %s", allow_patterns, hf_repo, local_dir)
-    else:
+    elif model_format == "onnx_folder":
+        # Strip PyTorch/TF weight formats — we only want ONNX files
         kwargs["ignore_patterns"] = [
             "*.bin",
             "*.safetensors",
@@ -81,6 +85,8 @@ def _hf_snapshot_sync(
             "tf_model*",
             "rust_model*",
         ]
+        log.info("HuggingFace snapshot (onnx_folder, ignore non-onnx): %s → %s", hf_repo, local_dir)
+    else:
         log.info("HuggingFace snapshot: %s → %s", hf_repo, local_dir)
     snapshot_download(**kwargs)  # type: ignore[arg-type]
     log.info("HuggingFace snapshot complete: %s → %s", hf_repo, local_dir)
@@ -281,7 +287,7 @@ async def run_download_job(status: JobStatus, manifest_id: str, models_dir: Path
     if entry.hf_repo:
         log.info("HuggingFace download: %s → %s", entry.hf_repo, model_dir)
         job_queue.update(status, progress=0.05, state=JobState.RUNNING)
-        await asyncio.to_thread(_hf_snapshot_sync, entry.hf_repo, model_dir, entry.hf_allow_patterns)
+        await asyncio.to_thread(_hf_snapshot_sync, entry.hf_repo, model_dir, entry.hf_allow_patterns, entry.format)
         job_queue.update(status, progress=0.95, state=JobState.RUNNING)
         registry_path = str(model_dir)
 
