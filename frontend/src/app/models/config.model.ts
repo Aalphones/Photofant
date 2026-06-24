@@ -18,6 +18,7 @@ export interface ProcessingConfig {
   autoTag: boolean;
   autoCaption: boolean;
   autoEmbed: boolean;
+  activeCaptioner: string;
   minProbability: number;
   maxTags: number;
   blurThreshold: number;
@@ -34,6 +35,7 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   autoTag: true,
   autoCaption: true,
   autoEmbed: true,
+  activeCaptioner: 'florence-2-base',
   minProbability: 0.5,
   maxTags: 30,
   blurThreshold: 200.0,

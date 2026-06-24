@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, linkedSignal } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { ProcessingConfig } from '@photofant/models';
+import type { ModelDto, ProcessingConfig } from '@photofant/models';
 import { modelsActions, modelsSelectors } from '@photofant/store';
 
 @Component({
@@ -14,6 +14,11 @@ export class Verarbeitung {
   private readonly store = inject(Store);
 
   readonly processingConfig = this.store.selectSignal(modelsSelectors.selectProcessingConfig);
+  private readonly allModels = this.store.selectSignal(modelsSelectors.selectModels);
+
+  readonly captionerOptions = computed((): ModelDto[] =>
+    this.allModels().filter((model: ModelDto) => model.caption_mode != null)
+  );
 
   // linkedSignals: zeigen Store-Werte an, akzeptieren temporäre Eingaben während des Ziehens
   protected readonly dupeThresholdDisplay       = linkedSignal(() => this.processingConfig().dupeThreshold);
@@ -63,11 +68,16 @@ export class Verarbeitung {
   constructor() {
     effect(() => {
       this.store.dispatch(modelsActions.loadConfig());
+      this.store.dispatch(modelsActions.loadModels());
     });
   }
 
   patchProcessingConfig(patch: Partial<ProcessingConfig>): void {
     this.store.dispatch(modelsActions.updateProcessingConfig({ patch }));
+  }
+
+  onActiveCaptionerChange(manifestId: string): void {
+    this.patchProcessingConfig({ activeCaptioner: manifestId });
   }
 
   onMinProbabilityChange(target: HTMLInputElement): void {

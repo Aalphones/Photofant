@@ -40,22 +40,28 @@ class _CaptionerInfo:
 
 
 def _resolve_active_captioner() -> _CaptionerInfo | None:
-    """Return info about the active captioner, preferring heavy models over Florence."""
+    """Return info about the configured active captioner (from settings.active_captioner)."""
+    from photofant.settings import load_settings
+
+    settings = load_settings()
+    preferred_id: str = settings.get("active_captioner", "florence-2-base")  # type: ignore[misc]
+
     with SessionLocal() as session:
-        rows = (
+        row = (
             session.query(ModelRegistry)
-            .filter(ModelRegistry.caption_mode.isnot(None), ModelRegistry.enabled.is_(True))
-            .all()
+            .filter_by(manifest_id=preferred_id, enabled=True)
+            .first()
         )
-        if not rows:
+        if row is None:
+            log.info(
+                "Configured captioner %r not enabled or not registered — skipping caption",
+                preferred_id,
+            )
             return None
-        # Prefer heavy captioners over Florence (heavy means non-task_token).
-        heavy = [row for row in rows if row.caption_mode != CaptionMode.TASK_TOKEN]
-        selected = heavy[0] if heavy else rows[0]
         return _CaptionerInfo(
-            model_db_id=selected.id,
-            manifest_id=selected.manifest_id,
-            caption_mode=selected.caption_mode or CaptionMode.TASK_TOKEN,
+            model_db_id=row.id,
+            manifest_id=row.manifest_id,
+            caption_mode=row.caption_mode or CaptionMode.TASK_TOKEN,
         )
 
 

@@ -32,6 +32,19 @@
 }
 .verarbeitung__btn:hover:not(:disabled) { background: var(--accent-press); }
 .verarbeitung__btn:disabled { opacity: .5; cursor: not-allowed; }
+.verarbeitung__captioner-auswahl {
+  margin-top: 8px;
+  height: 32px;
+  padding: 0 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  &:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+}
 .verarbeitung__warnung {
   margin-top: 6px;
   padding: 5px 8px;

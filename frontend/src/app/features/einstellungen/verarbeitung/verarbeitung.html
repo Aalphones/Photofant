@@ -22,8 +22,22 @@
   </div>
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">
     <div class="verarbeitung__zeile-inhalt">
-      <div class="verarbeitung__zeile-titel">Auto-Caption (Florence-2)</div>
+      <div class="verarbeitung__zeile-titel">Auto-Caption</div>
       <div class="verarbeitung__zeile-sub">Beim Import automatisch Bildbeschreibungen generieren.</div>
+      @if (processingConfig().autoCaption && captionerOptions().length > 0) {
+        <select
+          class="verarbeitung__captioner-auswahl"
+          [value]="processingConfig().activeCaptioner"
+          (change)="onActiveCaptionerChange($any($event.target).value)"
+        >
+          @for (model of captionerOptions(); track model.id) {
+            <option
+              [value]="model.id"
+              [disabled]="model.status !== 'active' && model.status !== 'inplace'"
+            >{{ model.name }}{{ (model.status !== 'active' && model.status !== 'inplace') ? ' (nicht installiert)' : '' }}</option>
+          }
+        </select>
+      }
     </div>
     <div class="verarbeitung__zeile-steuerung">
       <button

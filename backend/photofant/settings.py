@@ -35,6 +35,7 @@ class AppSettings(TypedDict):
     auto_caption: bool
     auto_embed: bool
     auto_face: bool
+    active_captioner: str
     min_probability: float
     max_tags: int
     tagging_threshold: float  # deprecated — kept for backward-compatible loading
@@ -63,6 +64,7 @@ SETTINGS_DEFAULTS: AppSettings = {
     "auto_caption": True,
     "auto_embed": True,
     "auto_face": True,
+    "active_captioner": "florence-2-base",
     "min_probability": 0.5,
     "max_tags": 30,
     "tagging_threshold": 0.35,
@@ -101,6 +103,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "auto_caption": bool,
     "auto_embed": bool,
     "auto_face": bool,
+    "active_captioner": str,
     "min_probability": (float, int),
     "max_tags": int,
     "tagging_threshold": (float, int),
