@@ -1,0 +1,191 @@
+@if (isScanning()) {
+  <div class="rr__loading">
+    <div class="rr__spinner"></div>
+    Scan läuft…
+  </div>
+} @else if (!report() || !report()!.generated_at) {
+  <div class="rr__empty">
+    <pf-icon name="search" [size]="40" />
+    <div class="rr__empty-title">Kein Scan-Ergebnis vorhanden</div>
+    <div class="rr__empty-hint">
+      Vergleicht Dateisystem mit Datenbank — findet verwaiste, fehlende und verschobene Dateien.
+    </div>
+    <button class="rr__scan-btn" (click)="triggerScan()">Scan starten</button>
+  </div>
+} @else if (totalIssues() === 0) {
+  <div class="rr__ok">
+    <pf-icon name="check" [size]="40" />
+    <div class="rr__ok-title">Alles in Ordnung</div>
+    <div class="rr__ok-sub">Scan vom {{ report()!.generated_at | date:'dd.MM.yyyy HH:mm' }} — keine Abweichungen.</div>
+    <button class="rr__scan-btn rr__scan-btn--sec" (click)="triggerScan()">Erneut scannen</button>
+  </div>
+} @else {
+  <!-- Header -->
+  <div class="rr__header">
+    <span class="rr__meta">
+      Letzter Scan: {{ report()!.generated_at | date:'dd.MM.yyyy HH:mm' }} ·
+      {{ totalIssues() }} Abweichung{{ totalIssues() !== 1 ? 'en' : '' }}
+    </span>
+    <button class="rr__scan-btn rr__scan-btn--sec" [disabled]="isScanning()" (click)="triggerScan()">
+      Erneut scannen
+    </button>
+  </div>
+
+  <div class="rr__sections">
+
+    <!-- Verwaiste Dateien -->
+    @if (orphanCount() > 0) {
+      <section class="rr__section">
+        <div class="rr__section-head">
+          <div class="rr__section-title">
+            <span class="rr__badge rr__badge--warn">{{ orphanCount() }}</span>
+            Verwaiste Dateien
+          </div>
+          <div class="rr__section-sub">Auf der Festplatte vorhanden, aber nicht in der Datenbank.</div>
+        </div>
+
+        <div class="rr__bulk-bar">
+          <label class="rr__check-all">
+            <input type="checkbox" [checked]="allOrphansSelected()" (change)="toggleAllOrphans()" />
+            Alle auswählen
+          </label>
+          @if (selOrphanCount() > 0) {
+            <span class="rr__sel-count">{{ selOrphanCount() }} ausgewählt</span>
+            <button class="rr__bulk-btn rr__bulk-btn--primary" [disabled]="isRepairing()" (click)="indexSelectedOrphans()">
+              <pf-icon name="plus" [size]="13" />
+              Indizieren
+            </button>
+            <button class="rr__bulk-btn rr__bulk-btn--danger" [disabled]="isRepairing()" (click)="trashSelectedOrphans()">
+              <pf-icon name="trash" [size]="13" />
+              In Papierkorb
+            </button>
+          }
+        </div>
+
+        <div class="rr__list">
+          @for (item of report()!.orphaned_files; track item.path) {
+            <div class="rr__row" [class.rr__row--selected]="isOrphanSelected(item.path)">
+              <input
+                type="checkbox"
+                class="rr__row-check"
+                [checked]="isOrphanSelected(item.path)"
+                (change)="toggleOrphan(item.path)"
+              />
+              <div class="rr__row-info">
+                <span class="rr__row-name">{{ fileName(item.path) }}</span>
+                <span class="rr__row-meta">{{ folderLabel(item.path) }}</span>
+              </div>
+              <div class="rr__row-actions">
+                <button class="rr__act-btn rr__act-btn--primary" [disabled]="isRepairing()" (click)="repairOrphan(item.path, 'index')">
+                  Indizieren
+                </button>
+                <button class="rr__act-btn rr__act-btn--danger" [disabled]="isRepairing()" (click)="repairOrphan(item.path, 'trash')">
+                  Papierkorb
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Fehlende Dateien -->
+    @if (missingCount() > 0) {
+      <section class="rr__section">
+        <div class="rr__section-head">
+          <div class="rr__section-title">
+            <span class="rr__badge rr__badge--danger">{{ missingCount() }}</span>
+            Fehlende Dateien
+          </div>
+          <div class="rr__section-sub">In der Datenbank registriert, aber nicht mehr auf der Festplatte.</div>
+        </div>
+
+        <div class="rr__bulk-bar">
+          <label class="rr__check-all">
+            <input type="checkbox" [checked]="allMissingSelected()" (change)="toggleAllMissing()" />
+            Alle auswählen
+          </label>
+          @if (selMissingCount() > 0) {
+            <span class="rr__sel-count">{{ selMissingCount() }} ausgewählt</span>
+            <button class="rr__bulk-btn rr__bulk-btn--danger" [disabled]="isRepairing()" (click)="markSelectedMissing()">
+              <pf-icon name="x" [size]="13" />
+              Als fehlend markieren
+            </button>
+          }
+        </div>
+
+        <div class="rr__list">
+          @for (item of report()!.missing_files; track item.instance_id) {
+            <div class="rr__row" [class.rr__row--selected]="isMissingSelected(item.instance_id)">
+              <input
+                type="checkbox"
+                class="rr__row-check"
+                [checked]="isMissingSelected(item.instance_id)"
+                (change)="toggleMissing(item.instance_id)"
+              />
+              <div class="rr__row-info">
+                <span class="rr__row-name">{{ fileName(item.path) }}</span>
+                <span class="rr__row-meta">{{ item.person_name ?? '_unknown' }}</span>
+              </div>
+              <div class="rr__row-actions">
+                <button class="rr__act-btn rr__act-btn--danger" [disabled]="isRepairing()" (click)="repairMissing(item.instance_id)">
+                  Als fehlend markieren
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Pfad-Drift -->
+    @if (driftCount() > 0) {
+      <section class="rr__section">
+        <div class="rr__section-head">
+          <div class="rr__section-title">
+            <span class="rr__badge rr__badge--info">{{ driftCount() }}</span>
+            Pfad-Verschiebungen
+          </div>
+          <div class="rr__section-sub">Gleicher Inhalt, anderer Speicherort als in der Datenbank.</div>
+        </div>
+
+        <div class="rr__bulk-bar">
+          <label class="rr__check-all">
+            <input type="checkbox" [checked]="allDriftSelected()" (change)="toggleAllDrift()" />
+            Alle auswählen
+          </label>
+          @if (selDriftCount() > 0) {
+            <span class="rr__sel-count">{{ selDriftCount() }} ausgewählt</span>
+            <button class="rr__bulk-btn rr__bulk-btn--primary" [disabled]="isRepairing()" (click)="fixSelectedDrift()">
+              <pf-icon name="check" [size]="13" />
+              Pfad korrigieren
+            </button>
+          }
+        </div>
+
+        <div class="rr__list">
+          @for (item of report()!.path_drift; track item.instance_id) {
+            <div class="rr__row" [class.rr__row--selected]="isDriftSelected(item.instance_id)">
+              <input
+                type="checkbox"
+                class="rr__row-check"
+                [checked]="isDriftSelected(item.instance_id)"
+                (change)="toggleDrift(item.instance_id)"
+              />
+              <div class="rr__row-info">
+                <span class="rr__row-name">{{ fileName(item.found_path) }}</span>
+                <span class="rr__row-meta">{{ item.person_name ?? '_unknown' }} · war: {{ fileName(item.db_path) }}</span>
+              </div>
+              <div class="rr__row-actions">
+                <button class="rr__act-btn rr__act-btn--primary" [disabled]="isRepairing()" (click)="repairDrift(item.instance_id, item.found_path)">
+                  Pfad korrigieren
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+  </div>
+}

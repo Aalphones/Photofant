@@ -38,6 +38,7 @@ from photofant.config import get_models_dir
 from photofant.inference.generative_engine import generative_engine
 from photofant.inference.session_manager import session_manager
 from photofant.jobs.download_job import scan_models_dir
+from photofant.jobs.face_folder_scan_job import enqueue_face_folder_scan
 from photofant.jobs.queue import job_queue
 from photofant.models.loader import load_manifest
 from photofant.settings import ensure_settings_file
@@ -68,6 +69,11 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         log.info("Auto-scan: %d model(s) registered from %s", len(found), models_dir)
     else:
         log.debug("Auto-scan: no matching models found in %s", models_dir)
+
+    # Scan person face folders for manually placed images not yet in the DB.
+    from photofant.config import get_data_root
+    await enqueue_face_folder_scan(get_data_root())
+
     eviction_task = asyncio.create_task(_idle_eviction_loop())
     yield
     log.info("Shutting down Photofant backend")

@@ -19,6 +19,12 @@ log = logging.getLogger(__name__)
 
 _PHOTOFANT_DIRNAME = ".photofant"
 
+# Subdirectory names that are NOT tracked by asset_instance and must be
+# excluded from the reconcile walk to avoid false orphan reports.
+# - faces/  → tracked via Face.crop_path (managed by face_job + face_folder_scan_job)
+# - edits/  → tracked via Version.path (managed by edit pipeline)
+_EXCLUDED_SUBDIRS = {"faces", "edits"}
+
 
 def _gather_active_instances() -> list[InstanceRecord]:
     """Active rows (not soft-deleted, not already acknowledged-missing)."""
@@ -52,11 +58,20 @@ def _gather_active_instances() -> list[InstanceRecord]:
 
 
 def _walk_data_root(data_root: Path) -> list[Path]:
-    """All supported image files under data_root, excluding the `.photofant/` subtree."""
+    """All supported image files under data_root, excluding managed subtrees.
+
+    Pruned directories:
+      .photofant/ — trash, backups, cache
+      faces/      — face crops tracked via Face.crop_path, not AssetInstance
+      edits/      — edited versions tracked via Version.path, not AssetInstance
+    """
     found: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(data_root):
         if _PHOTOFANT_DIRNAME in dirnames:
-            dirnames.remove(_PHOTOFANT_DIRNAME)  # prune trash/backups/cache
+            dirnames.remove(_PHOTOFANT_DIRNAME)
+        for excluded in _EXCLUDED_SUBDIRS:
+            if excluded in dirnames:
+                dirnames.remove(excluded)
         for filename in filenames:
             if Path(filename).suffix.lower() in SUPPORTED_EXTENSIONS:
                 found.append(Path(dirpath) / filename)

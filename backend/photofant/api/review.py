@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root
@@ -93,12 +93,40 @@ async def list_dupe_pairs(session: DbSession) -> list[DupePairDto]:
         .all()
     )
     result: list[DupePairDto] = []
+    auto_resolved: list[ReviewItem] = []
+
     for item, asset_a in rows:
         asset_b = session.get(Asset, item.asset_b_id)
         if asset_b is None:
             log.warning("review_item %d references missing asset_b %d — skipping", item.id, item.asset_b_id)
             continue
+
+        a_active: int = session.scalar(
+            select(func.count())
+            .select_from(AssetInstance)
+            .where(AssetInstance.asset_id == asset_a.id, AssetInstance.deleted_at.is_(None))
+        ) or 0
+        b_active: int = session.scalar(
+            select(func.count())
+            .select_from(AssetInstance)
+            .where(AssetInstance.asset_id == asset_b.id, AssetInstance.deleted_at.is_(None))
+        ) or 0
+
+        if a_active == 0 or b_active == 0:
+            log.info(
+                "review_item %d auto-resolved: asset_a active=%d asset_b active=%d (in trash)",
+                item.id, a_active, b_active,
+            )
+            item.resolved_at = _now_utc()
+            item.resolution = "auto_trashed"
+            auto_resolved.append(item)
+            continue
+
         result.append(_to_pair_dto(item, asset_a, asset_b))
+
+    if auto_resolved:
+        session.commit()
+
     return result
 
 
@@ -130,11 +158,12 @@ async def resolve_dupe(item_id: int, body: ResolveRequest, session: DbSession) -
             .where(AssetInstance.deleted_at.is_(None))
         ).scalar_one_or_none()
         if instance is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Active instance for asset {target_asset.id} not found",
+            log.info(
+                "resolve_dupe %d (%s): asset %d already in trash — marking resolved without move",
+                item_id, resolution, target_asset.id,
             )
-        await moves.soft_delete(session, instance, data_root)
+        else:
+            await moves.soft_delete(session, instance, data_root)
     # dismiss: no asset modification
 
     item.resolved_at = _now_utc()

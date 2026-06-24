@@ -1,0 +1,270 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+}
+
+.ru__loading,
+.ru__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.ru__empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.ru__empty-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+  max-width: 320px;
+}
+
+// Toolbar
+.ru__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+  flex-wrap: wrap;
+}
+
+.ru__count {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-right: auto;
+}
+
+.ru__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ru__sel-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.ru__btn-sec {
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text-2);
+
+  &:hover {
+    background: var(--surface-2);
+  }
+}
+
+.ru__btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.ru__btn-danger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  background: var(--danger, #e53e3e);
+  color: #fff;
+  border-radius: 6px;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+// Assign panel
+.ru__assign-wrap {
+  position: relative;
+}
+
+.ru__assign-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  width: 240px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.ru__assign-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ru__assign-input {
+  flex: 1;
+  font-size: 12px;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+}
+
+.ru__assign-close {
+  color: var(--text-3);
+  &:hover { color: var(--text); }
+}
+
+.ru__assign-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ru__assign-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  text-align: left;
+
+  &:hover {
+    background: var(--surface-2);
+  }
+}
+
+.ru__assign-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.ru__assign-ct {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.ru__assign-empty {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+// Grid
+.ru__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 4px;
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ru__cell {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.1s;
+
+  &--selected {
+    border-color: var(--accent);
+
+    .ru__check {
+      color: var(--accent);
+      background: rgba(255, 255, 255, 0.9);
+    }
+  }
+
+  &:hover {
+    .ru__check {
+      opacity: 1;
+    }
+  }
+}
+
+.ru__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ru__check {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  color: var(--text-3);
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  line-height: 0;
+
+  .ru__cell--selected & {
+    opacity: 1;
+  }
+}
+
+// Pagination
+.ru__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+  flex: none;
+}
+
+.ru__page-btn {
+  color: var(--text-2);
+  padding: 4px 8px;
+  border-radius: 4px;
+
+  &:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.ru__page-label {
+  font-size: 12px;
+  color: var(--text-3);
+}

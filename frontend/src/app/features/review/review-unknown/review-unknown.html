@@ -1,0 +1,94 @@
+@if (isLoading() && faces().length === 0) {
+  <div class="ru__loading">Lade unbekannte Gesichter…</div>
+} @else if (!isLoading() && faces().length === 0) {
+  <div class="ru__empty">
+    <pf-icon name="face" [size]="40" />
+    <div class="ru__empty-title">Keine unbekannten Gesichter</div>
+    <div class="ru__empty-hint">Alle erkannten Gesichter sind bereits einer Person zugeordnet.</div>
+  </div>
+} @else {
+  <!-- Toolbar -->
+  <div class="ru__toolbar">
+    <span class="ru__count">{{ total() }} Gesicht{{ total() !== 1 ? 'er' : '' }} ohne Zuordnung</span>
+
+    <div class="ru__toolbar-actions">
+      <button class="ru__btn-sec" (click)="toggleAll()">
+        {{ allSelected() ? 'Auswahl aufheben' : 'Alle auswählen' }}
+      </button>
+
+      @if (selectedCount() > 0) {
+        <span class="ru__sel-label">{{ selectedCount() }} ausgewählt</span>
+
+        <div class="ru__assign-wrap">
+          <button class="ru__btn-primary" (click)="openAssignPanel()">
+            <pf-icon name="person" [size]="14" />
+            Person zuweisen
+          </button>
+
+          @if (showAssignPanel()) {
+            <div class="ru__assign-panel">
+              <div class="ru__assign-search-row">
+                <pf-icon name="search" [size]="13" />
+                <input
+                  class="ru__assign-input"
+                  placeholder="Person suchen…"
+                  [value]="assignQuery()"
+                  (input)="assignQuery.set($any($event.target).value)"
+                  autofocus
+                />
+                <button class="ru__assign-close" (click)="closeAssignPanel()">
+                  <pf-icon name="x" [size]="13" />
+                </button>
+              </div>
+              <div class="ru__assign-list">
+                @for (person of filteredPersons().slice(0, 8); track person.id) {
+                  <button class="ru__assign-row" (click)="assignSelectedTo(person.id)">
+                    <span class="ru__assign-name">{{ person.name }}</span>
+                    <span class="ru__assign-ct">{{ person.count }}</span>
+                  </button>
+                }
+                @if (filteredPersons().length === 0) {
+                  <div class="ru__assign-empty">Keine Person gefunden</div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <button class="ru__btn-danger" (click)="deleteSelected()">
+          <pf-icon name="trash" [size]="14" />
+          Löschen
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="ru__grid">
+    @for (face of faces(); track face.id) {
+      <div
+        class="ru__cell"
+        [class.ru__cell--selected]="isSelected(face.id)"
+        (click)="toggleSelect(face.id)"
+      >
+        <img class="ru__thumb" [src]="face.thumbnail_url" alt="" loading="lazy" />
+        <div class="ru__check">
+          <pf-icon [name]="isSelected(face.id) ? 'checkSquare' : 'square'" [size]="16" />
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Pagination -->
+  @if (totalPages() > 1) {
+    <div class="ru__pagination">
+      <button class="ru__page-btn" [disabled]="page() <= 1" (click)="goPage(page() - 1)">
+        <pf-icon name="arrowLeft" [size]="14" />
+      </button>
+      <span class="ru__page-label">Seite {{ page() }} von {{ totalPages() }}</span>
+      <button class="ru__page-btn" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">
+        <pf-icon name="arrowRight" [size]="14" />
+      </button>
+    </div>
+  }
+}

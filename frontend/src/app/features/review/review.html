@@ -8,10 +8,24 @@
   </button>
   <button
     class="review__tab"
+    [class.review__tab--active]="activeTab() === 'unbekannt'"
+    (click)="goTab('unbekannt')"
+  >
+    Unbekannte Gesichter
+  </button>
+  <button
+    class="review__tab"
     [class.review__tab--active]="activeTab() === 'duplikate'"
     (click)="goTab('duplikate')"
   >
     Duplikate
+  </button>
+  <button
+    class="review__tab"
+    [class.review__tab--active]="activeTab() === 'abgleich'"
+    (click)="goTab('abgleich')"
+  >
+    Dateien-Abgleich
   </button>
 </div>
 
@@ -21,5 +35,11 @@
   }
   @case ('gesichter') {
     <pf-review-faces />
+  }
+  @case ('unbekannt') {
+    <pf-review-unknown />
+  }
+  @case ('abgleich') {
+    <pf-review-reconcile />
   }
 }
