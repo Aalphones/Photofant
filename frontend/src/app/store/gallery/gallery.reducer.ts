@@ -3,7 +3,7 @@ import { createFeature, createReducer, on } from '@ngrx/store';
 import type { AssetDto, Facets, FaceGalleryItemDto } from '@photofant/models';
 import { galleryActions } from './gallery.actions';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 100;
 
 export interface GalleryState extends EntityState<AssetDto> {
   total: number;
@@ -47,6 +47,10 @@ export const galleryFeature = createFeature({
   name: 'gallery',
   reducer: createReducer(
     initialState,
+    on(galleryActions.setPageSize, (state: GalleryState, { pageSize }) => ({
+      ...state,
+      pageSize,
+    })),
     on(galleryActions.requestPage, (state: GalleryState) => ({
       ...state,
       isLoading: true,

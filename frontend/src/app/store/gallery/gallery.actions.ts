@@ -4,6 +4,7 @@ import type { AssetDto, Facets, FaceGalleryItemDto } from '@photofant/models';
 export const galleryActions = createActionGroup({
   source: 'Gallery',
   events: {
+    'Set Page Size':             props<{ pageSize: number }>(),
     'Request Page':              emptyProps(),
     // Album lightbox: inject ordered context so prev/next navigates within the album
     'Set Lightbox Context':      props<{ assets: AssetDto[] }>(),

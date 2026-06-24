@@ -35,6 +35,23 @@
       ><i></i></button>
     </div>
   </div>
+  <div class="darstellung__zeile">
+    <div class="darstellung__zeile-inhalt">
+      <div class="darstellung__zeile-titel">Bilder pro Seite</div>
+      <div class="darstellung__zeile-sub">Wie viele Bilder pro Ladeschritt in der Galerie geladen werden.</div>
+    </div>
+    <div class="darstellung__zeile-steuerung">
+      <select
+        class="darstellung__auswahl"
+        [value]="displaySettings().galleryPageSize"
+        (change)="setGalleryPageSize(+$any($event.target).value)"
+      >
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+      </select>
+    </div>
+  </div>
 </div>
 
 <div class="darstellung__gruppen-label">Sprache & Region</div>

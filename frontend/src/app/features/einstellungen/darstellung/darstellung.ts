@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import type { Density } from '@photofant/models';
-import type { DateFormat, Locale } from '@photofant/services';
+import type { DateFormat, GalleryPageSize, Locale } from '@photofant/services';
 import { SettingsService } from '@photofant/services';
-import { filtersActions } from '@photofant/store';
+import { filtersActions, galleryActions } from '@photofant/store';
 
 @Component({
   selector: 'pf-einstellungen-darstellung',
@@ -36,5 +36,9 @@ export class Darstellung {
 
   setDateFormat(value: DateFormat): void {
     this.settings.setDateFormat(value);
+  }
+
+  setGalleryPageSize(value: number): void {
+    this.store.dispatch(galleryActions.setPageSize({ pageSize: value as GalleryPageSize }));
   }
 }

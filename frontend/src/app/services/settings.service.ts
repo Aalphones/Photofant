@@ -5,12 +5,15 @@ import type { Density } from '@photofant/models';
 export type Locale = 'de' | 'en';
 export type DateFormat = 'dmy' | 'ymd' | 'mdy';
 
+export type GalleryPageSize = 50 | 100 | 200;
+
 interface DisplaySettings {
   showMeta: boolean;
   reducedMotion: boolean;
   locale: Locale;
   dateFormat: DateFormat;
   density: Density;
+  galleryPageSize: GalleryPageSize;
 }
 
 const STORAGE_KEY = 'pf-display-settings';
@@ -21,6 +24,7 @@ const DEFAULTS: DisplaySettings = {
   locale: 'de',
   dateFormat: 'dmy',
   density: 'md',
+  galleryPageSize: 100,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +39,7 @@ export class SettingsService {
   readonly locale = () => this.state().locale;
   readonly dateFormat = () => this.state().dateFormat;
   readonly density = () => this.state().density;
+  readonly galleryPageSize = () => this.state().galleryPageSize;
 
   readonly snapshot = this.state.asReadonly();
 
@@ -56,6 +61,10 @@ export class SettingsService {
 
   setDensity(value: Density): void {
     this.patch({ density: value });
+  }
+
+  setGalleryPageSize(value: GalleryPageSize): void {
+    this.patch({ galleryPageSize: value });
   }
 
   private patch(partial: Partial<DisplaySettings>): void {

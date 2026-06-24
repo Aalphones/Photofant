@@ -28,10 +28,25 @@ export class GalleryEffects {
     )
   );
 
+  readonly initPageSize$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ROOT_EFFECTS_INIT),
+      map(() => galleryActions.setPageSize({ pageSize: this.settingsService.galleryPageSize() })),
+    )
+  );
+
   readonly saveDensity$ = createEffect(() =>
     this.actions$.pipe(
       ofType(filtersActions.setDensity),
       tap(({ density }) => { this.settingsService.setDensity(density); }),
+    ),
+    { dispatch: false }
+  );
+
+  readonly savePageSize$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(galleryActions.setPageSize),
+      tap(({ pageSize }) => { this.settingsService.setGalleryPageSize(pageSize as 50 | 100 | 200); }),
     ),
     { dispatch: false }
   );
@@ -54,6 +69,7 @@ export class GalleryEffects {
         searchActions.setQuery,
         searchActions.setMode,
         searchActions.clear,
+        galleryActions.setPageSize,
       ),
       map(() => galleryActions.reset()),
     )

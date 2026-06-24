@@ -12,7 +12,7 @@ export { TagService } from './tag.service';
 export type { MergeTagsRequest, BulkTagRequest } from './tag.service';
 export { CollectionService } from './collection.service';
 export { SettingsService } from './settings.service';
-export type { Locale, DateFormat } from './settings.service';
+export type { Locale, DateFormat, GalleryPageSize } from './settings.service';
 export { ReviewService } from './review.service';
 export { PersonService } from './person.service';
 export { EditSessionService } from './edit-session.service';
