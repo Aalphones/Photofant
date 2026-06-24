@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-from photofant.db.models import Face, Person, ProcessingLedger
+from photofant.db.models import AssetInstance, Face, Person, ProcessingLedger
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
@@ -159,6 +159,20 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
             return
         unknown_person_id = unknown_person.id
 
+        # Single face + fixed_person upload → assign directly to the known person.
+        fixed_person_id: int | None = None
+        if len(faces) == 1:
+            from sqlalchemy import select as sa_select
+            fixed_instance = session.scalar(
+                sa_select(AssetInstance).where(
+                    AssetInstance.asset_id == asset_id,
+                    AssetInstance.fixed_person.is_(True),
+                    AssetInstance.deleted_at.is_(None),
+                )
+            )
+            if fixed_instance is not None:
+                fixed_person_id = fixed_instance.person_id
+
     for face_index, face_dict in enumerate(faces):
         bbox = face_dict["bbox"]
         score = face_dict.get("score")
@@ -181,7 +195,7 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         with SessionLocal() as session:
             face_row = Face(
                 asset_id=asset_id,
-                person_id=unknown_person_id,
+                person_id=fixed_person_id if fixed_person_id is not None else unknown_person_id,
                 crop_path=str(crop_path.resolve()),
                 bbox={"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3]},
                 padding=padding,
