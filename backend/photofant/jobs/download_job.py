@@ -92,6 +92,42 @@ def _hf_snapshot_sync(
     log.info("HuggingFace snapshot complete: %s → %s", hf_repo, local_dir)
 
 
+async def _hf_download_files_resumable(
+    hf_repo: str,
+    filenames: list[str],
+    local_dir: Path,
+    status: JobStatus,
+    progress_base: float,
+    progress_span: float,
+) -> None:
+    """Download a fixed list of HuggingFace files via httpx with Range-resume.
+
+    Preferred over snapshot_download when exact filenames are known: each file is
+    written to a .partial temp and resumes on restart. HuggingFace Hub uses
+    process-unique UUID temp files that are deleted on failure — no byte-level resume.
+    """
+    from huggingface_hub import hf_hub_url
+
+    total_files = len(filenames)
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+        for file_index, filename in enumerate(filenames):
+            file_progress_base = progress_base + (file_index / total_files) * progress_span
+            file_progress_span = progress_span / total_files
+            url = hf_hub_url(hf_repo, filename)
+            dest = local_dir / filename
+            log.info("HuggingFace file: %s/%s → %s", hf_repo, filename, dest)
+            await _download_http_file(
+                client=client,
+                url=url,
+                dest=dest,
+                expected_sha256=None,
+                label=f"{hf_repo}/{filename}",
+                status=status,
+                progress_base=file_progress_base,
+                progress_span=file_progress_span,
+            )
+
+
 def _upsert_registry_row(
     session: Session,
     entry: ManifestEntry,
@@ -287,7 +323,19 @@ async def run_download_job(status: JobStatus, manifest_id: str, models_dir: Path
     if entry.hf_repo:
         log.info("HuggingFace download: %s → %s", entry.hf_repo, model_dir)
         job_queue.update(status, progress=0.05, state=JobState.RUNNING)
-        await asyncio.to_thread(_hf_snapshot_sync, entry.hf_repo, model_dir, entry.hf_allow_patterns, entry.format)
+        if entry.hf_allow_patterns:
+            # Exact filenames known: use httpx with Range-resume (survives app restart)
+            await _hf_download_files_resumable(
+                hf_repo=entry.hf_repo,
+                filenames=entry.hf_allow_patterns,
+                local_dir=model_dir,
+                status=status,
+                progress_base=0.05,
+                progress_span=0.90,
+            )
+        else:
+            # No pattern list: fall back to snapshot_download (no byte-level resume for partials)
+            await asyncio.to_thread(_hf_snapshot_sync, entry.hf_repo, model_dir, None, entry.format)
         job_queue.update(status, progress=0.95, state=JobState.RUNNING)
         registry_path = str(model_dir)
 
