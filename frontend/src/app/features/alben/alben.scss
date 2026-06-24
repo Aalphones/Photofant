@@ -226,20 +226,6 @@
   &--danger:hover { color: var(--danger); border-color: var(--danger); }
 }
 
-.member-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  gap: 0.5rem;
-
-  .tile {
-    aspect-ratio: 1;
-    border-radius: var(--radius-s);
-    overflow: hidden;
-    background: var(--surface-2);
-
-    img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  }
-}
 
 .placeholder-view {
   display: flex;

@@ -14,6 +14,7 @@ const {
   selectIsLoading,
   selectError,
   selectLightboxId,
+  selectLightboxContextIds,
   selectFacets,
   selectSelectionMode,
   selectSelectedIds,
@@ -108,24 +109,31 @@ const selectLightboxAsset = createSelector(
   (entities, lightboxId) => (lightboxId != null ? (entities[lightboxId] ?? null) : null),
 );
 
-const selectLightboxCurrentIndex = createSelector(
+const selectLightboxHasPrev = createSelector(
   selectAll,
   selectLightboxId,
-  (assets: AssetDto[], lightboxId: number | null) =>
-    lightboxId != null ? assets.findIndex((asset: AssetDto) => asset.id === lightboxId) : -1,
-);
-
-const selectLightboxHasPrev = createSelector(
-  selectLightboxCurrentIndex,
-  (index: number) => index > 0,
+  selectLightboxContextIds,
+  (assets: AssetDto[], lightboxId: number | null, contextIds: number[] | null) => {
+    const list = contextIds != null
+      ? contextIds.map((id: number) => assets.find((asset: AssetDto) => asset.id === id)).filter((asset): asset is AssetDto => asset != null)
+      : assets;
+    const index = lightboxId != null ? list.findIndex((asset: AssetDto) => asset.id === lightboxId) : -1;
+    return index > 0;
+  },
 );
 
 const selectLightboxHasNext = createSelector(
   selectAll,
-  selectLightboxCurrentIndex,
+  selectLightboxId,
   selectHasMore,
-  (assets: AssetDto[], index: number, hasMore: boolean) =>
-    index >= 0 && (index < assets.length - 1 || hasMore),
+  selectLightboxContextIds,
+  (assets: AssetDto[], lightboxId: number | null, hasMore: boolean, contextIds: number[] | null) => {
+    const list = contextIds != null
+      ? contextIds.map((id: number) => assets.find((asset: AssetDto) => asset.id === id)).filter((asset): asset is AssetDto => asset != null)
+      : assets;
+    const index = lightboxId != null ? list.findIndex((asset: AssetDto) => asset.id === lightboxId) : -1;
+    return index >= 0 && (index < list.length - 1 || (contextIds == null && hasMore));
+  },
 );
 
 const selectLightboxNavContext = createSelector(
@@ -133,8 +141,9 @@ const selectLightboxNavContext = createSelector(
   selectLightboxId,
   selectHasMore,
   selectIsLoading,
-  (assets: AssetDto[], lightboxId: number | null, hasMore: boolean, isLoading: boolean) =>
-    ({ assets, lightboxId, hasMore, isLoading }),
+  selectLightboxContextIds,
+  (assets: AssetDto[], lightboxId: number | null, hasMore: boolean, isLoading: boolean, contextIds: number[] | null) =>
+    ({ assets, lightboxId, hasMore, isLoading, contextIds }),
 );
 
 const selectHashMap = createSelector(

@@ -1,3 +1,7 @@
+@if (lightboxId() !== null) {
+  <pf-lightbox />
+}
+
 @if (openCollection(); as col) {
   <!-- ───────────────── Detail ───────────────── -->
   <div class="alb-detail" [class.alb-detail--settings]="settingsOpen()">
@@ -59,13 +63,7 @@
           </p>
         </div>
       } @else {
-        <div class="member-grid">
-          @for (asset of members(); track asset.id) {
-            <div class="tile">
-              <img [src]="thumbnailUrl(asset)" alt="" loading="lazy" />
-            </div>
-          }
-        </div>
+        <pf-album-grid [assets]="members()" (openAsset)="openMember($event)" />
       }
     </div>
 

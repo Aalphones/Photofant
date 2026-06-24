@@ -1,0 +1,16 @@
+@if (assets().length > 0) {
+  <div class="album-grid__row">
+    @for (asset of assets(); track asset.id) {
+      <pf-galerie-cell
+        [asset]="asset"
+        [baseHeight]="baseHeight()"
+        [density]="density()"
+        [selectionMode]="false"
+        [isSelected]="false"
+        [isArmed]="false"
+        (openAsset)="onOpen($event)"
+      />
+    }
+    <div class="album-grid__spacer"></div>
+  </div>
+}

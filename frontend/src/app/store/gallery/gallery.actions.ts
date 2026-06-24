@@ -5,6 +5,8 @@ export const galleryActions = createActionGroup({
   source: 'Gallery',
   events: {
     'Request Page':              emptyProps(),
+    // Album lightbox: inject ordered context so prev/next navigates within the album
+    'Set Lightbox Context':      props<{ assets: AssetDto[] }>(),
     'Request Next Page':         emptyProps(),
     'Reset':                     emptyProps(),
     'Load Page Success':         props<{ items: AssetDto[]; total: number; page: number; pageSize: number; facets: Facets }>(),

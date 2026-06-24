@@ -11,14 +11,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import type { AssetDto, AssetsPage, Collection, CollectionDetail } from '@photofant/models';
 import { AssetService } from '@photofant/services';
-import { collectionsActions, collectionsSelectors } from '@photofant/store';
+import { collectionsActions, collectionsSelectors, galleryActions, gallerySelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
+import { Lightbox } from '../galerie/lightbox/lightbox';
 import { AlbumSettings } from './album-settings/album-settings';
+import { AlbumGrid } from './album-grid/album-grid';
 
 @Component({
   selector: 'pf-alben',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, AlbumSettings],
+  imports: [Icon, AlbumSettings, Lightbox, AlbumGrid],
   templateUrl: './alben.html',
   styleUrl: './alben.scss',
 })
@@ -34,6 +36,8 @@ export class Alben {
   protected readonly selectedId = signal<number | null>(null);
   protected readonly members = signal<AssetDto[]>([]);
   protected readonly settingsOpen = signal(false);
+
+  protected readonly lightboxId = this.store.selectSignal(gallerySelectors.selectLightboxId);
 
   protected readonly creating = signal(false);
   protected readonly newName = signal('');
@@ -107,6 +111,11 @@ export class Alben {
   protected onCreateKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter') { this.confirmCreate(); }
     else if (event.key === 'Escape') { this.creating.set(false); }
+  }
+
+  protected openMember(assetId: number): void {
+    this.store.dispatch(galleryActions.setLightboxContext({ assets: this.members() }));
+    this.store.dispatch(galleryActions.openLightbox({ id: assetId }));
   }
 
   protected deleteOpen(): void {

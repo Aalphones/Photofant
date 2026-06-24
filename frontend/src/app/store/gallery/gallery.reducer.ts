@@ -13,6 +13,7 @@ export interface GalleryState extends EntityState<AssetDto> {
   error: string | null;
   lightboxId: number | null;
   lightboxPendingNext: boolean;
+  lightboxContextIds: number[] | null;
   facets: Facets | null;
   selectionMode: boolean;
   selectedIds: number[];
@@ -32,6 +33,7 @@ const initialState: GalleryState = adapter.getInitialState({
   error: null,
   lightboxId: null,
   lightboxPendingNext: false,
+  lightboxContextIds: null,
   facets: null,
   selectionMode: false,
   selectedIds: [],
@@ -55,7 +57,7 @@ export const galleryFeature = createFeature({
       error: null,
     })),
     on(galleryActions.reset, (state: GalleryState) =>
-      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null, faceItems: [], faceTotal: 0 })
+      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null, faceItems: [], faceTotal: 0, lightboxContextIds: null })
     ),
     on(galleryActions.loadFacesPageSuccess, (state: GalleryState, { items, total, page }) => ({
       ...state,
@@ -82,7 +84,10 @@ export const galleryFeature = createFeature({
       adapter.upsertOne(asset, state)
     ),
     on(galleryActions.openLightbox, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),
-    on(galleryActions.closeLightbox, (state: GalleryState) => ({ ...state, lightboxId: null, lightboxPendingNext: false })),
+    on(galleryActions.closeLightbox, (state: GalleryState) => ({ ...state, lightboxId: null, lightboxPendingNext: false, lightboxContextIds: null })),
+    on(galleryActions.setLightboxContext, (state: GalleryState, { assets }) =>
+      adapter.upsertMany(assets, { ...state, lightboxContextIds: assets.map((asset: AssetDto) => asset.id) })
+    ),
     on(galleryActions.lightboxGoTo, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),
     on(galleryActions.lightboxMarkPendingNext, (state: GalleryState) => ({ ...state, lightboxPendingNext: true })),
     on(galleryActions.toggleFavourite, (state: GalleryState, { id, value }) =>

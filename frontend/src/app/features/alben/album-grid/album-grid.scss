@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+
+.album-grid__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.album-grid__spacer {
+  flex-grow: 10;
+  flex-basis: 0;
+}

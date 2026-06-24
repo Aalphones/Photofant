@@ -160,13 +160,16 @@ export class GalleryEffects {
     this.actions$.pipe(
       ofType(galleryActions.lightboxNext),
       concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxNavContext)),
-      mergeMap(([, { assets, lightboxId, hasMore, isLoading }]) => {
-        const index = lightboxId != null ? assets.findIndex((asset) => asset.id === lightboxId) : -1;
+      mergeMap(([, { assets, lightboxId, hasMore, isLoading, contextIds }]) => {
+        const list = contextIds != null
+          ? contextIds.map((id) => assets.find((asset) => asset.id === id)).filter((asset): asset is AssetDto => asset != null)
+          : assets;
+        const index = lightboxId != null ? list.findIndex((asset) => asset.id === lightboxId) : -1;
         if (index < 0) return EMPTY;
-        if (index < assets.length - 1) {
-          return of(galleryActions.lightboxGoTo({ id: assets[index + 1]!.id })); // index < length - 1 guarantees slot exists
+        if (index < list.length - 1) {
+          return of(galleryActions.lightboxGoTo({ id: list[index + 1]!.id }));
         }
-        if (hasMore && !isLoading) {
+        if (contextIds == null && hasMore && !isLoading) {
           return of(galleryActions.lightboxMarkPendingNext(), galleryActions.requestNextPage());
         }
         return EMPTY;
@@ -178,10 +181,13 @@ export class GalleryEffects {
     this.actions$.pipe(
       ofType(galleryActions.lightboxPrev),
       concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxNavContext)),
-      mergeMap(([, { assets, lightboxId }]) => {
-        const index = lightboxId != null ? assets.findIndex((asset) => asset.id === lightboxId) : -1;
+      mergeMap(([, { assets, lightboxId, contextIds }]) => {
+        const list = contextIds != null
+          ? contextIds.map((id) => assets.find((asset) => asset.id === id)).filter((asset): asset is AssetDto => asset != null)
+          : assets;
+        const index = lightboxId != null ? list.findIndex((asset) => asset.id === lightboxId) : -1;
         if (index > 0) {
-          return of(galleryActions.lightboxGoTo({ id: assets[index - 1]!.id })); // index > 0 guarantees slot exists
+          return of(galleryActions.lightboxGoTo({ id: list[index - 1]!.id }));
         }
         return EMPTY;
       }),
