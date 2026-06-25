@@ -101,21 +101,31 @@ class DriftDto(BaseModel):
     detail: str
 
 
+class OrphanedFaceDto(BaseModel):
+    face_id: int
+    asset_id: int
+    crop_path: str
+    person_name: str | None
+    detail: str
+
+
 class ReconcileReportDto(BaseModel):
     generated_at: str | None
     orphaned_files: list[OrphanDto]
     missing_files: list[MissingDto]
     path_drift: list[DriftDto]
+    orphaned_faces: list[OrphanedFaceDto] = []
 
 
 _EMPTY_REPORT = ReconcileReportDto(
-    generated_at=None, orphaned_files=[], missing_files=[], path_drift=[]
+    generated_at=None, orphaned_files=[], missing_files=[], path_drift=[], orphaned_faces=[]
 )
 
 
 class RepairItem(BaseModel):
-    kind: Literal["orphan", "missing", "drift"]
+    kind: Literal["orphan", "missing", "drift", "orphaned_face"]
     instance_id: int | None = None
+    face_id: int | None = None
     path: str | None = None
     found_path: str | None = None
 
@@ -185,6 +195,10 @@ async def _apply_one(
         if item.instance_id is None or not item.found_path:
             raise repair.RepairError("fix_path requires instance_id and found_path")
         repair.fix_drift(session, item.instance_id, item.found_path, data_root)
+    elif item.kind == "orphaned_face" and action == "purge":
+        if item.face_id is None:
+            raise repair.RepairError("orphaned_face purge requires a face_id")
+        await repair.purge_orphaned_face(session, item.face_id, get_cache_db_path())
     else:
         raise repair.RepairError(f"unsupported action '{action}' for kind '{item.kind}'")
 

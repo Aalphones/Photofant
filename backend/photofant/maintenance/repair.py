@@ -65,6 +65,11 @@ async def purge_missing(session: Session, instance_id: int, cache_db_path: Path)
     await moves.purge(session, instance, cache_db_path)
 
 
+async def purge_orphaned_face(session: Session, face_id: int, cache_db_path: Path) -> None:
+    """Remove a Face record whose parent Asset is gone: crop file, thumbnail, embedding, row."""
+    await moves.purge_face(session, face_id, cache_db_path)
+
+
 def fix_drift(session: Session, instance_id: int, found_path: str, data_root: Path) -> None:
     """Point the instance at the rediscovered file and clear any missing marker."""
     target = ensure_under_root(Path(found_path), data_root)

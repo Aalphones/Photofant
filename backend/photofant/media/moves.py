@@ -197,6 +197,19 @@ def _delete_face_crops_and_thumbnails(
         delete_thumbnails(cache_db_path, face_id, "face")
 
 
+async def purge_face(session: Session, face_id: int, cache_db_path: Path) -> None:
+    """Permanently remove a single Face record: crop file, thumbnail, embedding, DB row."""
+    face = session.get(Face, face_id)
+    if face is None:
+        return
+    await asyncio.to_thread(
+        _delete_face_crops_and_thumbnails, cache_db_path, [(face_id, face.crop_path)]
+    )
+    delete_face_embedding(session, face_id)
+    session.delete(face)
+    session.commit()
+
+
 async def purge(session: Session, instance: AssetInstance, cache_db_path: Path) -> None:
     """Permanently remove the file, its thumbnails, and the DB rows.
 

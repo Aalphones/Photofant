@@ -68,15 +68,32 @@ class DriftItem:
 
 
 @dataclass
+class OrphanedFaceItem:
+    """A Face DB row whose parent Asset no longer exists."""
+
+    face_id: int
+    asset_id: int
+    crop_path: str
+    person_name: str | None
+    detail: str
+
+
+@dataclass
 class ReconcileReport:
     generated_at: str
     orphaned_files: list[OrphanItem] = field(default_factory=list)
     missing_files: list[MissingItem] = field(default_factory=list)
     path_drift: list[DriftItem] = field(default_factory=list)
+    orphaned_faces: list[OrphanedFaceItem] = field(default_factory=list)
 
     @property
     def total(self) -> int:
-        return len(self.orphaned_files) + len(self.missing_files) + len(self.path_drift)
+        return (
+            len(self.orphaned_files)
+            + len(self.missing_files)
+            + len(self.path_drift)
+            + len(self.orphaned_faces)
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -84,6 +101,7 @@ class ReconcileReport:
             "orphaned_files": [asdict(item) for item in self.orphaned_files],
             "missing_files": [asdict(item) for item in self.missing_files],
             "path_drift": [asdict(item) for item in self.path_drift],
+            "orphaned_faces": [asdict(item) for item in self.orphaned_faces],
         }
 
 
