@@ -25,7 +25,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from photofant.db.cache import delete_thumbnails, init_cache_db
-from photofant.db.models import Asset, AssetInstance, ProcessingLedger
+from photofant.db.face_vector_index import delete_embedding as delete_face_embedding
+from photofant.db.models import Asset, AssetInstance, Face, ProcessingLedger
 from photofant.db.vector_index import delete_embedding
 
 log = logging.getLogger(__name__)
@@ -184,6 +185,18 @@ def _delete_file_and_thumbnails(file_path: Path, cache_db_path: Path, asset_id: 
     delete_thumbnails(cache_db_path, asset_id)
 
 
+def _delete_face_crops_and_thumbnails(
+    cache_db_path: Path,
+    face_data: list[tuple[int, str]],
+) -> None:
+    """Delete derived face crop files and their thumbnails from the cache DB."""
+    init_cache_db(cache_db_path)
+    for face_id, crop_path in face_data:
+        with contextlib.suppress(FileNotFoundError):
+            Path(crop_path).unlink()
+        delete_thumbnails(cache_db_path, face_id, "face")
+
+
 async def purge(session: Session, instance: AssetInstance, cache_db_path: Path) -> None:
     """Permanently remove the file, its thumbnails, and the DB rows.
 
@@ -205,8 +218,21 @@ async def purge(session: Session, instance: AssetInstance, cache_db_path: Path) 
         or 0
     )
     if remaining == 0:
+        face_rows = session.execute(
+            select(Face.id, Face.crop_path).where(Face.asset_id == asset_id)
+        ).all()
+        face_data = [(row[0], row[1]) for row in face_rows]
+
+        if face_data:
+            await asyncio.to_thread(_delete_face_crops_and_thumbnails, cache_db_path, face_data)
+
         asset = session.get(Asset, asset_id)
         if asset is not None:
+            for face_id, _ in face_data:
+                face = session.get(Face, face_id)
+                if face is not None:
+                    delete_face_embedding(session, face_id)
+                    session.delete(face)
             ledger = session.get(ProcessingLedger, asset.content_hash)
             if ledger is not None:
                 session.delete(ledger)
