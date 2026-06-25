@@ -126,9 +126,15 @@ async def soft_delete(session: Session, instance: AssetInstance, data_root: Path
         relative = Path(source.name)
     dest = trash_root / relative
 
-    final = await asyncio.to_thread(_perform_move, source, dest)
+    if not source.exists() and not dest.exists():
+        log.warning(
+            "soft_delete: source %s missing on disk — marking deleted in DB without move",
+            source,
+        )
+    else:
+        final = await asyncio.to_thread(_perform_move, source, dest)
+        instance.path = str(final.resolve())
 
-    instance.path = str(final.resolve())
     instance.deleted_at = _now_utc()
     session.commit()
     return instance
