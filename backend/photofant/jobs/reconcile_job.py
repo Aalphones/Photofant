@@ -11,7 +11,7 @@ from photofant.config import get_data_root
 from photofant.db.models import Asset, AssetInstance, Face, Person
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
-from photofant.maintenance.reconcile import InstanceRecord, OrphanedFaceItem, classify_reconcile
+from photofant.maintenance.reconcile import AcknowledgedMissingItem, InstanceRecord, OrphanedFaceItem, classify_reconcile
 from photofant.maintenance.store import persist_report
 from photofant.media.meta import SUPPORTED_EXTENSIONS
 
@@ -106,22 +106,54 @@ def _gather_orphaned_faces() -> list[OrphanedFaceItem]:
     ]
 
 
+def _gather_acknowledged_missing() -> list[AcknowledgedMissingItem]:
+    """AssetInstances already marked missing but not yet purged (missing_at IS NOT NULL)."""
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(
+                AssetInstance.id,
+                AssetInstance.asset_id,
+                AssetInstance.path,
+                AssetInstance.missing_at,
+                Person.name,
+            )
+            .join(Asset, Asset.id == AssetInstance.asset_id)
+            .join(Person, Person.id == AssetInstance.person_id)
+            .where(AssetInstance.missing_at.is_not(None))
+            .where(AssetInstance.deleted_at.is_(None))
+        ).all()
+
+    return [
+        AcknowledgedMissingItem(
+            instance_id=row[0],
+            asset_id=row[1],
+            path=row[2],
+            missing_at=str(row[3]),
+            person_name=row[4],
+            detail=f"asset.id={row[1]} · als fehlend markiert am {str(row[3])[:10]}",
+        )
+        for row in rows
+    ]
+
+
 def _run_reconcile() -> int:
     data_root = get_data_root()
     active = _gather_active_instances()
     fs_paths = _walk_data_root(data_root)
     report = classify_reconcile(active, fs_paths)
     report.orphaned_faces = _gather_orphaned_faces()
+    report.acknowledged_missing = _gather_acknowledged_missing()
 
     with SessionLocal() as session:
         persist_report(session, report)
 
     log.info(
-        "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces",
+        "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces, %d acknowledged-missing",
         len(report.orphaned_files),
         len(report.missing_files),
         len(report.path_drift),
         len(report.orphaned_faces),
+        len(report.acknowledged_missing),
     )
     return report.total
 

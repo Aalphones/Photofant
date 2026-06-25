@@ -109,21 +109,36 @@ class OrphanedFaceDto(BaseModel):
     detail: str
 
 
+class AcknowledgedMissingDto(BaseModel):
+    instance_id: int
+    asset_id: int
+    path: str
+    person_name: str | None
+    missing_at: str
+    detail: str
+
+
 class ReconcileReportDto(BaseModel):
     generated_at: str | None
     orphaned_files: list[OrphanDto]
     missing_files: list[MissingDto]
     path_drift: list[DriftDto]
     orphaned_faces: list[OrphanedFaceDto] = []
+    acknowledged_missing: list[AcknowledgedMissingDto] = []
 
 
 _EMPTY_REPORT = ReconcileReportDto(
-    generated_at=None, orphaned_files=[], missing_files=[], path_drift=[], orphaned_faces=[]
+    generated_at=None,
+    orphaned_files=[],
+    missing_files=[],
+    path_drift=[],
+    orphaned_faces=[],
+    acknowledged_missing=[],
 )
 
 
 class RepairItem(BaseModel):
-    kind: Literal["orphan", "missing", "drift", "orphaned_face"]
+    kind: Literal["orphan", "missing", "drift", "orphaned_face", "acknowledged_missing"]
     instance_id: int | None = None
     face_id: int | None = None
     path: str | None = None
@@ -199,6 +214,10 @@ async def _apply_one(
         if item.face_id is None:
             raise repair.RepairError("orphaned_face purge requires a face_id")
         await repair.purge_orphaned_face(session, item.face_id, get_cache_db_path())
+    elif item.kind == "acknowledged_missing" and action == "purge":
+        if item.instance_id is None:
+            raise repair.RepairError("acknowledged_missing purge requires an instance_id")
+        await repair.purge_missing(session, item.instance_id, get_cache_db_path())
     else:
         raise repair.RepairError(f"unsupported action '{action}' for kind '{item.kind}'")
 

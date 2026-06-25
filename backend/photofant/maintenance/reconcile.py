@@ -79,12 +79,29 @@ class OrphanedFaceItem:
 
 
 @dataclass
+class AcknowledgedMissingItem:
+    """An AssetInstance marked missing (missing_at IS NOT NULL) but not yet purged.
+
+    The reconcile skips these in the main missing-files scan; this bucket makes
+    them visible again so the user can finish the cleanup with a purge action.
+    """
+
+    instance_id: int
+    asset_id: int
+    path: str
+    person_name: str | None
+    missing_at: str
+    detail: str
+
+
+@dataclass
 class ReconcileReport:
     generated_at: str
     orphaned_files: list[OrphanItem] = field(default_factory=list)
     missing_files: list[MissingItem] = field(default_factory=list)
     path_drift: list[DriftItem] = field(default_factory=list)
     orphaned_faces: list[OrphanedFaceItem] = field(default_factory=list)
+    acknowledged_missing: list[AcknowledgedMissingItem] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -93,6 +110,7 @@ class ReconcileReport:
             + len(self.missing_files)
             + len(self.path_drift)
             + len(self.orphaned_faces)
+            + len(self.acknowledged_missing)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -102,6 +120,7 @@ class ReconcileReport:
             "missing_files": [asdict(item) for item in self.missing_files],
             "path_drift": [asdict(item) for item in self.path_drift],
             "orphaned_faces": [asdict(item) for item in self.orphaned_faces],
+            "acknowledged_missing": [asdict(item) for item in self.acknowledged_missing],
         }
 
 
