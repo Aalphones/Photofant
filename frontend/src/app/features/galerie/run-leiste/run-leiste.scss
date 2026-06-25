@@ -1,7 +1,27 @@
 :host {
-  display: block;
-  background: var(--bg-2);
-  border-bottom: 1px solid var(--line);
+  position: fixed;
+  left: 30%;
+  bottom: 6px;
+  z-index: 201;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  justify-content: center;
+
+  @media (max-width: 640px) {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 }
 
 .rleiste__inner {
@@ -12,6 +32,10 @@
   min-height: 52px;
   flex-wrap: nowrap;
   overflow-x: auto;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
 }
 
 // Workflow dropdown
@@ -32,7 +56,9 @@
   min-width: 160px;
   max-width: 220px;
 
-  &:focus { outline: 1px solid var(--accent); }
+  &:focus {
+    outline: 1px solid var(--accent);
+  }
 }
 
 // Divider
@@ -44,6 +70,7 @@
   min-width: 0;
   overflow-x: auto;
   padding: 2px 0;
+  overflow: hidden;
 }
 
 // Slot button
@@ -59,7 +86,10 @@
   background: var(--surface);
   padding: 4px;
   cursor: pointer;
-  transition: border-color .12s, background .12s, box-shadow .12s;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    box-shadow 0.12s;
   position: relative;
 
   &:hover:not(:disabled) {
@@ -94,8 +124,13 @@
 }
 
 @keyframes rleiste-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px var(--accent-weak); }
-  50%       { box-shadow: 0 0 0 4px oklch(0.685 0.135 248 / 0.28); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--accent-weak);
+  }
+  50% {
+    box-shadow: 0 0 0 4px oklch(0.685 0.135 248 / 0.28);
+  }
 }
 
 .rleiste__slot-thumb {
@@ -173,7 +208,10 @@
   color: var(--text-3);
   font-size: 12.5px;
   cursor: not-allowed;
-  transition: background .12s, color .12s, border-color .12s;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
 
   &--ready {
     border-color: var(--accent-line);
@@ -188,7 +226,9 @@
     }
   }
 
-  &:disabled { opacity: 0.6; }
+  &:disabled {
+    opacity: 0.6;
+  }
 }
 
 .rleiste__hint {
@@ -210,7 +250,12 @@
   color: var(--text-3);
   flex-shrink: 0;
   margin-left: auto;
-  transition: background .12s, color .12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 
-  &:hover { background: var(--surface-hover); color: var(--text); }
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
 }
