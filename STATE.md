@@ -45,6 +45,23 @@ Person hängen — in DB *und* im Ordner. Quelle: `issues.txt` (untracked).
 4. **Verifizieren:** `npm run lint && npm run build`; danach echten Reconcile-Lauf in
    der App, Bucket prüfen.
 
+**⚠️ Im selben Zug prüfen — Verdacht: der FS/DB-Abgleich wirkt wirkungslos.**
+Nutzer-Beobachtung: Der Abgleich meldet *immer* „Alles in Ordnung" / 0 Abweichungen —
+es wirkt, als würde gar nichts passieren. Vor/während der UI-Arbeit klären, ob der
+Abgleich überhaupt etwas tut:
+- Läuft der Job wirklich? `triggerReconcile()` → `POST /api/maintenance/reconcile`
+  → `run_reconcile_job` → schreibt `reconcile_report` (Singleton, id=1). Im Job-Dock
+  sichtbar? Schreibt er die Tabelle?
+- Wird der Report nach dem Job **neu geladen**? `GET /api/maintenance/reconcile/report`
+  erneut holen — sonst zeigt die UI den alten (leeren) Stand.
+- Zeigt die UI die Befunde überhaupt? Das Modell kennt nur orphan/missing/drift
+  (Schritt 2) → `orphaned_faces`, `acknowledged_missing`, `misassigned_instances`
+  werden aktuell **nicht angezeigt**, selbst wenn der Scan sie findet. Das allein
+  kann den Eindruck „nichts passiert" erklären.
+- Gegencheck direkt in der DB (umgeht die UI): `SELECT payload FROM reconcile_report
+  WHERE id=1;` nach einem Lauf — steht da was drin? Plus die misassigned-Query aus
+  `_gather_misassigned_instances` per Hand gegen `Data/.photofant/db.sqlite` laufen.
+
 ---
 
 ## Backlog & Abgeschlossenes
