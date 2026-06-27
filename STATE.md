@@ -1,7 +1,7 @@
 # STATE
 
-**Aktiver Plan:** Falsche Personen-Zuordnungen — Wartungs-UI (Backend fertig, Frontend offen)
-**Nächster Schritt:** „misassigned"-Bucket in der Reconcile-Report-UI anzeigen + bereinigbar machen
+**Aktiver Plan:** Falsche Personen-Zuordnungen — Wartungs-UI (Backend + Frontend fertig, User-Smoke offen)
+**Nächster Schritt:** Echten Reconcile-Lauf in der App machen, die neuen Buckets prüfen (siehe „User-Smoke" unten), dann Plan archivieren.
 
 ## Aktive Arbeit: falsche Personen-Zuordnungen
 
@@ -29,38 +29,35 @@ Person hängen — in DB *und* im Ordner. Quelle: `issues.txt` (untracked).
 - `POST /api/maintenance/reconcile/repair`, Body
   `{ actions: [{ item: { kind: "misassigned", instance_id }, action: "fix_assignment" }] }`.
 
-**Frontend — TODO (das ist der nächste Schritt):**
-1. **Erst lesen:** `features/review/review-reconcile/review-reconcile.{ts,html}` —
-   das ist die echte Reconcile-Report-UI (Tabs + Issue-Liste + Repair-Buttons).
-   (`features/wartung/wartung.ts` ist NUR Cache/Thumbnails, nicht der Report.)
-2. **Modell nachziehen:** [models/maintenance.model.ts](frontend/src/app/models/maintenance.model.ts)
-   hinkt hinterher — kennt nur `orphan`/`missing`/`drift`. Hinzufügen:
-   `MisassignedInstance`-Interface, Feld `misassigned_instances` in `ReconcileReport`,
-   `'misassigned'` zu `ISSUE_KINDS`, `'fix_assignment'` zu `REPAIR_ACTIONS`.
-   (Hinweis: auch `orphaned_faces` + `acknowledged_missing` fehlen im Modell komplett —
-   **Entscheidung offen:** nur `misassigned` nachziehen oder gleich alle Backend-Buckets.)
-3. **UI:** neuer Tab/Abschnitt „Falsch zugeordnet" in review-reconcile mit
-   Bereinigen-Button → `dispatchRepair({ kind: 'misassigned', instance_id }, 'fix_assignment')`.
-   `RepairItem` trägt `instance_id` bereits.
-4. **Verifizieren:** `npm run lint && npm run build`; danach echten Reconcile-Lauf in
-   der App, Bucket prüfen.
+**Frontend — FERTIG (Lint + Build grün):**
+Entscheidung getroffen: **alle drei** neuen Buckets sichtbar gemacht, und die UI per
+**generischer `rr-section`-Child-Komponente** refactored (Shell wurde sonst ein
+6-Sektionen-Monolith, über der Aufspaltungs-Schwelle).
+- `models/maintenance.model.ts` + Barrel: `OrphanedFace`/`MisassignedInstance`/
+  `AcknowledgedMissing`-Interfaces, drei Felder in `ReconcileReport`, drei Kinds in
+  `ISSUE_KINDS`, `'purge'`+`'fix_assignment'` in `REPAIR_ACTIONS`, `face_id?` in `RepairItem`.
+- `store/maintenance.reducer.ts`: `pruneReport` prunet jetzt alle sechs Buckets optimistisch.
+- Neu: `features/review/review-reconcile/review-reconcile.types.ts` (RrRow/RrAction/…) +
+  `rr-section/` (generische Section-Child: Selection, Bulk-/Row-Buttons, BEM `rr-section__*`).
+- `review-reconcile.{ts,html,scss}`: Shell ist jetzt dünne Konfig — sechs `<pf-rr-section>`
+  mit Row-Projektion + Action-Configs, `onRepair(kind, event)` baut die `RepairAction[]`.
+- `docs/code-map.md`: Wartungs-Zeile um `features/review/review-reconcile/` ergänzt.
 
-**⚠️ Im selben Zug prüfen — Verdacht: der FS/DB-Abgleich wirkt wirkungslos.**
-Nutzer-Beobachtung: Der Abgleich meldet *immer* „Alles in Ordnung" / 0 Abweichungen —
-es wirkt, als würde gar nichts passieren. Vor/während der UI-Arbeit klären, ob der
-Abgleich überhaupt etwas tut:
-- Läuft der Job wirklich? `triggerReconcile()` → `POST /api/maintenance/reconcile`
-  → `run_reconcile_job` → schreibt `reconcile_report` (Singleton, id=1). Im Job-Dock
-  sichtbar? Schreibt er die Tabelle?
-- Wird der Report nach dem Job **neu geladen**? `GET /api/maintenance/reconcile/report`
-  erneut holen — sonst zeigt die UI den alten (leeren) Stand.
-- Zeigt die UI die Befunde überhaupt? Das Modell kennt nur orphan/missing/drift
-  (Schritt 2) → `orphaned_faces`, `acknowledged_missing`, `misassigned_instances`
-  werden aktuell **nicht angezeigt**, selbst wenn der Scan sie findet. Das allein
-  kann den Eindruck „nichts passiert" erklären.
-- Gegencheck direkt in der DB (umgeht die UI): `SELECT payload FROM reconcile_report
-  WHERE id=1;` nach einem Lauf — steht da was drin? Plus die misassigned-Query aus
-  `_gather_misassigned_instances` per Hand gegen `Data/.photofant/db.sqlite` laufen.
+**Diagnose zum „No-Op"-Verdacht (geklärt):** Der Abgleich ist **kein** No-Op. Job läuft,
+schreibt den Report, API ([maintenance.py](backend/photofant/api/maintenance.py)) liefert
+alle Buckets aus, Effect lädt nach dem Job neu. Der „immer alles in Ordnung"-Eindruck kam
+allein daher, dass die UI drei Buckets (misassigned, orphaned_faces, acknowledged_missing)
+verworfen hat. Genau das ist jetzt behoben. (`orphan/missing/drift` = 0 ist der gesunde
+Normalfall bei synchronem FS↔DB — kein Bug.)
+
+**⏳ User-Smoke (offen, vor Archivierung):**
+1. App starten, Wartung/Review → Reconcile-Scan auslösen.
+2. Erscheinen die neuen Sektionen, wenn das Backend was findet? (Wenn alles synchron ist
+   und keine Fehlzuordnung existiert → „Alles in Ordnung", das ist korrekt.)
+3. Gegencheck bei Zweifel: `SELECT payload FROM reconcile_report WHERE id=1;` gegen
+   `Data/.photofant/db.sqlite` nach einem Lauf — stehen `misassigned_instances` etc. drin?
+4. Bereinigen-Button auf einem „Falsch zugeordnet"-Eintrag testen → verschwindet die Zeile,
+   und ist die Person-Zuordnung in DB + Ordner korrigiert?
 
 ---
 

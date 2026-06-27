@@ -50,11 +50,17 @@ function pruneReport(report: ReconcileReport, removed: RepairItem[]): ReconcileR
   const orphanPaths = new Set(removed.filter((item: RepairItem) => item.kind === 'orphan').map((item: RepairItem) => item.path));
   const missingIds = new Set(removed.filter((item: RepairItem) => item.kind === 'missing').map((item: RepairItem) => item.instance_id));
   const driftIds = new Set(removed.filter((item: RepairItem) => item.kind === 'drift').map((item: RepairItem) => item.instance_id));
+  const orphanedFaceIds = new Set(removed.filter((item: RepairItem) => item.kind === 'orphaned_face').map((item: RepairItem) => item.face_id));
+  const misassignedIds = new Set(removed.filter((item: RepairItem) => item.kind === 'misassigned').map((item: RepairItem) => item.instance_id));
+  const ackMissingIds = new Set(removed.filter((item: RepairItem) => item.kind === 'acknowledged_missing').map((item: RepairItem) => item.instance_id));
   return {
     ...report,
     orphaned_files: report.orphaned_files.filter((file) => !orphanPaths.has(file.path)),
     missing_files: report.missing_files.filter((file) => !missingIds.has(file.instance_id)),
     path_drift: report.path_drift.filter((file) => !driftIds.has(file.instance_id)),
+    orphaned_faces: report.orphaned_faces.filter((face) => !orphanedFaceIds.has(face.face_id)),
+    misassigned_instances: report.misassigned_instances.filter((instance) => !misassignedIds.has(instance.instance_id)),
+    acknowledged_missing: report.acknowledged_missing.filter((instance) => !ackMissingIds.has(instance.instance_id)),
   };
 }
 

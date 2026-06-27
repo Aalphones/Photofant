@@ -43,7 +43,7 @@ Pfade unten relativ zu `frontend/src/app/` bzw. `backend/photofant/`.
 | Feature | Frontend | Backend |
 |---|---|---|
 | **Modell-Management** | `features/modelle/` (modelle, bind-dialog, download-dialog, model-card, model-drawer) · `store/models/` · `services/model.service.ts` · `models/model.model.ts` | `api/models.py` · `models/loader.py`, `models/validation.py`, `models/vram.py` · `jobs/download_job.py` · `inference/session_manager.py` |
-| **Wartung & Datensicherheit** | `features/wartung/` · `features/einstellungen/backup-wartung/` · `store/maintenance/` · `services/maintenance.service.ts` · `models/maintenance.model.ts` | `api/maintenance.py` · `maintenance/` (reconcile, repair, store) · `jobs/{rebuild,reconcile,backup}_job.py` |
+| **Wartung & Datensicherheit** | `features/wartung/` · `features/review/review-reconcile/` (Reconcile-Report-UI, Shell + generische `rr-section`-Child) · `features/einstellungen/backup-wartung/` · `store/maintenance/` · `services/maintenance.service.ts` · `models/maintenance.model.ts` | `api/maintenance.py` · `maintenance/` (reconcile, repair, store) · `jobs/{rebuild,reconcile,backup}_job.py` |
 | **Papierkorb & Favoriten** | `features/papierkorb/`, `features/favoriten/` · `store/trash/` | `api/trash.py` · `media/moves.py` (Favorit = physischer Move) |
 | **Einstellungen** | `features/einstellungen/` (Shell + darstellung, bibliothek, verarbeitung, bearbeitung, info, tastaturkuerzel, tags, comfyui, backup-wartung) · `services/settings.service.ts` · `models/config.model.ts` | `api/config.py` · `settings.py`, `config.py` |
 | **Trainingssets & Export** | `features/trainingssets/` | (nutzt `api/assets.py` + `api/collections.py`; eigener Backend-Pfad noch dünn) |

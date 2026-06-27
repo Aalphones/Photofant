@@ -1,0 +1,57 @@
+<section class="rr-section">
+  <div class="rr-section__head">
+    <div class="rr-section__title">
+      <span class="rr-section__badge rr-section__badge--{{ variant() }}">{{ count() }}</span>
+      {{ title() }}
+    </div>
+    <div class="rr-section__sub">{{ subtitle() }}</div>
+  </div>
+
+  <div class="rr-section__bulk">
+    <label class="rr-section__check-all">
+      <input type="checkbox" [checked]="allSelected()" (change)="toggleAll()" />
+      Alle auswählen
+    </label>
+    @if (selCount() > 0) {
+      <span class="rr-section__sel-count">{{ selCount() }} ausgewählt</span>
+      @for (action of actions(); track action.action) {
+        <button
+          class="rr-section__bulk-btn rr-section__bulk-btn--{{ action.variant }}"
+          [disabled]="busy()"
+          (click)="runBulk(action)"
+        >
+          <pf-icon [name]="action.icon" [size]="13" />
+          {{ action.label }}
+        </button>
+      }
+    }
+  </div>
+
+  <div class="rr-section__list">
+    @for (row of rows(); track row.key) {
+      <div class="rr-section__row" [class.rr-section__row--selected]="isSelected(row.key)">
+        <input
+          type="checkbox"
+          class="rr-section__row-check"
+          [checked]="isSelected(row.key)"
+          (change)="toggle(row.key)"
+        />
+        <div class="rr-section__row-info">
+          <span class="rr-section__row-name">{{ row.name }}</span>
+          <span class="rr-section__row-meta">{{ row.meta }}</span>
+        </div>
+        <div class="rr-section__row-actions">
+          @for (action of actions(); track action.action) {
+            <button
+              class="rr-section__act-btn rr-section__act-btn--{{ action.variant }}"
+              [disabled]="busy()"
+              (click)="runRow(action, row.key)"
+            >
+              {{ action.label }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</section>

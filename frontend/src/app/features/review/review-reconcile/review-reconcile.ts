@@ -3,22 +3,28 @@ import {
   Component,
   computed,
   inject,
-  signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { Icon } from '@photofant/ui';
 import type {
+  AcknowledgedMissing,
   DriftFile,
+  IssueKind,
+  MisassignedInstance,
   MissingFile,
   OrphanFile,
+  OrphanedFace,
   RepairAction,
+  RepairActionKind,
 } from '@photofant/models';
 import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
+import { RrSection } from './rr-section/rr-section';
+import type { RrAction, RrKey, RrRepairEvent, RrRow } from './review-reconcile.types';
 
 @Component({
   selector: 'pf-review-reconcile',
-  imports: [Icon, DatePipe],
+  imports: [Icon, DatePipe, RrSection],
   templateUrl: './review-reconcile.html',
   styleUrl: './review-reconcile.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,219 +36,126 @@ export class ReviewReconcile {
   protected readonly isScanning = this.store.selectSignal(maintenanceSelectors.selectIsScanning);
   protected readonly isRepairing = this.store.selectSignal(maintenanceSelectors.selectIsRepairing);
 
-  protected readonly selectedOrphans = signal<Set<string>>(new Set());
-  protected readonly selectedMissing = signal<Set<number>>(new Set());
-  protected readonly selectedDrift = signal<Set<number>>(new Set());
+  // ── Repair button configs per bucket (label + action + style) ──────────────
 
-  protected readonly orphanCount = computed(() => this.report()?.orphaned_files.length ?? 0);
-  protected readonly missingCount = computed(() => this.report()?.missing_files.length ?? 0);
-  protected readonly driftCount = computed(() => this.report()?.path_drift.length ?? 0);
-  protected readonly totalIssues = computed(() =>
-    this.orphanCount() + this.missingCount() + this.driftCount()
+  protected readonly ORPHAN_ACTIONS: RrAction[] = [
+    { label: 'Indizieren', variant: 'primary', action: 'index', icon: 'plus' },
+    { label: 'Papierkorb', variant: 'danger', action: 'trash', icon: 'trash' },
+  ];
+  protected readonly MISSING_ACTIONS: RrAction[] = [
+    { label: 'Als fehlend markieren', variant: 'danger', action: 'mark_missing', icon: 'x' },
+  ];
+  protected readonly DRIFT_ACTIONS: RrAction[] = [
+    { label: 'Pfad korrigieren', variant: 'primary', action: 'fix_path', icon: 'check' },
+  ];
+  protected readonly MISASSIGNED_ACTIONS: RrAction[] = [
+    { label: 'Zuordnung bereinigen', variant: 'primary', action: 'fix_assignment', icon: 'check' },
+  ];
+  protected readonly ORPHANED_FACE_ACTIONS: RrAction[] = [
+    { label: 'Endgültig entfernen', variant: 'danger', action: 'purge', icon: 'trash' },
+  ];
+  protected readonly ACK_MISSING_ACTIONS: RrAction[] = [
+    { label: 'Endgültig entfernen', variant: 'danger', action: 'purge', icon: 'trash' },
+  ];
+
+  // ── Buckets projected to display rows ───────────────────────────────────────
+
+  protected readonly orphanRows = computed((): RrRow[] =>
+    (this.report()?.orphaned_files ?? []).map((file: OrphanFile) => ({
+      key: file.path,
+      name: this.fileName(file.path),
+      meta: this.folderLabel(file.path),
+    }))
   );
 
-  protected readonly selOrphanCount = computed(() => this.selectedOrphans().size);
-  protected readonly selMissingCount = computed(() => this.selectedMissing().size);
-  protected readonly selDriftCount = computed(() => this.selectedDrift().size);
-  protected readonly anySelected = computed(() =>
-    this.selOrphanCount() > 0 || this.selMissingCount() > 0 || this.selDriftCount() > 0
+  protected readonly missingRows = computed((): RrRow[] =>
+    (this.report()?.missing_files ?? []).map((file: MissingFile) => ({
+      key: file.instance_id,
+      name: this.fileName(file.path),
+      meta: file.person_name ?? '_unknown',
+    }))
   );
 
-  protected readonly allOrphansSelected = computed((): boolean => {
-    const orphans = this.report()?.orphaned_files ?? [];
-    const sel = this.selectedOrphans();
-    return orphans.length > 0 && orphans.every((orphan: OrphanFile) => sel.has(orphan.path));
-  });
+  protected readonly driftRows = computed((): RrRow[] =>
+    (this.report()?.path_drift ?? []).map((file: DriftFile) => ({
+      key: file.instance_id,
+      name: this.fileName(file.found_path),
+      meta: `${file.person_name ?? '_unknown'} · war: ${this.fileName(file.db_path)}`,
+    }))
+  );
 
-  protected readonly allMissingSelected = computed((): boolean => {
-    const missing = this.report()?.missing_files ?? [];
-    const sel = this.selectedMissing();
-    return missing.length > 0 && missing.every((item: MissingFile) => sel.has(item.instance_id));
-  });
+  protected readonly misassignedRows = computed((): RrRow[] =>
+    (this.report()?.misassigned_instances ?? []).map((instance: MisassignedInstance) => ({
+      key: instance.instance_id,
+      name: this.fileName(instance.path),
+      meta: `${instance.person_name ?? '_unknown'} · ohne Gesicht auf diesem Bild`,
+    }))
+  );
 
-  protected readonly allDriftSelected = computed((): boolean => {
-    const drift = this.report()?.path_drift ?? [];
-    const sel = this.selectedDrift();
-    return drift.length > 0 && drift.every((item: DriftFile) => sel.has(item.instance_id));
-  });
+  protected readonly orphanedFaceRows = computed((): RrRow[] =>
+    (this.report()?.orphaned_faces ?? []).map((face: OrphanedFace) => ({
+      key: face.face_id,
+      name: this.fileName(face.crop_path),
+      meta: `${face.person_name ?? '_unknown'} · Bild gelöscht`,
+    }))
+  );
+
+  protected readonly ackMissingRows = computed((): RrRow[] =>
+    (this.report()?.acknowledged_missing ?? []).map((instance: AcknowledgedMissing) => ({
+      key: instance.instance_id,
+      name: this.fileName(instance.path),
+      meta: `${instance.person_name ?? '_unknown'} · fehlend seit ${instance.missing_at.slice(0, 10)}`,
+    }))
+  );
+
+  protected readonly totalIssues = computed((): number =>
+    this.orphanRows().length +
+    this.missingRows().length +
+    this.driftRows().length +
+    this.misassignedRows().length +
+    this.orphanedFaceRows().length +
+    this.ackMissingRows().length
+  );
+
+  // ── Actions ─────────────────────────────────────────────────────────────────
 
   protected triggerScan(): void {
     this.store.dispatch(maintenanceActions.triggerReconcile());
-    this.clearSelections();
   }
 
-  protected clearSelections(): void {
-    this.selectedOrphans.set(new Set());
-    this.selectedMissing.set(new Set());
-    this.selectedDrift.set(new Set());
+  protected onRepair(kind: IssueKind, event: RrRepairEvent): void {
+    const actions: RepairAction[] = event.keys.map((key: RrKey) =>
+      this.buildAction(kind, key, event.action)
+    );
+    if (actions.length > 0) {
+      this.store.dispatch(maintenanceActions.repair({ actions }));
+    }
   }
 
-  // ── Orphan selection ─────────────────────────────────────────
-
-  protected toggleOrphan(path: string): void {
-    this.selectedOrphans.update((sel: Set<string>) => {
-      const next = new Set(sel);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
+  private buildAction(kind: IssueKind, key: RrKey, action: RepairActionKind): RepairAction {
+    switch (kind) {
+      case 'orphan':
+        return { item: { kind, path: key as string }, action };
+      case 'drift': {
+        // fix_path needs the rediscovered location, looked up by the row's instance id.
+        const drift = (this.report()?.path_drift ?? []).find(
+          (file: DriftFile) => file.instance_id === key
+        );
+        if (!drift) {
+          // The key always comes from a rendered drift row; this only guards a torn-down report.
+          return { item: { kind, instance_id: key as number }, action };
+        }
+        return { item: { kind, instance_id: key as number, found_path: drift.found_path }, action };
       }
-      return next;
-    });
-  }
-
-  protected toggleAllOrphans(): void {
-    const orphans = this.report()?.orphaned_files ?? [];
-    if (this.allOrphansSelected()) {
-      this.selectedOrphans.set(new Set());
-    } else {
-      this.selectedOrphans.set(new Set(orphans.map((orphan: OrphanFile) => orphan.path)));
+      case 'orphaned_face':
+        return { item: { kind, face_id: key as number }, action };
+      default:
+        // missing, misassigned, acknowledged_missing — all keyed by instance id.
+        return { item: { kind, instance_id: key as number }, action };
     }
   }
 
-  protected isOrphanSelected(path: string): boolean {
-    return this.selectedOrphans().has(path);
-  }
-
-  // ── Missing selection ─────────────────────────────────────────
-
-  protected toggleMissing(instanceId: number): void {
-    this.selectedMissing.update((sel: Set<number>) => {
-      const next = new Set(sel);
-      if (next.has(instanceId)) {
-        next.delete(instanceId);
-      } else {
-        next.add(instanceId);
-      }
-      return next;
-    });
-  }
-
-  protected toggleAllMissing(): void {
-    const missing = this.report()?.missing_files ?? [];
-    if (this.allMissingSelected()) {
-      this.selectedMissing.set(new Set());
-    } else {
-      this.selectedMissing.set(new Set(missing.map((item: MissingFile) => item.instance_id)));
-    }
-  }
-
-  protected isMissingSelected(instanceId: number): boolean {
-    return this.selectedMissing().has(instanceId);
-  }
-
-  // ── Drift selection ───────────────────────────────────────────
-
-  protected toggleDrift(instanceId: number): void {
-    this.selectedDrift.update((sel: Set<number>) => {
-      const next = new Set(sel);
-      if (next.has(instanceId)) {
-        next.delete(instanceId);
-      } else {
-        next.add(instanceId);
-      }
-      return next;
-    });
-  }
-
-  protected toggleAllDrift(): void {
-    const drift = this.report()?.path_drift ?? [];
-    if (this.allDriftSelected()) {
-      this.selectedDrift.set(new Set());
-    } else {
-      this.selectedDrift.set(new Set(drift.map((item: DriftFile) => item.instance_id)));
-    }
-  }
-
-  protected isDriftSelected(instanceId: number): boolean {
-    return this.selectedDrift().has(instanceId);
-  }
-
-  // ── Bulk actions ──────────────────────────────────────────────
-
-  protected indexSelectedOrphans(): void {
-    const orphans = this.report()?.orphaned_files ?? [];
-    const sel = this.selectedOrphans();
-    const actions: RepairAction[] = orphans
-      .filter((orphan: OrphanFile) => sel.has(orphan.path))
-      .map((orphan: OrphanFile) => ({
-        item: { kind: 'orphan' as const, path: orphan.path },
-        action: 'index' as const,
-      }));
-    if (actions.length > 0) {
-      this.store.dispatch(maintenanceActions.repair({ actions }));
-      this.selectedOrphans.set(new Set());
-    }
-  }
-
-  protected trashSelectedOrphans(): void {
-    const orphans = this.report()?.orphaned_files ?? [];
-    const sel = this.selectedOrphans();
-    const actions: RepairAction[] = orphans
-      .filter((orphan: OrphanFile) => sel.has(orphan.path))
-      .map((orphan: OrphanFile) => ({
-        item: { kind: 'orphan' as const, path: orphan.path },
-        action: 'trash' as const,
-      }));
-    if (actions.length > 0) {
-      this.store.dispatch(maintenanceActions.repair({ actions }));
-      this.selectedOrphans.set(new Set());
-    }
-  }
-
-  protected markSelectedMissing(): void {
-    const missing = this.report()?.missing_files ?? [];
-    const sel = this.selectedMissing();
-    const actions: RepairAction[] = missing
-      .filter((item: MissingFile) => sel.has(item.instance_id))
-      .map((item: MissingFile) => ({
-        item: { kind: 'missing' as const, instance_id: item.instance_id },
-        action: 'mark_missing' as const,
-      }));
-    if (actions.length > 0) {
-      this.store.dispatch(maintenanceActions.repair({ actions }));
-      this.selectedMissing.set(new Set());
-    }
-  }
-
-  // ── Single-item actions (called from template) ───────────────
-
-  protected repairOrphan(path: string, action: 'index' | 'trash'): void {
-    this.store.dispatch(maintenanceActions.repair({
-      actions: [{ item: { kind: 'orphan', path }, action }],
-    }));
-  }
-
-  protected repairMissing(instanceId: number): void {
-    this.store.dispatch(maintenanceActions.repair({
-      actions: [{ item: { kind: 'missing', instance_id: instanceId }, action: 'mark_missing' }],
-    }));
-  }
-
-  protected repairDrift(instanceId: number, foundPath: string): void {
-    this.store.dispatch(maintenanceActions.repair({
-      actions: [{ item: { kind: 'drift', instance_id: instanceId, found_path: foundPath }, action: 'fix_path' }],
-    }));
-  }
-
-  protected fixSelectedDrift(): void {
-    const drift = this.report()?.path_drift ?? [];
-    const sel = this.selectedDrift();
-    const actions: RepairAction[] = drift
-      .filter((item: DriftFile) => sel.has(item.instance_id))
-      .map((item: DriftFile) => ({
-        item: {
-          kind: 'drift' as const,
-          instance_id: item.instance_id,
-          found_path: item.found_path,
-        },
-        action: 'fix_path' as const,
-      }));
-    if (actions.length > 0) {
-      this.store.dispatch(maintenanceActions.repair({ actions }));
-      this.selectedDrift.set(new Set());
-    }
-  }
+  // ── Path helpers (display only) ─────────────────────────────────────────────
 
   protected fileName(path: string): string {
     return path.split(/[\\/]/).pop() ?? path;
