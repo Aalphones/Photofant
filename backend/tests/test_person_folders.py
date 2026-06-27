@@ -10,6 +10,7 @@ from photofant.media.person_folders import (
     merge_persons,
     person_folder_name,
     prune_orphaned_instances,
+    reassign_face,
     split_faces,
 )
 
@@ -387,3 +388,81 @@ def test_prune_no_photo_loss_on_last_orphan(db_session: Session, tmp_path: Path)
 
     final = sum(1 for child in tmp_path.rglob("*") if child.is_file())
     assert final == initial
+
+
+# ── reassign_face: the lightbox "no, this is personB" flow ───────────────────
+
+
+def test_reassign_drops_old_person_instance(db_session: Session, tmp_path: Path) -> None:
+    """Photo on personA, user changes the face to personB → personA is gone."""
+    person_a = _create_person(db_session, "Alice", tmp_path)
+    person_b = _create_person(db_session, "Bob", tmp_path)
+
+    asset = _create_asset(db_session)
+    instance_a = _create_instance(db_session, asset, person_a, tmp_path, filename="photo.png")
+    face = _create_face(db_session, asset, person_a, tmp_path)
+    db_session.commit()
+
+    old_file = Path(instance_a.path)
+    reassign_face(db_session, face.id, person_b.id, tmp_path)
+    db_session.commit()
+
+    a_instances = (
+        db_session.query(AssetInstance)
+        .filter(
+            AssetInstance.asset_id == asset.id,
+            AssetInstance.person_id == person_a.id,
+            AssetInstance.deleted_at.is_(None),
+        )
+        .count()
+    )
+    assert a_instances == 0
+    assert not old_file.exists()
+
+    b_instances = (
+        db_session.query(AssetInstance)
+        .filter(
+            AssetInstance.asset_id == asset.id,
+            AssetInstance.person_id == person_b.id,
+            AssetInstance.deleted_at.is_(None),
+        )
+        .count()
+    )
+    assert b_instances == 1
+    db_session.refresh(face)
+    assert face.person_id == person_b.id
+
+
+def test_reassign_drops_misassigned_fixed_instance(db_session: Session, tmp_path: Path) -> None:
+    """Import put the photo on personA (fixed, no personA face); the only face is
+    _unknown. Reassigning that face to personB must still drop personA."""
+    person_a = _create_person(db_session, "Alice", tmp_path)
+    person_b = _create_person(db_session, "Bob", tmp_path)
+    unknown = db_session.get(Person, 1)
+    for sub in ("photos", "favourites", "faces", "edits"):
+        (tmp_path / "_unknown" / sub).mkdir(parents=True, exist_ok=True)
+
+    asset = _create_asset(db_session)
+    instance_a = _create_instance(db_session, asset, person_a, tmp_path, filename="wrong.png")
+    instance_a.fixed_person = True
+    # The detected face never belonged to personA — it sits on _unknown.
+    face = _create_face(db_session, asset, unknown, tmp_path, filename="uk_face.jpg")
+    db_session.commit()
+
+    old_file = Path(instance_a.path)
+    reassign_face(db_session, face.id, person_b.id, tmp_path)
+    db_session.commit()
+
+    a_instances = (
+        db_session.query(AssetInstance)
+        .filter(
+            AssetInstance.asset_id == asset.id,
+            AssetInstance.person_id == person_a.id,
+            AssetInstance.deleted_at.is_(None),
+        )
+        .count()
+    )
+    assert a_instances == 0  # the wrong fixed assignment is gone
+    assert not old_file.exists()
+    db_session.refresh(face)
+    assert face.person_id == person_b.id
