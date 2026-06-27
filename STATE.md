@@ -11,3 +11,4 @@
 - P10 Trainingssets: `docs/planning/2026-06-12_p10-trainingssets-export/`
 - P11 Duale Duplikaterkennung: `docs/planning/2026-06-22_p11-duale-duplikaterkennung/`
 - P13 Person-Bulk-Import: `docs/planning/2026-06-22_p13-person-bulk-import/`
+- P14 Job-Queue Zwei-Spuren + Prio: `docs/planning/2026-06-27_p14-job-queue-prio-parallelisierung.md`
