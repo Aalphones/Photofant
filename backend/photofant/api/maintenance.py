@@ -109,6 +109,14 @@ class OrphanedFaceDto(BaseModel):
     detail: str
 
 
+class MisassignedInstanceDto(BaseModel):
+    instance_id: int
+    asset_id: int
+    path: str
+    person_name: str | None
+    detail: str
+
+
 class AcknowledgedMissingDto(BaseModel):
     instance_id: int
     asset_id: int
@@ -124,6 +132,7 @@ class ReconcileReportDto(BaseModel):
     missing_files: list[MissingDto]
     path_drift: list[DriftDto]
     orphaned_faces: list[OrphanedFaceDto] = []
+    misassigned_instances: list[MisassignedInstanceDto] = []
     acknowledged_missing: list[AcknowledgedMissingDto] = []
 
 
@@ -133,12 +142,15 @@ _EMPTY_REPORT = ReconcileReportDto(
     missing_files=[],
     path_drift=[],
     orphaned_faces=[],
+    misassigned_instances=[],
     acknowledged_missing=[],
 )
 
 
 class RepairItem(BaseModel):
-    kind: Literal["orphan", "missing", "drift", "orphaned_face", "acknowledged_missing"]
+    kind: Literal[
+        "orphan", "missing", "drift", "orphaned_face", "misassigned", "acknowledged_missing"
+    ]
     instance_id: int | None = None
     face_id: int | None = None
     path: str | None = None
@@ -147,7 +159,7 @@ class RepairItem(BaseModel):
 
 class RepairActionDto(BaseModel):
     item: RepairItem
-    action: Literal["index", "mark_missing", "trash", "fix_path"]
+    action: Literal["index", "mark_missing", "trash", "fix_path", "purge", "fix_assignment"]
 
 
 class RepairRequest(BaseModel):
@@ -214,6 +226,10 @@ async def _apply_one(
         if item.face_id is None:
             raise repair.RepairError("orphaned_face purge requires a face_id")
         await repair.purge_orphaned_face(session, item.face_id, get_cache_db_path())
+    elif item.kind == "misassigned" and action == "fix_assignment":
+        if item.instance_id is None:
+            raise repair.RepairError("fix_assignment requires an instance_id")
+        repair.fix_misassigned(session, item.instance_id, data_root)
     elif item.kind == "acknowledged_missing" and action == "purge":
         if item.instance_id is None:
             raise repair.RepairError("acknowledged_missing purge requires an instance_id")

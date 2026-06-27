@@ -79,6 +79,23 @@ class OrphanedFaceItem:
 
 
 @dataclass
+class MisassignedInstanceItem:
+    """An active instance assigned to a real person who has no face on the asset.
+
+    The asset *does* have faces (so the assignment was meant to follow them), but
+    none of them belong to this instance's person — a left-over wrong assignment
+    from an import or a stale clustering result. Repairing it re-runs the same
+    face-driven cleanup used after a manual delete / reassign.
+    """
+
+    instance_id: int
+    asset_id: int
+    path: str
+    person_name: str | None
+    detail: str
+
+
+@dataclass
 class AcknowledgedMissingItem:
     """An AssetInstance marked missing (missing_at IS NOT NULL) but not yet purged.
 
@@ -101,6 +118,7 @@ class ReconcileReport:
     missing_files: list[MissingItem] = field(default_factory=list)
     path_drift: list[DriftItem] = field(default_factory=list)
     orphaned_faces: list[OrphanedFaceItem] = field(default_factory=list)
+    misassigned_instances: list[MisassignedInstanceItem] = field(default_factory=list)
     acknowledged_missing: list[AcknowledgedMissingItem] = field(default_factory=list)
 
     @property
@@ -110,6 +128,7 @@ class ReconcileReport:
             + len(self.missing_files)
             + len(self.path_drift)
             + len(self.orphaned_faces)
+            + len(self.misassigned_instances)
             + len(self.acknowledged_missing)
         )
 
@@ -120,6 +139,7 @@ class ReconcileReport:
             "missing_files": [asdict(item) for item in self.missing_files],
             "path_drift": [asdict(item) for item in self.path_drift],
             "orphaned_faces": [asdict(item) for item in self.orphaned_faces],
+            "misassigned_instances": [asdict(item) for item in self.misassigned_instances],
             "acknowledged_missing": [asdict(item) for item in self.acknowledged_missing],
         }
 

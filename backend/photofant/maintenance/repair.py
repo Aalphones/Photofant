@@ -79,3 +79,16 @@ def fix_drift(session: Session, instance_id: int, found_path: str, data_root: Pa
     instance.path = str(target)
     instance.missing_at = None
     session.commit()
+
+
+def fix_misassigned(session: Session, instance_id: int, data_root: Path) -> None:
+    """Clean up a wrong person assignment by re-running the face-driven prune.
+
+    Drops the instance if the photo still lives under a face-backed person,
+    otherwise moves it to `_unknown` — never deletes the last copy of a photo.
+    """
+    from photofant.media.person_folders import prune_orphaned_instances
+
+    instance = _load_instance(session, instance_id)
+    prune_orphaned_instances(session, instance.asset_id, data_root)
+    session.commit()

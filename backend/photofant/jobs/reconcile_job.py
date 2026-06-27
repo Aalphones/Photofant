@@ -11,7 +11,13 @@ from photofant.config import get_data_root
 from photofant.db.models import Asset, AssetInstance, Face, Person
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
-from photofant.maintenance.reconcile import AcknowledgedMissingItem, InstanceRecord, OrphanedFaceItem, classify_reconcile
+from photofant.maintenance.reconcile import (
+    AcknowledgedMissingItem,
+    InstanceRecord,
+    MisassignedInstanceItem,
+    OrphanedFaceItem,
+    classify_reconcile,
+)
 from photofant.maintenance.store import persist_report
 from photofant.media.meta import SUPPORTED_EXTENSIONS
 
@@ -106,6 +112,53 @@ def _gather_orphaned_faces() -> list[OrphanedFaceItem]:
     ]
 
 
+def _gather_misassigned_instances() -> list[MisassignedInstanceItem]:
+    """Active real-person instances the asset's faces no longer back.
+
+    The asset has at least one face, but none belongs to the instance's person —
+    a stale wrong assignment. Face-less assets are excluded (a deliberate
+    person assignment without a face is left alone), as are `_unknown` rows.
+    """
+    with SessionLocal() as session:
+        asset_has_face = (
+            select(Face.id)
+            .where(Face.asset_id == AssetInstance.asset_id)
+            .exists()
+        )
+        person_has_face = (
+            select(Face.id)
+            .where(
+                Face.asset_id == AssetInstance.asset_id,
+                Face.person_id == AssetInstance.person_id,
+            )
+            .exists()
+        )
+        rows = session.execute(
+            select(
+                AssetInstance.id,
+                AssetInstance.asset_id,
+                AssetInstance.path,
+                Person.name,
+            )
+            .join(Person, Person.id == AssetInstance.person_id)
+            .where(AssetInstance.deleted_at.is_(None))
+            .where(Person.is_unknown.is_(False))
+            .where(asset_has_face)
+            .where(~person_has_face)
+        ).all()
+
+    return [
+        MisassignedInstanceItem(
+            instance_id=row[0],
+            asset_id=row[1],
+            path=row[2],
+            person_name=row[3],
+            detail=f"asset.id={row[1]} · {row[3] or '?'} ohne Gesicht auf diesem Bild",
+        )
+        for row in rows
+    ]
+
+
 def _gather_acknowledged_missing() -> list[AcknowledgedMissingItem]:
     """AssetInstances already marked missing but not yet purged (missing_at IS NOT NULL)."""
     with SessionLocal() as session:
@@ -142,17 +195,20 @@ def _run_reconcile() -> int:
     fs_paths = _walk_data_root(data_root)
     report = classify_reconcile(active, fs_paths)
     report.orphaned_faces = _gather_orphaned_faces()
+    report.misassigned_instances = _gather_misassigned_instances()
     report.acknowledged_missing = _gather_acknowledged_missing()
 
     with SessionLocal() as session:
         persist_report(session, report)
 
     log.info(
-        "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces, %d acknowledged-missing",
+        "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces, "
+        "%d misassigned, %d acknowledged-missing",
         len(report.orphaned_files),
         len(report.missing_files),
         len(report.path_drift),
         len(report.orphaned_faces),
+        len(report.misassigned_instances),
         len(report.acknowledged_missing),
     )
     return report.total
