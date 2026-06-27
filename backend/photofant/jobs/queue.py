@@ -66,18 +66,24 @@ _PARALLEL_KINDS: frozenset[JobKind] = frozenset({JobKind.DOWNLOAD})
 # Background-inference kinds run on a dedicated worker so user-triggered jobs on the
 # main worker (import, export, ComfyUI) never wait behind a slow caption run.
 # Lower number = higher priority; FIFO within the same priority via a sequence counter.
+#
+# ORDERING CONSTRAINT: FACE must run *after* all jobs that open the asset file by the
+# path captured at enqueue time (HEURISTICS, TAGGING, EMBEDDING, CAPTIONING).
+# Reason: FACE calls run_incremental_match → materialize_assignment which physically
+# moves the file to the matched person's folder, invalidating any stale asset_path
+# closures still waiting in the queue.
 _BACKGROUND_PRIORITY: dict[JobKind, int] = {
     JobKind.COMFYUI_RUN: 10,
     JobKind.UPSCALE: 10,
     JobKind.FLUX_EDIT: 10,
     JobKind.INPAINT: 10,
-    JobKind.FACE: 20,
-    JobKind.HEURISTICS: 30,
-    JobKind.TAGGING: 40,
-    JobKind.EMBEDDING: 40,
+    JobKind.HEURISTICS: 20,
+    JobKind.TAGGING: 30,
+    JobKind.EMBEDDING: 30,
+    JobKind.CAPTIONING: 40,
+    JobKind.FACE: 45,   # must be after all path-based readers (see constraint above)
     JobKind.CLUSTERING: 50,
     JobKind.DUPE_SCAN: 50,
-    JobKind.CAPTIONING: 60,
 }
 
 _BACKGROUND_KINDS: frozenset[JobKind] = frozenset(_BACKGROUND_PRIORITY)
