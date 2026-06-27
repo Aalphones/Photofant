@@ -1,6 +1,6 @@
 # P14 — Job-Queue: Zwei-Spuren + Priorität in Lane 3
 
-**Status:** pending
+**Status:** complete
 
 Die aktuelle Queue hat einen einzigen sequenziellen Worker. Ein laufender Caption-Job
 (Florence-2, ONNX, bis zu mehreren Sekunden pro Bild) blockiert jeden nachfolgenden
@@ -40,8 +40,8 @@ zwischen Caption und Face ist ein reiner dict-Lookup, kein Reload.
 
 | Phase | Thema | Status |
 |---|---|---|
-| 1 | Queue-Kern refactorn | pending |
-| 2 | Doc-Sync | pending |
+| 1 | Queue-Kern refactorn | complete |
+| 2 | Doc-Sync | complete |
 
 ---
 
@@ -98,8 +98,20 @@ zwischen Caption und Face ist ein reiner dict-Lookup, kein Reload.
 
 ## Archiv-Footer
 
-**Summary:** —
-**Files touched:** —
-**Commits:** —
-**Deviations:** —
-**Follow-ups:** —
+**Summary:** Dritte Worker-Lane in `jobs/queue.py` ergänzt: Background-Inferenz läuft jetzt
+auf einer eigenen `asyncio.PriorityQueue` (Prio 10–60, FIFO via Sequenz-Counter innerhalb
+gleicher Prio), parallel zum bestehenden Main-FIFO-Worker. User-getriggerte Jobs warten
+nicht mehr hinter laufenden Caption-Jobs.
+
+**Files touched:** `backend/photofant/jobs/queue.py` · `docs/code-map.md`
+
+**Commits:** (siehe `feat(queue)`-Commit für P14)
+
+**Deviations:** Statt die Run-Logik ein drittes Mal zu kopieren, wurde `_run_parallel`
+zu einem geteilten `_run_job(status, coro_factory)`-Helfer verallgemeinert, den Main- und
+Background-Worker plus die parallelen Tasks gemeinsam nutzen — „identisches Fehler-Handling"
+by construction statt drei driftender Kopien. Log-Message dadurch einheitlich `"Job %s failed"`
+(vorher unterschied der Parallel-Pfad mit `"Parallel job %s failed"`).
+
+**Follow-ups:** Keine. Risiken (SQLite-Concurrent-Writes, VRAM bei heavy captionern) bleiben
+beobachtet, kein Handlungsbedarf.

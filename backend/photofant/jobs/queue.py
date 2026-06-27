@@ -63,6 +63,25 @@ CoroFactory = Callable[["JobStatus"], Coroutine[Any, Any, None]]
 # Add a kind here when it is I/O-bound and must never block other queue entries.
 _PARALLEL_KINDS: frozenset[JobKind] = frozenset({JobKind.DOWNLOAD})
 
+# Background-inference kinds run on a dedicated worker so user-triggered jobs on the
+# main worker (import, export, ComfyUI) never wait behind a slow caption run.
+# Lower number = higher priority; FIFO within the same priority via a sequence counter.
+_BACKGROUND_PRIORITY: dict[JobKind, int] = {
+    JobKind.COMFYUI_RUN: 10,
+    JobKind.UPSCALE: 10,
+    JobKind.FLUX_EDIT: 10,
+    JobKind.INPAINT: 10,
+    JobKind.FACE: 20,
+    JobKind.HEURISTICS: 30,
+    JobKind.TAGGING: 40,
+    JobKind.EMBEDDING: 40,
+    JobKind.CLUSTERING: 50,
+    JobKind.DUPE_SCAN: 50,
+    JobKind.CAPTIONING: 60,
+}
+
+_BACKGROUND_KINDS: frozenset[JobKind] = frozenset(_BACKGROUND_PRIORITY)
+
 
 @dataclass
 class _Job:
@@ -73,19 +92,24 @@ class _Job:
 class JobQueue:
     def __init__(self) -> None:
         self._queue: asyncio.Queue[_Job] = asyncio.Queue()
+        self._background_queue: asyncio.PriorityQueue[tuple[int, int, _Job]] = asyncio.PriorityQueue()
+        self._bg_seq: int = 0
         self._jobs: dict[str, JobStatus] = {}
         self._subscribers: list[asyncio.Queue[JobStatus]] = []
         self._worker_task: asyncio.Task[None] | None = None
+        self._background_worker_task: asyncio.Task[None] | None = None
         self._parallel_tasks: set[asyncio.Task[None]] = set()
 
     def start(self) -> None:
         self._worker_task = asyncio.create_task(self._worker())
+        self._background_worker_task = asyncio.create_task(self._background_worker())
 
     async def stop(self) -> None:
-        if self._worker_task:
-            self._worker_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._worker_task
+        for worker_task in (self._worker_task, self._background_worker_task):
+            if worker_task:
+                worker_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await worker_task
         for task in list(self._parallel_tasks):
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -108,12 +132,16 @@ class JobQueue:
         status = JobStatus(id=job_id, kind=kind, label=label)
         self._jobs[job_id] = status
         self._notify(status)
+        job = _Job(status=status, coro_factory=coro_factory)
         if kind in _PARALLEL_KINDS:
-            task = asyncio.create_task(self._run_parallel(status, coro_factory))
+            task = asyncio.create_task(self._run_job(status, coro_factory))
             self._parallel_tasks.add(task)
             task.add_done_callback(self._parallel_tasks.discard)
+        elif kind in _BACKGROUND_KINDS:
+            self._bg_seq += 1
+            await self._background_queue.put((_BACKGROUND_PRIORITY[kind], self._bg_seq, job))
         else:
-            await self._queue.put(_Job(status=status, coro_factory=coro_factory))
+            await self._queue.put(job)
         return status
 
     def update(self, status: JobStatus, progress: float, state: JobState, error: str | None = None) -> None:
@@ -126,28 +154,30 @@ class JobQueue:
         for subscriber in self._subscribers:
             subscriber.put_nowait(status)
 
-    async def _run_parallel(self, status: JobStatus, coro_factory: CoroFactory) -> None:
+    async def _run_job(self, status: JobStatus, coro_factory: CoroFactory) -> None:
         self.update(status, progress=0.0, state=JobState.RUNNING)
         try:
             await coro_factory(status)
             self.update(status, progress=1.0, state=JobState.DONE)
         except Exception as exc:
-            log.exception("Parallel job %s failed", status.id)
+            log.exception("Job %s failed", status.id)
             self.update(status, progress=status.progress, state=JobState.ERROR, error=str(exc))
 
     async def _worker(self) -> None:
         while True:
             job = await self._queue.get()
-            status = job.status
-            self.update(status, progress=0.0, state=JobState.RUNNING)
             try:
-                await job.coro_factory(status)
-                self.update(status, progress=1.0, state=JobState.DONE)
-            except Exception as exc:
-                log.exception("Job %s failed", status.id)
-                self.update(status, progress=status.progress, state=JobState.ERROR, error=str(exc))
+                await self._run_job(job.status, job.coro_factory)
             finally:
                 self._queue.task_done()
+
+    async def _background_worker(self) -> None:
+        while True:
+            _priority, _seq, job = await self._background_queue.get()
+            try:
+                await self._run_job(job.status, job.coro_factory)
+            finally:
+                self._background_queue.task_done()
 
 
 job_queue = JobQueue()
