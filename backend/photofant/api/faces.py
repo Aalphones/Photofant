@@ -19,11 +19,10 @@ import numpy as np
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
-from photofant.db.models import AssetInstance, Face, Person
+from photofant.db.models import Face, Person
 from photofant.db.session import get_session
 from photofant.media.thumbnails import generate_thumbnail
 
@@ -348,30 +347,17 @@ async def delete_face(face_id: int, session: DbSession) -> None:
         except OSError:
             log.warning("Could not delete crop file for face %d: %s", face_id, crop_path)
 
-    old_person_id = face.person_id
     session.delete(face)
+    session.flush()  # face must be gone before pruning re-counts remaining faces
 
-    # If this was the last face for the old person in this asset, remove their instance.
-    if asset_id is not None and old_person_id is not None:
-        remaining_faces: int = session.scalar(
-            select(func.count())
-            .select_from(Face)
-            .where(Face.asset_id == asset_id, Face.person_id == old_person_id)
-        ) or 0
-        if remaining_faces == 0:
-            old_instance = session.scalar(
-                select(AssetInstance).where(
-                    AssetInstance.asset_id == asset_id,
-                    AssetInstance.person_id == old_person_id,
-                    AssetInstance.deleted_at.is_(None),
-                )
-            )
-            if old_instance:
-                old_path = Path(old_instance.path)
-                if old_path.exists():
-                    old_path.unlink()
-                    log.info("Removed orphaned instance file %s", old_path)
-                session.delete(old_instance)
+    # Prune every instance this asset no longer has a face for. The deleted
+    # face's person may differ from the instance that's now orphaned (e.g. an
+    # import-into-person assignment whose face never matched that person).
+    if asset_id is not None:
+        from photofant.config import get_data_root
+        from photofant.media.person_folders import prune_orphaned_instances
+
+        prune_orphaned_instances(session, asset_id, get_data_root())
 
     session.commit()
 

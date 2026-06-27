@@ -448,6 +448,120 @@ def materialize_clustering_results(
     return {"instances_created": instances_created, "crops_moved": crops_moved}
 
 
+# ── orphaned-instance pruning ────────────────────────────────────────────
+
+
+def _delete_instance(session: Session, instance: AssetInstance) -> None:
+    """Drop an instance row and its file (a per-person copy that's safe to lose)."""
+    old_path = Path(instance.path)
+    if old_path.exists():
+        try:
+            old_path.unlink()
+            log.info("Pruned orphaned instance file %s", old_path)
+        except OSError:
+            log.warning("Could not delete orphaned instance file %s", old_path)
+    session.delete(instance)
+
+
+def _move_instance_to_unknown(
+    session: Session,
+    instance: AssetInstance,
+    unknown_person: Person,
+    data_root: Path,
+) -> None:
+    """Reassign an orphaned last instance to _unknown instead of deleting it."""
+    unknown_dir = ensure_person_folder(data_root, unknown_person)
+    subfolder = "favourites" if instance.favourite else "photos"
+    source = Path(instance.path)
+    dest = unknown_dir / subfolder / source.name
+    try:
+        final = _safe_move(source, dest)
+        instance.path = str(final.resolve())
+    except FileNotFoundError:
+        log.warning("Cannot move orphaned instance %s to _unknown — file missing", source)
+    instance.person_id = unknown_person.id
+    instance.fixed_person = False
+    log.info("Moved orphaned instance for asset %d to _unknown", instance.asset_id)
+
+
+def prune_orphaned_instances(
+    session: Session,
+    asset_id: int | None,
+    data_root: Path,
+) -> dict[str, int]:
+    """Reconcile an asset's instances with its faces after a face mutation.
+
+    Runs after delete / reassign so the gallery's person filter and the on-disk
+    person folders follow the faces. An instance is *orphaned* when its person
+    has no remaining face on this asset. Orphans are handled so a photo is never
+    destroyed just because its last face was removed:
+
+      - The photo still lives under a face-backed person → drop the orphan's row
+        and its (copied) file.
+      - It is the asset's last instance → move it to `_unknown` instead of
+        deleting it. A face-less photo lands in the catch-all, not the trash.
+
+    Because this only runs after a face operation, a photo that never had a face
+    (e.g. a landscape deliberately dropped onto a person) is never touched here.
+
+    Returns {"removed": n, "moved_to_unknown": m}.
+    """
+    if asset_id is None:
+        return {"removed": 0, "moved_to_unknown": 0}
+
+    unknown_person = session.scalar(select(Person).where(Person.is_unknown.is_(True)))
+    if unknown_person is None:
+        return {"removed": 0, "moved_to_unknown": 0}
+
+    instances = session.scalars(
+        select(AssetInstance).where(
+            AssetInstance.asset_id == asset_id,
+            AssetInstance.deleted_at.is_(None),
+        )
+    ).all()
+
+    def has_face(person_id: int) -> bool:
+        count: int = session.scalar(
+            select(func.count())
+            .select_from(Face)
+            .where(Face.asset_id == asset_id, Face.person_id == person_id)
+        ) or 0
+        return count > 0
+
+    orphans = [inst for inst in instances if not has_face(inst.person_id)]
+    if not orphans:
+        return {"removed": 0, "moved_to_unknown": 0}
+
+    face_backed = [inst for inst in instances if inst not in orphans]
+
+    removed = 0
+    moved = 0
+
+    if face_backed:
+        # The photo survives under a real face elsewhere → drop every orphan.
+        for instance in orphans:
+            _delete_instance(session, instance)
+            removed += 1
+    else:
+        # No face-backed instance left. Keep exactly one, in _unknown, so the
+        # photo isn't lost. Prefer an instance that's already in _unknown.
+        survivor = next(
+            (inst for inst in orphans if inst.person_id == unknown_person.id),
+            orphans[0],
+        )
+        for instance in orphans:
+            if instance is survivor:
+                if instance.person_id != unknown_person.id:
+                    _move_instance_to_unknown(session, instance, unknown_person, data_root)
+                    moved += 1
+            else:
+                _delete_instance(session, instance)
+                removed += 1
+
+    session.flush()
+    return {"removed": removed, "moved_to_unknown": moved}
+
+
 # ── manual face reassignment ────────────────────────────────────────────
 
 
@@ -499,30 +613,10 @@ def reassign_face(
 
     materialize_assignment(session, asset_id, new_person_id, data_root, fixed=True)
 
-    if old_person_id is not None:
-        remaining_faces: int = session.scalar(
-            select(func.count())
-            .select_from(Face)
-            .where(Face.asset_id == asset_id, Face.person_id == old_person_id)
-        ) or 0
-
-        if remaining_faces == 0:
-            old_instance = session.scalar(
-                select(AssetInstance).where(
-                    AssetInstance.asset_id == asset_id,
-                    AssetInstance.person_id == old_person_id,
-                    AssetInstance.deleted_at.is_(None),
-                )
-            )
-            if old_instance:
-                # Remove regardless of fixed_person — if the last face for this
-                # asset was manually moved away from old_person, the instance is
-                # orphaned and the user's intent is clear.
-                old_path = Path(old_instance.path)
-                if old_path.exists():
-                    old_path.unlink()
-                    log.info("Removed orphaned instance file %s", old_path)
-                session.delete(old_instance)
+    # Prune every instance this asset no longer has a face for — not just the
+    # old person. The wrongly-assigned instance may belong to a third person
+    # (e.g. an import-into-person assignment whose face never matched it).
+    prune_orphaned_instances(session, asset_id, data_root)
 
     session.flush()
     log.info(

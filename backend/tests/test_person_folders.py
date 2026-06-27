@@ -6,7 +6,12 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from photofant.db.models import Asset, AssetInstance, Face, Person
-from photofant.media.person_folders import merge_persons, person_folder_name, split_faces
+from photofant.media.person_folders import (
+    merge_persons,
+    person_folder_name,
+    prune_orphaned_instances,
+    split_faces,
+)
 
 _asset_counter = 0
 
@@ -292,3 +297,93 @@ def test_split_no_file_loss(db_session: Session, tmp_path: Path) -> None:
 
     final_file_count = sum(1 for child in tmp_path.rglob("*") if child.is_file())
     assert final_file_count >= initial_file_count
+
+
+# ── prune_orphaned_instances ─────────────────────────────────────────────────
+
+
+def test_prune_drops_orphan_when_photo_survives_elsewhere(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """personA has no face on the asset, personB does → personA's copy goes."""
+    person_a = _create_person(db_session, "Alice", tmp_path)
+    person_b = _create_person(db_session, "Bob", tmp_path)
+
+    asset = _create_asset(db_session)
+    instance_a = _create_instance(db_session, asset, person_a, tmp_path, filename="a.png")
+    _create_instance(db_session, asset, person_b, tmp_path, filename="b.png")
+    _create_face(db_session, asset, person_b, tmp_path)  # only B has a face
+    db_session.commit()
+
+    orphan_file = Path(instance_a.path)
+    result = prune_orphaned_instances(db_session, asset.id, tmp_path)
+    db_session.commit()
+
+    assert result == {"removed": 1, "moved_to_unknown": 0}
+    assert not orphan_file.exists()
+    surviving = (
+        db_session.query(AssetInstance)
+        .filter(AssetInstance.asset_id == asset.id, AssetInstance.deleted_at.is_(None))
+        .all()
+    )
+    assert len(surviving) == 1
+    assert surviving[0].person_id == person_b.id
+
+
+def test_prune_moves_last_orphan_to_unknown(db_session: Session, tmp_path: Path) -> None:
+    """Last face removed → the photo must land in _unknown, not be deleted."""
+    person_a = _create_person(db_session, "Alice", tmp_path)
+
+    asset = _create_asset(db_session)
+    instance = _create_instance(db_session, asset, person_a, tmp_path, filename="solo.png")
+    # No face for the asset at all (the user just deleted the only one).
+    db_session.commit()
+
+    old_file = Path(instance.path)
+    result = prune_orphaned_instances(db_session, asset.id, tmp_path)
+    db_session.commit()
+
+    assert result == {"removed": 0, "moved_to_unknown": 1}
+
+    db_session.refresh(instance)
+    assert instance.person_id == 1  # _unknown seed id
+    assert not instance.fixed_person
+
+    new_file = Path(instance.path)
+    assert new_file.exists()
+    assert new_file.parent == tmp_path / "_unknown" / "photos"
+    assert not old_file.exists()  # moved, not copied
+
+
+def test_prune_keeps_face_backed_instance(db_session: Session, tmp_path: Path) -> None:
+    """An instance still covered by a face is left untouched."""
+    person_a = _create_person(db_session, "Alice", tmp_path)
+
+    asset = _create_asset(db_session)
+    instance = _create_instance(db_session, asset, person_a, tmp_path)
+    _create_face(db_session, asset, person_a, tmp_path)
+    db_session.commit()
+
+    result = prune_orphaned_instances(db_session, asset.id, tmp_path)
+    db_session.commit()
+
+    assert result == {"removed": 0, "moved_to_unknown": 0}
+    db_session.refresh(instance)
+    assert instance.person_id == person_a.id
+    assert Path(instance.path).exists()
+
+
+def test_prune_no_photo_loss_on_last_orphan(db_session: Session, tmp_path: Path) -> None:
+    """Pruning the last orphan keeps the file count stable (move, not delete)."""
+    person_a = _create_person(db_session, "Alice", tmp_path)
+
+    asset = _create_asset(db_session)
+    _create_instance(db_session, asset, person_a, tmp_path, filename="solo.png")
+    db_session.commit()
+
+    initial = sum(1 for child in tmp_path.rglob("*") if child.is_file())
+    prune_orphaned_instances(db_session, asset.id, tmp_path)
+    db_session.commit()
+
+    final = sum(1 for child in tmp_path.rglob("*") if child.is_file())
+    assert final == initial
