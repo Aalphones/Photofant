@@ -63,7 +63,8 @@
 ### Aktionen-Sektion kürzen
 
 - [ ] Text-Buttons „Favorisieren" + „Bearbeiten" + „Herunterladen" entfernen (→ Toolbar)
-- [ ] Verbleibend im Panel (kein Pendants in Toolbar): Papierkorb, Klassifizieren, ComfyUI, Upscale
+- [ ] Verbleibend im Panel (kein Pendant in Toolbar): Papierkorb, Klassifizieren, ComfyUI, Upscale, **Im Explorer anzeigen**
+  - „Im Explorer anzeigen" wurde in Session 2026-06-28 ergänzt (ruft `POST /api/assets/{id}/reveal` auf, öffnet Explorer mit `/select,<pfad>`) — **muss beim Umbau erhalten bleiben**
 - [ ] Diese restlichen Aktionen kompakter gestalten (Icon + kurzer Text, 2er-Grid)
 
 ---

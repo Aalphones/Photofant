@@ -138,6 +138,10 @@ export class AssetService {
     return this.http.post<void>('/api/assets/bulk-trash', { asset_ids: assetIds });
   }
 
+  revealAsset(id: number): Observable<void> {
+    return this.http.post<void>(`/api/assets/${id}/reveal`, null);
+  }
+
   bulkEdit(assetIds: number[], op: string, params: Record<string, unknown>): Observable<{ job_id: string }> {
     return this.http.post<{ job_id: string }>('/api/assets/bulk-edit', {
       asset_ids: assetIds,

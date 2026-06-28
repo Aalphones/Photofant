@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import subprocess
+import sys
 import tempfile
 from datetime import datetime
 from enum import StrEnum
@@ -1089,6 +1091,26 @@ class BulkEditRequest(BaseModel):
     asset_ids: list[int]
     op: str
     params: dict[str, Any]  # type: ignore[type-arg]
+
+
+@router.post("/{asset_id}/reveal", status_code=204)
+async def reveal_asset(asset_id: int, session: DbSession) -> Response:
+    """Open the asset's file in the system file browser, with the file selected."""
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    _, instance = row
+    file_path = Path(instance.path)
+
+    if sys.platform == "win32":
+        subprocess.Popen(["explorer", "/select,", str(file_path)])
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", "-R", str(file_path)])
+    else:
+        subprocess.Popen(["xdg-open", str(file_path.parent)])
+
+    return Response(status_code=204)
 
 
 @router.post("/bulk-edit", response_model=JobStarted, status_code=202)

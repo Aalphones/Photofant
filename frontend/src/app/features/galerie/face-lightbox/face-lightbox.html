@@ -39,6 +39,14 @@
             <pf-icon name="gallery" [size]="14" />
             Zum Bild
           </button>
+          <button
+            class="fl-action-btn"
+            (click)="revealInExplorer()"
+            title="Originalbild im Windows Explorer anzeigen und markieren"
+          >
+            <pf-icon name="folder" [size]="14" />
+            Im Explorer
+          </button>
         }
         <button class="fl-action-btn fl-action-btn--danger" (click)="deleteFace()">
           <pf-icon name="trash" [size]="14" />

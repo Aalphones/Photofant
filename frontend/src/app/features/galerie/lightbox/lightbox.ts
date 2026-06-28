@@ -321,6 +321,13 @@ export class Lightbox {
     }
   }
 
+  protected revealInExplorer(): void {
+    const asset: AssetDto | null = this.asset();
+    if (asset != null) {
+      this.assetService.revealAsset(asset.id).subscribe();
+    }
+  }
+
   protected openRerunDialog(): void {
     this.store.dispatch(presetsActions.loadPresets());
     this.showRerunDialog.set(true);

@@ -76,6 +76,16 @@
           </button>
         </div>
         <div class="pbtn-row">
+          <button
+            class="pbtn pbtn--ghost"
+            (click)="revealInExplorer()"
+            title="Datei im Windows Explorer anzeigen und markieren"
+          >
+            <pf-icon name="folder" [size]="15" />
+            Im Explorer anzeigen
+          </button>
+        </div>
+        <div class="pbtn-row">
           <button class="pbtn pbtn--ghost" (click)="openEditor()">
             <pf-icon name="crop" [size]="15" />
             Bearbeiten

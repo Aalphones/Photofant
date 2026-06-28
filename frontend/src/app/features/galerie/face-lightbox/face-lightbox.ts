@@ -14,6 +14,7 @@ import { DOCUMENT } from '@angular/common';
 import { Store } from '@ngrx/store';
 import type { FaceGalleryItemDto, FaceMatch, PersonDto } from '@photofant/models';
 import { PersonService } from '@photofant/services';
+import { AssetService } from '../../../services/asset.service';
 import { personsActions, personsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
@@ -27,6 +28,7 @@ import { Icon } from '@photofant/ui';
 export class FaceLightbox {
   private readonly store         = inject(Store);
   private readonly personService = inject(PersonService);
+  private readonly assetService  = inject(AssetService);
   private readonly destroyRef    = inject(DestroyRef);
   private readonly document      = inject(DOCUMENT);
 
@@ -170,5 +172,14 @@ export class FaceLightbox {
 
   protected matchScorePercent(score: number): number {
     return Math.round(score * 100);
+  }
+
+  protected revealInExplorer(): void {
+    const assetId = this.faceItem().asset_id;
+    if (assetId != null) {
+      this.assetService.revealAsset(assetId)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe();
+    }
   }
 }
