@@ -3,10 +3,14 @@
 **Status:** pending  
 **ADR:** 007 (erweitert ADR-006)
 
-DHash erkennt nur pixel-nahe Kopien (Kompression, leichte Helligkeit). CLIP erfasst
-semantische Ähnlichkeit — gleiche Szene, andere Aufnahme, andere Bearbeitung.
-Beide laufen parallel (OR-Logik): ein Paar landet in der Queue, wenn DHash **oder**
-CLIP Ähnlichkeit meldet. Im UI werden beide Scores separat gezeigt.
+**pHash = Exact-Copy-Detector (distance == 0):** pHash findet nur pixelidentische
+Dateien — keine Schwelle, kein Slider, kein false positive. Konfigurierbar nur
+als An/Aus-Toggle. Der bestehende `dupe_threshold`-Wert im Backend wird ignoriert.
+
+CLIP erfasst semantische Ähnlichkeit — gleiche Szene, andere Aufnahme, andere
+Bearbeitung. Beide laufen parallel (OR-Logik): ein Paar landet in der Queue,
+wenn pHash **oder** CLIP Ähnlichkeit meldet. Im UI werden beide Scores separat
+gezeigt.
 
 ---
 
@@ -47,10 +51,11 @@ triggered_by:        str          # "phash" | "clip" | "both"
 
 | Key | Typ | Default | Beschreibung |
 |---|---|---|---|
-| `dupe_phash_enabled` | bool | `true` | DHash-Suche aktiv |
-| `dupe_threshold` | int | `10` | DHash Hamming-Schwelle (0–32, bleibt) |
+| `dupe_phash_enabled` | bool | `true` | pHash-Suche aktiv (findet immer nur distance==0) |
 | `dupe_clip_enabled` | bool | `true` | CLIP-Suche aktiv |
 | `dupe_clip_threshold` | float | `0.15` | CLIP Cosine-Distance-Schwelle (0.05–0.30); entspricht 70–95% Ähnlichkeit |
+
+> `dupe_threshold` (Altlast) bleibt im Backend gespeichert, wird aber ab Phase 2 nicht mehr für den Scan verwendet.
 
 ### Frontend-Modell-Erweiterung
 
@@ -59,7 +64,7 @@ triggered_by:        str          # "phash" | "clip" | "both"
 dupePhashEnabled:   boolean   // neu
 dupeClipEnabled:    boolean   // neu
 dupeClipThreshold:  number    // neu, 0.05–0.30 (intern Cosine-Distance)
-// dupeThreshold bleibt
+// dupeThreshold (Altlast) bleibt im Typ, wird aber im UI nicht mehr angezeigt
 ```
 
 ```typescript
@@ -76,7 +81,7 @@ triggered_by:         'phash' | 'clip' | 'both'
 ## Finale Abnahme-Kriterien (Gesamt)
 
 - [ ] Zwei Bilder, die nur per CLIP als ähnlich erkennbar sind (DHash-Distanz > 32), landen nach Scan in der Review-Queue mit CLIP-Score
-- [ ] Zwei fast identische Bilder (DHash ≤ Schwelle) landen mit DHash-Score, CLIP-Score optional
+- [ ] Zwei pixelidentische Bilder (pHash distance == 0) landen mit `phash_distance=0`, CLIP-Score optional
 - [ ] Einstellungsseite zeigt Toggles + Schwellen für beide Methoden, Beschriftungen erklären die Wirkung ohne Fachbegriffe
 - [ ] Person-Duplikate-Dialog und Lightbox-Similar nutzen beide Methoden
 - [ ] Deaktiviert man DHash, finden nur noch CLIP-Treffer statt — und umgekehrt

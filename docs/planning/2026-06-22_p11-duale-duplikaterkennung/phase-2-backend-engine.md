@@ -18,7 +18,7 @@
 
 ## Abnahme-Kriterien
 
-- [ ] `run_dupe_scan_job` nutzt DHash wenn `dupe_phash_enabled`, CLIP wenn `dupe_clip_enabled`
+- [ ] `run_dupe_scan_job` nutzt pHash wenn `dupe_phash_enabled` (distance == 0, kein Threshold), CLIP wenn `dupe_clip_enabled`
 - [ ] Ergebnis ist die Vereinigung (UNION) beider Methoden — kein Paar doppelt
 - [ ] Für CLIP-Paare: `phash_distance = NULL`, `clip_distance` gesetzt
 - [ ] Für DHash-Paare: `phash_distance` gesetzt, `clip_distance = NULL`
@@ -53,7 +53,7 @@
 ### Scan-Job update
 
 - [ ] `run_dupe_scan_job`: Settings-Felder `dupe_phash_enabled`, `dupe_clip_enabled`, `dupe_clip_threshold` laden
-- [ ] DHash-Pfad nur ausführen wenn `dupe_phash_enabled`
+- [ ] pHash-Pfad nur ausführen wenn `dupe_phash_enabled`; Vergleich **immer** `distance == 0` — `dupe_threshold` wird ignoriert
 - [ ] CLIP-Pfad:
   - [ ] Alle Assets mit `clip_embedding IS NOT NULL` laden (id + blob)
   - [ ] Chunked über `_compare_chunk_clip` iterieren (COMPARISON_CHUNK = 1000)
@@ -68,7 +68,7 @@
 ### Similar-Endpoint update (Lightbox)
 
 - [ ] `GET /assets/{id}/similar` in `review.py`:
-  - DHash-Suche nur wenn `dupe_phash_enabled` und `asset.phash is not None`
+  - pHash-Suche nur wenn `dupe_phash_enabled` und `asset.phash is not None`; Treffer nur bei `phash_distance == 0`
   - CLIP-Suche nur wenn `dupe_clip_enabled` und `asset.clip_embedding is not None`
   - CLIP-Suche: sqlite-vec ANN Query (`vector_index.search`) mit Limit = 20, dann filtern nach `clip_distance ≤ threshold`
   - Ergebnis: UNION beider Listen, nach bestem Ähnlichkeits-Score sortiert (kleinste Distance first)

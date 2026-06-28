@@ -21,6 +21,7 @@
 - [ ] Bestehende DB-Rows durch Migration unverändert (kein Backfill, kein Datenverlust)
 - [ ] `AppSettings` hat `dupe_phash_enabled: bool`, `dupe_clip_enabled: bool`, `dupe_clip_threshold: float`
 - [ ] `SETTINGS_DEFAULTS` setzt sinnvolle Defaults: phash aktiv, CLIP aktiv, Schwelle `0.15`
+- [ ] `dupe_threshold` bleibt im Schema, wird aber nicht mehr vom Scan gelesen (Altlast; kein Breaking Change)
 - [ ] `_EXPECTED_TYPES` validiert alle drei neuen Felder korrekt
 - [ ] `patch_settings` wirft `TypeError` bei falschem Typ (bool statt int etc.)
 

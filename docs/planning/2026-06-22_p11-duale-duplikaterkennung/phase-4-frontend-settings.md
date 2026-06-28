@@ -19,11 +19,10 @@
 
 ## Abnahme-Kriterien
 
-- [ ] Einstellungsseite zeigt unter „Duplikaterkennung" vier Steuerungen:
-  - Toggle: „DHash-Erkennung aktiv" (mit Erklärtext: was DHash findet)
-  - Slider: „DHash-Schwelle" (0–32, bleibt, nur sichtbar wenn DHash aktiv)
-  - Toggle: „CLIP-Erkennung aktiv" (mit Erklärtext: was CLIP findet)
-  - Slider: „CLIP-Schwelle" (70–99 %, nur sichtbar wenn CLIP aktiv)
+- [ ] Einstellungsseite zeigt unter „Duplikaterkennung" drei Steuerungen:
+  - Toggle: „Genaue Duplikate erkennen" (pHash, mit Erklärtext: findet pixelidentische Dateien)
+  - Toggle: „Ähnliche Bilder erkennen" (CLIP, mit Erklärtext: was CLIP findet)
+  - Slider: „Ähnlichkeits-Schwelle" (70–99 %, nur sichtbar wenn CLIP aktiv)
 - [ ] Jede Steuerung hat einen Erklärtext — keine Fachbegriffe, kein „Hamming"
 - [ ] CLIP-Schwelle wird im UI als Prozent angezeigt (z. B. 85 %), intern als Cosine-Distance (0.15) gespeichert
 - [ ] Deaktivierter Toggle blendet den zugehörigen Slider aus (kein Layout-Loch)
@@ -65,23 +64,21 @@
 
 ### verarbeitung.html
 
-- [ ] Sektion „Duplikaterkennung" neu strukturieren — 4 Zeilen statt 1:
+- [ ] Sektion „Duplikaterkennung" neu strukturieren — 3 Zeilen statt 1:
 
   ```
-  [Toggle] DHash-Erkennung aktiv
-           "Findet pixelnahe Kopien: gleiche Datei in anderer Qualität, leicht
-            heller/dunkler oder minimal beschnitten."
-  [Slider] DHash-Schwelle  ← nur wenn DHash aktiv
-           "0 = nur identische Bilder · 32 = auch deutlich ähnliche Pixel"
+  [Toggle] Genaue Duplikate erkennen  (pHash)
+           "Findet pixelidentische Dateien — dieselbe Datei in zwei verschiedenen
+            Ordnern oder unter unterschiedlichem Namen. Kein false positive möglich."
 
-  [Toggle] CLIP-Erkennung aktiv
+  [Toggle] Ähnliche Bilder erkennen  (CLIP)
            "Findet inhaltlich ähnliche Bilder: gleiche Szene aus einem anderen
             Blickwinkel, andere Belichtung oder Bearbeitung."
-  [Slider] CLIP-Schwelle (in %)  ← nur wenn CLIP aktiv
+  [Slider] Ähnlichkeits-Schwelle (in %)  ← nur wenn CLIP aktiv
            "99 % = nur fast identische Motive · 70 % = auch entfernt ähnliche einschließen"
   ```
 
-- [ ] Bedingte Sichtbarkeit: `@if (processingConfig().dupePhashEnabled)` um Slider
+- [ ] Kein Slider für pHash (distance == 0 ist fix, keine Konfiguration nötig)
 - [ ] Bedingte Sichtbarkeit: `@if (processingConfig().dupeClipEnabled)` um CLIP-Slider
 - [ ] Slider-Wert CLIP: `[value]="Math.round((1 - processingConfig().dupeClipThreshold) * 100)"`
   - `min="70"` `max="99"` `step="1"`
