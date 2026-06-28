@@ -568,7 +568,7 @@ async def run_workflow(workflow_id: int, body: RunRequest, db: DbSession) -> Run
 
     # Validate required inputs are provided
     required_keys = {b["key"] for b in input_bindings if b.get("required", True)}
-    missing = required_keys - set(body.inputs.keys())
+    missing = required_keys - set(body.inputs.keys()) - set(body.face_inputs.keys())
     if missing:
         raise HTTPException(
             status_code=422,
