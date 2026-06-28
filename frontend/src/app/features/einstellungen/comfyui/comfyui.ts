@@ -186,6 +186,10 @@ export class ComfyUISection {
     this.store.dispatch(comfyuiActions.duplicateWorkflow({ workflowId }));
   }
 
+  redetectInputs(workflowId: number): void {
+    this.store.dispatch(comfyuiActions.redetectInputs({ workflowId }));
+  }
+
   statusLabel(workflow: ComfyUIWorkflow): string {
     if (!workflow.isValid) return 'invalide';
     if (workflow.isActive) return 'aktiv';

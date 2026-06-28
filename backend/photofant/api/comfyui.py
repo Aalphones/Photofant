@@ -11,7 +11,8 @@ POST /api/comfyui/workflows/introspect -- introspect template JSON
 POST /api/comfyui/workflows/{id}/activate   -- activate (with validation gate)
 POST /api/comfyui/workflows/{id}/deactivate -- deactivate
 POST /api/comfyui/workflows/{id}/duplicate  -- duplicate workflow
-POST /api/comfyui/workflows/{id}/revalidate -- re-validate after template change
+POST /api/comfyui/workflows/{id}/revalidate      -- re-validate after template change
+POST /api/comfyui/workflows/{id}/redetect-inputs -- re-run introspection, replace inputs
 POST /api/comfyui/workflows/{id}/run        -- fire-and-forget trigger (Phase 3)
 GET  /api/comfyui/results              -- list output images (history + output_dir)
 GET  /api/comfyui/results/view         -- proxy ComfyUI /view (CORS-free preview)
@@ -507,6 +508,35 @@ def revalidate_workflow(workflow_id: int, db: DbSession) -> WorkflowResponse:
     if workflow is None:
         raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
 
+    _run_validation(workflow)
+    workflow.updated_at = datetime.now(UTC).replace(tzinfo=None)
+
+    return _workflow_to_response(workflow)
+
+
+@comfyui_router.post("/workflows/{workflow_id}/redetect-inputs", response_model=WorkflowResponse)
+def redetect_inputs(workflow_id: int, db: DbSession) -> WorkflowResponse:
+    """Re-run introspection on the stored template and replace workflow.inputs."""
+    workflow = db.get(ComfyUIWorkflow, workflow_id)
+    if workflow is None:
+        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
+
+    template = _load_template(workflow.template_path)
+    introspection = introspect_template(template)
+
+    workflow.inputs = [
+        {
+            "key": suggestion.key,
+            "label": suggestion.label,
+            "node_title": suggestion.node_title,
+            "node_id": suggestion.node_id,
+            "field": suggestion.field,
+            "kind": suggestion.kind,
+            "required": suggestion.required,
+            "lockable": suggestion.lockable,
+        }
+        for suggestion in introspection.input_suggestions
+    ]
     _run_validation(workflow)
     workflow.updated_at = datetime.now(UTC).replace(tzinfo=None)
 

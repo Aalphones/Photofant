@@ -144,6 +144,12 @@ export class ComfyUIService {
     );
   }
 
+  redetectInputs(workflowId: number): Observable<ComfyUIWorkflow> {
+    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowId}/redetect-inputs`, {}).pipe(
+      map((raw: WorkflowApi) => workflowFromApi(raw))
+    );
+  }
+
   runWorkflow(
     workflowId: number,
     inputs: Record<string, number | number[]>,

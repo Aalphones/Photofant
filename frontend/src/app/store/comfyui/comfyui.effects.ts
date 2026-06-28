@@ -149,6 +149,20 @@ export class ComfyUIEffects {
       ),
     )
   );
+
+  readonly redetectInputs$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(comfyuiActions.redetectInputs),
+      switchMap(({ workflowId }) =>
+        this.comfyuiService.redetectInputs(workflowId).pipe(
+          map((workflow) => comfyuiActions.redetectInputsSuccess({ workflow })),
+          catchError((error: HttpErrorResponse) =>
+            of(comfyuiActions.redetectInputsFailure({ error: extractErrorMessage(error) }))
+          ),
+        )
+      ),
+    )
+  );
 }
 
 function extractErrorMessage(error: HttpErrorResponse): string {

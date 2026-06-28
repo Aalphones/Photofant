@@ -137,6 +137,13 @@ export const comfyuiFeature = createFeature({
       ({ ...state, workflowError: error })
     ),
 
+    on(comfyuiActions.redetectInputsSuccess, (state: ComfyUIState, { workflow }) =>
+      ({ ...state, workflows: replaceWorkflow(state.workflows, workflow) })
+    ),
+    on(comfyuiActions.redetectInputsFailure, (state: ComfyUIState, { error }) =>
+      ({ ...state, workflowError: error })
+    ),
+
     on(comfyuiActions.selectWorkflow, (state: ComfyUIState, { workflowId }) =>
       ({ ...state, selectedWorkflowId: workflowId })
     ),

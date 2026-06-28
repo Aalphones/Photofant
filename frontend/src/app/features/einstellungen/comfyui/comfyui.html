@@ -307,6 +307,9 @@
           <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="duplicateWorkflow(workflow.id)">
             <pf-icon name="copy" [size]="12" /> Duplizieren
           </button>
+          <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="redetectInputs(workflow.id)" title="Inputs neu aus Template erkennen (überschreibt bestehende)">
+            <pf-icon name="scan" [size]="12" /> Inputs neu erkennen
+          </button>
           <button class="comfyui__btn comfyui__btn--gefahr comfyui__btn--klein" (click)="deleteWorkflow(workflow.id)">
             <pf-icon name="trash" [size]="12" /> Löschen
           </button>
