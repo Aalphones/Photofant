@@ -12,6 +12,7 @@ IMAGE_LOADER_CLASSES = frozenset({
     "LoadImageFromUrl",
     "LoadImage (mtb)",
     "Image Load",
+    "ImageBatchLoader",
 })
 
 MASK_LOADER_CLASSES = frozenset({
@@ -101,6 +102,8 @@ def introspect_template(template: dict[str, Any]) -> IntrospectionResult:
             input_field = "image"
             if class_type == "LoadImageMask":
                 input_field = "image"
+            elif class_type == "ImageBatchLoader":
+                input_field = "image_paths"
 
             safe_title = title or class_type
             safe_key = _title_to_key(safe_title)
