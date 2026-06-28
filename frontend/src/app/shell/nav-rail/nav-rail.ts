@@ -20,6 +20,7 @@ interface NavItem {
 })
 export class NavRail {
   readonly close = output<void>();
+  readonly importClick = output<void>();
 
   private readonly store = inject(Store);
 

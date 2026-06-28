@@ -21,88 +21,53 @@
     </button>
   </div>
 
-  <!-- Mode Tabs -->
-  <div class="imp-tabs">
-    <button class="imp-tab" [class.on]="mode() === 'path'" (click)="setMode('path')">
-      <pf-icon name="folder" [size]="15" />
-      Pfad-Import
-    </button>
-    <button class="imp-tab" [class.on]="mode() === 'upload'" (click)="setMode('upload')">
-      <pf-icon name="import" [size]="15" />
-      Datei-Upload
-    </button>
-  </div>
-
   <!-- Body -->
   <div class="imp-body">
+    <input
+      #fileInput
+      type="file"
+      accept="image/*"
+      multiple
+      style="display: none"
+      (change)="onFileChange($event)"
+    />
 
-    <!-- PATH MODE -->
-    @if (mode() === 'path') {
-      <div class="fld">
-        <label class="fld-lbl" for="pathInput">Verzeichnis- oder Dateipfade (eine Zeile pro Pfad)</label>
-        <textarea
-          id="pathInput"
-          class="path-input"
-          [ngModel]="pathInput()"
-          (ngModelChange)="pathInput.set($event)"
-          placeholder="C:\Users\Sascha\Bilder\Session2024&#10;C:\Exports\render_batch"
-          rows="6"
-          autocomplete="off"
-          spellcheck="false"
-        ></textarea>
-        <p class="fld-hint">Server-seitige Pfade — der Backend-Prozess muss darauf zugreifen können.</p>
+    @if (files().length === 0) {
+      <div class="imp-drop" (click)="openFilePicker()">
+        <div class="dz-ico">
+          <pf-icon name="import" [size]="28" />
+        </div>
+        <div class="dz-title">Dateien hierher ziehen</div>
+        <div class="dz-sub">JPG, PNG, WebP</div>
+        <div class="dz-or">oder</div>
+        <button class="dz-btn" (click)="$event.stopPropagation(); openFilePicker()">
+          <pf-icon name="import" [size]="14" />
+          Dateien wählen
+        </button>
       </div>
-    }
-
-    <!-- UPLOAD MODE -->
-    @if (mode() === 'upload') {
-      <input
-        #fileInput
-        type="file"
-        accept="image/*"
-        multiple
-        style="display: none"
-        (change)="onFileChange($event)"
-      />
-
-      @if (files().length === 0) {
-        <div class="imp-drop" (click)="openFilePicker()">
-          <div class="dz-ico">
-            <pf-icon name="import" [size]="28" />
-          </div>
-          <div class="dz-title">Dateien hierher ziehen</div>
-          <div class="dz-sub">JPG, PNG, WebP</div>
-          <div class="dz-or">oder</div>
-          <button class="dz-btn" (click)="$event.stopPropagation(); openFilePicker()">
-            <pf-icon name="import" [size]="14" />
-            Dateien wählen
+    } @else {
+      <div class="imp-filelist">
+        <div class="filelist-bar">
+          <span class="fb-count">{{ files().length }} Datei{{ files().length === 1 ? '' : 'en' }}</span>
+          <button class="imp-addmore" (click)="openFilePicker()">
+            <pf-icon name="plus" [size]="14" />
+            Hinzufügen
           </button>
         </div>
-      } @else {
-        <div class="imp-filelist">
-          <div class="filelist-bar">
-            <span class="fb-count">{{ files().length }} Datei{{ files().length === 1 ? '' : 'en' }}</span>
-            <button class="imp-addmore" (click)="openFilePicker()">
-              <pf-icon name="plus" [size]="14" />
-              Hinzufügen
-            </button>
-          </div>
-          <div class="filelist-items">
-            @for (file of files(); track file.name; let i = $index) {
-              <div class="filelist-row">
-                <pf-icon name="gallery" [size]="16" />
-                <span class="fl-name">{{ file.name }}</span>
-                <span class="fl-size">{{ formatSize(file.size) }}</span>
-                <button class="fl-x iconbtn" (click)="removeFile(i)" aria-label="Entfernen">
-                  <pf-icon name="x" [size]="14" />
-                </button>
-              </div>
-            }
-          </div>
+        <div class="filelist-items">
+          @for (file of files(); track file.name; let i = $index) {
+            <div class="filelist-row">
+              <pf-icon name="gallery" [size]="16" />
+              <span class="fl-name">{{ file.name }}</span>
+              <span class="fl-size">{{ formatSize(file.size) }}</span>
+              <button class="fl-x iconbtn" (click)="removeFile(i)" aria-label="Entfernen">
+                <pf-icon name="x" [size]="14" />
+              </button>
+            </div>
+          }
         </div>
-      }
+      </div>
     }
-
   </div>
 
   <!-- Error -->
@@ -127,7 +92,7 @@
           Startet…
         } @else {
           <pf-icon name="import" [size]="15" />
-          {{ mode() === 'path' ? 'Importieren' : 'Hochladen' }}
+          Hochladen
         }
       </button>
     </div>

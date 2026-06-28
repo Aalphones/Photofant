@@ -11,16 +11,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { AssetService } from '../../services/asset.service';
 import { Icon } from '../icon/icon';
-
-export type ImportMode = 'path' | 'upload';
 
 @Component({
   selector: 'pf-import-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon],
+  imports: [Icon],
   templateUrl: './import-dialog.html',
   styleUrl: './import-dialog.scss',
 })
@@ -33,8 +30,6 @@ export class ImportDialog implements OnInit {
   readonly close = output<void>();
   readonly imported = output<string>();
 
-  protected readonly mode = signal<ImportMode>('path');
-  protected readonly pathInput = signal('');
   protected readonly files = signal<File[]>([]);
   protected readonly isDragging = signal(false);
   protected readonly isLoading = signal(false);
@@ -47,7 +42,6 @@ export class ImportDialog implements OnInit {
     const initial = this.initialFiles();
     if (initial.length > 0) {
       this.files.set([...initial]);
-      this.mode.set('upload');
     }
 
     const handler = (event: KeyboardEvent): void => {
@@ -55,11 +49,6 @@ export class ImportDialog implements OnInit {
     };
     this.document.addEventListener('keydown', handler);
     this.destroyRef.onDestroy(() => this.document.removeEventListener('keydown', handler));
-  }
-
-  protected setMode(mode: ImportMode): void {
-    this.mode.set(mode);
-    this.errorMsg.set(null);
   }
 
   protected onClose(): void {
@@ -112,14 +101,12 @@ export class ImportDialog implements OnInit {
       );
       if (images.length > 0) {
         this.files.update((current: File[]) => [...current, ...images]);
-        this.mode.set('upload');
       }
     }
   }
 
   protected canSubmit(): boolean {
     if (this.isLoading()) return false;
-    if (this.mode() === 'path') return this.pathInput().trim().length > 0;
     return this.files().length > 0;
   }
 
@@ -127,11 +114,7 @@ export class ImportDialog implements OnInit {
     this.errorMsg.set(null);
     this.isLoading.set(true);
 
-    const request$ = this.mode() === 'path'
-      ? this.assetService.importPaths(this.parsePaths())
-      : this.assetService.uploadFiles(this.files());
-
-    request$.subscribe({
+    this.assetService.uploadFiles(this.files()).subscribe({
       next: (response: { job_id: string }) => {
         this.isLoading.set(false);
         this.imported.emit(response.job_id);
@@ -142,13 +125,6 @@ export class ImportDialog implements OnInit {
         this.errorMsg.set('Import fehlgeschlagen. Backend erreichbar?');
       },
     });
-  }
-
-  private parsePaths(): string[] {
-    return this.pathInput()
-      .split('\n')
-      .map((line: string) => line.trim())
-      .filter((line: string) => line.length > 0);
   }
 
   protected formatSize(bytes: number): string {

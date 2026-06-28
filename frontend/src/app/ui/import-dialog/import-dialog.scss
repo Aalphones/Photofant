@@ -68,35 +68,6 @@
   margin-top: 1px;
 }
 
-/* ---- Tabs ---- */
-.imp-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--line);
-  flex: none;
-  padding: 0 18px;
-  gap: 2px;
-}
-
-.imp-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 12px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-3);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color .12s, border-color .12s;
-
-  &:hover { color: var(--text-2); }
-
-  &.on {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-  }
-}
-
 /* ---- Body ---- */
 .imp-body {
   flex: 1;
@@ -105,44 +76,7 @@
   min-height: 0;
 }
 
-/* ---- Path Mode ---- */
-.fld { display: flex; flex-direction: column; gap: 8px; }
-
-.fld-lbl {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-.path-input {
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  resize: vertical;
-  outline: none;
-  transition: border-color .14s, box-shadow .14s;
-  box-sizing: border-box;
-
-  &:focus {
-    border-color: var(--accent-line);
-    box-shadow: 0 0 0 3px var(--accent-weak);
-  }
-
-  &::placeholder { color: var(--text-3); }
-}
-
-.fld-hint {
-  font-size: 11.5px;
-  color: var(--text-3);
-  margin: 0;
-}
-
-/* ---- Upload Mode ---- */
+/* ---- Upload ---- */
 .imp-drop {
   border: 2px dashed var(--line-2);
   border-radius: var(--radius);

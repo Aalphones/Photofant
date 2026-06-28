@@ -280,15 +280,6 @@ export class Lightbox {
     };
     this.document.addEventListener('keydown', onKeyDown);
     this.destroyRef.onDestroy(() => this.document.removeEventListener('keydown', onKeyDown));
-
-    const deregister = this.shortcutService.register([
-      { key: '←',   description: 'Vorheriges Bild',       context: 'Lightbox' },
-      { key: '→',   description: 'Nächstes Bild',         context: 'Lightbox' },
-      { key: 'F',   description: 'Favorit setzen/entfernen', context: 'Lightbox' },
-      { key: 'Entf', description: 'In Papierkorb legen',  context: 'Lightbox' },
-      { key: 'Esc', description: 'Lightbox schließen',    context: 'Lightbox' },
-    ]);
-    this.destroyRef.onDestroy(deregister);
   }
 
   protected close(): void {

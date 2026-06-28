@@ -11,14 +11,11 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { Store } from '@ngrx/store';
 import { filter, map, startWith } from 'rxjs';
 import { jobsActions, jobsSelectors } from '../store';
-import { AssetService } from '../services/asset.service';
-import { ShortcutService } from '../services/shortcut.service';
 import { NavRail } from './nav-rail/nav-rail';
 import { TopBar } from './top-bar/top-bar';
 import { JobDock } from '../ui/job-dock/job-dock';
 import { Icon } from '../ui/icon/icon';
 import { ImportDialog } from '../ui/import-dialog/import-dialog';
-import { ShortcutLegend } from '../ui/shortcut-legend/shortcut-legend';
 
 const ROUTE_TITLES: Record<string, string> = {
   galerie:       'Galerie',
@@ -34,17 +31,15 @@ const ROUTE_TITLES: Record<string, string> = {
 @Component({
   selector: 'pf-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, NavRail, TopBar, JobDock, Icon, ImportDialog, ShortcutLegend],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, NavRail, TopBar, JobDock, Icon, ImportDialog],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })
 export class Shell {
-  private readonly store         = inject(Store);
-  private readonly router        = inject(Router);
-  private readonly assetService  = inject(AssetService);
-  readonly shortcutService       = inject(ShortcutService);
-  private readonly document      = inject(DOCUMENT);
-  private readonly destroyRef    = inject(DestroyRef);
+  private readonly store      = inject(Store);
+  private readonly router     = inject(Router);
+  private readonly document   = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly isNavOpen       = signal(false);
   protected readonly isImportOpen    = signal(false);
@@ -142,6 +137,11 @@ export class Shell {
     this.isImportOpen.set(true);
   }
 
+  protected openImportFromNav(): void {
+    this.isNavOpen.set(false);
+    this.openImport();
+  }
+
   protected closeImport(): void {
     this.isImportOpen.set(false);
     this.droppedFiles.set([]);
@@ -149,16 +149,5 @@ export class Shell {
 
   protected onImported(): void {
     this.store.dispatch(jobsActions.toggleDock());
-  }
-
-  protected triggerScan(): void {
-    this.assetService.scan().subscribe({
-      next: () => this.store.dispatch(jobsActions.toggleDock()),
-      error: () => { /* SSE liefert Job-Fehler */ },
-    });
-  }
-
-  protected toggleShortcutLegend(): void {
-    this.shortcutService.isLegendVisible.update((visible: boolean) => !visible);
   }
 }

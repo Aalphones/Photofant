@@ -2,7 +2,7 @@
   <div class="shell__nav-scrim" (click)="isNavOpen.set(false)"></div>
 }
 <div class="shell__nav" [class.shell__nav--open]="isNavOpen()">
-  <pf-nav-rail (close)="isNavOpen.set(false)" />
+  <pf-nav-rail (close)="isNavOpen.set(false)" (importClick)="openImportFromNav()" />
 </div>
 
 <div class="shell__main">
@@ -12,9 +12,6 @@
     [isDockOpen]="isDockOpen()"
     (menuToggle)="toggleNav()"
     (dockToggle)="toggleDock()"
-    (importClick)="openImport()"
-    (scanClick)="triggerScan()"
-    (shortcutClick)="toggleShortcutLegend()"
   />
 
   <div class="shell__content">
@@ -41,11 +38,6 @@
     (close)="closeImport()"
     (imported)="onImported()"
   />
-}
-
-<!-- Shortcut Legend -->
-@if (shortcutService.isLegendVisible()) {
-  <pf-shortcut-legend (close)="shortcutService.closeLegend()" />
 }
 
 <nav class="shell__mobnav" aria-label="Hauptnavigation (Mobile)">

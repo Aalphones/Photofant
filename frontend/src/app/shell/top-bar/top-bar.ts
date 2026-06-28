@@ -15,9 +15,6 @@ export class TopBar {
   readonly activeJobs = input<number>(0);
   readonly isDockOpen = input<boolean>(false);
 
-  readonly menuToggle    = output<void>();
-  readonly dockToggle    = output<void>();
-  readonly importClick   = output<void>();
-  readonly scanClick     = output<void>();
-  readonly shortcutClick = output<void>();
+  readonly menuToggle = output<void>();
+  readonly dockToggle = output<void>();
 }
