@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from photofant.comfyui.client import ComfyUIClient
-from photofant.db.models import Asset, AssetInstance
+from photofant.db.models import Asset, AssetInstance, Face
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.settings import load_settings
@@ -102,19 +102,21 @@ def patch_template(
 def expand_batch(
     inputs: dict[str, int | list[int]],
     input_bindings: list[dict[str, Any]],
-) -> list[dict[str, int]]:
-    """Expand inputs into N single-asset dicts (one per batch-axis image).
+    face_inputs: dict[str, int | list[int]] | None = None,
+) -> list[tuple[dict[str, int], dict[str, int]]]:
+    """Expand inputs into N (asset_inputs, face_inputs) tuples — one per batch job.
 
     Rules:
-    - At most one batch axis (array value).
+    - At most one batch axis across BOTH inputs and face_inputs.
     - kind=mask inputs cannot be the batch axis.
-    - A second array input raises ValueError.
+    - A second array input (in either map) raises ValueError.
     - No array input → one job (pass-through).
     """
+    resolved_face_inputs: dict[str, int | list[int]] = face_inputs or {}
     kind_map = {b["key"]: b.get("kind", "image") for b in input_bindings}
 
     batch_key: str | None = None
-    batch_items: list[int] = []
+    batch_in_faces = False
 
     for key, value in inputs.items():
         if not isinstance(value, list):
@@ -129,37 +131,78 @@ def expand_batch(
                 "Nur ein Input darf eine Liste sein."
             )
         batch_key = key
-        batch_items = value
+        batch_in_faces = False
+
+    for key, value in resolved_face_inputs.items():
+        if not isinstance(value, list):
+            continue
+        if batch_key is not None:
+            raise ValueError(
+                f"Mehrere Batch-Achsen: '{batch_key}' und '{key}'. "
+                "Nur ein Input darf eine Liste sein."
+            )
+        batch_key = key
+        batch_in_faces = True
 
     if batch_key is None:
-        single: dict[str, int] = {
+        single_assets: dict[str, int] = {
             key: (value[0] if isinstance(value, list) else value)
             for key, value in inputs.items()
         }
-        return [single]
+        single_faces: dict[str, int] = {
+            key: (value[0] if isinstance(value, list) else value)
+            for key, value in resolved_face_inputs.items()
+        }
+        return [(single_assets, single_faces)]
 
-    result: list[dict[str, int]] = []
-    for asset_id in batch_items:
-        job_inputs: dict[str, int] = {}
+    source_map = resolved_face_inputs if batch_in_faces else inputs
+    batch_items: list[int] = source_map[batch_key]  # type: ignore[assignment]
+
+    result: list[tuple[dict[str, int], dict[str, int]]] = []
+    for item_id in batch_items:
+        job_assets: dict[str, int] = {}
         for key, value in inputs.items():
-            if key == batch_key:
-                job_inputs[key] = asset_id
+            if key == batch_key and not batch_in_faces:
+                job_assets[key] = item_id
             else:
-                job_inputs[key] = value[0] if isinstance(value, list) else value  # type: ignore[assignment]
-        result.append(job_inputs)
+                job_assets[key] = value[0] if isinstance(value, list) else value  # type: ignore[assignment]
+
+        job_faces: dict[str, int] = {}
+        for key, value in resolved_face_inputs.items():
+            if key == batch_key and batch_in_faces:
+                job_faces[key] = item_id
+            else:
+                job_faces[key] = value[0] if isinstance(value, list) else value  # type: ignore[assignment]
+
+        result.append((job_assets, job_faces))
     return result
 
 
-# ── Asset path resolution ─────────────────────────────────────────────────────
+# ── Asset / Face path resolution ──────────────────────────────────────────────
 
 def _resolve_asset_paths(asset_ids: list[int]) -> dict[int, str]:
     """Return {asset_id: file_path} for active (non-deleted) instances."""
+    if not asset_ids:
+        return {}
     with SessionLocal() as session:
         rows = (
             session.query(Asset.id, AssetInstance.path)
             .join(AssetInstance, AssetInstance.asset_id == Asset.id)
             .filter(Asset.id.in_(asset_ids))
             .filter(AssetInstance.deleted_at.is_(None))
+            .all()
+        )
+    return {int(row[0]): str(row[1]) for row in rows}
+
+
+def _resolve_face_paths(face_ids: list[int]) -> dict[int, str]:
+    """Return {face_id: crop_path} for the given face IDs."""
+    if not face_ids:
+        return {}
+    with SessionLocal() as session:
+        rows = (
+            session.query(Face.id, Face.crop_path)
+            .filter(Face.id.in_(face_ids))
             .all()
         )
     return {int(row[0]): str(row[1]) for row in rows}
@@ -173,6 +216,7 @@ async def run_comfyui_run_job(
     input_bindings: list[dict[str, Any]],
     param_bindings: list[dict[str, Any]],
     job_inputs: dict[str, int],
+    job_face_inputs: dict[str, int],
     params: dict[str, Any],
     base_url: str,
     client_id: str,
@@ -181,9 +225,9 @@ async def run_comfyui_run_job(
     """Execute one ComfyUI run: upload all inputs → patch template → POST /prompt."""
     client = ComfyUIClient(base_url=base_url, timeout=timeout)
 
-    # 1. Resolve file paths
-    asset_ids = list(job_inputs.values())
-    path_map = await asyncio.to_thread(_resolve_asset_paths, asset_ids)
+    # 1. Resolve file paths for assets and faces
+    path_map = await asyncio.to_thread(_resolve_asset_paths, list(job_inputs.values()))
+    face_path_map = await asyncio.to_thread(_resolve_face_paths, list(job_face_inputs.values()))
 
     # 2. Upload each input image to ComfyUI; collect assigned filenames
     asset_filenames: dict[str, str] = {}
@@ -194,6 +238,14 @@ async def run_comfyui_run_job(
         uploaded_name = await asyncio.to_thread(client.upload_image, Path(file_path_str))
         asset_filenames[key] = uploaded_name
         log.info("Uploaded asset %d as '%s' (job %s)", asset_id, uploaded_name, status.id)
+
+    for key, face_id in job_face_inputs.items():
+        file_path_str = face_path_map.get(face_id)
+        if file_path_str is None:
+            raise ValueError(f"Gesicht {face_id} nicht gefunden")
+        uploaded_name = await asyncio.to_thread(client.upload_image, Path(file_path_str))
+        asset_filenames[key] = uploaded_name
+        log.info("Uploaded face %d as '%s' (job %s)", face_id, uploaded_name, status.id)
 
     job_queue.update(status, progress=0.5, state=JobState.RUNNING)
 
@@ -217,7 +269,7 @@ async def enqueue_comfyui_runs(
     workflow_template: dict[str, Any],
     input_bindings: list[dict[str, Any]],
     param_bindings: list[dict[str, Any]],
-    expanded_inputs: list[dict[str, int]],
+    expanded_inputs: list[tuple[dict[str, int], dict[str, int]]],
     params: dict[str, Any],
     workflow_name: str,
 ) -> list[JobStatus]:
@@ -231,7 +283,7 @@ async def enqueue_comfyui_runs(
     total = len(expanded_inputs)
     statuses: list[JobStatus] = []
 
-    for index, job_inputs in enumerate(expanded_inputs):
+    for index, (job_inputs, job_face_inputs) in enumerate(expanded_inputs):
         label = f"ComfyUI: {workflow_name}"
         if total > 1:
             label += f" ({index + 1}/{total})"
@@ -239,12 +291,13 @@ async def enqueue_comfyui_runs(
         status = await job_queue.enqueue(
             kind=JobKind.COMFYUI_RUN,
             label=label,
-            coro_factory=lambda js, ji=job_inputs: run_comfyui_run_job(
+            coro_factory=lambda js, ji=job_inputs, jfi=job_face_inputs: run_comfyui_run_job(
                 js,
                 workflow_template,
                 input_bindings,
                 param_bindings,
                 ji,
+                jfi,
                 params,
                 base_url,
                 client_id,

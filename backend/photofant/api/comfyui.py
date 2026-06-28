@@ -517,6 +517,7 @@ def revalidate_workflow(workflow_id: int, db: DbSession) -> WorkflowResponse:
 
 class RunRequest(BaseModel):
     inputs: dict[str, int | list[int]]
+    face_inputs: dict[str, int | list[int]] = {}
     params: dict[str, Any] = {}
 
 
@@ -574,9 +575,9 @@ async def run_workflow(workflow_id: int, body: RunRequest, db: DbSession) -> Run
             detail=f"Pflicht-Inputs fehlen: {', '.join(sorted(missing))}",
         )
 
-    # Validate and expand batch axis
+    # Validate and expand batch axis (asset inputs + face inputs)
     try:
-        expanded = expand_batch(body.inputs, input_bindings)
+        expanded = expand_batch(body.inputs, input_bindings, body.face_inputs)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

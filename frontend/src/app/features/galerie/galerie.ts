@@ -85,6 +85,7 @@ export class Galerie {
   protected readonly workflowMode      = signal(false);
   protected readonly activeWorkflowId  = signal<number | null>(null);
   protected readonly slotBindings      = signal<Record<string, number | number[]>>({});
+  protected readonly faceSlotBindings  = signal<Record<string, number | number[]>>({});
   protected readonly assetHashMap      = this.store.selectSignal(gallerySelectors.selectHashMap);
   protected readonly armedSlotKey      = signal<string | null>(null);
   protected readonly batchAxisKey      = signal<string | null>(null);
@@ -238,9 +239,15 @@ export class Galerie {
   }
 
   protected onBindFace(event: { faceId: number; assetId: number | null }): void {
-    if (event.assetId != null) {
-      this.onBindAsset(event.assetId);
-    }
+    const armedKey = this.armedSlotKey();
+    if (armedKey === null) { return; }
+    // Gesicht direkt binden — unabhängig davon ob ein Quell-Asset existiert
+    const currentAssetBindings = { ...this.slotBindings() };
+    delete currentAssetBindings[armedKey];
+    this.slotBindings.set(currentAssetBindings);
+    if (this.batchAxisKey() === armedKey) { this.batchAxisKey.set(null); }
+    this.faceSlotBindings.set({ ...this.faceSlotBindings(), [armedKey]: event.faceId });
+    this.armedSlotKey.set(null);
   }
 
   protected onOpenAsset(id: number): void {
@@ -380,7 +387,9 @@ export class Galerie {
   }
 
   protected onWorkflowChanged(workflowId: number | null): void {
-    const hasBindings = Object.keys(this.slotBindings()).length > 0;
+    const hasBindings =
+      Object.keys(this.slotBindings()).length > 0 ||
+      Object.keys(this.faceSlotBindings()).length > 0;
     if (hasBindings && workflowId !== this.activeWorkflowId()) {
       if (!window.confirm('Workflow wechseln? Alle aktuellen Bindungen werden gelöscht.')) {
         return;
@@ -388,6 +397,7 @@ export class Galerie {
     }
     this.activeWorkflowId.set(workflowId);
     this.slotBindings.set({});
+    this.faceSlotBindings.set({});
     this.armedSlotKey.set(null);
     this.batchAxisKey.set(null);
   }
@@ -403,12 +413,14 @@ export class Galerie {
       this.onOpenAsset(assetId);
       return;
     }
+    // Gesicht-Bindung für diesen Slot löschen (Asset überschreibt Gesicht)
+    const currentFaceBindings = { ...this.faceSlotBindings() };
+    delete currentFaceBindings[armedKey];
+    this.faceSlotBindings.set(currentFaceBindings);
+
     const currentBindings = this.slotBindings();
     const updatedBindings = { ...currentBindings, [armedKey]: assetId };
-    // Wenn dieser Slot war die Batch-Achse, Batch-Achse aufheben (Single überschreibt)
-    if (this.batchAxisKey() === armedKey) {
-      this.batchAxisKey.set(null);
-    }
+    if (this.batchAxisKey() === armedKey) { this.batchAxisKey.set(null); }
     this.slotBindings.set(updatedBindings);
     this.armedSlotKey.set(null);
   }
@@ -418,13 +430,17 @@ export class Galerie {
     const armedKey = this.armedSlotKey();
     if (armedKey === null) { return; }
 
+    // Gesicht-Bindung für diesen Slot löschen (Asset überschreibt Gesicht)
+    const currentFaceBindings = { ...this.faceSlotBindings() };
+    delete currentFaceBindings[armedKey];
+    this.faceSlotBindings.set(currentFaceBindings);
+
     const currentBindings = this.slotBindings();
     const existing = currentBindings[armedKey];
     const existingArray = Array.isArray(existing)
       ? existing
       : existing != null ? [existing] : [];
 
-    // Doppelte IDs überspringen
     if (existingArray.includes(assetId)) { return; }
 
     const updatedArray = [...existingArray, assetId];
@@ -432,7 +448,6 @@ export class Galerie {
     // Batch-Achse verschieben wenn nötig (zweiter Slot bekommt Multi-Select)
     const previousBatchKey = this.batchAxisKey();
     if (previousBatchKey !== null && previousBatchKey !== armedKey) {
-      // Alte Batch-Achse auf Einzelwert reduzieren (erstes Element behalten)
       const oldBatch = currentBindings[previousBatchKey];
       const oldFirst = Array.isArray(oldBatch) ? oldBatch[0] : oldBatch;
       this.slotBindings.set({
@@ -445,13 +460,12 @@ export class Galerie {
       this.slotBindings.set({ ...currentBindings, [armedKey]: updatedArray });
     }
     this.batchAxisKey.set(armedKey);
-    // Scharf-Zustand bleibt (weiteres Batch-Binden möglich)
   }
 
   protected onRunFire(payload: RunFirePayload): void {
     if (this.isFiring()) { return; }
     this.isFiring.set(true);
-    this.comfyuiService.runWorkflow(payload.workflowId, payload.inputs, payload.params)
+    this.comfyuiService.runWorkflow(payload.workflowId, payload.inputs, payload.faceInputs, payload.params)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
       next: (response) => {
@@ -472,6 +486,7 @@ export class Galerie {
     this.workflowMode.set(false);
     this.activeWorkflowId.set(null);
     this.slotBindings.set({});
+    this.faceSlotBindings.set({});
     this.armedSlotKey.set(null);
     this.batchAxisKey.set(null);
   }

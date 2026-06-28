@@ -147,11 +147,12 @@ export class ComfyUIService {
   runWorkflow(
     workflowId: number,
     inputs: Record<string, number | number[]>,
+    faceInputs: Record<string, number | number[]> = {},
     params: Record<string, unknown> = {},
   ): Observable<{ jobs: { job_id: string }[] }> {
     return this.http.post<{ jobs: { job_id: string }[] }>(
       `/api/comfyui/workflows/${workflowId}/run`,
-      { inputs, params },
+      { inputs, face_inputs: faceInputs, params },
     );
   }
 
