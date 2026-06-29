@@ -27,11 +27,19 @@
 
 ## Checkliste
 
-- [ ] ADR-008 anlegen
-- [ ] ADR-002/-003 Status/Fußnoten
-- [ ] code-map.md / routes.md / models.md
-- [ ] AGENTS.md Stack-Zeile (+ Konzept-Hinweis)
-- [ ] design-reconciliation.md
+- [x] ADR-008 anlegen
+- [x] ADR-002/-003 Status/Fußnoten
+- [x] code-map.md / routes.md / models.md
+- [x] AGENTS.md Stack-Zeile (+ Konzept-Hinweis)
+- [x] design-reconciliation.md
 
 ## Report-Back
-_(beim Umsetzen füllen)_
+
+- **ADR-008** angelegt mit Kontext, Optionen, Entscheidung, Architektur-Diagramm, Kontrakt-Sektion und Konsequenzen. Prompt-Erkennung ohne Single-Encode-Fallback dort dokumentiert.
+- **ADR-002** Status auf „Ersetzt durch ADR-008" + Fußnote.
+- **ADR-003** Entscheidungs-Tabelle korrigiert (P9 durchgestrichen, ComfyUI = einziger Pfad), P9-Koexistenz-Passage + Konsequenzen als überholt markiert.
+- **code-map.md** ComfyUI-Integration-Zeile um FS-Discovery + 3-Default-Zuordnungen ergänzt. Generativ-Zeile war bereits korrekt (Phase 5 hatte sie angepasst).
+- **routes.md** geprüft: RunRequest bereits korrekt, CapabilitiesDto bereits korrekt — kein P9-Rückstand. Keine Änderung nötig.
+- **models.md** `version.type` um `comfyui` erweitert, P9-Typen (`upscale|flux_edit|inpaint`) als historisch/Legacy markiert. `comfyui_workflow` war bereits als dropped dokumentiert.
+- **AGENTS.md** Stack-Zeile Inferenz: diffusers entfernt, ComfyUI als einziger Generativ-Pfad + ADR-008-Verweis.
+- **design-reconciliation.md** Editor-Generativ-Sektion war bereits von Phase 5 gepflegt (bewusste Abweichung inkl. ADR-008-Verweis).

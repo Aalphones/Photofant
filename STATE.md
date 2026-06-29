@@ -1,9 +1,9 @@
 # STATE
 
-**Aktiver Plan:** P16 — Generativ via ComfyUI, `docs/planning/2026-06-29_p16-generativ-via-comfyui/` · Phase 6/6 (pending)
-**Nächster Schritt:** Phase 6 — Docs + ADR (ADR-008, code-map/routes/models/AGENTS). Mechanisch → Modell-Empfehlung: `sonnet`. FINDINGS.md hat 4 getaggte Phase-6-Einträge zum Einarbeiten.
+**Aktiver Plan:** (kein aktiver Plan) — P16 complete, Archivierung ausstehend.
+**Nächster Schritt:** Plan archivieren (`git mv docs/planning/2026-06-29_p16-generativ-via-comfyui/ docs/archive/2026-06/`), dann nächsten Backlog-Plan wählen.
 
-**Stand:** Phase 3 (P9-Abriss), Phase 4 (Frontend Settings) und Phase 5 (Frontend Editor + Run-Leiste) sind complete. Phase 5: lint+build grün.
+**Stand:** P16 alle 6 Phasen complete. lint+build grün nach Phase 5.
 
 ---
 

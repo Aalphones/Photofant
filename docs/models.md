@@ -327,7 +327,7 @@ Saved edit versions per asset_instance or face. Exactly one of `instance_id`/`fa
 | `id` | INTEGER PK | |
 | `instance_id` | INTEGER FK → `asset_instance.id` | gesetzt: Edit eines Fotos; XOR mit `face_id` |
 | `face_id` | INTEGER FK → `face.id` | gesetzt: Edit eines Faces; XOR mit `instance_id` |
-| `type` | TEXT | `crop \| rotate \| mirror \| pad \| rembg \| convert \| smart_crop \| import \| edit \| upscale \| flux_edit \| inpaint` |
+| `type` | TEXT | `crop \| rotate \| mirror \| pad \| rembg \| convert \| smart_crop \| import \| edit \| comfyui` (aktiv); historisch: `upscale \| flux_edit \| inpaint` (P9, entfernt) |
 | `parent_id` | INTEGER FK → `version.id` | Edit eines Edits → Kette; NULL = erste Version |
 | `path` | TEXT | Datei in `personX/edits/`, nicht null |
 | `is_current` | BOOLEAN | `0` default; genau eine Version pro instance/face ist `1` |

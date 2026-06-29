@@ -1,6 +1,6 @@
 # P16 — Generativ läuft über ComfyUI
 
-**Status:** Entwurf (zur Freigabe) · angelegt 2026-06-29
+**Status:** Complete · 2026-06-29
 **ADR:** 008 (ersetzt ADR-002 „diffusers in-process", erweitert ADR-003 „ComfyUI-Trigger")
 
 ## Ziel
@@ -28,7 +28,7 @@ die ComfyUI ohnehin liefert — koexistierende Doppelpflege ohne Mehrwert.
 | 3 | [P9 abreißen](phase-3-p9-abriss.md) — in-process generatives Backend entfernen | standard | complete |
 | 4 | [Frontend: Settings + Service](phase-4-frontend-settings.md) — Auto-Liste, 3 Default-Dropdowns | standard | complete |
 | 5 | [Frontend: Editor + Run-Leiste](phase-5-frontend-editor.md) — 3 Aufgaben + Bulk + generischer Trigger | heikel | complete |
-| 6 | [Docs + ADR](phase-6-docs-adr.md) — ADR-008, code-map/routes/models/AGENTS | mechanisch | pending |
+| 6 | [Docs + ADR](phase-6-docs-adr.md) — ADR-008, code-map/routes/models/AGENTS | mechanisch | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -105,13 +105,27 @@ entfallen ersatzlos. Das Mockup gilt für diese drei Panels als überholt — wi
   bleiben. Sweep klärt die Kopplung vor dem Löschen.
 
 ## Files touched
-_(beim Archivieren füllen)_
+
+**Backend:**
+`api/generative.py` (gelöscht) · `api/assets.py` (upscale/flux_edit/inpaint-Endpoints entfernt) · `api/models.py` (CapabilitiesDto bereinigt) · `api/comfyui.py` (Discovery + Run + Import erweitert) · `inference/generative_engine.py` (diffusers-Methoden entfernt, heavy_captioner-Infra bleibt) · `inference/interfaces.py` (P9-Protocols entfernt) · `inference/__init__.py` · `jobs/upscale_job.py`, `jobs/flux_edit_job.py`, `jobs/inpaint_job.py`, `jobs/install_generative_job.py` (gelöscht) · `jobs/queue.py` (P9-JobKinds entfernt) · `jobs/comfyui_run_job.py` (erweitert: Prompt/Resolution/Mask-Patching) · `comfyui/introspect.py` (erweitert: Prompt/Resolution/Mask-Erkennung) · `comfyui/validator.py` · `models/manifest.json` (flux2/seedvr2 entfernt) · `models/loader.py` (upscaler/editor/inpainter-Rollen entfernt) · `pyproject.toml` (diffusers entfernt) · `main.py` (generative-Router entfernt) · `alembic/versions/0022_drop_comfyui_workflow.py`
+
+**Frontend:**
+`features/editor/` (flux2-panel, inpaint-panel, upscale-panel, resolution-field — P9-Parameter entfernt, ComfyUI-Param-Binding) · `features/galerie/lightbox/` (Upscale → ComfyUI) · `ui/bulk-bar/` (Bulk-Upscale via ComfyUI) · `features/einstellungen/comfyui/` (Settings: default_upscale/edit/inpaint-Dropdowns) · `store/editor/` (runGenerative → runWorkflow) · `services/comfyui.service.ts` (runWorkflow erweitert) · `models/comfyui-workflow.model.ts` (auf echten Kontrakt gezogen)
+
+**Docs:**
+`docs/decisions/008-generativ-via-comfyui.md` (neu) · `docs/decisions/002-*.md` (ersetzt) · `docs/decisions/003-*.md` (erweitert) · `docs/code-map.md` · `docs/models.md` · `docs/design-reconciliation.md` · `AGENTS.md`
 
 ## Commits
-_(beim Archivieren füllen)_
+_(beim Archivieren aus git log füllen)_
 
 ## Deviations from plan
-_(beim Archivieren füllen)_
+
+- `generative_engine.py` nicht vollständig gelöscht (AK2/AK4) — only diffusers-Methoden entfernt. Heavy Captioners nutzen `load_transformers_model()` + torch/transformers.
+- `generative`-Dependency-Gruppe bleibt (torch/transformers/accelerate), nur `diffusers` entfernt.
+- Single-CLIPTextEncode-Fallback für Prompt-Erkennung weggelassen (kollidiert mit SeedVR2-Workflows).
+- Editor-Panels verschlankt (Mockup überholt) — bewusste Entscheidung Sascha 2026-06-29.
 
 ## Follow-ups
-_(beim Archivieren füllen)_
+
+- Aspect-Ratio-Liste über `/object_info` nachrüsten (optional — aktuell Template-Default).
+- P15 Lightbox-Angleichung (nächster Plan im Backlog).

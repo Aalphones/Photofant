@@ -1,7 +1,7 @@
 # ADR-003 — ComfyUI Trigger-Integration (Fire-and-Forget, koexistierend)
 
-**Status:** Akzeptiert · 2026-06-21  
-**Querverweise:** [ADR-002](002-generatives-backend.md) (in-process Diffusers vs. ComfyUI als Backend)
+**Status:** Akzeptiert · 2026-06-21 — **erweitert durch [ADR-008](008-generativ-via-comfyui.md)** (2026-06-29)
+**Querverweise:** [ADR-002](002-generatives-backend.md) (in-process Diffusers — **ersetzt durch ADR-008**) · [ADR-008](008-generativ-via-comfyui.md) (ComfyUI übernimmt alle generativen Aufgaben)
 
 ---
 
@@ -13,16 +13,19 @@ Photofant benötigt generative Bildoperationen (Upscale, img2img, Inpainting). A
 
 ## Entscheidung
 
-**ComfyUI-Integration als koexistierender generativer Pfad neben dem in-process-Backend (P9).**
+**ComfyUI-Integration als generativer Pfad — mit P16 der einzige.**
 
-Beide Pfade existieren gleichzeitig und gegaten unabhängig voneinander:
+~~Beide Pfade existieren gleichzeitig und gegaten unabhängig voneinander~~ (ADR-002/P9
+wurde mit P16 entfernt, siehe [ADR-008](008-generativ-via-comfyui.md)):
 
-| Pfad | Aktivierung | VRAM-Owner | Modell-Owner |
-|---|---|---|---|
-| P9 (in-process) | `models.generativ`-Gruppe installiert | Photofant | Photofant |
-| P8b (ComfyUI) | `comfyui.enabled = true && Verbindung ok` | ComfyUI | ComfyUI |
+| Pfad | Aktivierung | VRAM-Owner | Modell-Owner | Status |
+|---|---|---|---|---|
+| ~~P9 (in-process)~~ | ~~`models.generativ`-Gruppe installiert~~ | ~~Photofant~~ | ~~Photofant~~ | **entfernt (P16)** |
+| P8b/P16 (ComfyUI) | `comfyui.enabled = true && Verbindung ok` | ComfyUI | ComfyUI | **einziger Generativ-Pfad** |
 
-Kein Pfad ersetzt den anderen; beide können gleichzeitig aktiv sein.
+ComfyUI deckt jetzt drei Aufgaben ab: **Fire-and-Forget** (generischer Workflow-Trigger,
+wie in diesem ADR beschrieben) **und** die drei festgelegten generativen Aufgaben
+(Upscale, Image Edit, Inpaint) über Default-Workflow-Zuordnung aus den Einstellungen.
 
 ---
 
@@ -49,12 +52,18 @@ Kein Pfad ersetzt den anderen; beide können gleichzeitig aktiv sein.
 
 ## Warum nicht ComfyUI als das Backend (anstelle P9)?
 
-P9 läuft in-process und braucht keine externe Instanz. P8b benötigt eine laufende ComfyUI-Instanz — ideal für Nutzer, die ComfyUI ohnehin betreiben und dessen Workflow-Ökosystem (GGUF-Nodes, Custom Nodes, Prompt-Bausteine) nutzen wollen. Beide Szenarien sind real; deshalb koexistieren beide Pfade.
+~~P9 läuft in-process und braucht keine externe Instanz. P8b benötigt eine laufende ComfyUI-Instanz —
+ideal für Nutzer, die ComfyUI ohnehin betreiben und dessen Workflow-Ökosystem nutzen wollen. Beide
+Szenarien sind real; deshalb koexistieren beide Pfade.~~
+
+> **Überholt (P16, ADR-008):** Diese Abwägung hat sich erledigt. ComfyUI ist ab P16 der einzige
+> generative Pfad. Nutzer, die generative Features nutzen wollen, betreiben zwingend eine
+> ComfyUI-Instanz. Das Workflow-Ökosystem (GGUF-Nodes, Custom Nodes) ist damit vollständig verfügbar.
 
 ---
 
 ## Konsequenzen
 
-- Phase 4 des ComfyUI-Plans (`kind = mask`-Slots) hängt an P9 Phase 4 (Masken-Editor). Bis dahin gegated.
-- Template-Dateien liegen in einem Photofant-verwalteten `workflows/`-Ordner; die Binding-Konfiguration lebt in der DB.
+- ~~Phase 4 des ComfyUI-Plans (`kind = mask`-Slots) hängt an P9 Phase 4 (Masken-Editor). Bis dahin gegated.~~ (P16: Inpaint-Maske via Alpha-Embedding, unabhängig von P9)
+- ~~Template-Dateien liegen in einem Photofant-verwalteten `workflows/`-Ordner; die Binding-Konfiguration lebt in der DB.~~ (P16: Workflows als Dateien in `.photofant/workflows/`, keine DB-Konfiguration mehr)
 - Output-Cleanup liegt bei ComfyUI; Photofant löscht oder verwaltet keine `output/`-Dateien.

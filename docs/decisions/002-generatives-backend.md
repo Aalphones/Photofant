@@ -1,7 +1,7 @@
 # ADR-002 — Generatives Backend: diffusers (in-process)
 
-**Status:** Akzeptiert / 2026-06-22
-**Querverweise:** [ADR-003](003-comfyui-trigger-integration.md) (ComfyUI-Trigger, Fire-and-Forget, koexistierend)
+**Status:** ~~Akzeptiert~~ **Ersetzt durch [ADR-008](008-generativ-via-comfyui.md)** · 2026-06-29
+**Querverweise:** [ADR-003](003-comfyui-trigger-integration.md) (ComfyUI-Trigger, Fire-and-Forget, koexistierend) · [ADR-008](008-generativ-via-comfyui.md) (ersetzt diese Entscheidung)
 
 ---
 
@@ -83,3 +83,10 @@ Inference-Layer
 - fp8-Support über `torchao` oder `bitsandbytes`, GGUF über `gguf`-Package — beides in der generative-Dependency-Gruppe.
 - Manifest erweitert um Rollen `upscaler`, `editor`, `heavy_captioner`; `generativ`-Tier.
 - Validierungs-Pipeline (§12.2a) muss um safetensors/GGUF-Format-Erkennung erweitert werden — erkennt sie bereits (magic bytes), braucht nur neue Rollen-Zuordnung.
+
+---
+
+> **Hinweis (P16, 2026-06-29):** Diese Entscheidung wurde durch [ADR-008](008-generativ-via-comfyui.md)
+> ersetzt. Das diffusers in-process Backend (SeedVR2, Flux-Edit, Inpaint) wurde vollständig entfernt.
+> Upscale/Edit/Inpaint laufen ausschließlich über ComfyUI. Die `heavy_captioner`-Rolle (JoyCaption,
+> Qwen-VL) und die torch/transformers-Infrastruktur in `generative_engine.py` bleiben bestehen.

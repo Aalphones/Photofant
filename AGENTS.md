@@ -22,7 +22,7 @@ Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, 
 | Frontend | Angular 19.2 + Tailwind v4 (Tokens) + NgRx 19 classic |
 | Backend | Python + FastAPI + Uvicorn |
 | DB | SQLite + Alembic, `sqlite-vec` |
-| Inferenz | ONNX Runtime (Core) · torch/diffusers (generativ, gated, ADR-002) · ComfyUI-Trigger (P8b, ADR-003) |
+| Inferenz | ONNX Runtime (Core) · torch/transformers (Heavy Captioners: JoyCaption, Qwen-VL) · ComfyUI (einziger Generativ-Pfad: Upscale/Edit/Inpaint + Fire-and-Forget; ADR-003, ADR-008) |
 | Pakete | `uv` (Backend) · `npm` (Frontend) |
 
 ## Konventionen
@@ -39,8 +39,8 @@ Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, 
 
 ## Planung
 
-- Aktive Pläne (Backlog): `docs/planning/` — aktuell P10 Trainingssets, P11 Duale Duplikaterkennung, P13 Person-Bulk-Import
-- Entscheidungen (ADRs): `docs/decisions/` (001–006)
+- Aktive Pläne (Backlog): `docs/planning/` — aktuell P10 Trainingssets, P11 Duale Duplikaterkennung, P13 Person-Bulk-Import, P15 Lightbox-Angleichung
+- Entscheidungen (ADRs): `docs/decisions/` (001–003, 004–006, 008)
 - Archiv (umgesetzte Pläne): `docs/archive/`
 - [Design-Reconciliation](docs/design-reconciliation.md) — View-für-View-Abgleich Mockup vs. Impl
 

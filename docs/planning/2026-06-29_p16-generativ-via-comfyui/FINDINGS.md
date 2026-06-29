@@ -30,17 +30,17 @@ Getaggte Erkenntnisse während der Umsetzung. Format:
   `generative_engine.py` wird nicht vollständig gelöscht — nur die diffusers-Methoden.
   `generative`-Dep-Gruppe bleibt, nur `diffusers` fliegt raus.
   Grund: heavy_captioners (Qwen/JoyCaption) nutzen `load_transformers_model()` + torch/transformers.
-- [ ] → Phase 6 (Doku): Frontend-Workflow-Modell war beim Phase-5-Start veraltet. Das Backend-DTO
+- [x] → Phase 6 (Doku): Frontend-Workflow-Modell war beim Phase-5-Start veraltet. Das Backend-DTO
   (Phase 1/2) liefert pro Workflow `prompt`/`negative_prompt`/`resolution`/`mask`-Erkennung; das alte
   Frontend-Modell (`comfyui-workflow.model.ts`) warf die weg und trug stattdessen ein `params`-Feld +
   `node_title`/`required`/`lockable` auf Inputs, die das Backend nie sendete. In Phase 5 auf den echten
   Kontrakt gezogen (Mapper + `runWorkflow` senden jetzt `prompt`/`resolution`/`mask`). `routes.md`-Eintrag
-  für `/api/comfyui/workflows/{key}/run` auf diese Felder prüfen.
+  für `/api/comfyui/workflows/{key}/run` geprüft — RunRequest in routes.md bereits korrekt (prompt/negative_prompt/resolution/mask). ✓
 
-- [ ] → Phase 6 (Doku): Lightbox-„Upscale" rief in Phase 5 noch den in Phase 3 gelöschten P9-Endpoint
+- [x] → Phase 6 (Doku): Lightbox-„Upscale" rief in Phase 5 noch den in Phase 3 gelöschten P9-Endpoint
   `/api/assets/{id}/upscale` (toter Code seit Abriss). Auf `default_upscale` via ComfyUI umgestellt.
   Bulk-Upscale neu in der Auswahl-Leiste (BulkBar). Capability-Felder `upscale`/`flux_edit`/`inpaint`
-  aus `CapabilitiesDto` (FE) entfernt — Backend hatte sie schon in Phase 3 entfernt. `models.md`/Capabilities
-  prüfen.
+  aus `CapabilitiesDto` (FE) entfernt — Backend hatte sie schon in Phase 3 entfernt. `models.md`/CapabilitiesDto
+  in routes.md geprüft — bereits korrekt (kein upscale/flux_edit/inpaint). ✓
 
-- [ ] → Phase 6 (Doku): Prompt-Erkennung nur via Titel-Match (Positive/Negative). Der „Single-Encode-Fallback" (genau ein CLIPTextEncode → positiv, AK1) wurde weggelassen — er kollidiert mit SeedVR2, wo das einzige CLIPTextEncode ein interner Upscaler-Prompt ist. Bewusste Entscheidung: Nutzer benennen Nodes explizit mit Positive/Negative, sonst kein Prompt-Feld. In ADR-008 oder Design-Reconciliation vermerken.
+- [x] → Phase 6 (Doku): Prompt-Erkennung nur via Titel-Match (Positive/Negative). Der „Single-Encode-Fallback" (genau ein CLIPTextEncode → positiv, AK1) wurde weggelassen — er kollidiert mit SeedVR2, wo das einzige CLIPTextEncode ein interner Upscaler-Prompt ist. Bewusste Entscheidung: Nutzer benennen Nodes explizit mit Positive/Negative, sonst kein Prompt-Feld. In ADR-008 Kontrakt-Sektion dokumentiert. ✓
