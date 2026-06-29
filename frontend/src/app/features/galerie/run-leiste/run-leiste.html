@@ -5,11 +5,11 @@
     <select
       class="rleiste__select"
       (change)="onWorkflowSelect($event)"
-      [value]="activeWorkflow()?.id ?? ''"
+      [value]="activeWorkflow()?.key ?? ''"
     >
       <option value="">Workflow wählen…</option>
-      @for (wf of workflows(); track wf.id) {
-        <option [value]="wf.id">{{ wf.name }}</option>
+      @for (wf of workflows(); track wf.key) {
+        <option [value]="wf.key">{{ wf.name }}</option>
       }
     </select>
   </div>

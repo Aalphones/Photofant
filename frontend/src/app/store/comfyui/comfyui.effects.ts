@@ -108,34 +108,6 @@ export class ComfyUIEffects {
     )
   );
 
-  readonly activateWorkflow$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(comfyuiActions.activateWorkflow),
-      switchMap(({ workflowId }) =>
-        this.comfyuiService.activateWorkflow(workflowId).pipe(
-          map((workflow) => comfyuiActions.activateWorkflowSuccess({ workflow })),
-          catchError((error: HttpErrorResponse) =>
-            of(comfyuiActions.activateWorkflowFailure({ error: extractErrorMessage(error) }))
-          ),
-        )
-      ),
-    )
-  );
-
-  readonly deactivateWorkflow$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(comfyuiActions.deactivateWorkflow),
-      switchMap(({ workflowId }) =>
-        this.comfyuiService.deactivateWorkflow(workflowId).pipe(
-          map((workflow) => comfyuiActions.deactivateWorkflowSuccess({ workflow })),
-          catchError((error: HttpErrorResponse) =>
-            of(comfyuiActions.deactivateWorkflowFailure({ error: error.message }))
-          ),
-        )
-      ),
-    )
-  );
-
   readonly duplicateWorkflow$ = createEffect(() =>
     this.actions$.pipe(
       ofType(comfyuiActions.duplicateWorkflow),

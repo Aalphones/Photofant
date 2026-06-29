@@ -31,12 +31,14 @@
 
 ## Checkliste
 
-- [ ] `comfyui-workflow.model.ts` auf Discovery-DTO umstellen
-- [ ] `comfyui.service.ts`: Scan-/Defaults-Endpunkte, CRUD-Calls raus
-- [ ] Store: Actions/Effects/Reducer/Selectors anpassen (Defaults rein, CRUD raus)
-- [ ] `comfyui.ts`/`.html`: Liste read-only + drei Default-Dropdowns + Ordner-Hinweis
+- [x] `comfyui-workflow.model.ts` auf Discovery-DTO umstellen (`key`, `isValid`, `errors`; `id`/`isActive`/`templatePath`/`validationErrors` raus)
+- [x] `comfyui.service.ts`: `activateWorkflow`/`deactivateWorkflow`/`revalidateWorkflow` raus; `updateWorkflow`/`deleteWorkflow`/`duplicateWorkflow`/`redetectInputs` auf `key: string` umgestellt; `runWorkflow` auf `key: string`
+- [x] Store: Activate/Deactivate-Actions/Effects/Reducer-Handler raus; `selectedWorkflowId: string | null`; `selectActiveWorkflows` ohne `isActive`-Filter; alle `workflow.id` → `workflow.key`
+- [x] Galerie: `activeWorkflowId: signal<string | null>`, `RunFirePayload.workflowKey`, run-leiste HTML auf `wf.key`
+- [ ] Settings-Liste fully read-only: Upload-, Duplizieren-, Löschen-, Redetect-Buttons entfernen; stattdessen Ordner-Hinweis (`.photofant/workflows/`)
+- [ ] Drei Default-Dropdowns (Upscale / Image Edit / Inpaint) + `loadDefaults`/`setDefaults`-Actions + Backend-Endpunkte prüfen
 - [ ] Komponente sauber geschnitten (Shell + Child falls zu groß, [[feedback-komponenten-aufspaltung]])
 - [ ] Doc-Update: `code-map.md` (ComfyUI-Frontend-Zeile)
 
 ## Report-Back
-_(beim Umsetzen füllen)_
+Strukturelle Umstellung erledigt (2026-06-29): Bugfix für "aktivieren funktioniert nicht" als Einstieg in Phase 4. Model, Service, Store, run-leiste auf FS-basiertes Discovery-DTO umgestellt. Noch offen: read-only Settings-Liste, drei Default-Dropdowns.

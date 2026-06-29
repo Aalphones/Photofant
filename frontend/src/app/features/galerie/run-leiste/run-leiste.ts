@@ -4,7 +4,7 @@ import { AssetService } from '@photofant/services';
 import { Icon } from '@photofant/ui';
 
 export interface RunFirePayload {
-  workflowId: number;
+  workflowKey: string;
   inputs: Record<string, number | number[]>;
   faceInputs: Record<string, number | number[]>;
   params: Record<string, unknown>;
@@ -29,7 +29,7 @@ export class RunLeiste {
   readonly batchAxisKey = input<string | null>(null);
   readonly isFiring     = input<boolean>(false);
 
-  readonly workflowChanged = output<number | null>();
+  readonly workflowChanged = output<string | null>();
   readonly slotArmed       = output<string | null>();
   readonly fire            = output<RunFirePayload>();
   readonly closed          = output<void>();
@@ -104,7 +104,7 @@ export class RunLeiste {
     const workflow = this.activeWorkflow();
     if (!workflow || !this.canFire() || this.isFiring()) { return; }
     this.fire.emit({
-      workflowId: workflow.id,
+      workflowKey: workflow.key,
       inputs: this.bindings(),
       faceInputs: this.faceBindings(),
       params: {},
@@ -113,7 +113,7 @@ export class RunLeiste {
 
   protected onWorkflowSelect(event: Event): void {
     const selectEl = event.target as HTMLSelectElement;
-    const workflowId = Number(selectEl.value) || null;
-    this.workflowChanged.emit(workflowId);
+    const workflowKey = selectEl.value || null;
+    this.workflowChanged.emit(workflowKey);
   }
 }

@@ -18,7 +18,7 @@ export interface ComfyUIState {
   workflows: ComfyUIWorkflow[];
   isLoadingWorkflows: boolean;
   isCreatingWorkflow: boolean;
-  selectedWorkflowId: number | null;
+  selectedWorkflowId: string | null;
   workflowError: string | null;
 }
 
@@ -37,7 +37,7 @@ const initialState: ComfyUIState = {
 };
 
 function replaceWorkflow(workflows: ComfyUIWorkflow[], updated: ComfyUIWorkflow): ComfyUIWorkflow[] {
-  return workflows.map((workflow: ComfyUIWorkflow) => workflow.id === updated.id ? updated : workflow);
+  return workflows.map((workflow: ComfyUIWorkflow) => workflow.key === updated.key ? updated : workflow);
 }
 
 export const comfyuiFeature = createFeature({
@@ -94,7 +94,7 @@ export const comfyuiFeature = createFeature({
       ({ ...state, isCreatingWorkflow: true, workflowError: null })
     ),
     on(comfyuiActions.createWorkflowSuccess, (state: ComfyUIState, { workflow }) =>
-      ({ ...state, isCreatingWorkflow: false, workflows: [...state.workflows, workflow], selectedWorkflowId: workflow.id })
+      ({ ...state, isCreatingWorkflow: false, workflows: [...state.workflows, workflow], selectedWorkflowId: workflow.key })
     ),
     on(comfyuiActions.createWorkflowFailure, (state: ComfyUIState, { error }) =>
       ({ ...state, isCreatingWorkflow: false, workflowError: error })
@@ -109,24 +109,10 @@ export const comfyuiFeature = createFeature({
 
     on(comfyuiActions.deleteWorkflowSuccess, (state: ComfyUIState, { workflowId }) => ({
       ...state,
-      workflows: state.workflows.filter((workflow: ComfyUIWorkflow) => workflow.id !== workflowId),
+      workflows: state.workflows.filter((workflow: ComfyUIWorkflow) => workflow.key !== workflowId),
       selectedWorkflowId: state.selectedWorkflowId === workflowId ? null : state.selectedWorkflowId,
     })),
     on(comfyuiActions.deleteWorkflowFailure, (state: ComfyUIState, { error }) =>
-      ({ ...state, workflowError: error })
-    ),
-
-    on(comfyuiActions.activateWorkflowSuccess, (state: ComfyUIState, { workflow }) =>
-      ({ ...state, workflows: replaceWorkflow(state.workflows, workflow) })
-    ),
-    on(comfyuiActions.activateWorkflowFailure, (state: ComfyUIState, { error }) =>
-      ({ ...state, workflowError: error })
-    ),
-
-    on(comfyuiActions.deactivateWorkflowSuccess, (state: ComfyUIState, { workflow }) =>
-      ({ ...state, workflows: replaceWorkflow(state.workflows, workflow) })
-    ),
-    on(comfyuiActions.deactivateWorkflowFailure, (state: ComfyUIState, { error }) =>
       ({ ...state, workflowError: error })
     ),
 

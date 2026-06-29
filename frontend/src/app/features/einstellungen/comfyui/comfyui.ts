@@ -124,7 +124,7 @@ export class ComfyUISection {
     input.value = '';
   }
 
-  selectWorkflow(workflowId: number): void {
+  selectWorkflow(workflowId: string): void {
     const current = this.selectedWorkflowId();
     if (current === workflowId) {
       this.store.dispatch(comfyuiActions.selectWorkflow({ workflowId: null }));
@@ -157,7 +157,7 @@ export class ComfyUISection {
       patch.category = this.editCategory();
     }
     if (Object.keys(patch).length > 0) {
-      this.store.dispatch(comfyuiActions.updateWorkflow({ workflowId: editing.id, patch }));
+      this.store.dispatch(comfyuiActions.updateWorkflow({ workflowId: editing.key, patch }));
     }
     this.editingWorkflow.set(null);
   }
@@ -170,43 +170,31 @@ export class ComfyUISection {
     this.editCategory.set(target.value);
   }
 
-  deleteWorkflow(workflowId: number): void {
+  deleteWorkflow(workflowId: string): void {
     this.store.dispatch(comfyuiActions.deleteWorkflow({ workflowId }));
   }
 
-  activateWorkflow(workflowId: number): void {
-    this.store.dispatch(comfyuiActions.activateWorkflow({ workflowId }));
-  }
-
-  deactivateWorkflow(workflowId: number): void {
-    this.store.dispatch(comfyuiActions.deactivateWorkflow({ workflowId }));
-  }
-
-  duplicateWorkflow(workflowId: number): void {
+  duplicateWorkflow(workflowId: string): void {
     this.store.dispatch(comfyuiActions.duplicateWorkflow({ workflowId }));
   }
 
-  redetectInputs(workflowId: number): void {
+  redetectInputs(workflowId: string): void {
     this.store.dispatch(comfyuiActions.redetectInputs({ workflowId }));
   }
 
   statusLabel(workflow: ComfyUIWorkflow): string {
-    if (!workflow.isValid) return 'invalide';
-    if (workflow.isActive) return 'aktiv';
-    return 'inaktiv';
+    return workflow.isValid ? 'verfügbar' : 'invalide';
   }
 
   statusClass(workflow: ComfyUIWorkflow): string {
-    if (!workflow.isValid) return 'comfyui__status--fehler';
-    if (workflow.isActive) return 'comfyui__status--ok';
-    return 'comfyui__status--inaktiv';
+    return workflow.isValid ? 'comfyui__status--ok' : 'comfyui__status--fehler';
   }
 
   removeInput(workflow: ComfyUIWorkflow, index: number): void {
     const inputs = [...workflow.inputs];
     inputs.splice(index, 1);
     this.store.dispatch(comfyuiActions.updateWorkflow({
-      workflowId: workflow.id,
+      workflowId: workflow.key,
       patch: { inputs },
     }));
   }
@@ -215,7 +203,7 @@ export class ComfyUISection {
     const params = [...workflow.params];
     params.splice(index, 1);
     this.store.dispatch(comfyuiActions.updateWorkflow({
-      workflowId: workflow.id,
+      workflowId: workflow.key,
       patch: { params },
     }));
   }
@@ -225,7 +213,7 @@ export class ComfyUISection {
       idx === index ? { ...input, required: !input.required } : input
     );
     this.store.dispatch(comfyuiActions.updateWorkflow({
-      workflowId: workflow.id,
+      workflowId: workflow.key,
       patch: { inputs },
     }));
   }
@@ -235,7 +223,7 @@ export class ComfyUISection {
       idx === index ? { ...input, lockable: !input.lockable } : input
     );
     this.store.dispatch(comfyuiActions.updateWorkflow({
-      workflowId: workflow.id,
+      workflowId: workflow.key,
       patch: { inputs },
     }));
   }

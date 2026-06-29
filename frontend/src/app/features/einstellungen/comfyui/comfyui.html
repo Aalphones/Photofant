@@ -180,44 +180,41 @@
   </div>
 }
 
-@for (workflow of workflows(); track workflow.id) {
+@for (workflow of workflows(); track workflow.key) {
   <div
     class="comfyui__workflow-karte"
-    [class.comfyui__workflow-karte--offen]="selectedWorkflowId() === workflow.id"
+    [class.comfyui__workflow-karte--offen]="selectedWorkflowId() === workflow.key"
   >
     <!-- Kopfzeile -->
-    <div class="comfyui__workflow-kopf" (click)="selectWorkflow(workflow.id)">
+    <div class="comfyui__workflow-kopf" (click)="selectWorkflow(workflow.key)">
       <div class="comfyui__workflow-info">
         <span class="comfyui__workflow-name">{{ workflow.name }}</span>
         <span class="comfyui__workflow-kat">{{ workflow.category }}</span>
       </div>
       <div class="comfyui__workflow-rechts">
         <span class="comfyui__status" [class]="'comfyui__status ' + statusClass(workflow)">{{ statusLabel(workflow) }}</span>
-        <pf-icon [name]="selectedWorkflowId() === workflow.id ? 'chevronUp' : 'chevronDown'" [size]="14" />
+        <pf-icon [name]="selectedWorkflowId() === workflow.key ? 'chevronUp' : 'chevronDown'" [size]="14" />
       </div>
     </div>
 
     <!-- Detail-Panel -->
-    @if (selectedWorkflowId() === workflow.id) {
+    @if (selectedWorkflowId() === workflow.key) {
       <div class="comfyui__workflow-detail">
 
         <!-- Validierungsfehler -->
-        @if (workflow.validationErrors && workflow.validationErrors.length > 0) {
+        @if (workflow.errors.length > 0) {
           <div class="comfyui__val-fehler">
-            @for (validationError of workflow.validationErrors; track validationError.code) {
+            @for (error of workflow.errors; track error) {
               <div class="comfyui__val-fehler-zeile">
                 <pf-icon name="alertTriangle" [size]="12" />
-                <span>{{ validationError.message }}</span>
-                @if (validationError.next_step) {
-                  <span class="comfyui__val-tipp">→ {{ validationError.next_step }}</span>
-                }
+                <span>{{ error }}</span>
               </div>
             }
           </div>
         }
 
         <!-- Edit-Modus -->
-        @if (editingWorkflow()?.id === workflow.id) {
+        @if (editingWorkflow()?.key === workflow.key) {
           <div class="comfyui__edit-form">
             <div class="comfyui__edit-zeile">
               <label>Name</label>
@@ -290,27 +287,13 @@
           <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="startEditWorkflow(workflow)">
             <pf-icon name="pencil" [size]="12" /> Bearbeiten
           </button>
-          @if (workflow.isActive) {
-            <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="deactivateWorkflow(workflow.id)">
-              Deaktivieren
-            </button>
-          } @else {
-            <button
-              class="comfyui__btn comfyui__btn--akzent comfyui__btn--klein"
-              [disabled]="!workflow.isValid"
-              (click)="activateWorkflow(workflow.id)"
-              [title]="workflow.isValid ? 'Aktivieren' : 'Erst Validierungsfehler beheben'"
-            >
-              Aktivieren
-            </button>
-          }
-          <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="duplicateWorkflow(workflow.id)">
+          <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="duplicateWorkflow(workflow.key)">
             <pf-icon name="copy" [size]="12" /> Duplizieren
           </button>
-          <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="redetectInputs(workflow.id)" title="Inputs neu aus Template erkennen (überschreibt bestehende)">
+          <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="redetectInputs(workflow.key)" title="Inputs neu aus Template erkennen (überschreibt bestehende)">
             <pf-icon name="scan" [size]="12" /> Inputs neu erkennen
           </button>
-          <button class="comfyui__btn comfyui__btn--gefahr comfyui__btn--klein" (click)="deleteWorkflow(workflow.id)">
+          <button class="comfyui__btn comfyui__btn--gefahr comfyui__btn--klein" (click)="deleteWorkflow(workflow.key)">
             <pf-icon name="trash" [size]="12" /> Löschen
           </button>
         </div>

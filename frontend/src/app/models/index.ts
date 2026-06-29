@@ -64,7 +64,6 @@ export type {
   WorkflowInput,
   WorkflowParam,
   ComfyUIWorkflow,
-  ValidationError as WorkflowValidationError,
   NodeInfo,
   InputSuggestion,
   IntrospectionResult,

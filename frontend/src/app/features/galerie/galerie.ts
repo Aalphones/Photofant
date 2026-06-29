@@ -83,7 +83,7 @@ export class Galerie {
   // --- Workflow-Modus (Run-Leiste) ---
   protected readonly activeWorkflows   = this.store.selectSignal(comfyuiSelectors.selectActiveWorkflows);
   protected readonly workflowMode      = signal(false);
-  protected readonly activeWorkflowId  = signal<number | null>(null);
+  protected readonly activeWorkflowId  = signal<string | null>(null);
   protected readonly slotBindings      = signal<Record<string, number | number[]>>({});
   protected readonly faceSlotBindings  = signal<Record<string, number | number[]>>({});
   protected readonly assetHashMap      = this.store.selectSignal(gallerySelectors.selectHashMap);
@@ -98,7 +98,7 @@ export class Galerie {
   protected readonly activeWorkflow = computed(() => {
     const workflowId = this.activeWorkflowId();
     if (workflowId === null) { return null; }
-    return this.activeWorkflows().find((workflow) => workflow.id === workflowId) ?? null;
+    return this.activeWorkflows().find((workflow) => workflow.key === workflowId) ?? null;
   });
 
   protected readonly facesMap = computed((): Map<number, FaceGalleryItemDto[]> => {
@@ -386,16 +386,16 @@ export class Galerie {
     }
   }
 
-  protected onWorkflowChanged(workflowId: number | null): void {
+  protected onWorkflowChanged(workflowKey: string | null): void {
     const hasBindings =
       Object.keys(this.slotBindings()).length > 0 ||
       Object.keys(this.faceSlotBindings()).length > 0;
-    if (hasBindings && workflowId !== this.activeWorkflowId()) {
+    if (hasBindings && workflowKey !== this.activeWorkflowId()) {
       if (!window.confirm('Workflow wechseln? Alle aktuellen Bindungen werden gelöscht.')) {
         return;
       }
     }
-    this.activeWorkflowId.set(workflowId);
+    this.activeWorkflowId.set(workflowKey);
     this.slotBindings.set({});
     this.faceSlotBindings.set({});
     this.armedSlotKey.set(null);
@@ -465,7 +465,7 @@ export class Galerie {
   protected onRunFire(payload: RunFirePayload): void {
     if (this.isFiring()) { return; }
     this.isFiring.set(true);
-    this.comfyuiService.runWorkflow(payload.workflowId, payload.inputs, payload.faceInputs, payload.params)
+    this.comfyuiService.runWorkflow(payload.workflowKey, payload.inputs, payload.faceInputs, payload.params)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
       next: (response) => {

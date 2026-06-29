@@ -26,12 +26,12 @@ const selectSelectedWorkflow = createSelector(
   selectWorkflows,
   selectSelectedWorkflowId,
   (workflows: ComfyUIWorkflow[], selectedId: number | null) =>
-    selectedId !== null ? workflows.find((workflow: ComfyUIWorkflow) => workflow.id === selectedId) ?? null : null
+    selectedId !== null ? workflows.find((workflow: ComfyUIWorkflow) => workflow.key === selectedId) ?? null : null
 );
 
 const selectActiveWorkflows = createSelector(
   selectWorkflows,
-  (workflows: ComfyUIWorkflow[]) => workflows.filter((workflow: ComfyUIWorkflow) => workflow.isActive && workflow.isValid)
+  (workflows: ComfyUIWorkflow[]) => workflows.filter((workflow: ComfyUIWorkflow) => workflow.isValid)
 );
 
 export const comfyuiSelectors = {

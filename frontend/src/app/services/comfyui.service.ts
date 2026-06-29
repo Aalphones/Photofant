@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs';
 import type { Observable } from 'rxjs';
-import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, IntrospectionResult, WorkflowInput, WorkflowParam } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, IntrospectionResult, WorkflowParam } from '@photofant/models';
 import { COMFYUI_CONFIG_DEFAULTS } from '@photofant/models';
 
 export interface TestConnectionResponse {
@@ -19,17 +19,22 @@ interface ComfyUIConfigApi {
 }
 
 interface WorkflowApi {
-  id: number;
+  key: string;
   name: string;
   category: string;
-  template_path: string;
-  inputs: WorkflowInput[];
-  params: WorkflowParam[];
-  is_active: boolean;
+  inputs: Array<{
+    key: string;
+    label: string;
+    node_title?: string;
+    node_id: string;
+    field: string;
+    kind: string;
+    required?: boolean;
+    lockable?: boolean;
+  }>;
+  params?: WorkflowParam[];
   is_valid: boolean;
-  validation_errors: Array<{ code: string; message: string; expected: string; found: string; next_step: string }> | null;
-  created_at: string | null;
-  updated_at: string | null;
+  errors: string[];
 }
 
 function fromApi(raw: ComfyUIConfigApi): ComfyUIConfig {
@@ -44,17 +49,22 @@ function fromApi(raw: ComfyUIConfigApi): ComfyUIConfig {
 
 function workflowFromApi(raw: WorkflowApi): ComfyUIWorkflow {
   return {
-    id: raw.id,
+    key: raw.key,
     name: raw.name,
     category: raw.category,
-    templatePath: raw.template_path,
-    inputs: raw.inputs ?? [],
+    inputs: (raw.inputs ?? []).map((inp) => ({
+      key: inp.key,
+      label: inp.label,
+      node_title: inp.node_title ?? '',
+      node_id: inp.node_id,
+      field: inp.field,
+      kind: inp.kind as 'image' | 'mask',
+      required: inp.required ?? false,
+      lockable: inp.lockable ?? false,
+    })),
     params: raw.params ?? [],
-    isActive: raw.is_active,
     isValid: raw.is_valid,
-    validationErrors: raw.validation_errors ?? null,
-    createdAt: raw.created_at,
-    updatedAt: raw.updated_at,
+    errors: raw.errors ?? [],
   };
 }
 
@@ -102,7 +112,7 @@ export class ComfyUIService {
   }
 
   updateWorkflow(
-    workflowId: number,
+    workflowId: string,
     patch: { name?: string; category?: string; inputs?: WorkflowInput[]; params?: WorkflowParam[] },
   ): Observable<ComfyUIWorkflow> {
     return this.http.patch<WorkflowApi>(`/api/comfyui/workflows/${workflowId}`, patch).pipe(
@@ -110,24 +120,12 @@ export class ComfyUIService {
     );
   }
 
-  deleteWorkflow(workflowId: number): Observable<void> {
-    return this.http.delete<void>(`/api/comfyui/workflows/${workflowId}`);
+  deleteWorkflow(workflowKey: string): Observable<void> {
+    return this.http.delete<void>(`/api/comfyui/workflows/${workflowKey}`);
   }
 
-  activateWorkflow(workflowId: number): Observable<ComfyUIWorkflow> {
-    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowId}/activate`, {}).pipe(
-      map((raw: WorkflowApi) => workflowFromApi(raw))
-    );
-  }
-
-  deactivateWorkflow(workflowId: number): Observable<ComfyUIWorkflow> {
-    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowId}/deactivate`, {}).pipe(
-      map((raw: WorkflowApi) => workflowFromApi(raw))
-    );
-  }
-
-  duplicateWorkflow(workflowId: number): Observable<ComfyUIWorkflow> {
-    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowId}/duplicate`, {}).pipe(
+  duplicateWorkflow(workflowKey: string): Observable<ComfyUIWorkflow> {
+    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowKey}/duplicate`, {}).pipe(
       map((raw: WorkflowApi) => workflowFromApi(raw))
     );
   }
@@ -138,26 +136,20 @@ export class ComfyUIService {
     return this.http.post<IntrospectionResult>('/api/comfyui/workflows/introspect', formData);
   }
 
-  revalidateWorkflow(workflowId: number): Observable<ComfyUIWorkflow> {
-    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowId}/revalidate`, {}).pipe(
-      map((raw: WorkflowApi) => workflowFromApi(raw))
-    );
-  }
-
-  redetectInputs(workflowId: number): Observable<ComfyUIWorkflow> {
-    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowId}/redetect-inputs`, {}).pipe(
+  redetectInputs(workflowKey: string): Observable<ComfyUIWorkflow> {
+    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowKey}/redetect-inputs`, {}).pipe(
       map((raw: WorkflowApi) => workflowFromApi(raw))
     );
   }
 
   runWorkflow(
-    workflowId: number,
+    workflowKey: string,
     inputs: Record<string, number | number[]>,
     faceInputs: Record<string, number | number[]> = {},
     params: Record<string, unknown> = {},
   ): Observable<{ jobs: { job_id: string }[] }> {
     return this.http.post<{ jobs: { job_id: string }[] }>(
-      `/api/comfyui/workflows/${workflowId}/run`,
+      `/api/comfyui/workflows/${workflowKey}/run`,
       { inputs, face_inputs: faceInputs, params },
     );
   }

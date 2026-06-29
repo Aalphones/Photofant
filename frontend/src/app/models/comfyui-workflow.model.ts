@@ -24,25 +24,13 @@ export interface WorkflowParam {
 }
 
 export interface ComfyUIWorkflow {
-  id: number;
+  key: string;
   name: string;
   category: string;
-  templatePath: string;
   inputs: WorkflowInput[];
   params: WorkflowParam[];
-  isActive: boolean;
   isValid: boolean;
-  validationErrors: ValidationError[] | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-}
-
-export interface ValidationError {
-  code: string;
-  message: string;
-  expected: string;
-  found: string;
-  next_step: string;
+  errors: string[];
 }
 
 export interface NodeInfo {
