@@ -2,8 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs';
 import type { Observable } from 'rxjs';
-import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, WorkflowParam } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, ResolutionRun } from '@photofant/models';
 import { COMFYUI_CONFIG_DEFAULTS } from '@photofant/models';
+
+/** Optionale Run-Parameter, die der Workflow erkannt hat (Prompt/Auflösung/Maske). */
+export interface RunExtras {
+  prompt?: string | null;
+  negativePrompt?: string | null;
+  resolution?: ResolutionRun | null;
+  mask?: { asset_id: number; mask_data_url: string } | null;
+}
 
 export interface TestConnectionResponse {
   ok: boolean;
@@ -28,14 +36,19 @@ interface WorkflowApi {
   inputs: Array<{
     key: string;
     label: string;
-    node_title?: string;
     node_id: string;
     field: string;
     kind: string;
-    required?: boolean;
-    lockable?: boolean;
   }>;
-  params?: WorkflowParam[];
+  prompt: { node_id: string; field: string } | null;
+  negative_prompt: { node_id: string; field: string } | null;
+  resolution: {
+    node_id: string;
+    megapixels_field: string;
+    aspect_field: string;
+    aspect_default: string;
+  } | null;
+  mask: { mode: string; image_node_id: string } | null;
   is_valid: boolean;
   errors: string[];
 }
@@ -61,14 +74,25 @@ function workflowFromApi(raw: WorkflowApi): ComfyUIWorkflow {
     inputs: (raw.inputs ?? []).map((inp) => ({
       key: inp.key,
       label: inp.label,
-      node_title: inp.node_title ?? '',
       node_id: inp.node_id,
       field: inp.field,
       kind: inp.kind as 'image' | 'mask',
-      required: inp.required ?? false,
-      lockable: inp.lockable ?? false,
     })),
-    params: raw.params ?? [],
+    prompt: raw.prompt ? { node_id: raw.prompt.node_id, field: raw.prompt.field } : null,
+    negativePrompt: raw.negative_prompt
+      ? { node_id: raw.negative_prompt.node_id, field: raw.negative_prompt.field }
+      : null,
+    resolution: raw.resolution
+      ? {
+          node_id: raw.resolution.node_id,
+          megapixelsField: raw.resolution.megapixels_field,
+          aspectField: raw.resolution.aspect_field,
+          aspectDefault: raw.resolution.aspect_default,
+        }
+      : null,
+    mask: raw.mask
+      ? { mode: raw.mask.mode as 'alpha' | 'loader', image_node_id: raw.mask.image_node_id }
+      : null,
     isValid: raw.is_valid,
     errors: raw.errors ?? [],
   };
@@ -114,11 +138,18 @@ export class ComfyUIService {
     workflowKey: string,
     inputs: Record<string, number | number[]>,
     faceInputs: Record<string, number | number[]> = {},
-    params: Record<string, unknown> = {},
+    extras: RunExtras = {},
   ): Observable<{ jobs: { job_id: string }[] }> {
     return this.http.post<{ jobs: { job_id: string }[] }>(
       `/api/comfyui/workflows/${workflowKey}/run`,
-      { inputs, face_inputs: faceInputs, params },
+      {
+        inputs,
+        face_inputs: faceInputs,
+        prompt: extras.prompt ?? null,
+        negative_prompt: extras.negativePrompt ?? null,
+        resolution: extras.resolution ?? null,
+        mask: extras.mask ?? null,
+      },
     );
   }
 

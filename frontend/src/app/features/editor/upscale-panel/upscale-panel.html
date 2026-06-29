@@ -1,0 +1,31 @@
+<div class="upscale-panel__scroll">
+
+  <div class="upscale-panel__hint">
+    <pf-icon name="info" [size]="14" />
+    Hochskalieren über den eingestellten ComfyUI-Workflow. Modell, Tiles und Schritte
+    leben im Workflow — hier nur ein Klick.
+  </div>
+
+  <!-- Auflösung (nur falls der Workflow sie exponiert) -->
+  @if (resolution(); as res) {
+    <div class="upscale-panel__section">
+      <pf-resolution-field [resolution]="res" [(megapixels)]="megapixels" />
+    </div>
+  }
+
+  <!-- Generate button -->
+  <button
+    class="upscale-panel__generate"
+    [disabled]="generating()"
+    (click)="onGenerate()"
+  >
+    @if (generating()) {
+      <div class="upscale-panel__spinner"></div>
+      Wird hochskaliert …
+    } @else {
+      <pf-icon name="refresh" [size]="15" />
+      Hochskalieren
+    }
+  </button>
+
+</div>

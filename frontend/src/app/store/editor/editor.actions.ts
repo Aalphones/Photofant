@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { EditorStep, EditorTargetKind } from '@photofant/models';
+import type { EditorStep, EditorTargetKind, ResolutionRun } from '@photofant/models';
 
 export const editorActions = createActionGroup({
   source: 'Editor',
@@ -12,12 +12,18 @@ export const editorActions = createActionGroup({
     'Apply Step Failure': props<{ error: string }>(),
     'Rollback': props<{ toSeq: number }>(),
     'Rollback Success': props<{ seq: number }>(),
-    'Flux Edit': props<{ prompt: string; templateId: number | null; params: Record<string, unknown> }>(),
-    'Flux Edit Success': props<{ jobId: string }>(),
-    'Flux Edit Failure': props<{ error: string }>(),
-    'Inpaint': props<{ mask: string; prompt: string; params: Record<string, unknown> }>(),
-    'Inpaint Success': props<{ jobId: string }>(),
-    'Inpaint Failure': props<{ error: string }>(),
+    // Generativer Run über ComfyUI (Edit / Inpaint / Upscale).
+    // imageSlotKey = der Bild-Slot des Workflows, an den das Editor-Asset gebunden wird.
+    // maskDataUrl gesetzt → Inpaint (Backend bettet die Maske als Alpha ins Upload-PNG).
+    'Run Generative': props<{
+      workflowKey: string;
+      imageSlotKey: string;
+      prompt: string | null;
+      resolution: ResolutionRun | null;
+      maskDataUrl: string | null;
+    }>(),
+    'Run Generative Success': props<{ jobId: string }>(),
+    'Run Generative Failure': props<{ error: string }>(),
     'Close': emptyProps(),
   },
 });

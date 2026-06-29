@@ -1,0 +1,67 @@
+:host {
+  display: block;
+}
+
+.res-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.res-field__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.res-field__row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.res-field__mp {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.res-field__mp-label,
+.res-field__aspect-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.res-field__mp-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+  outline: none;
+  font-family: monospace;
+
+  &:focus {
+    border-color: var(--accent);
+  }
+}
+
+.res-field__aspect {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.res-field__aspect-value {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: monospace;
+}

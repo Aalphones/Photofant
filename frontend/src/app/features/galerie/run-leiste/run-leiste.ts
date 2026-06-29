@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import type { ComfyUIWorkflow } from '@photofant/models';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import type { ComfyUIWorkflow, ResolutionRun } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { Icon } from '@photofant/ui';
 
@@ -7,7 +7,8 @@ export interface RunFirePayload {
   workflowKey: string;
   inputs: Record<string, number | number[]>;
   faceInputs: Record<string, number | number[]>;
-  params: Record<string, unknown>;
+  prompt: string | null;
+  resolution: ResolutionRun | null;
 }
 
 @Component({
@@ -34,6 +35,22 @@ export class RunLeiste {
   readonly fire            = output<RunFirePayload>();
   readonly closed          = output<void>();
 
+  protected readonly prompt      = signal('');
+  protected readonly megapixels  = signal(1.0);
+
+  constructor() {
+    // Prompt/Auflösung zurücksetzen, wenn der Workflow wechselt.
+    let lastKey: string | null = null;
+    effect((): void => {
+      const key = this.activeWorkflow()?.key ?? null;
+      if (key !== lastKey) {
+        lastKey = key;
+        this.prompt.set('');
+        this.megapixels.set(1.0);
+      }
+    });
+  }
+
   protected readonly fireCount = computed((): number => {
     const batchKey = this.batchAxisKey();
     if (!batchKey) { return 1; }
@@ -43,13 +60,14 @@ export class RunLeiste {
     return Array.isArray(faceBatch) ? faceBatch.length : 1;
   });
 
+  // Alle Bild-Slots müssen gebunden sein (Masken-Slots ausgenommen).
   protected readonly canFire = computed((): boolean => {
     const workflow = this.activeWorkflow();
     if (!workflow) { return false; }
     const bindings = this.bindings();
     const faceBindings = this.faceBindings();
     return workflow.inputs
-      .filter((inp) => inp.kind !== 'mask' && inp.required)
+      .filter((inp) => inp.kind !== 'mask')
       .every((inp) => {
         const assetValue = bindings[inp.key];
         const assetBound = assetValue != null && (!Array.isArray(assetValue) || assetValue.length > 0);
@@ -103,12 +121,28 @@ export class RunLeiste {
   protected onFire(): void {
     const workflow = this.activeWorkflow();
     if (!workflow || !this.canFire() || this.isFiring()) { return; }
+    const promptText = this.prompt().trim();
+    const resolution = workflow.resolution;
     this.fire.emit({
       workflowKey: workflow.key,
       inputs: this.bindings(),
       faceInputs: this.faceBindings(),
-      params: {},
+      prompt: workflow.prompt != null && promptText.length > 0 ? promptText : null,
+      resolution: resolution != null
+        ? { megapixels: this.megapixels(), aspect_ratio: resolution.aspectDefault }
+        : null,
     });
+  }
+
+  protected onPromptInput(event: Event): void {
+    this.prompt.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onMegapixelsInput(event: Event): void {
+    const value = Number((event.target as HTMLInputElement).value);
+    if (Number.isFinite(value) && value > 0) {
+      this.megapixels.set(value);
+    }
   }
 
   protected onWorkflowSelect(event: Event): void {

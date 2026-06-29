@@ -8,29 +8,33 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { Icon } from '@photofant/ui';
-import { editorActions, editorSelectors, modelsActions, modelsSelectors } from '@photofant/store';
-import type { CropRatio, CropRect, EditorTargetKind } from '@photofant/models';
+import { comfyuiActions, comfyuiSelectors, editorActions, editorSelectors, modelsActions, modelsSelectors } from '@photofant/store';
+import type { ComfyUIWorkflow, CropRatio, CropRect, EditorTargetKind } from '@photofant/models';
 import { ZoomStage } from '../galerie/lightbox/zoom-stage';
 import { BasisPanel } from './basis-panel/basis-panel';
 import type { OpEvent } from './basis-panel/basis-panel';
 import { Flux2Panel } from './flux2-panel/flux2-panel';
-import type { FluxEditEvent } from './flux2-panel/flux2-panel';
+import type { EditEvent } from './flux2-panel/flux2-panel';
 import { InpaintPanel } from './inpaint-panel/inpaint-panel';
 import type { InpaintEvent } from './inpaint-panel/inpaint-panel';
+import { UpscalePanel } from './upscale-panel/upscale-panel';
+import type { UpscaleEvent } from './upscale-panel/upscale-panel';
 import { MaskOverlay } from './mask-overlay/mask-overlay';
 import { CropOverlay } from './crop-overlay/crop-overlay';
 import { StepBar } from './step-bar/step-bar';
 import { SaveModal } from './save-modal/save-modal';
 import type { SaveMode } from './save-modal/save-modal';
 
+type EditorTool = 'basis' | 'edit' | 'inpaint' | 'upscale';
+
 @Component({
   selector: 'pf-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, ZoomStage, BasisPanel, Flux2Panel, InpaintPanel, MaskOverlay, CropOverlay, StepBar, SaveModal],
+  imports: [Icon, RouterLink, NgTemplateOutlet, ZoomStage, BasisPanel, Flux2Panel, InpaintPanel, UpscalePanel, MaskOverlay, CropOverlay, StepBar, SaveModal],
   templateUrl: './editor.html',
   styleUrl: './editor.scss',
 })
@@ -53,16 +57,38 @@ export class Editor {
 
   protected readonly generating = this.store.selectSignal(editorSelectors.selectGenerating);
 
+  // ── Generative Tools über ComfyUI-Default-Workflows ──
+  protected readonly comfyConfig = this.store.selectSignal(comfyuiSelectors.selectConfig);
+  private readonly activeWorkflows = this.store.selectSignal(comfyuiSelectors.selectActiveWorkflows);
+
+  protected readonly editWorkflow = computed((): ComfyUIWorkflow | null =>
+    this.findDefaultWorkflow(this.comfyConfig().defaultEdit)
+  );
+  protected readonly inpaintWorkflow = computed((): ComfyUIWorkflow | null =>
+    this.findDefaultWorkflow(this.comfyConfig().defaultInpaint)
+  );
+  protected readonly upscaleWorkflow = computed((): ComfyUIWorkflow | null =>
+    this.findDefaultWorkflow(this.comfyConfig().defaultUpscale)
+  );
+
+  protected readonly editAvailable = computed((): boolean =>
+    this.comfyConfig().enabled && this.editWorkflow() != null
+  );
+  protected readonly inpaintAvailable = computed((): boolean =>
+    this.comfyConfig().enabled && this.inpaintWorkflow() != null
+  );
+  protected readonly upscaleAvailable = computed((): boolean =>
+    this.comfyConfig().enabled && this.upscaleWorkflow() != null
+  );
+
   protected readonly histOpen = signal(true);
   protected readonly showSaveModal = signal(false);
-  protected readonly activeTool = signal<'basis' | 'flux2' | 'inpaint'>('basis');
+  protected readonly activeTool = signal<EditorTool>('basis');
   protected readonly compareMode = signal(false);
   protected readonly maskDataUrl = signal<string | null>(null);
 
   protected readonly maskOverlayRef = viewChild<MaskOverlay>('maskOverlay');
 
-  protected readonly hasFluxEdit = computed((): boolean => this.capabilities()?.flux_edit === true);
-  protected readonly hasInpaint = computed((): boolean => this.capabilities()?.inpaint === true);
   protected readonly isInpaintMode = computed((): boolean => this.activeTool() === 'inpaint');
 
   protected readonly cropActive = signal(false);
@@ -84,6 +110,8 @@ export class Editor {
 
     this.store.dispatch(editorActions.init({ kind, id }));
     this.store.dispatch(modelsActions.loadCapabilities());
+    this.store.dispatch(comfyuiActions.loadConfig());
+    this.store.dispatch(comfyuiActions.loadWorkflows());
 
     const keyHandler = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement;
@@ -172,7 +200,7 @@ export class Editor {
     console.info('[Editor] Save requested:', mode);
   }
 
-  protected setTool(tool: 'basis' | 'flux2' | 'inpaint'): void {
+  protected setTool(tool: EditorTool): void {
     this.activeTool.set(tool);
     if (tool !== 'inpaint') {
       this.maskDataUrl.set(null);
@@ -180,28 +208,53 @@ export class Editor {
     }
   }
 
-  protected onFluxEdit(event: FluxEditEvent): void {
-    this.store.dispatch(editorActions.fluxEdit({
+  protected onEdit(event: EditEvent): void {
+    this.dispatchGenerative(this.editWorkflow(), {
       prompt: event.prompt,
-      templateId: event.templateId,
-      params: event.params,
-    }));
+      resolution: event.resolution,
+      maskDataUrl: null,
+    });
   }
 
   protected onInpaint(event: InpaintEvent): void {
-    this.store.dispatch(editorActions.inpaint({
-      mask: event.mask,
-      prompt: event.prompt,
-      params: event.params,
+    this.dispatchGenerative(this.inpaintWorkflow(), {
+      prompt: event.prompt.trim().length > 0 ? event.prompt : null,
+      resolution: event.resolution,
+      maskDataUrl: event.maskDataUrl,
+    });
+  }
+
+  protected onUpscale(event: UpscaleEvent): void {
+    this.dispatchGenerative(this.upscaleWorkflow(), {
+      prompt: null,
+      resolution: event.resolution,
+      maskDataUrl: null,
+    });
+  }
+
+  private findDefaultWorkflow(key: string): ComfyUIWorkflow | null {
+    if (!key) { return null; }
+    return this.activeWorkflows().find((workflow: ComfyUIWorkflow) => workflow.key === key) ?? null;
+  }
+
+  private dispatchGenerative(
+    workflow: ComfyUIWorkflow | null,
+    run: { prompt: string | null; resolution: EditEvent['resolution']; maskDataUrl: string | null },
+  ): void {
+    if (workflow == null) { return; }
+    const imageSlot = workflow.inputs.find((input) => input.kind === 'image');
+    if (imageSlot == null) { return; }
+    this.store.dispatch(editorActions.runGenerative({
+      workflowKey: workflow.key,
+      imageSlotKey: imageSlot.key,
+      prompt: run.prompt,
+      resolution: run.resolution,
+      maskDataUrl: run.maskDataUrl,
     }));
   }
 
   protected onMaskChanged(dataUrl: string | null): void {
     this.maskDataUrl.set(dataUrl);
-  }
-
-  protected onBrushSizeChange(_size: number): void {
-    // propagated to mask overlay via input binding
   }
 
   protected onClearMask(): void {

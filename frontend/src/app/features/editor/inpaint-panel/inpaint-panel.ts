@@ -7,23 +7,26 @@ import {
   signal,
 } from '@angular/core';
 import { Icon } from '@photofant/ui';
+import type { ResolutionRun, WorkflowResolution } from '@photofant/models';
+import { ResolutionField } from '../resolution-field/resolution-field';
 
 export interface InpaintEvent {
-  mask: string;
+  maskDataUrl: string;
   prompt: string;
-  params: Record<string, unknown>;
+  resolution: ResolutionRun | null;
 }
 
 @Component({
   selector: 'pf-inpaint-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon],
+  imports: [Icon, ResolutionField],
   templateUrl: './inpaint-panel.html',
   styleUrl: './inpaint-panel.scss',
 })
 export class InpaintPanel {
   readonly generating = input(false);
   readonly maskDataUrl = input<string | null>(null);
+  readonly resolution = input<WorkflowResolution | null>(null);
 
   readonly inpaint = output<InpaintEvent>();
   readonly brushSizeChange = output<number>();
@@ -33,14 +36,12 @@ export class InpaintPanel {
   protected readonly prompt = signal('');
   protected readonly brushSize = signal(30);
   protected readonly brushMode = signal<'paint' | 'erase'>('paint');
-  protected readonly steps = signal(20);
-  protected readonly guidance = signal(7.5);
-  protected readonly strength = signal(0.85);
+  protected readonly megapixels = signal(1.0);
 
   protected readonly hasMask = computed((): boolean => this.maskDataUrl() != null);
 
   protected readonly canGenerate = computed((): boolean =>
-    this.hasMask() && this.prompt().trim().length > 0 && !this.generating()
+    this.hasMask() && !this.generating()
   );
 
   protected onPromptInput(event: Event): void {
@@ -63,29 +64,16 @@ export class InpaintPanel {
     this.clearMask.emit();
   }
 
-  protected onStepsChange(event: Event): void {
-    this.steps.set(+(event.target as HTMLInputElement).value);
-  }
-
-  protected onGuidanceChange(event: Event): void {
-    this.guidance.set(+(event.target as HTMLInputElement).value);
-  }
-
-  protected onStrengthChange(event: Event): void {
-    this.strength.set(+(event.target as HTMLInputElement).value);
-  }
-
   protected onGenerate(): void {
-    const mask = this.maskDataUrl();
-    if (mask == null) { return; }
+    const maskDataUrl = this.maskDataUrl();
+    if (maskDataUrl == null) { return; }
+    const resolution = this.resolution();
     this.inpaint.emit({
-      mask,
+      maskDataUrl,
       prompt: this.prompt(),
-      params: {
-        steps: this.steps(),
-        guidance: this.guidance(),
-        strength: this.strength(),
-      },
+      resolution: resolution != null
+        ? { megapixels: this.megapixels(), aspect_ratio: resolution.aspectDefault }
+        : null,
     });
   }
 }

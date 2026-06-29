@@ -163,6 +163,32 @@
   &:hover:not(.on) { color: var(--text); }
 }
 
+// ── Tool nicht verfügbar (kein Default-Workflow / ComfyUI aus) ──────────────────
+
+.ed-tool-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 14px;
+  color: var(--text-muted);
+}
+
+.ed-tool-unavailable__text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ed-tool-unavailable__link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
 // ── Compare Button ────────────────────────────────────────────────────────────
 
 .ed-compare-btn {

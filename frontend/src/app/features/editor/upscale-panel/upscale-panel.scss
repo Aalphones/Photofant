@@ -1,0 +1,71 @@
+:host {
+  display: block;
+  overflow: hidden;
+}
+
+.upscale-panel__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.upscale-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.upscale-panel__hint {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.upscale-panel__generate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.upscale-panel__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid color-mix(in oklch, var(--on-accent) 30%, transparent);
+  border-top-color: var(--on-accent);
+  border-radius: 50%;
+  animation: upscale-spin 0.7s linear infinite;
+}
+
+@keyframes upscale-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

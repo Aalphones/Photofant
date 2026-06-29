@@ -37,9 +37,9 @@
     </button>
   </div>
 
-  <!-- Prompt -->
+  <!-- Prompt (optional) -->
   <div class="inpaint-panel__section">
-    <div class="inpaint-panel__label">Prompt</div>
+    <div class="inpaint-panel__label">Prompt (optional)</div>
     <textarea
       class="inpaint-panel__textarea"
       rows="3"
@@ -49,34 +49,12 @@
     ></textarea>
   </div>
 
-  <!-- Parameters -->
-  <div class="inpaint-panel__section">
-    <div class="inpaint-panel__label">Parameter</div>
-
-    <div class="inpaint-panel__ctrl">
-      <div class="inpaint-panel__ctrl-row">
-        <span class="inpaint-panel__ctrl-label">Stärke</span>
-        <span class="inpaint-panel__ctrl-value">{{ strength().toFixed(2) }}</span>
-      </div>
-      <input type="range" [min]="0.5" [max]="1.0" [step]="0.01" [value]="strength()" (input)="onStrengthChange($event)" />
+  <!-- Auflösung (nur falls der Workflow sie exponiert) -->
+  @if (resolution(); as res) {
+    <div class="inpaint-panel__section">
+      <pf-resolution-field [resolution]="res" [(megapixels)]="megapixels" />
     </div>
-
-    <div class="inpaint-panel__ctrl">
-      <div class="inpaint-panel__ctrl-row">
-        <span class="inpaint-panel__ctrl-label">Schritte</span>
-        <span class="inpaint-panel__ctrl-value">{{ steps() }}</span>
-      </div>
-      <input type="range" [min]="10" [max]="50" [step]="1" [value]="steps()" (input)="onStepsChange($event)" />
-    </div>
-
-    <div class="inpaint-panel__ctrl">
-      <div class="inpaint-panel__ctrl-row">
-        <span class="inpaint-panel__ctrl-label">CFG-Skala</span>
-        <span class="inpaint-panel__ctrl-value">{{ guidance().toFixed(1) }}</span>
-      </div>
-      <input type="range" [min]="1" [max]="15" [step]="0.5" [value]="guidance()" (input)="onGuidanceChange($event)" />
-    </div>
-  </div>
+  }
 
   <!-- Hint -->
   @if (!hasMask()) {

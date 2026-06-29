@@ -61,24 +61,27 @@
         >
           <pf-icon name="crop" [size]="18" /> Basis
         </div>
-        @if (hasFluxEdit()) {
-          <div
-            class="ed-tool-tab"
-            [class.on]="activeTool() === 'flux2'"
-            (click)="setTool('flux2')"
-          >
-            <pf-icon name="pencil" [size]="18" /> Flux
-          </div>
-        }
-        @if (hasInpaint()) {
-          <div
-            class="ed-tool-tab"
-            [class.on]="activeTool() === 'inpaint'"
-            (click)="setTool('inpaint')"
-          >
-            <pf-icon name="pencil" [size]="18" /> Inpaint
-          </div>
-        }
+        <div
+          class="ed-tool-tab"
+          [class.on]="activeTool() === 'edit'"
+          (click)="setTool('edit')"
+        >
+          <pf-icon name="pencil" [size]="18" /> Edit
+        </div>
+        <div
+          class="ed-tool-tab"
+          [class.on]="activeTool() === 'inpaint'"
+          (click)="setTool('inpaint')"
+        >
+          <pf-icon name="pencil" [size]="18" /> Inpaint
+        </div>
+        <div
+          class="ed-tool-tab"
+          [class.on]="activeTool() === 'upscale'"
+          (click)="setTool('upscale')"
+        >
+          <pf-icon name="refresh" [size]="18" /> Upscale
+        </div>
       </div>
 
       @switch (activeTool()) {
@@ -94,22 +97,60 @@
             (cropRatioChange)="onCropRatioChange($event)"
           />
         }
-        @case ('flux2') {
-          <pf-flux2-panel
-            [generating]="generating()"
-            [capabilities]="capabilities()"
-            (fluxEdit)="onFluxEdit($event)"
-          />
+        @case ('edit') {
+          @if (editAvailable()) {
+            <pf-flux2-panel
+              [generating]="generating()"
+              [resolution]="editWorkflow()?.resolution ?? null"
+              (edit)="onEdit($event)"
+            />
+          } @else {
+            <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Image Edit' }" />
+          }
         }
         @case ('inpaint') {
-          <pf-inpaint-panel
-            [generating]="generating()"
-            [maskDataUrl]="maskDataUrl()"
-            (inpaint)="onInpaint($event)"
-            (clearMask)="onClearMask()"
-          />
+          @if (inpaintAvailable()) {
+            <pf-inpaint-panel
+              [generating]="generating()"
+              [maskDataUrl]="maskDataUrl()"
+              [resolution]="inpaintWorkflow()?.resolution ?? null"
+              (inpaint)="onInpaint($event)"
+              (clearMask)="onClearMask()"
+            />
+          } @else {
+            <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Inpaint' }" />
+          }
+        }
+        @case ('upscale') {
+          @if (upscaleAvailable()) {
+            <pf-upscale-panel
+              [generating]="generating()"
+              [resolution]="upscaleWorkflow()?.resolution ?? null"
+              (upscale)="onUpscale($event)"
+            />
+          } @else {
+            <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Upscale' }" />
+          }
         }
       }
+
+      <ng-template #toolUnavailable let-toolName>
+        <div class="ed-tool-unavailable">
+          <pf-icon name="alertTriangle" [size]="18" />
+          <p class="ed-tool-unavailable__text">
+            @if (!comfyConfig().enabled) {
+              ComfyUI ist nicht aktiviert. {{ toolName }} läuft über ComfyUI —
+              aktiviere und wähle einen Standard-Workflow in den Einstellungen.
+            } @else {
+              Für {{ toolName }} ist kein Standard-Workflow gewählt. Lege in den
+              Einstellungen einen Workflow für diese Aufgabe fest.
+            }
+          </p>
+          <a class="ed-tool-unavailable__link" routerLink="/einstellungen">
+            Zu den Einstellungen
+          </a>
+        </div>
+      </ng-template>
     </div>
 
     <!-- Center: Canvas -->

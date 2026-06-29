@@ -98,11 +98,13 @@
   <pf-bulk-bar
     [count]="selectedCount()"
     [albums]="albums()"
+    [canUpscale]="canBulkUpscale()"
     (close)="onBulkClose()"
     (tagAction)="onBulkTag($event)"
     (addToAlbum)="onAddToAlbum($event)"
     (rerunAction)="onBulkRerunOpen()"
     (editAction)="onBulkEditOpen()"
+    (upscaleAction)="onBulkUpscale()"
     (dupeScanAction)="onBulkDupeScan()"
     (trashAction)="onBulkTrash()"
   />

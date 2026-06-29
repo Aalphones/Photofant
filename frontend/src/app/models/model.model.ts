@@ -34,9 +34,6 @@ export interface CapabilitiesDto {
   captioning: boolean;
   semantic_search: boolean;
   rembg: boolean;
-  upscale: boolean;
-  flux_edit: boolean;
-  inpaint: boolean;
   heavy_caption: boolean;
 }
 

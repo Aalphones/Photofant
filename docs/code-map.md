@@ -35,7 +35,7 @@ Pfade unten relativ zu `frontend/src/app/` bzw. `backend/photofant/`.
 | Feature | Frontend | Backend |
 |---|---|---|
 | **Editor** (CPU: Crop/Rotate/rembg) | `features/editor/` (editor, basis-panel, crop-overlay, mask-overlay, step-bar, save-modal) · `store/editor/` · `services/edit-session.service.ts` · `models/edit-session.model.ts` · `ui/bulk-edit-dialog/` | `api/edit_sessions.py` · `jobs/bulk_edit_job.py` · `media/ops.py` |
-| **Generativ** (Upscale/Edit/Inpaint via ComfyUI) | `features/editor/` (Panels in Phase 5) · `features/galerie/run-leiste/` | `api/comfyui.py` · `jobs/comfyui_run_job.py` · `inference/generative_engine.py` (nur heavy_captioners) |
+| **Generativ** (Upscale/Edit/Inpaint via ComfyUI) | `features/editor/` (flux2-panel = Edit, inpaint-panel, upscale-panel, resolution-field) · `store/editor/` (runGenerative) · `features/galerie/run-leiste/` (Prompt/Resolution) · Bulk-Upscale: `ui/bulk-bar/` + Galerie · Einzel-Upscale: `galerie/lightbox/`. Lauf über `services/comfyui.service.ts` (`runWorkflow`) — kein eigener Generativ-Service mehr | `api/comfyui.py` · `jobs/comfyui_run_job.py` · `inference/generative_engine.py` (nur heavy_captioners) |
 | **ComfyUI-Integration** | `features/galerie/run-leiste/` · `features/einstellungen/comfyui/` · `ui/comfyui-import-dialog/` · `store/comfyui/`, `store/prompt-templates/` · `services/comfyui.service.ts`, `prompt-template.service.ts` · `models/comfyui-workflow.model.ts`, `prompt-template.model.ts` | `api/comfyui.py`, `api/prompt_templates.py` · `jobs/comfyui_run_job.py` · `comfyui/` (client, introspect, validator) |
 
 ## Verwaltung

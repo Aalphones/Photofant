@@ -56,6 +56,14 @@
     Bearbeiten
   </button>
 
+  @if (canUpscale()) {
+    <div class="bulkbar__divider"></div>
+    <button class="bulkbar__action" (click)="triggerUpscale()">
+      <pf-icon name="refresh" [size]="15" />
+      Hochskalieren
+    </button>
+  }
+
   @if (count() >= 2) {
     <div class="bulkbar__divider"></div>
     <button class="bulkbar__action" (click)="triggerDupeScan()">

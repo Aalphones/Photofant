@@ -1,26 +1,29 @@
 export interface WorkflowInput {
   key: string;
   label: string;
-  node_title: string;
   node_id: string;
   field: string;
   kind: 'image' | 'mask';
-  required: boolean;
-  lockable: boolean;
 }
 
-export interface WorkflowParam {
-  key: string;
-  label: string;
-  node_title: string;
+/** Erkannter Prompt-/Negativ-Prompt-Node: nur vorhanden, wenn der Workflow ihn exponiert. */
+export interface WorkflowPromptField {
   node_id: string;
   field: string;
-  type: 'float' | 'int' | 'string' | 'enum';
-  default: unknown;
-  min: number | null;
-  max: number | null;
-  step: number | null;
-  options: string[] | null;
+}
+
+/** Erkannter ResolutionSelector. `aspectDefault` ist die einzige sichere Aspect-Option. */
+export interface WorkflowResolution {
+  node_id: string;
+  megapixelsField: string;
+  aspectField: string;
+  aspectDefault: string;
+}
+
+/** Erkannter Masken-Pfad. `alpha` = gemalte Maske wird ins Upload-PNG eingebettet. */
+export interface WorkflowMask {
+  mode: 'alpha' | 'loader';
+  image_node_id: string;
 }
 
 export interface ComfyUIWorkflow {
@@ -28,9 +31,18 @@ export interface ComfyUIWorkflow {
   name: string;
   category: string;
   inputs: WorkflowInput[];
-  params: WorkflowParam[];
+  prompt: WorkflowPromptField | null;
+  negativePrompt: WorkflowPromptField | null;
+  resolution: WorkflowResolution | null;
+  mask: WorkflowMask | null;
   isValid: boolean;
   errors: string[];
+}
+
+/** Run-Request-Auflösung: was der Nutzer wählt, nicht die Node-Felder. */
+export interface ResolutionRun {
+  megapixels: number;
+  aspect_ratio: string;
 }
 
 export interface NodeInfo {

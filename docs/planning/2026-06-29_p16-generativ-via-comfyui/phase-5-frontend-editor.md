@@ -41,15 +41,28 @@ unten setzen die Empfehlung um; bei Gegenentscheidung AK anpassen.
 
 ## Checkliste
 
-- [ ] `editor.ts`: `activeTool` um `upscale`; Gating über Defaults statt capabilities
-- [ ] `flux2-panel` → Edit-Panel verschlanken (Prompt + optional Resolution)
-- [ ] `inpaint-panel`: Masken-DataURL an Run durchreichen (+ Prompt)
-- [ ] Upscale-Panel (neu, minimal)
-- [ ] Editor-Store: `fluxEdit`/`inpaint`-Effekte → `comfyui`-Run
-- [ ] `generative.service.ts` löschen + Referenzen
-- [ ] `run-leiste`: Prompt-/Resolution-Felder + Payload
-- [ ] Galerie/Lightbox: Bulk-Upscale-Aktion
-- [ ] Doc-Update: `code-map.md` (Editor/Generativ-Zeile), `design-reconciliation.md` (Mockup-Diskrepanz)
+- [x] `editor.ts`: `activeTool` um `upscale`; Gating über Defaults statt capabilities
+- [x] `flux2-panel` → Edit-Panel verschlanken (Prompt + optional Resolution)
+- [x] `inpaint-panel`: Masken-DataURL an Run durchreichen (+ Prompt)
+- [x] Upscale-Panel (neu, minimal)
+- [x] Editor-Store: `fluxEdit`/`inpaint`-Effekte → `comfyui`-Run (`runGenerative`)
+- [x] `generative.service.ts` löschen + Referenzen
+- [x] `run-leiste`: Prompt-/Resolution-Felder + Payload
+- [x] Galerie/Lightbox: Bulk-Upscale-Aktion (BulkBar + Lightbox-Einzelupscale)
+- [x] Doc-Update: `code-map.md` (Editor/Generativ-Zeile), `design-reconciliation.md` (Mockup-Diskrepanz)
 
 ## Report-Back
-_(beim Umsetzen füllen)_
+
+**Status:** complete (2026-06-29).
+
+Kontrakt-Lücke beim Start gefunden: Frontend-Workflow-Modell war veraltet (kein prompt/resolution/mask,
+stattdessen ein totes `params`-Feld) — auf den echten Backend-Kontrakt gezogen (Mapper + `runWorkflow`).
+Geteilte `resolution-field`-Komponente für die drei Panels. Generative Tools laufen jetzt über ein
+einheitliches `editorActions.runGenerative` → `comfyui.service.runWorkflow`. Default-Gating zeigt einen
+Hinweis + Einstellungen-Link, wenn ComfyUI aus oder kein Default-Workflow gesetzt ist. Lightbox-Upscale
+hing noch am gelöschten P9-Endpoint — auf `default_upscale` umgestellt; Bulk-Upscale neu in der
+Auswahl-Leiste. `CapabilitiesDto` (FE) um die toten upscale/flux_edit/inpaint-Felder bereinigt.
+`npm run lint` (tsc) grün, `npm run build` grün (nur vorbestehende Bundle-Budget-Warnungen).
+
+**Bewusste Abweichungen:** Inpaint-Prompt optional (Maske allein genügt zum Feuern). Run-Leiste-Prompt
+als einzeilige Eingabe (Platz), Editor-Edit-Prompt als Textarea.

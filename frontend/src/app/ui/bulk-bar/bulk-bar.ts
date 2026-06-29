@@ -23,12 +23,14 @@ export interface BulkAlbumOption {
 export class BulkBar {
   readonly count = input.required<number>();
   readonly albums = input<BulkAlbumOption[]>([]);
+  readonly canUpscale = input<boolean>(false);
 
   readonly close = output<void>();
   readonly tagAction = output<{ add: string[]; remove: number[] }>();
   readonly addToAlbum = output<number>();
   readonly rerunAction = output<void>();
   readonly editAction = output<void>();
+  readonly upscaleAction = output<void>();
   readonly dupeScanAction = output<void>();
   readonly trashAction = output<void>();
 
@@ -79,6 +81,10 @@ export class BulkBar {
 
   protected openEditDialog(): void {
     this.editAction.emit();
+  }
+
+  protected triggerUpscale(): void {
+    this.upscaleAction.emit();
   }
 
   protected onClose(): void {

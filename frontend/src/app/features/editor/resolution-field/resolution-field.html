@@ -1,0 +1,23 @@
+<div class="res-field">
+  <div class="res-field__label">Auflösung</div>
+
+  <div class="res-field__row">
+    <label class="res-field__mp">
+      <span class="res-field__mp-label">Megapixel</span>
+      <input
+        type="number"
+        class="res-field__mp-input"
+        [min]="0.25"
+        [max]="8"
+        [step]="0.25"
+        [value]="megapixels()"
+        (input)="onMegapixelsInput($event)"
+      />
+    </label>
+
+    <div class="res-field__aspect" title="Seitenverhältnis aus dem Workflow">
+      <span class="res-field__aspect-label">Format</span>
+      <span class="res-field__aspect-value">{{ resolution().aspectDefault }}</span>
+    </div>
+  </div>
+</div>

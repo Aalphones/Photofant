@@ -82,6 +82,7 @@ export class Galerie {
 
   // --- Workflow-Modus (Run-Leiste) ---
   protected readonly activeWorkflows   = this.store.selectSignal(comfyuiSelectors.selectActiveWorkflows);
+  protected readonly comfyConfig       = this.store.selectSignal(comfyuiSelectors.selectConfig);
   protected readonly workflowMode      = signal(false);
   protected readonly activeWorkflowId  = signal<string | null>(null);
   protected readonly slotBindings      = signal<Record<string, number | number[]>>({});
@@ -100,6 +101,17 @@ export class Galerie {
     if (workflowId === null) { return null; }
     return this.activeWorkflows().find((workflow) => workflow.key === workflowId) ?? null;
   });
+
+  // Standard-Upscale-Workflow für die Bulk-Aktion (nur wenn ComfyUI aktiv + gesetzt + gültig).
+  protected readonly upscaleWorkflow = computed(() => {
+    const key = this.comfyConfig().defaultUpscale;
+    if (!key) { return null; }
+    return this.activeWorkflows().find((workflow) => workflow.key === key) ?? null;
+  });
+
+  protected readonly canBulkUpscale = computed((): boolean =>
+    this.comfyConfig().enabled && this.upscaleWorkflow() != null
+  );
 
   protected readonly facesMap = computed((): Map<number, FaceGalleryItemDto[]> => {
     if (this.mediaType() !== 'all') {
@@ -161,6 +173,9 @@ export class Galerie {
 
     this.store.dispatch(collectionsActions.load());
     this.store.dispatch(galleryActions.requestPage());
+    // Config + Workflows laden, damit Bulk-Upscale die Default-Zuordnung kennt.
+    this.store.dispatch(comfyuiActions.loadConfig());
+    this.store.dispatch(comfyuiActions.loadWorkflows());
 
     // store → URL: keep query params in sync
     effect((): void => {
@@ -354,6 +369,27 @@ export class Galerie {
     this.showBulkEditDialog.set(false);
   }
 
+  protected onBulkUpscale(): void {
+    const workflow = this.upscaleWorkflow();
+    const ids = this.selectedIds();
+    if (workflow == null || ids.length === 0) { return; }
+    const imageSlot = workflow.inputs.find((input) => input.kind === 'image');
+    if (imageSlot == null) { return; }
+    this.comfyuiService.runWorkflow(workflow.key, { [imageSlot.key]: ids }, {}, {})
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          const count = response.jobs.length;
+          this.showRunToast(`${count} Upscale-Job${count !== 1 ? 's' : ''} an ComfyUI gesendet`);
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Fehler beim Senden an ComfyUI';
+          this.showRunToast(`Fehler: ${message}`);
+        },
+      });
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
   protected onBulkTrash(): void {
     const ids = this.selectedIds();
     if (!ids.length) { return; }
@@ -465,7 +501,10 @@ export class Galerie {
   protected onRunFire(payload: RunFirePayload): void {
     if (this.isFiring()) { return; }
     this.isFiring.set(true);
-    this.comfyuiService.runWorkflow(payload.workflowKey, payload.inputs, payload.faceInputs, payload.params)
+    this.comfyuiService.runWorkflow(payload.workflowKey, payload.inputs, payload.faceInputs, {
+      prompt: payload.prompt,
+      resolution: payload.resolution,
+    })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
       next: (response) => {

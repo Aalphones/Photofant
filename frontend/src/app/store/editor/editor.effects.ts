@@ -5,8 +5,7 @@ import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, EMPTY, map, of, switchMap, concatMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { ApplyStepResponse, CreateSessionResponse, EditorStep, RollbackResponse } from '@photofant/models';
-import { EditSessionService, GenerativeService } from '@photofant/services';
-import type { FluxEditRequest, InpaintRequest } from '@photofant/services';
+import { ComfyUIService, EditSessionService } from '@photofant/services';
 import { editorActions } from './editor.actions';
 import { editorSelectors } from './editor.selectors';
 
@@ -15,7 +14,7 @@ export class EditorEffects {
   private readonly actions$ = inject(Actions);
   private readonly store = inject(Store);
   private readonly editSessionService = inject(EditSessionService);
-  private readonly generativeService = inject(GenerativeService);
+  private readonly comfyuiService = inject(ComfyUIService);
 
   readonly onInit$ = createEffect(() =>
     this.actions$.pipe(
@@ -74,38 +73,28 @@ export class EditorEffects {
     )
   );
 
-  readonly onFluxEdit$ = createEffect(() =>
+  readonly onRunGenerative$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(editorActions.fluxEdit),
+      ofType(editorActions.runGenerative),
       concatLatestFrom(() => this.store.select(editorSelectors.selectTargetId)),
-      concatMap(([{ prompt, templateId, params }, targetId]) => {
+      concatMap(([{ workflowKey, imageSlotKey, prompt, resolution, maskDataUrl }, targetId]) => {
         if (targetId == null) { return EMPTY; }
-        const request: FluxEditRequest = {
+        // Editor-Asset an den Bild-Slot binden. Bei Inpaint trägt zusätzlich die Maske
+        // dieselbe asset_id — das Backend injiziert sie in den Masken-Slot.
+        const inputs: Record<string, number> = { [imageSlotKey]: targetId };
+        const mask = maskDataUrl != null
+          ? { asset_id: targetId, mask_data_url: maskDataUrl }
+          : null;
+        return this.comfyuiService.runWorkflow(workflowKey, inputs, {}, {
           prompt,
-          template_id: templateId,
-          params,
-        };
-        return this.generativeService.fluxEdit(targetId, request).pipe(
-          map((response: { job_id: string }) => editorActions.fluxEditSuccess({ jobId: response.job_id })),
-          catchError((error: HttpErrorResponse) =>
-            of(editorActions.fluxEditFailure({ error: error.message }))
+          resolution,
+          mask,
+        }).pipe(
+          map((response: { jobs: { job_id: string }[] }) =>
+            editorActions.runGenerativeSuccess({ jobId: response.jobs[0]?.job_id ?? '' })
           ),
-        );
-      }),
-    )
-  );
-
-  readonly onInpaint$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(editorActions.inpaint),
-      concatLatestFrom(() => this.store.select(editorSelectors.selectTargetId)),
-      concatMap(([{ mask, prompt, params }, targetId]) => {
-        if (targetId == null) { return EMPTY; }
-        const request: InpaintRequest = { mask, prompt, params };
-        return this.generativeService.inpaint(targetId, request).pipe(
-          map((response: { job_id: string }) => editorActions.inpaintSuccess({ jobId: response.job_id })),
           catchError((error: HttpErrorResponse) =>
-            of(editorActions.inpaintFailure({ error: error.message }))
+            of(editorActions.runGenerativeFailure({ error: error.message }))
           ),
         );
       }),

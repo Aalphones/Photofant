@@ -62,8 +62,11 @@ export type { EditorTargetKind, CropRatio, CropRect, EditorStep, CreateSessionRe
 
 export type {
   WorkflowInput,
-  WorkflowParam,
+  WorkflowPromptField,
+  WorkflowResolution,
+  WorkflowMask,
   ComfyUIWorkflow,
+  ResolutionRun,
   NodeInfo,
   InputSuggestion,
   IntrospectionResult,

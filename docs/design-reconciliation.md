@@ -236,6 +236,24 @@ Impl: Placeholder `"Noch nicht implementiert — kommt in P10"` → **sauber-ver
 
 ---
 
+### Editor — Generative Panels (Edit / Inpaint / Upscale)
+
+**Design:** `docs/design/js/editor-tools.jsx` (`UpscalePanel`, `Flux2Panel`)  
+**Impl:** `frontend/src/app/features/editor/` (flux2-panel = Edit, inpaint-panel, upscale-panel, resolution-field)
+
+**Design-Status:** vorhanden, aber **bewusst überholt (P16, ADR-008).**
+
+**Abweichungstyp:** Design-missachtet — **bewusste Entscheidung**, nicht versehentlich.
+
+Das Mockup zeichnet P9-Parameter (SeedVR2-Modellwahl, VRAM, fp8/GGUF, Ultimate-SD-Tiles;
+strength/steps/guidance/seed), die voraussetzen, dass Photofant Modelle und VRAM besitzt.
+Mit dem P9-Abriss (ADR-008 ersetzt ADR-002) leben diese Werte im ComfyUI-Workflow, nicht in
+Photofant. Entscheidung Sascha (2026-06-29): Panels radikal verschlanken — sie zeigen nur, was
+der Workflow als Parameter exponiert (Prompt; Auflösung, falls ResolutionSelector). Modell-/
+Tile-/Step-Regler entfallen ersatzlos. Das Mockup gilt für diese drei Panels als überholt.
+
+---
+
 ## GROSS/MITTEL-Zusammenfassung (Phase-4-Ergebnis)
 
 > Phase 4 abgeschlossen 2026-06-19.

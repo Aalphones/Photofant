@@ -259,11 +259,28 @@
             @for (input of workflow.inputs; track input.key) {
               <div class="comfyui__input-zeile">
                 <span class="comfyui__input-key">{{ input.label }}</span>
-                <span class="comfyui__input-meta">{{ input.kind }}@if (input.required) { · Pflicht }</span>
+                <span class="comfyui__input-meta">{{ input.kind }}</span>
               </div>
             }
           </div>
         }
+
+        <!-- Automatisch erkannt -->
+        <div class="comfyui__detail-sektion">
+          <div class="comfyui__detail-label">Automatisch erkannt</div>
+          <div class="comfyui__input-zeile">
+            <span class="comfyui__input-key">Prompt</span>
+            <span class="comfyui__input-meta">{{ workflow.prompt ? 'ja' : '–' }}</span>
+          </div>
+          <div class="comfyui__input-zeile">
+            <span class="comfyui__input-key">Auflösung</span>
+            <span class="comfyui__input-meta">{{ workflow.resolution ? workflow.resolution.aspectDefault : '–' }}</span>
+          </div>
+          <div class="comfyui__input-zeile">
+            <span class="comfyui__input-key">Maske</span>
+            <span class="comfyui__input-meta">{{ workflow.mask ? workflow.mask.mode : '–' }}</span>
+          </div>
+        </div>
 
       </div>
     }

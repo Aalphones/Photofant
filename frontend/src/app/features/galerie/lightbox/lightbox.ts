@@ -13,12 +13,12 @@ import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetSummary, ComfyUIImportResponse, DupePair, DupeResolution, FaceDto, FaceMatch, ModelDto, PersonDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
-import { AssetService, ClassifyService, GenerativeService, PersonService, TagService } from '@photofant/services';
+import type { AssetDto, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
+import { AssetService, ClassifyService, ComfyUIService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
-import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, modelsSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare';
 
@@ -74,7 +74,7 @@ export class Lightbox {
   private readonly tagService         = inject(TagService);
   private readonly classifyService    = inject(ClassifyService);
   private readonly shortcutService    = inject(ShortcutService);
-  private readonly generativeService  = inject(GenerativeService);
+  private readonly comfyuiService     = inject(ComfyUIService);
   private readonly document           = inject(DOCUMENT);
   private readonly personService      = inject(PersonService);
   private readonly destroyRef         = inject(DestroyRef);
@@ -88,8 +88,7 @@ export class Lightbox {
   protected readonly asset    = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
   protected readonly presets  = this.store.selectSignal(presetsSelectors.selectPresets);
   protected readonly comfyuiConfig    = this.store.selectSignal(comfyuiSelectors.selectConfig);
-  protected readonly capabilities     = this.store.selectSignal(modelsSelectors.selectCapabilities);
-  protected readonly allModels        = this.store.selectSignal(modelsSelectors.selectModels);
+  private readonly activeWorkflows    = this.store.selectSignal(comfyuiSelectors.selectActiveWorkflows);
   protected readonly hasPrev  = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
   protected readonly hasNext  = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
 
@@ -205,14 +204,15 @@ export class Lightbox {
     this.asset()?.has_phash ?? false
   );
 
-  protected readonly upscalerModels = computed((): ModelDto[] =>
-    this.allModels().filter((model: ModelDto) =>
-      model.role === 'upscaler' && (model.status === 'active' || model.status === 'inplace')
-    )
-  );
+  // Standard-Upscale-Workflow (nur wenn ComfyUI aktiv + gesetzt + gültig).
+  private readonly upscaleWorkflow = computed((): ComfyUIWorkflow | null => {
+    const key = this.comfyuiConfig().defaultUpscale;
+    if (!key) { return null; }
+    return this.activeWorkflows().find((workflow: ComfyUIWorkflow) => workflow.key === key) ?? null;
+  });
 
   protected readonly canUpscale = computed((): boolean =>
-    (this.capabilities()?.upscale ?? false) && this.upscalerModels().length > 0
+    this.comfyuiConfig().enabled && this.upscaleWorkflow() != null
   );
 
   protected readonly faces = computed((): FaceDto[] => this.detail()?.faces ?? []);
@@ -619,19 +619,21 @@ export class Lightbox {
 
   // ── Upscale ───────────────────────────────────────────────────────────────
 
-  protected triggerUpscale(modelId?: string): void {
+  protected triggerUpscale(): void {
     const asset: AssetDto | null = this.asset();
-    if (asset == null || this.isUpscaling()) { return; }
+    const workflow = this.upscaleWorkflow();
+    if (asset == null || workflow == null || this.isUpscaling()) { return; }
+    const imageSlot = workflow.inputs.find((input) => input.kind === 'image');
+    if (imageSlot == null) { return; }
 
     this.isUpscaling.set(true);
     this.upscaleError.set(null);
 
-    this.generativeService.upscaleAsset(asset.id, { model_id: modelId ?? null })
+    this.comfyuiService.runWorkflow(workflow.key, { [imageSlot.key]: asset.id }, {}, {})
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.isUpscaling.set(false);
-          this.reloadTrigger.update((count: number) => count + 1);
         },
         error: (err: unknown) => {
           this.isUpscaling.set(false);
