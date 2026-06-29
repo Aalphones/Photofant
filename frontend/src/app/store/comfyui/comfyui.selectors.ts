@@ -25,7 +25,7 @@ const selectComfyuiReady = createSelector(
 const selectSelectedWorkflow = createSelector(
   selectWorkflows,
   selectSelectedWorkflowId,
-  (workflows: ComfyUIWorkflow[], selectedId: number | null) =>
+  (workflows: ComfyUIWorkflow[], selectedId: string | null) =>
     selectedId !== null ? workflows.find((workflow: ComfyUIWorkflow) => workflow.key === selectedId) ?? null : null
 );
 
