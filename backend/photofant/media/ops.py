@@ -61,11 +61,6 @@ class SmartCropParams(BaseModel):
     pass
 
 
-class UpscaleParams(BaseModel):
-    model_id: str | None = None
-    scale: int = 4
-
-
 # ── Model path resolution ─────────────────────────────────────────────────────
 
 def _resolve_rembg_model_path() -> str | None:
@@ -320,35 +315,7 @@ def apply_op(img: Image.Image, op: str, raw_params: dict[str, Any]) -> Image.Ima
         return _apply_rembg(img, RembgParams.model_validate(raw_params))
     if op == "smart_crop":
         return _apply_smart_crop(img, SmartCropParams.model_validate(raw_params))
-    if op == "upscale":
-        return _apply_upscale(img, UpscaleParams.model_validate(raw_params))
     log.warning("Unknown op %r — returning image unchanged", op)
     return img
 
 
-def _apply_upscale(img: Image.Image, params: UpscaleParams) -> Image.Image:
-    """Upscale via SeedVR2 / spandrel / PIL Lanczos fallback."""
-    from photofant.inference.seedvr2_upscaler import SeedVR2Upscaler
-
-    from photofant.db.models import ModelRegistry
-    from photofant.db.session import SessionLocal
-
-    with SessionLocal() as session:
-        if params.model_id:
-            row = session.query(ModelRegistry).filter_by(
-                manifest_id=params.model_id, enabled=True
-            ).first()
-        else:
-            row = session.query(ModelRegistry).filter_by(role="upscaler", enabled=True).first()
-
-        if row is None or not row.path or not Path(row.path).exists():
-            raise ModelNotAvailableError("upscale", "upscaler")
-
-        model_path = row.path
-
-    upscaler = SeedVR2Upscaler(model_path)
-    upscaler.load()
-    try:
-        return upscaler.upscale(img, scale=params.scale)
-    finally:
-        upscaler.unload()

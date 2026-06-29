@@ -26,7 +26,6 @@ dependencies = [
 [project.optional-dependencies]
 generative = [
     "torch>=2.4",
-    "diffusers>=0.31",
     "transformers>=4.44",
     "accelerate>=1.0",
     "safetensors>=0.4",

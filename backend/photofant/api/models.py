@@ -64,9 +64,6 @@ class CapabilitiesDto(BaseModel):
     captioning: bool
     semantic_search: bool
     rembg: bool
-    upscale: bool
-    flux_edit: bool
-    inpaint: bool
     heavy_caption: bool
 
 
@@ -382,9 +379,6 @@ def get_capabilities(session: DbSession) -> CapabilitiesDto:
         captioning="captioner" in enabled_roles,
         semantic_search="semantic_search" in enabled_roles,
         rembg="rembg" in enabled_roles,
-        upscale="upscaler" in enabled_roles,
-        flux_edit="editor" in enabled_roles,
-        inpaint="editor" in enabled_roles,
         heavy_caption="heavy_captioner" in enabled_roles,
     )
 

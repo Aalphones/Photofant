@@ -40,10 +40,6 @@ class JobKind(StrEnum):
     CLUSTERING = "clustering"
     BULK_EDIT = "bulk_edit"
     COMFYUI_RUN = "comfyui_run"
-    INSTALL_GENERATIVE = "install_generative"
-    UPSCALE = "upscale"
-    FLUX_EDIT = "flux_edit"
-    INPAINT = "inpaint"
     EXPORT = "export"
 
 
@@ -74,9 +70,6 @@ _PARALLEL_KINDS: frozenset[JobKind] = frozenset({JobKind.DOWNLOAD})
 # closures still waiting in the queue.
 _BACKGROUND_PRIORITY: dict[JobKind, int] = {
     JobKind.COMFYUI_RUN: 10,
-    JobKind.UPSCALE: 10,
-    JobKind.FLUX_EDIT: 10,
-    JobKind.INPAINT: 10,
     JobKind.HEURISTICS: 20,
     JobKind.TAGGING: 30,
     JobKind.EMBEDDING: 30,

@@ -12,8 +12,7 @@ MANIFEST_PATH = Path(__file__).parent / "manifest.json"
 
 _REQUIRED_FIELDS: frozenset[str] = frozenset({"id", "role", "name", "format", "tier"})
 _VALID_ROLES: frozenset[str] = frozenset({
-    "face", "tagger", "captioner", "semantic_search", "rembg",
-    "upscaler", "editor", "heavy_captioner", "inpainter",
+    "face", "tagger", "captioner", "semantic_search", "rembg", "heavy_captioner",
 })
 
 # Module-level cache — loaded once per process.

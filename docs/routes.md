@@ -226,7 +226,7 @@ interface MaintenanceStatus {
 ```typescript
 interface ModelDto {
   id: string;
-  role: 'face' | 'tagger' | 'captioner' | 'semantic_search' | 'rembg' | 'upscaler' | 'editor' | 'heavy_captioner' | 'inpainter';
+  role: 'face' | 'tagger' | 'captioner' | 'semantic_search' | 'rembg' | 'heavy_captioner';
   name: string;
   variant: string | null;
   format: 'onnx' | 'onnx_bundle' | 'onnx_folder' | 'safetensors' | 'gguf';
@@ -247,9 +247,6 @@ interface CapabilitiesDto {
   captioning: boolean;
   semantic_search: boolean;
   rembg: boolean;
-  upscale: boolean;
-  flux_edit: boolean;
-  inpaint: boolean;
   heavy_caption: boolean;
 }
 
@@ -293,8 +290,6 @@ interface ScanResult {
 | Versionen (Re-Import) | `POST` | `/api/assets/{id}/versions/import` | `multipart/form-data; file` | `{ version: VersionDto }` (201) |
 | Versionen (Thumbnail) | `GET` | `/api/versions/{id}/thumbnail` | `size` (256\|512\|1024) | JPEG blob |
 | Versionen (Datei) | `GET` | `/api/versions/{id}/file` | — | Original-Datei |
-| Upscale (Einzelbild) | `POST` | `/api/assets/{id}/upscale` | `{ model_id?: string, params?: object }` | `{ job_id }` (202) — Queue-Job; Ergebnis als neue Version (`type=upscale`, `is_current=true`) |
-| Upscale (Bulk) | `POST` | `/api/assets/bulk-upscale` | `{ asset_ids: number[], model_id?: string, params?: object }` | `{ job_id }` (202) |
 
 ```typescript
 interface CreateSessionResponse { session_key: string; original_preview_url: string; }
@@ -694,37 +689,6 @@ interface UpdatePromptTemplateRequest {
   params?: PromptTemplateParams;
 }
 ```
-
-## Flux-Edit & Inpaint (P9 Phase 4)
-
-| Angular Route | Method | Backend Endpoint | Request | Response |
-|---|---|---|---|---|
-| Editor (Flux-Edit) | `POST` | `/api/assets/{id}/flux-edit` | `FluxEditRequest` | `{ job_id: string }` (202) |
-| Editor (Bulk Flux-Edit) | `POST` | `/api/assets/bulk-flux-edit` | `BulkFluxEditRequest` | `{ job_id: string }` (202) |
-| Editor (Inpaint) | `POST` | `/api/assets/{id}/inpaint` | `InpaintRequest` | `{ job_id: string }` (202) |
-
-```typescript
-interface FluxEditRequest {
-  prompt?: string | null;
-  template_id?: number | null;
-  params?: Record<string, unknown>;   // strength, steps, guidance, seed
-}
-
-interface BulkFluxEditRequest {
-  asset_ids: number[];
-  prompt?: string | null;
-  template_id?: number | null;
-  params?: Record<string, unknown>;
-}
-
-interface InpaintRequest {
-  mask: string;        // Base64-encoded PNG
-  prompt?: string;
-  params?: Record<string, unknown>;   // strength, steps, guidance
-}
-```
-
-Flux-Edit erstellt eine neue Version (`type=flux_edit`, `is_current=true`); Seed wird in `version.params` gespeichert. Inpaint erstellt eine Version (`type=inpaint`). Beide nutzen die Job-Queue; Fortschritt via `/api/jobs/stream`. `{person}`-Platzhalter im Prompt wird serverseitig durch den Personnamen des Assets ersetzt.
 
 ## Job-Stream
 

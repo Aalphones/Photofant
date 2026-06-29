@@ -1,11 +1,9 @@
-"""Generative Engine — torch/diffusers pipeline lifecycle (ADR-002).
+"""Generative Engine — torch/transformers model lifecycle for heavy captioners.
 
-Manages loading and unloading of generative AI models (Upscale, Flux-Edit,
-Inpainting, heavy Captioners). One pipeline at a time to respect VRAM limits.
-Coordinates with the ONNX SessionManager: evicts idle ONNX sessions before
-loading a large torch model.
+Manages loading and unloading of transformers-based models (Qwen2.5-VL, JoyCaption).
+One model at a time to respect VRAM limits.
 
-The generative dependency group (torch, diffusers, etc.) is optional.
+The generative dependency group (torch, transformers, etc.) is optional.
 All public methods gracefully degrade when it is not installed.
 """
 from __future__ import annotations
@@ -16,7 +14,6 @@ import threading
 import time
 from dataclasses import dataclass, field
 from enum import StrEnum
-from pathlib import Path
 from typing import Any
 
 log = logging.getLogger(__name__)
@@ -39,10 +36,10 @@ class _PipelineEntry:
 
 
 def check_generative_available() -> GenerativeAvailability:
-    """Check whether the generative dependency group is importable."""
+    """Check whether the generative dependency group (torch + transformers) is importable."""
     try:
-        import diffusers  # noqa: F401
         import torch  # noqa: F401
+        import transformers  # noqa: F401
     except ImportError:
         return GenerativeAvailability.NOT_INSTALLED
     except Exception:
@@ -142,90 +139,6 @@ class GenerativeEngine:
         log.info("Transformers model ready: %s", model_id)
         return model, processor
 
-    def load_pipeline(
-        self,
-        model_id: str,
-        pipeline_class_name: str,
-        *,
-        model_path: str | None = None,
-        components: dict[str, str] | None = None,
-        torch_dtype: str = "float16",
-        device: str = "cuda",
-        extra_kwargs: dict[str, Any] | None = None,
-    ) -> Any:
-        """Load a diffusers pipeline, evicting any currently loaded model.
-
-        Args:
-            model_id: Registry identifier (for tracking).
-            pipeline_class_name: diffusers class name, e.g. 'FluxPipeline'.
-            model_path: Path to a single model directory (diffusers layout).
-            components: Map of component names to paths for component models
-                        (e.g. {"transformer": "...", "text_encoder": "...", "vae": "..."}).
-            torch_dtype: Weight precision — "float16", "bfloat16", or "float32".
-            device: Target device.
-            extra_kwargs: Additional kwargs passed to from_pretrained.
-        """
-        availability = check_generative_available()
-        if availability is not GenerativeAvailability.AVAILABLE:
-            raise RuntimeError(
-                f"Generative dependencies not available ({availability}). "
-                "Install with: uv pip install photofant[generative]"
-            )
-
-        import diffusers
-        import torch
-
-        _set_offline_env()
-
-        dtype_map = {
-            "float16": torch.float16,
-            "bfloat16": torch.bfloat16,
-            "float32": torch.float32,
-        }
-        resolved_dtype = dtype_map.get(torch_dtype, torch.float16)
-
-        pipeline_cls = getattr(diffusers, pipeline_class_name, None)
-        if pipeline_cls is None:
-            raise ValueError(f"Unknown diffusers pipeline class: {pipeline_class_name}")
-
-        with self._lock:
-            self._evict_locked()
-
-        log.info("Loading generative pipeline: %s (%s)", model_id, pipeline_class_name)
-
-        kwargs: dict[str, Any] = {
-            "torch_dtype": resolved_dtype,
-            **(extra_kwargs or {}),
-        }
-
-        if components:
-            pipeline = self._load_component_model(
-                pipeline_cls, components, device, kwargs
-            )
-        elif model_path:
-            pipeline = pipeline_cls.from_pretrained(model_path, **kwargs)
-            pipeline = pipeline.to(device)
-        else:
-            raise ValueError("Either model_path or components must be provided")
-
-        with self._lock:
-            self._current = _PipelineEntry(
-                pipeline=pipeline,
-                model_id=model_id,
-                pipeline_type=pipeline_class_name,
-            )
-
-        log.info("Generative pipeline ready: %s", model_id)
-        return pipeline
-
-    def get_pipeline(self) -> Any | None:
-        """Return the currently loaded pipeline, updating last-used timestamp."""
-        with self._lock:
-            if self._current is None:
-                return None
-            self._current.last_used = time.monotonic()
-            return self._current.pipeline
-
     def unload(self) -> None:
         """Explicitly unload the current pipeline and free VRAM."""
         with self._lock:
@@ -265,52 +178,5 @@ class GenerativeEngine:
 
         gc.collect()
         log.info("Evicted generative pipeline: %s", model_id)
-
-    def _load_component_model(
-        self,
-        pipeline_cls: type,
-        components: dict[str, str],
-        device: str,
-        kwargs: dict[str, Any],
-    ) -> Any:
-        """Load a pipeline from separately stored components (Konzept §12.1)."""
-        import diffusers  # noqa: F811
-
-        main_path = components.get("diffusion") or components.get("transformer")
-        if main_path is None:
-            raise ValueError(
-                "Component model requires at least a 'diffusion' or 'transformer' path"
-            )
-
-        component_kwargs: dict[str, Any] = {}
-
-        for component_name, component_path in components.items():
-            if component_name in ("diffusion", "transformer"):
-                continue
-            resolved_path = Path(component_path)
-            if not resolved_path.exists():
-                raise FileNotFoundError(
-                    f"Component '{component_name}' not found at: {component_path}"
-                )
-
-            if component_name == "text_encoder":
-                from transformers import CLIPTextModel
-                component_kwargs["text_encoder"] = CLIPTextModel.from_pretrained(
-                    str(resolved_path), **kwargs
-                )
-            elif component_name == "vae":
-                vae_cls = getattr(diffusers, "AutoencoderKL", None)
-                if vae_cls is not None:
-                    component_kwargs["vae"] = vae_cls.from_pretrained(
-                        str(resolved_path), **kwargs
-                    )
-
-        pipeline = pipeline_cls.from_pretrained(
-            main_path,
-            **component_kwargs,
-            **kwargs,
-        )
-        return pipeline.to(device)
-
 
 generative_engine = GenerativeEngine()

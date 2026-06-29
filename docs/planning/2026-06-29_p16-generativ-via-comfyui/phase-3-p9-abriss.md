@@ -40,12 +40,17 @@ nichts davon hat Funktion, die ComfyUI nach P16 nicht abdeckt.
 
 ## Checkliste
 
-- [ ] Sweep + Klassifikation → FINDINGS.md (vor dem Löschen)
-- [ ] Backend-Dateien/Routen/JobKinds entfernen
-- [ ] Manifest + model-Module bereinigen (Captioner schützen)
-- [ ] `pyproject.toml` generative-Deps raus
-- [ ] Capabilities-Endpoint anpassen
-- [ ] Doc-Update: `code-map.md` (Generativ-Zeile), `routes.md`
+- [x] Sweep + Klassifikation → FINDINGS.md (vor dem Löschen)
+- [x] Backend-Dateien/Routen/JobKinds entfernen
+- [x] Manifest + model-Module bereinigen (Captioner schützen)
+- [x] `pyproject.toml` generative-Deps raus (`diffusers` entfernt, rest bleibt für heavy_captioners)
+- [x] Capabilities-Endpoint anpassen
+- [x] Doc-Update: `code-map.md` (Generativ-Zeile), `routes.md`
 
 ## Report-Back
-_(beim Umsetzen füllen)_
+
+**Gelöscht:** `api/generative.py`, `inference/seedvr2_upscaler.py`, `jobs/{upscale,flux_edit,inpaint,install_generative}_job.py` (6 Dateien).
+
+**Plan-Abweichung:** `inference/generative_engine.py` bleibt — `qwen_vl` + `joycaption` nutzen `load_transformers_model()`. Nur diffusers-Methoden (`load_pipeline`, `_load_component_model`, `get_pipeline`) entfernt. Dep-Gruppe: nur `diffusers` gestrichen, torch/transformers bleiben.
+
+**Zusätzlich gefunden:** `media/ops.py` hatte `_apply_upscale` + `UpscaleParams` (P9-Code via SeedVR2Upscaler) — ebenfalls entfernt.
