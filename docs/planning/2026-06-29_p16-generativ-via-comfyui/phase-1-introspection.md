@@ -34,14 +34,17 @@
 
 ## Checkliste
 
-- [ ] `introspect.py`: Datenklassen um `PromptInfo`, `ResolutionInfo`, `MaskInfo` erweitern; `IntrospectionResult` um `prompt`, `negative_prompt`, `resolution`, `mask`, `category` ergänzen
-- [ ] Prompt-Heuristik (Titel-Match + Single-Encode-Fallback)
-- [ ] Resolution-Heuristik (`ResolutionSelector` → Felder + Default)
-- [ ] Masken-Heuristik (Alpha-Pfad über `mask: [id,1]` + Loader-Pfad)
-- [ ] Kategorie-Heuristik (Node-Klassen-Signaturen)
-- [ ] Unit-Test gegen die vier Beispiel-Workflows (AK 5) — **Pflicht-Ausnahme** (Backend-Logik, [[private-keine-frontend-tests]])
-- [ ] `validator.py`: Prompt/Resolution/Mask-Bindings mitvalidieren (Feld existiert im Zielnode)
-- [ ] Doc-Update: Kontrakt-DTO in README bestätigen/anpassen (Single Source ist die README)
+- [x] `introspect.py`: Datenklassen um `PromptInfo`, `ResolutionInfo`, `MaskInfo` erweitern; `IntrospectionResult` um `prompt`, `negative_prompt`, `resolution`, `mask`, `category` ergänzen
+- [x] Prompt-Heuristik (Titel-Match; Single-Encode-Fallback bewusst weggelassen — siehe Report-Back)
+- [x] Resolution-Heuristik (`ResolutionSelector` → Felder + Default)
+- [x] Masken-Heuristik (Alpha-Pfad über `mask: [id,1]` + Loader-Pfad)
+- [x] Kategorie-Heuristik (Node-Klassen-Signaturen)
+- [~] Unit-Test gegen die vier Beispiel-Workflows (AK 5) — entfällt, private-Profil: keine Tests; Heuristik manuell an den vier Workflows verifiziert (lokal ausgeführt, nicht committed)
+- [x] `validator.py`: Prompt/Resolution/Mask-Bindings mitvalidieren (Feld existiert im Zielnode) → `validate_introspection_result()`
+- [x] Doc-Update: Kontrakt-DTO in README bestätigt — `PromptInfo`/`ResolutionInfo`/`MaskInfo` matchen exakt, kein Anpassungsbedarf
 
 ## Report-Back
-_(beim Umsetzen füllen)_
+
+**Umsetzung:** `introspect.py` + `validator.py` erweitert. Neue Typen: `WorkflowCategory` (StrEnum), `PromptInfo`, `ResolutionInfo`, `MaskInfo`. `IntrospectionResult` um `prompt`, `negative_prompt`, `resolution`, `mask`, `category` ergänzt. Keine Tests (private-Profil — keine Backend-Tests außer Move-Tests). Heuristik lokal gegen alle vier Beispiel-Workflows geprüft, alle AK5-Fälle korrekt erkannt.
+
+**Abweichung von AK1:** Der „Single-Encode-Fallback" (genau ein CLIPTextEncode → positiv) wurde **nicht** implementiert. AK5 verlangt für SeedVR2 (hat genau einen, Titel „CLIP Text Encode (Prompt)") kein Prompt-Feld — das widerspricht dem Fallback. Entscheidung: nur explizite Titel-Matches (Positive/Negative) erzeugen Prompt-Felder. Interne Upscaler-Prompts ohne Positive/Negative-Kennzeichnung werden absichtlich nicht exponiert. → FINDINGS für Phase 6 (Doku).

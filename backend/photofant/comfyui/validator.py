@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from photofant.comfyui.introspect import IntrospectionResult
 
 
 @dataclass
@@ -203,3 +206,66 @@ def key_from_message(message: str) -> str:
     if end == -1:
         return "?"
     return message[start + 1:end]
+
+
+def validate_introspection_result(
+    template: dict[str, Any],
+    introspection: IntrospectionResult,
+) -> ValidationResult:
+    """Validate that introspected prompt/resolution/mask nodes and fields exist in the template."""
+    result = ValidationResult()
+
+    node_id_to_data: dict[str, dict[str, Any]] = {
+        str(node_id): node_data
+        for node_id, node_data in template.items()
+        if isinstance(node_data, dict)
+    }
+
+    def _check_field(label: str, node_id: str, field_name: str) -> None:
+        if node_id not in node_id_to_data:
+            result.add_error(
+                code="introspect_node_missing",
+                message=f'{label}: Node "{node_id}" existiert nicht im Template',
+                expected=f"Node {node_id}",
+                found="Nicht gefunden",
+                next_step="Workflow erneut importieren",
+            )
+            return
+        node_inputs = node_id_to_data[node_id].get("inputs", {})
+        if isinstance(node_inputs, dict) and field_name not in node_inputs:
+            available = ", ".join(sorted(node_inputs.keys())) if node_inputs else "(keine)"
+            result.add_error(
+                code="introspect_field_missing",
+                message=f'{label}: Feld "{field_name}" fehlt in Node "{node_id}"',
+                expected=f'Feld "{field_name}"',
+                found=f"Verfügbare Felder: {available}",
+                next_step="Workflow-Node prüfen",
+            )
+
+    if introspection.prompt is not None:
+        _check_field("Prompt (positiv)", introspection.prompt.node_id, introspection.prompt.field)
+
+    if introspection.negative_prompt is not None:
+        _check_field(
+            "Prompt (negativ)",
+            introspection.negative_prompt.node_id,
+            introspection.negative_prompt.field,
+        )
+
+    if introspection.resolution is not None:
+        res = introspection.resolution
+        _check_field("Resolution (megapixels)", res.node_id, res.megapixels_field)
+        _check_field("Resolution (aspect_ratio)", res.node_id, res.aspect_field)
+
+    if introspection.mask is not None and introspection.mask.mode == "alpha":
+        mask_node_id = introspection.mask.image_node_id
+        if mask_node_id not in node_id_to_data:
+            result.add_error(
+                code="introspect_mask_node_missing",
+                message=f'Maske (Alpha): LoadImage-Node "{mask_node_id}" nicht gefunden',
+                expected=f"LoadImage Node {mask_node_id}",
+                found="Nicht gefunden",
+                next_step="Workflow erneut importieren",
+            )
+
+    return result
