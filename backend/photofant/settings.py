@@ -22,6 +22,9 @@ class ComfyUISettings(TypedDict):
     client_id: str
     output_dir: str
     timeout: int
+    default_upscale: str   # Workflow-key für Upscale-Aufgabe (leer = keiner)
+    default_edit: str      # Workflow-key für Image-Edit-Aufgabe
+    default_inpaint: str   # Workflow-key für Inpaint-Aufgabe
 
 
 class AppSettings(TypedDict):
@@ -88,6 +91,9 @@ SETTINGS_DEFAULTS: AppSettings = {
         "client_id": "photofant",
         "output_dir": "",
         "timeout": 10,
+        "default_upscale": "",
+        "default_edit": "",
+        "default_inpaint": "",
     },
 }
 

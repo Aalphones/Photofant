@@ -350,6 +350,11 @@ Indexes: `ix_version_instance_id`, `ix_version_face_id`. Check constraint: `ck_v
 
 Seed-Daten (migration 0020): 'Portrait verbessern', 'Anime-Stil', 'Hintergrund entfernen'.
 
+### ~~`comfyui_workflow`~~ (migration 0019 → **dropped in 0022**)
+
+Tabelle wurde in P16 Phase 2 entfernt. Workflows sind jetzt Dateien in `.photofant/workflows/`,
+keine DB-Einträge mehr. Migration 0022 dropped die Tabelle; Model `ComfyUIWorkflow` aus `models.py` entfernt.
+
 ## Upcoming tables (planned)
 
 *(keine offenen Tabellen)*

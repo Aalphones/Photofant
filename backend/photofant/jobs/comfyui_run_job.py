@@ -221,8 +221,16 @@ async def run_comfyui_run_job(
     base_url: str,
     client_id: str,
     timeout: float,
+    mask_input_key: str | None = None,
+    mask_data_url: str | None = None,
 ) -> None:
-    """Execute one ComfyUI run: upload all inputs → patch template → POST /prompt."""
+    """Execute one ComfyUI run: upload all inputs → patch template → POST /prompt.
+
+    If mask_input_key and mask_data_url are set, the asset for that key is combined
+    with the mask canvas (RGBA embedding) before upload — Flux-Fill alpha convention.
+    """
+    from photofant.media.alpha_mask import embed_mask_as_alpha
+
     client = ComfyUIClient(base_url=base_url, timeout=timeout)
 
     # 1. Resolve file paths for assets and faces
@@ -235,9 +243,19 @@ async def run_comfyui_run_job(
         file_path_str = path_map.get(asset_id)
         if file_path_str is None:
             raise ValueError(f"Asset {asset_id} nicht gefunden oder gelöscht")
-        uploaded_name = await asyncio.to_thread(client.upload_image, Path(file_path_str))
+
+        if key == mask_input_key and mask_data_url:
+            image_bytes = await asyncio.to_thread(Path(file_path_str).read_bytes)
+            rgba_bytes = await asyncio.to_thread(embed_mask_as_alpha, image_bytes, mask_data_url)
+            uploaded_name = await asyncio.to_thread(
+                client.upload_image_bytes, rgba_bytes, "mask_embed.png"
+            )
+            log.info("Uploaded alpha-masked asset %d as '%s' (job %s)", asset_id, uploaded_name, status.id)
+        else:
+            uploaded_name = await asyncio.to_thread(client.upload_image, Path(file_path_str))
+            log.info("Uploaded asset %d as '%s' (job %s)", asset_id, uploaded_name, status.id)
+
         asset_filenames[key] = uploaded_name
-        log.info("Uploaded asset %d as '%s' (job %s)", asset_id, uploaded_name, status.id)
 
     for key, face_id in job_face_inputs.items():
         file_path_str = face_path_map.get(face_id)
@@ -272,6 +290,8 @@ async def enqueue_comfyui_runs(
     expanded_inputs: list[tuple[dict[str, int], dict[str, int]]],
     params: dict[str, Any],
     workflow_name: str,
+    mask_input_key: str | None = None,
+    mask_data_url: str | None = None,
 ) -> list[JobStatus]:
     """Enqueue N jobs (one per entry in *expanded_inputs*). Returns their JobStatus list."""
     cfg = load_settings()
@@ -302,6 +322,8 @@ async def enqueue_comfyui_runs(
                 base_url,
                 client_id,
                 timeout,
+                mask_input_key=mask_input_key,
+                mask_data_url=mask_data_url,
             ),
         )
         statuses.append(status)

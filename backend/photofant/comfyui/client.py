@@ -1,6 +1,7 @@
 """ComfyUI HTTP client — wraps /system_stats, /upload/image, /prompt, /history."""
 from __future__ import annotations
 
+import io
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +62,43 @@ class ComfyUIClient:
             response.raise_for_status()
             data: dict[str, Any] = response.json()
             return str(data["name"])
+        except httpx.ConnectError as exc:
+            raise ComfyUIError(
+                what_expected=f"ComfyUI unter {self._base}",
+                what_found="Verbindung abgelehnt beim Bild-Upload",
+                next_step="Prüfen, ob ComfyUI läuft und die URL korrekt ist",
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise ComfyUIError(
+                what_expected=f"Antwort in {self._timeout:.0f} s",
+                what_found="Timeout beim Bild-Upload",
+                next_step="Timeout erhöhen oder ComfyUI-Last prüfen",
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            raise ComfyUIError(
+                what_expected="HTTP 200 beim Bild-Upload",
+                what_found=f"HTTP {exc.response.status_code}",
+                next_step="ComfyUI-Logs prüfen",
+            ) from exc
+        except (KeyError, ValueError) as exc:
+            raise ComfyUIError(
+                what_expected="{'name': ...} in Upload-Antwort",
+                what_found=f"Unerwartete Antwort: {exc}",
+                next_step="ComfyUI-Version prüfen",
+            ) from exc
+
+    def upload_image_bytes(self, data: bytes, filename: str = "image.png") -> str:
+        """POST /upload/image from in-memory bytes — returns filename ComfyUI assigned."""
+        url = f"{self._base}/upload/image"
+        try:
+            response = httpx.post(
+                url,
+                files={"image": (filename, io.BytesIO(data), "image/png")},
+                timeout=self._timeout,
+            )
+            response.raise_for_status()
+            result: dict[str, Any] = response.json()
+            return str(result["name"])
         except httpx.ConnectError as exc:
             raise ComfyUIError(
                 what_expected=f"ComfyUI unter {self._base}",

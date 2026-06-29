@@ -761,3 +761,71 @@ interface AssetDetailDto extends AssetDto {
   versions: VersionDto[];         // alle Versionen (Instance + Face) für dieses Asset
 }
 ```
+
+## ComfyUI (P16 Phase 2 — Filesystem-Discovery)
+
+Workflows liegen als `.json` / `.api.json` in `.photofant/workflows/`. Kein Upload, kein Aktivieren.
+
+### Settings
+
+| Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/einstellungen` ComfyUI-Block | `GET` | `/api/settings/comfyui` | — | `ComfyUISettingsDto` |
+| `/einstellungen` ComfyUI-Block | `PUT` | `/api/settings/comfyui` | `ComfyUISettingsPutRequest` | `ComfyUISettingsDto` |
+| `/einstellungen` Verbindungstest | `POST` | `/api/comfyui/test-connection` | — | `{ ok: bool, detail: string }` |
+
+### Workflow-Discovery
+
+| Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| Einstellungen / Run-Leiste | `GET` | `/api/comfyui/workflows` | — | `WorkflowDiscoveryDto[]` |
+| Run-Leiste (Detail) | `GET` | `/api/comfyui/workflows/{key}` | — | `WorkflowDiscoveryDto` |
+| Einstellungen (Vorschau) | `POST` | `/api/comfyui/workflows/introspect` | `multipart: template (JSON-Datei)` | `IntrospectionResponse` |
+
+### Run & Ergebnisse
+
+| Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| Run-Leiste / Editor | `POST` | `/api/comfyui/workflows/{key}/run` | `RunRequest` | `{ jobs: [{ job_id }] }` |
+| Ergebnisse | `GET` | `/api/comfyui/results` | `prompt_id?` | `{ items: ComfyUIResultItem[] }` |
+| Vorschau | `GET` | `/api/comfyui/results/view` | `filename`, `subfolder?` | Bild-Bytes |
+| Import | `POST` | `/api/comfyui/results/import` | `{ asset_id, filename, subfolder? }` | `ComfyUIImportResponse` |
+
+```typescript
+interface ComfyUISettingsDto {
+  enabled: boolean;
+  base_url: string;
+  client_id: string;
+  output_dir: string;
+  timeout: number;
+  default_upscale: string;  // Workflow-key oder ""
+  default_edit: string;
+  default_inpaint: string;
+}
+
+interface WorkflowDiscoveryDto {
+  key: string;           // Dateiname ohne Endung — Run-Selektor
+  name: string;          // menschenlesbar (key, Underscores → Spaces)
+  category: 'upscale' | 'img2img' | 'inpaint' | 'generic';
+  inputs: WorkflowInputDto[];
+  prompt?: { node_id: string; field: string } | null;
+  negative_prompt?: { node_id: string; field: string } | null;
+  resolution?: { node_id: string; megapixels_field: string; aspect_field: string; aspect_default: string } | null;
+  mask?: { mode: 'alpha' | 'loader'; image_node_id: string } | null;
+  is_valid: boolean;
+  errors: string[];
+}
+
+interface WorkflowInputDto {
+  key: string; label: string; node_id: string; field: string; kind: 'image' | 'mask';
+}
+
+interface RunRequest {
+  inputs: Record<string, number | number[]>;
+  face_inputs?: Record<string, number | number[]>;
+  prompt?: string | null;
+  negative_prompt?: string | null;
+  resolution?: { megapixels: number; aspect_ratio: string } | null;
+  mask?: { asset_id: number; mask_data_url: string } | null;
+}
+```

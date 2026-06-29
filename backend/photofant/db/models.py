@@ -222,21 +222,6 @@ class PromptTemplate(Base):
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
-class ComfyUIWorkflow(Base):
-    __tablename__ = "comfyui_workflow"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(Text, nullable=False)
-    category: Mapped[str] = mapped_column(Text, nullable=False, server_default="generic")
-    template_path: Mapped[str] = mapped_column(Text, nullable=False)
-    inputs: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, server_default="[]")  # type: ignore[type-arg]
-    params: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, server_default="[]")  # type: ignore[type-arg]
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
-    is_valid: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
-    validation_errors: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
-    created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-
 
 class ReviewItem(Base):
     __tablename__ = "review_item"

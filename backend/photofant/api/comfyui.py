@@ -1,29 +1,20 @@
 """
-GET  /api/settings/comfyui            -- read ComfyUI settings block
-PUT  /api/settings/comfyui            -- replace ComfyUI settings block
-POST /api/comfyui/test-connection      -- probe ComfyUI /system_stats
-GET  /api/comfyui/workflows            -- list all workflows
-POST /api/comfyui/workflows            -- create workflow (template upload)
-GET  /api/comfyui/workflows/{id}       -- get single workflow
-PATCH /api/comfyui/workflows/{id}      -- update workflow
-DELETE /api/comfyui/workflows/{id}     -- delete workflow
-POST /api/comfyui/workflows/introspect -- introspect template JSON
-POST /api/comfyui/workflows/{id}/activate   -- activate (with validation gate)
-POST /api/comfyui/workflows/{id}/deactivate -- deactivate
-POST /api/comfyui/workflows/{id}/duplicate  -- duplicate workflow
-POST /api/comfyui/workflows/{id}/revalidate      -- re-validate after template change
-POST /api/comfyui/workflows/{id}/redetect-inputs -- re-run introspection, replace inputs
-POST /api/comfyui/workflows/{id}/run        -- fire-and-forget trigger (Phase 3)
-GET  /api/comfyui/results              -- list output images (history + output_dir)
-GET  /api/comfyui/results/view         -- proxy ComfyUI /view (CORS-free preview)
-POST /api/comfyui/results/import       -- import a ComfyUI output as Edit-Version (Phase 5)
+GET  /api/settings/comfyui              -- read ComfyUI settings block
+PUT  /api/settings/comfyui              -- replace ComfyUI settings block
+POST /api/comfyui/test-connection       -- probe ComfyUI /system_stats
+GET  /api/comfyui/workflows             -- list all workflows (filesystem scan)
+GET  /api/comfyui/workflows/{key}       -- get single workflow by key
+POST /api/comfyui/workflows/introspect  -- introspect uploaded template JSON
+POST /api/comfyui/workflows/{key}/run   -- fire-and-forget trigger (key-based)
+GET  /api/comfyui/results               -- list output images (history + output_dir)
+GET  /api/comfyui/results/view          -- proxy ComfyUI /view (CORS-free preview)
+POST /api/comfyui/results/import        -- import a ComfyUI output as Edit-Version
 """
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-import shutil
 import uuid as _uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,11 +27,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from photofant.comfyui.client import ComfyUIClient, ComfyUIError
+from photofant.comfyui.discovery import load_workflow, load_workflow_template, scan_workflows
 from photofant.comfyui.introspect import introspect_template
-from photofant.comfyui.validator import validate_workflow
 from photofant.config import get_data_root, get_data_root_base
 from photofant.db.cache import get_cache_db_path, init_cache_db, store_thumbnail
-from photofant.db.models import AssetInstance, ComfyUIWorkflow, Person, Version
+from photofant.db.models import AssetInstance, Person, Version
 from photofant.db.session import get_session
 from photofant.media.person_folders import ensure_person_folder
 from photofant.media.thumbnails import generate_thumbnail
@@ -60,7 +51,7 @@ def _workflows_dir() -> Path:
     return base
 
 
-# -- Schemas ------------------------------------------------------------------
+# ── Schemas — Settings ────────────────────────────────────────────────────────
 
 class ComfyUISettingsResponse(BaseModel):
     enabled: bool
@@ -68,6 +59,9 @@ class ComfyUISettingsResponse(BaseModel):
     client_id: str
     output_dir: str
     timeout: int
+    default_upscale: str
+    default_edit: str
+    default_inpaint: str
 
 
 class ComfyUISettingsPutRequest(BaseModel):
@@ -76,65 +70,42 @@ class ComfyUISettingsPutRequest(BaseModel):
     client_id: str
     output_dir: str
     timeout: int
+    default_upscale: str = ""
+    default_edit: str = ""
+    default_inpaint: str = ""
 
+
+# ── Schemas — Test-Connection ─────────────────────────────────────────────────
 
 class TestConnectionResponse(BaseModel):
     ok: bool
     detail: str
 
 
+# ── Schemas — Workflow Discovery ──────────────────────────────────────────────
+
 class WorkflowInputDto(BaseModel):
     key: str
     label: str
-    node_title: str
-    node_id: str = ""
-    field: str = "image"
-    kind: str = "image"
-    required: bool = True
-    lockable: bool = False
-
-
-class WorkflowParamDto(BaseModel):
-    key: str
-    label: str
-    node_title: str
-    node_id: str = ""
+    node_id: str
     field: str
-    type: str = "float"
-    default: Any = None
-    min: float | None = None
-    max: float | None = None
-    step: float | None = None
-    options: list[str] | None = None
+    kind: str  # image | mask
 
 
-class WorkflowResponse(BaseModel):
-    id: int
+class WorkflowDiscoveryDto(BaseModel):
+    key: str
     name: str
     category: str
-    template_path: str
     inputs: list[WorkflowInputDto]
-    params: list[WorkflowParamDto]
-    is_active: bool
+    prompt: dict[str, str] | None
+    negative_prompt: dict[str, str] | None
+    resolution: dict[str, Any] | None
+    mask: dict[str, str] | None
     is_valid: bool
-    validation_errors: list[dict[str, str]] | None
-    created_at: str | None
-    updated_at: str | None
+    errors: list[str]
 
 
-class WorkflowCreateRequest(BaseModel):
-    name: str
-    category: str = "generic"
-    inputs: list[WorkflowInputDto] = []
-    params: list[WorkflowParamDto] = []
-
-
-class WorkflowUpdateRequest(BaseModel):
-    name: str | None = None
-    category: str | None = None
-    inputs: list[WorkflowInputDto] | None = None
-    params: list[WorkflowParamDto] | None = None
-
+# ── Schemas — Introspection (upload-based, for preview) ──────────────────────
 
 class NodeInfoDto(BaseModel):
     node_id: str
@@ -162,46 +133,78 @@ class IntrospectionResponse(BaseModel):
     errors: list[str]
 
 
-# -- Helpers ------------------------------------------------------------------
+# ── Schemas — Run ─────────────────────────────────────────────────────────────
 
-def _workflow_to_response(workflow: ComfyUIWorkflow) -> WorkflowResponse:
-    return WorkflowResponse(
-        id=workflow.id,
-        name=workflow.name,
-        category=workflow.category,
-        template_path=workflow.template_path,
-        inputs=[WorkflowInputDto(**inp) for inp in (workflow.inputs or [])],
-        params=[WorkflowParamDto(**param) for param in (workflow.params or [])],
-        is_active=workflow.is_active,
-        is_valid=workflow.is_valid,
-        validation_errors=workflow.validation_errors,
-        created_at=workflow.created_at.isoformat() if workflow.created_at else None,
-        updated_at=workflow.updated_at.isoformat() if workflow.updated_at else None,
+class MaskRunRequest(BaseModel):
+    asset_id: int
+    mask_data_url: str
+
+
+class ResolutionRunRequest(BaseModel):
+    megapixels: float
+    aspect_ratio: str
+
+
+class RunRequest(BaseModel):
+    inputs: dict[str, int | list[int]]
+    face_inputs: dict[str, int | list[int]] = {}
+    prompt: str | None = None
+    negative_prompt: str | None = None
+    resolution: ResolutionRunRequest | None = None
+    mask: MaskRunRequest | None = None
+
+
+class RunJobDto(BaseModel):
+    job_id: str
+
+
+class RunResponse(BaseModel):
+    jobs: list[RunJobDto]
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _discovery_to_dto(item: Any) -> WorkflowDiscoveryDto:
+    return WorkflowDiscoveryDto(
+        key=item.key,
+        name=item.name,
+        category=item.category,
+        inputs=[WorkflowInputDto(**inp) for inp in item.inputs],
+        prompt=item.prompt,
+        negative_prompt=item.negative_prompt,
+        resolution=item.resolution,
+        mask=item.mask,
+        is_valid=item.is_valid,
+        errors=item.errors,
     )
 
 
-def _load_template(template_path: str) -> dict[str, Any]:
-    path = Path(template_path)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail=f"Template-Datei nicht gefunden: {template_path}")
+def _get_comfyui_client() -> tuple[ComfyUIClient, dict[str, Any]]:
+    """Load settings and return (client, comfyui_cfg). Raises 422 if disabled."""
+    cfg = load_settings()
+    comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
+    if not comfyui_cfg.get("enabled", False):
+        raise HTTPException(
+            status_code=422,
+            detail="ComfyUI-Integration ist deaktiviert — zuerst in den Einstellungen aktivieren",
+        )
+    base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
+    timeout = float(comfyui_cfg.get("timeout", 10))
+    return ComfyUIClient(base_url=base_url, timeout=timeout), comfyui_cfg
+
+
+def _check_connection(client: ComfyUIClient) -> None:
+    """Probe ComfyUI; raises HTTP 503 if unreachable."""
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError) as exc:
-        raise HTTPException(status_code=422, detail=f"Template nicht lesbar: {exc}") from exc
+        client.system_stats()
+    except ComfyUIError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"ComfyUI nicht erreichbar: {exc.what_found}. {exc.next_step}.",
+        ) from exc
 
 
-def _run_validation(workflow: ComfyUIWorkflow) -> None:
-    template = _load_template(workflow.template_path)
-    inputs_dicts = workflow.inputs or []
-    params_dicts = workflow.params or []
-    result = validate_workflow(template, inputs_dicts, params_dicts)
-    workflow.is_valid = result.is_valid
-    workflow.validation_errors = result.to_dicts() if result.errors else None
-    if not result.is_valid:
-        workflow.is_active = False
-
-
-# -- Settings routes ----------------------------------------------------------
+# ── Settings routes ───────────────────────────────────────────────────────────
 
 @settings_router.get("", response_model=ComfyUISettingsResponse)
 def get_comfyui_settings() -> ComfyUISettingsResponse:
@@ -213,6 +216,9 @@ def get_comfyui_settings() -> ComfyUISettingsResponse:
         client_id=str(comfyui.get("client_id", "photofant")),
         output_dir=str(comfyui.get("output_dir", "")),
         timeout=int(comfyui.get("timeout", 10)),
+        default_upscale=str(comfyui.get("default_upscale", "")),
+        default_edit=str(comfyui.get("default_edit", "")),
+        default_inpaint=str(comfyui.get("default_inpaint", "")),
     )
 
 
@@ -220,6 +226,21 @@ def get_comfyui_settings() -> ComfyUISettingsResponse:
 def put_comfyui_settings(body: ComfyUISettingsPutRequest) -> ComfyUISettingsResponse:
     if body.timeout < 1 or body.timeout > 300:
         raise HTTPException(status_code=422, detail="timeout muss zwischen 1 und 300 Sekunden liegen")
+
+    # Validate default keys: must either be empty or exist in the workflow directory
+    workflows_dir = _workflows_dir()
+    for field_name, key_value in [
+        ("default_upscale", body.default_upscale),
+        ("default_edit", body.default_edit),
+        ("default_inpaint", body.default_inpaint),
+    ]:
+        if key_value and load_workflow(workflows_dir, key_value) is None:
+            log.warning(
+                "Default-Workflow-Key '%s' für %s nicht gefunden — wird als leer gespeichert",
+                key_value,
+                field_name,
+            )
+
     cfg = load_settings()
     cfg["comfyui"] = {  # type: ignore[typeddict-item]
         "enabled": body.enabled,
@@ -227,13 +248,16 @@ def put_comfyui_settings(body: ComfyUISettingsPutRequest) -> ComfyUISettingsResp
         "client_id": body.client_id.strip() or "photofant",
         "output_dir": body.output_dir.strip(),
         "timeout": body.timeout,
+        "default_upscale": body.default_upscale.strip(),
+        "default_edit": body.default_edit.strip(),
+        "default_inpaint": body.default_inpaint.strip(),
     }
     save_settings(cfg)
     log.info("comfyui settings updated: enabled=%s url=%s", body.enabled, body.base_url)
-    return ComfyUISettingsResponse(**cfg["comfyui"])  # type: ignore[typeddict-item]
+    return get_comfyui_settings()
 
 
-# -- Test-connection route ----------------------------------------------------
+# ── Test-connection route ─────────────────────────────────────────────────────
 
 @comfyui_router.post("/test-connection", response_model=TestConnectionResponse)
 def test_connection() -> TestConnectionResponse:
@@ -252,128 +276,23 @@ def test_connection() -> TestConnectionResponse:
         return TestConnectionResponse(ok=False, detail=detail)
 
 
-# -- Workflow CRUD ------------------------------------------------------------
+# ── Workflow Discovery routes ─────────────────────────────────────────────────
 
-@comfyui_router.get("/workflows", response_model=list[WorkflowResponse])
-def list_workflows(db: DbSession) -> list[WorkflowResponse]:
-    workflows = db.query(ComfyUIWorkflow).order_by(ComfyUIWorkflow.name).all()
-    return [_workflow_to_response(workflow) for workflow in workflows]
-
-
-@comfyui_router.post("/workflows", response_model=WorkflowResponse, status_code=201)
-async def create_workflow(
-    db: DbSession,
-    template: UploadFile,
-    name: str = "Neuer Workflow",
-    category: str = "generic",
-) -> WorkflowResponse:
-    if not template.filename or not template.filename.endswith(".json"):
-        raise HTTPException(status_code=422, detail="Template muss eine .json-Datei sein")
-
-    content = await template.read()
-    try:
-        template_data = json.loads(content)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=422, detail=f"Template ist kein valides JSON: {exc}") from exc
-
-    introspection = introspect_template(template_data)
-    if not introspection.is_api_format:
-        detail = introspection.errors[0] if introspection.errors else "Kein API-Format"
-        raise HTTPException(status_code=422, detail=detail)
-
-    dest_dir = _workflows_dir()
-    safe_name = "".join(char for char in name.lower().replace(" ", "_") if char.isalnum() or char == "_") or "workflow"
-    dest_path = dest_dir / f"{safe_name}.api.json"
-    counter = 1
-    while dest_path.exists():
-        dest_path = dest_dir / f"{safe_name}_{counter}.api.json"
-        counter += 1
-
-    dest_path.write_bytes(content)
-
-    auto_inputs = [
-        {
-            "key": suggestion.key,
-            "label": suggestion.label,
-            "node_title": suggestion.node_title,
-            "node_id": suggestion.node_id,
-            "field": suggestion.field,
-            "kind": suggestion.kind,
-            "required": suggestion.required,
-            "lockable": suggestion.lockable,
-        }
-        for suggestion in introspection.input_suggestions
-    ]
-
-    now = datetime.now(UTC).replace(tzinfo=None)
-    workflow = ComfyUIWorkflow(
-        name=name,
-        category=category,
-        template_path=str(dest_path.resolve()),
-        inputs=auto_inputs,
-        params=[],
-        is_active=False,
-        is_valid=False,
-        validation_errors=None,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(workflow)
-    db.flush()
-
-    _run_validation(workflow)
-    workflow.updated_at = now
-
-    return _workflow_to_response(workflow)
+@comfyui_router.get("/workflows", response_model=list[WorkflowDiscoveryDto])
+def list_workflows() -> list[WorkflowDiscoveryDto]:
+    items = scan_workflows(_workflows_dir())
+    return [_discovery_to_dto(item) for item in items]
 
 
-@comfyui_router.get("/workflows/{workflow_id}", response_model=WorkflowResponse)
-def get_workflow(workflow_id: int, db: DbSession) -> WorkflowResponse:
-    workflow = db.get(ComfyUIWorkflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
-    return _workflow_to_response(workflow)
+@comfyui_router.get("/workflows/{key}", response_model=WorkflowDiscoveryDto)
+def get_workflow(key: str) -> WorkflowDiscoveryDto:
+    item = load_workflow(_workflows_dir(), key)
+    if item is None:
+        raise HTTPException(status_code=404, detail=f"Workflow '{key}' nicht gefunden")
+    return _discovery_to_dto(item)
 
 
-@comfyui_router.patch("/workflows/{workflow_id}", response_model=WorkflowResponse)
-def update_workflow(workflow_id: int, body: WorkflowUpdateRequest, db: DbSession) -> WorkflowResponse:
-    workflow = db.get(ComfyUIWorkflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
-
-    if body.name is not None:
-        workflow.name = body.name
-    if body.category is not None:
-        workflow.category = body.category
-    if body.inputs is not None:
-        workflow.inputs = [inp.model_dump() for inp in body.inputs]
-    if body.params is not None:
-        workflow.params = [param.model_dump() for param in body.params]
-
-    _run_validation(workflow)
-    workflow.updated_at = datetime.now(UTC).replace(tzinfo=None)
-
-    return _workflow_to_response(workflow)
-
-
-@comfyui_router.delete("/workflows/{workflow_id}", status_code=204)
-def delete_workflow(workflow_id: int, db: DbSession) -> None:
-    workflow = db.get(ComfyUIWorkflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
-
-    template_path = Path(workflow.template_path)
-    db.delete(workflow)
-    db.flush()
-
-    if template_path.exists():
-        try:
-            template_path.unlink()
-        except OSError:
-            log.warning("Could not delete template file: %s", template_path)
-
-
-# -- Introspection ------------------------------------------------------------
+# ── Introspection (upload-based preview) ─────────────────────────────────────
 
 @comfyui_router.post("/workflows/introspect", response_model=IntrospectionResponse)
 async def introspect_workflow(template: UploadFile) -> IntrospectionResponse:
@@ -414,117 +333,46 @@ async def introspect_workflow(template: UploadFile) -> IntrospectionResponse:
     )
 
 
-# -- Activation / Deactivation -----------------------------------------------
+# ── Run (Fire-and-Forget, key-based) ─────────────────────────────────────────
 
-@comfyui_router.post("/workflows/{workflow_id}/activate", response_model=WorkflowResponse)
-def activate_workflow(workflow_id: int, db: DbSession) -> WorkflowResponse:
-    workflow = db.get(ComfyUIWorkflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
+@comfyui_router.post("/workflows/{key}/run", response_model=RunResponse)
+async def run_workflow(key: str, body: RunRequest) -> RunResponse:
+    from photofant.jobs.comfyui_run_job import enqueue_comfyui_runs, expand_batch
 
-    _run_validation(workflow)
+    # 1. Load workflow
+    workflows_dir = _workflows_dir()
+    workflow_item = load_workflow(workflows_dir, key)
+    if workflow_item is None:
+        raise HTTPException(status_code=404, detail=f"Workflow '{key}' nicht gefunden")
 
-    if not workflow.is_valid:
+    if not workflow_item.is_valid:
         raise HTTPException(
             status_code=422,
-            detail={
-                "message": "Workflow kann nicht aktiviert werden -- Validierungsfehler",
-                "errors": workflow.validation_errors or [],
-            },
+            detail=f"Workflow '{key}' ist nicht valide: {'; '.join(workflow_item.errors)}",
         )
 
-    cfg = load_settings()
-    comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
-    if not comfyui_cfg.get("enabled", False):
-        raise HTTPException(
-            status_code=422,
-            detail="ComfyUI-Integration ist deaktiviert -- zuerst in den Einstellungen aktivieren",
-        )
+    # 2. Check ComfyUI enabled + connection
+    client, comfyui_cfg = _get_comfyui_client()
+    _check_connection(client)
 
-    workflow.is_active = True
-    workflow.updated_at = datetime.now(UTC).replace(tzinfo=None)
+    # 3. Load raw template for patch_template
+    template = load_workflow_template(workflows_dir, key)
+    if template is None:
+        raise HTTPException(status_code=500, detail=f"Template für '{key}' konnte nicht geladen werden")
 
-    return _workflow_to_response(workflow)
+    # 4. Build input_bindings from introspection (node_title needed for patch lookup)
+    from photofant.comfyui.introspect import load_and_introspect
+    workflow_path = None
+    for suffix in [f"{key}.api.json", f"{key}.json"]:
+        candidate = workflows_dir / suffix
+        if candidate.is_file():
+            workflow_path = candidate
+            break
+    if workflow_path is None:
+        raise HTTPException(status_code=404, detail=f"Workflow-Datei für '{key}' nicht gefunden")
 
-
-@comfyui_router.post("/workflows/{workflow_id}/deactivate", response_model=WorkflowResponse)
-def deactivate_workflow(workflow_id: int, db: DbSession) -> WorkflowResponse:
-    workflow = db.get(ComfyUIWorkflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
-
-    workflow.is_active = False
-    workflow.updated_at = datetime.now(UTC).replace(tzinfo=None)
-
-    return _workflow_to_response(workflow)
-
-
-# -- Duplicate ----------------------------------------------------------------
-
-@comfyui_router.post("/workflows/{workflow_id}/duplicate", response_model=WorkflowResponse, status_code=201)
-def duplicate_workflow(workflow_id: int, db: DbSession) -> WorkflowResponse:
-    original = db.get(ComfyUIWorkflow, workflow_id)
-    if original is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
-
-    src_path = Path(original.template_path)
-    if not src_path.exists():
-        raise HTTPException(status_code=404, detail="Template-Datei nicht gefunden")
-
-    dest_dir = _workflows_dir()
-    stem = src_path.stem
-    dest_path = dest_dir / f"{stem}_copy.api.json"
-    counter = 1
-    while dest_path.exists():
-        dest_path = dest_dir / f"{stem}_copy_{counter}.api.json"
-        counter += 1
-
-    shutil.copy2(src_path, dest_path)
-
-    now = datetime.now(UTC).replace(tzinfo=None)
-    clone = ComfyUIWorkflow(
-        name=f"{original.name} (Kopie)",
-        category=original.category,
-        template_path=str(dest_path.resolve()),
-        inputs=list(original.inputs) if original.inputs else [],
-        params=list(original.params) if original.params else [],
-        is_active=False,
-        is_valid=original.is_valid,
-        validation_errors=original.validation_errors,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(clone)
-    db.flush()
-
-    return _workflow_to_response(clone)
-
-
-# -- Re-validate (template re-import / drift check) --------------------------
-
-@comfyui_router.post("/workflows/{workflow_id}/revalidate", response_model=WorkflowResponse)
-def revalidate_workflow(workflow_id: int, db: DbSession) -> WorkflowResponse:
-    workflow = db.get(ComfyUIWorkflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
-
-    _run_validation(workflow)
-    workflow.updated_at = datetime.now(UTC).replace(tzinfo=None)
-
-    return _workflow_to_response(workflow)
-
-
-@comfyui_router.post("/workflows/{workflow_id}/redetect-inputs", response_model=WorkflowResponse)
-def redetect_inputs(workflow_id: int, db: DbSession) -> WorkflowResponse:
-    """Re-run introspection on the stored template and replace workflow.inputs."""
-    workflow = db.get(ComfyUIWorkflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
-
-    template = _load_template(workflow.template_path)
-    introspection = introspect_template(template)
-
-    workflow.inputs = [
+    introspection = load_and_introspect(workflow_path)
+    input_bindings: list[dict[str, Any]] = [
         {
             "key": suggestion.key,
             "label": suggestion.label,
@@ -537,95 +385,101 @@ def redetect_inputs(workflow_id: int, db: DbSession) -> WorkflowResponse:
         }
         for suggestion in introspection.input_suggestions
     ]
-    _run_validation(workflow)
-    workflow.updated_at = datetime.now(UTC).replace(tzinfo=None)
 
-    return _workflow_to_response(workflow)
-
-
-# -- Run (Fire-and-Forget, Phase 3) ------------------------------------------
-
-class RunRequest(BaseModel):
-    inputs: dict[str, int | list[int]]
-    face_inputs: dict[str, int | list[int]] = {}
-    params: dict[str, Any] = {}
-
-
-class RunJobDto(BaseModel):
-    job_id: str
-
-
-class RunResponse(BaseModel):
-    jobs: list[RunJobDto]
-
-
-@comfyui_router.post("/workflows/{workflow_id}/run", response_model=RunResponse)
-async def run_workflow(workflow_id: int, body: RunRequest, db: DbSession) -> RunResponse:
-    from photofant.jobs.comfyui_run_job import enqueue_comfyui_runs, expand_batch
-
-    workflow = db.get(ComfyUIWorkflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(status_code=404, detail="Workflow nicht gefunden")
-
-    if not workflow.is_active or not workflow.is_valid:
-        raise HTTPException(
-            status_code=422,
-            detail="Workflow ist nicht aktiv oder nicht valide — zuerst validieren und aktivieren",
-        )
-
-    cfg = load_settings()
-    comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
-    if not comfyui_cfg.get("enabled", False):
-        raise HTTPException(
-            status_code=422,
-            detail="ComfyUI-Integration ist deaktiviert — zuerst in den Einstellungen aktivieren",
-        )
-
-    # Connection gate
-    base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
-    timeout = float(comfyui_cfg.get("timeout", 10))
-    connection_client = ComfyUIClient(base_url=base_url, timeout=timeout)
-    try:
-        connection_client.system_stats()
-    except ComfyUIError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"ComfyUI nicht erreichbar: {exc.what_found}. {exc.next_step}.",
-        ) from exc
-
-    input_bindings: list[dict[str, Any]] = workflow.inputs or []
-    param_bindings: list[dict[str, Any]] = workflow.params or []
-
-    # Validate required inputs are provided
+    # 5. Validate required inputs
     required_keys = {b["key"] for b in input_bindings if b.get("required", True)}
-    missing = required_keys - set(body.inputs.keys()) - set(body.face_inputs.keys())
+    all_provided = set(body.inputs.keys()) | set(body.face_inputs.keys())
+    # If mask is provided, its asset_id satisfies the image_node_id slot
+    if body.mask and introspection.mask:
+        mask_suggestion = next(
+            (s for s in introspection.input_suggestions if s.node_id == introspection.mask.image_node_id),
+            None,
+        )
+        if mask_suggestion:
+            all_provided.add(mask_suggestion.key)
+    missing = required_keys - all_provided
     if missing:
         raise HTTPException(
             status_code=422,
             detail=f"Pflicht-Inputs fehlen: {', '.join(sorted(missing))}",
         )
 
-    # Validate and expand batch axis (asset inputs + face inputs)
+    # 6. Handle mask: inject asset_id into inputs and determine mask_input_key
+    resolved_inputs = dict(body.inputs)
+    mask_input_key: str | None = None
+    mask_data_url: str | None = None
+
+    if body.mask and introspection.mask and introspection.mask.mode == "alpha":
+        mask_suggestion = next(
+            (s for s in introspection.input_suggestions if s.node_id == introspection.mask.image_node_id),
+            None,
+        )
+        if mask_suggestion:
+            mask_input_key = mask_suggestion.key
+            mask_data_url = body.mask.mask_data_url
+            resolved_inputs[mask_input_key] = body.mask.asset_id
+
+    # 7. Build param_bindings for prompt / negative_prompt / resolution
+    param_bindings: list[dict[str, Any]] = []
+    param_values: dict[str, Any] = {}
+
+    if body.prompt and introspection.prompt:
+        param_bindings.append({
+            "key": "_prompt",
+            "node_title": "",
+            "node_id": introspection.prompt.node_id,
+            "field": introspection.prompt.field,
+        })
+        param_values["_prompt"] = body.prompt
+
+    if body.negative_prompt and introspection.negative_prompt:
+        param_bindings.append({
+            "key": "_negative_prompt",
+            "node_title": "",
+            "node_id": introspection.negative_prompt.node_id,
+            "field": introspection.negative_prompt.field,
+        })
+        param_values["_negative_prompt"] = body.negative_prompt
+
+    if body.resolution and introspection.resolution:
+        res = introspection.resolution
+        param_bindings.append({
+            "key": "_resolution_mp",
+            "node_title": "",
+            "node_id": res.node_id,
+            "field": res.megapixels_field,
+        })
+        param_values["_resolution_mp"] = body.resolution.megapixels
+        param_bindings.append({
+            "key": "_resolution_ar",
+            "node_title": "",
+            "node_id": res.node_id,
+            "field": res.aspect_field,
+        })
+        param_values["_resolution_ar"] = body.resolution.aspect_ratio
+
+    # 8. Expand batch
     try:
-        expanded = expand_batch(body.inputs, input_bindings, body.face_inputs)
+        expanded = expand_batch(resolved_inputs, input_bindings, body.face_inputs)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    template = _load_template(workflow.template_path)
-
+    # 9. Enqueue
     statuses = await enqueue_comfyui_runs(
         workflow_template=template,
         input_bindings=input_bindings,
         param_bindings=param_bindings,
         expanded_inputs=expanded,
-        params=body.params,
-        workflow_name=workflow.name,
+        params=param_values,
+        workflow_name=workflow_item.name,
+        mask_input_key=mask_input_key,
+        mask_data_url=mask_data_url,
     )
 
     return RunResponse(jobs=[RunJobDto(job_id=status.id) for status in statuses])
 
 
-# -- Results (Phase 5) --------------------------------------------------------
+# ── Results ───────────────────────────────────────────────────────────────────
 
 _IMAGE_EXTS = frozenset({".png", ".jpg", ".jpeg", ".webp"})
 
@@ -642,7 +496,6 @@ class ComfyUIResultsResponse(BaseModel):
 
 
 def _extract_history_items(history: dict[str, Any]) -> list[ComfyUIResultItem]:
-    """Parse ComfyUI /history response → list of output image items."""
     items: list[ComfyUIResultItem] = []
     for _prompt_id, entry in history.items():
         outputs = entry.get("outputs", {}) if isinstance(entry, dict) else {}
@@ -662,7 +515,6 @@ def _extract_history_items(history: dict[str, Any]) -> list[ComfyUIResultItem]:
 
 
 def _scan_output_dir(output_dir: str) -> list[ComfyUIResultItem]:
-    """Walk output_dir (non-recursively) for image files, newest first."""
     if not output_dir:
         return []
     base = Path(output_dir)
@@ -691,15 +543,13 @@ def list_results(prompt_id: str | None = None) -> ComfyUIResultsResponse:
 
     items: list[ComfyUIResultItem] = []
 
-    # History path (if prompt_id given and ComfyUI reachable)
     if prompt_id:
         base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
         timeout = float(comfyui_cfg.get("timeout", 10))
-        client = ComfyUIClient(base_url=base_url, timeout=timeout)
-        history = client.get_history(prompt_id)
+        history_client = ComfyUIClient(base_url=base_url, timeout=timeout)
+        history = history_client.get_history(prompt_id)
         items.extend(_extract_history_items(history))
 
-    # output_dir scan (always, deduplication by filename)
     output_dir = str(comfyui_cfg.get("output_dir", ""))
     dir_items = _scan_output_dir(output_dir)
     history_filenames = {item.filename for item in items}
@@ -714,20 +564,18 @@ def view_result(filename: str, subfolder: str = "") -> _FastAPIResponse:
     cfg = load_settings()
     comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
 
-    # Try ComfyUI remote first
     base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
     timeout = float(comfyui_cfg.get("timeout", 10))
-    client = ComfyUIClient(base_url=base_url, timeout=timeout)
+    view_client = ComfyUIClient(base_url=base_url, timeout=timeout)
     _MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 
     try:
-        data = client.view_image(filename, subfolder)
+        data = view_client.view_image(filename, subfolder)
         ext = Path(filename).suffix.lower()
         return _FastAPIResponse(content=data, media_type=_MEDIA_TYPES.get(ext, "image/png"))
     except ComfyUIError:
         pass
 
-    # Fallback: read from local output_dir
     output_dir = str(comfyui_cfg.get("output_dir", ""))
     if output_dir:
         candidates = [
@@ -744,6 +592,8 @@ def view_result(filename: str, subfolder: str = "") -> _FastAPIResponse:
         detail=f"Datei '{filename}' nicht gefunden (weder in ComfyUI noch in output_dir)",
     )
 
+
+# ── Import (ComfyUI output → Edit-Version) ────────────────────────────────────
 
 class ComfyUIImportRequest(BaseModel):
     asset_id: int
@@ -763,7 +613,6 @@ class ComfyUIImportResponse(BaseModel):
 @comfyui_router.post("/results/import", response_model=ComfyUIImportResponse, status_code=201)
 async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> ComfyUIImportResponse:
     """Fetch a ComfyUI output image and import it as an Edit-Version (type=comfyui)."""
-    # -- Load asset --
     instance = db.query(AssetInstance).filter(
         AssetInstance.asset_id == body.asset_id,
         AssetInstance.deleted_at.is_(None),
@@ -775,7 +624,6 @@ async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> Co
     if person is None:
         raise HTTPException(status_code=500, detail="Person nicht gefunden")
 
-    # -- Fetch image bytes (ComfyUI /view → fallback: output_dir) --
     cfg = load_settings()
     comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
     base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
@@ -786,9 +634,9 @@ async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> Co
 
     image_bytes: bytes | None = None
 
-    client = ComfyUIClient(base_url=base_url, timeout=timeout)
+    import_client = ComfyUIClient(base_url=base_url, timeout=timeout)
     with contextlib.suppress(ComfyUIError):
-        image_bytes = client.view_image(body.filename, body.subfolder)
+        image_bytes = import_client.view_image(body.filename, body.subfolder)
 
     if image_bytes is None:
         for candidate in [
@@ -805,7 +653,6 @@ async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> Co
             detail=f"Datei '{body.filename}' nicht abrufbar — weder via ComfyUI noch in output_dir",
         )
 
-    # -- Write to person/edits/ --
     data_root_path = Path(get_data_root())
     person_dir = ensure_person_folder(data_root_path, person)
     edits_dir = person_dir / "edits"
@@ -816,14 +663,12 @@ async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> Co
     dest = edits_dir / dest_name
     dest.write_bytes(image_bytes)
 
-    # -- Read dimensions --
     try:
         with _Image.open(dest) as img:
             width, height = img.size
     except Exception:
         width, height = None, None
 
-    # -- Create Version (type=comfyui) --
     siblings = db.query(Version).filter(
         Version.instance_id == instance.id,
         Version.is_current.is_(True),
@@ -851,7 +696,6 @@ async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> Co
     db.commit()
     db.refresh(version)
 
-    # -- Generate thumbnails --
     cache_path = get_cache_db_path()
     init_cache_db(cache_path)
     for thumb_size in (256, 512):
