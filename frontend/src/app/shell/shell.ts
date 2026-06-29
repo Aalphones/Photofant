@@ -48,7 +48,7 @@ export class Shell {
 
   protected readonly isDockOpen = this.store.selectSignal(jobsSelectors.isDockOpen);
   protected readonly activeJobs = this.store.selectSignal(jobsSelectors.activeCount);
-  protected readonly allJobs    = this.store.selectSignal(jobsSelectors.allJobs);
+  protected readonly allJobs    = this.store.selectSignal(jobsSelectors.sortedJobs);
 
   protected readonly activeRoute = toSignal(
     this.router.events.pipe(

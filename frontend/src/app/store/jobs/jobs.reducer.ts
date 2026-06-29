@@ -30,7 +30,7 @@ export const jobsFeature = createFeature({
     })),
     on(jobsActions.clearDoneJobs, (state: JobsState) =>
       adapter.removeMany(
-        (job: Job) => job.state === 'done',
+        (job: Job) => job.state === 'done' || job.state === 'error',
         state,
       )
     ),

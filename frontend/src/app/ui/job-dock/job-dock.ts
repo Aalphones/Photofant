@@ -29,8 +29,8 @@ export class JobDock {
   readonly close     = output<void>();
   readonly clearDone = output<void>();
 
-  protected readonly hasDoneJobs = computed(() =>
-    this.jobs().some((job: Job) => job.state === 'done')
+  protected readonly hasClearableJobs = computed(() =>
+    this.jobs().some((job: Job) => job.state === 'done' || job.state === 'error')
   );
 
   protected iconFor(kind: string): string {
