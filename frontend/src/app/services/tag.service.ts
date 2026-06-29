@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { EMPTY, expand, Observable, reduce } from 'rxjs';
 import type { TagListItem } from '@photofant/models';
 
 export interface MergeTagsRequest {
@@ -18,12 +18,24 @@ export interface BulkTagRequest {
 export class TagService {
   private readonly http = inject(HttpClient);
 
-  listTags(query?: string, pageSize = 20): Observable<TagListItem[]> {
-    let params = new HttpParams().set('page_size', pageSize);
+  listTags(query?: string, pageSize = 20, page = 1): Observable<TagListItem[]> {
+    let params = new HttpParams()
+      .set('page_size', pageSize)
+      .set('page', page);
     if (query) {
       params = params.set('query', query);
     }
     return this.http.get<TagListItem[]>('/api/tags', { params });
+  }
+
+  listAllTags(query?: string): Observable<TagListItem[]> {
+    const pageSize = 2000;
+    return this.listTags(query, pageSize).pipe(
+      expand((items: TagListItem[], index: number) =>
+        items.length === pageSize ? this.listTags(query, pageSize, index + 2) : EMPTY
+      ),
+      reduce((allItems: TagListItem[], items: TagListItem[]) => [...allItems, ...items], []),
+    );
   }
 
   renameTag(id: number, name: string): Observable<TagListItem> {

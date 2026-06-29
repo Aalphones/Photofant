@@ -15,7 +15,7 @@ export class TagsEffects {
     this.actions$.pipe(
       ofType(tagsActions.load),
       switchMap(() =>
-        this.tagService.listTags(undefined, 200).pipe(
+        this.tagService.listAllTags().pipe(
           map((items: TagListItem[]) => tagsActions.loadSuccess({ items })),
           catchError((error: HttpErrorResponse) =>
             of(tagsActions.loadFailure({ error: error.message }))
