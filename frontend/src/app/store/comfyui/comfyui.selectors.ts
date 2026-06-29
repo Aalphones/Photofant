@@ -11,7 +11,6 @@ const {
   selectError,
   selectWorkflows,
   selectIsLoadingWorkflows,
-  selectIsCreatingWorkflow,
   selectSelectedWorkflowId,
   selectWorkflowError,
 } = comfyuiFeature;
@@ -44,7 +43,6 @@ export const comfyuiSelectors = {
   selectComfyuiReady,
   selectWorkflows,
   selectIsLoadingWorkflows,
-  selectIsCreatingWorkflow,
   selectSelectedWorkflowId,
   selectSelectedWorkflow,
   selectActiveWorkflows,

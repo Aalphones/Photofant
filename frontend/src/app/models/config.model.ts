@@ -4,6 +4,9 @@ export interface ComfyUIConfig {
   clientId: string;
   outputDir: string;
   timeout: number;
+  defaultUpscale: string;
+  defaultEdit: string;
+  defaultInpaint: string;
 }
 
 export const COMFYUI_CONFIG_DEFAULTS: ComfyUIConfig = {
@@ -12,6 +15,9 @@ export const COMFYUI_CONFIG_DEFAULTS: ComfyUIConfig = {
   clientId: 'photofant',
   outputDir: '',
   timeout: 10,
+  defaultUpscale: '',
+  defaultEdit: '',
+  defaultInpaint: '',
 };
 
 export interface ProcessingConfig {

@@ -9,8 +9,7 @@ import {
 import { Store } from '@ngrx/store';
 import { Icon } from '@photofant/ui';
 import { comfyuiActions, comfyuiSelectors } from '@photofant/store';
-import type { ComfyUIConfig, ComfyUIWorkflow, WorkflowInput } from '@photofant/models';
-import { WORKFLOW_CATEGORIES } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIWorkflow } from '@photofant/models';
 
 @Component({
   selector: 'pf-einstellungen-comfyui',
@@ -30,18 +29,17 @@ export class ComfyUISection {
 
   readonly workflows = this.store.selectSignal(comfyuiSelectors.selectWorkflows);
   readonly isLoadingWorkflows = this.store.selectSignal(comfyuiSelectors.selectIsLoadingWorkflows);
-  readonly isCreatingWorkflow = this.store.selectSignal(comfyuiSelectors.selectIsCreatingWorkflow);
   readonly selectedWorkflowId = this.store.selectSignal(comfyuiSelectors.selectSelectedWorkflowId);
-  readonly selectedWorkflow = this.store.selectSignal(comfyuiSelectors.selectSelectedWorkflow);
   readonly workflowError = this.store.selectSignal(comfyuiSelectors.selectWorkflowError);
-
-  readonly categories = WORKFLOW_CATEGORIES;
 
   readonly draftEnabled = signal<boolean>(false);
   readonly draftBaseUrl = signal<string>('');
   readonly draftClientId = signal<string>('');
   readonly draftOutputDir = signal<string>('');
   readonly draftTimeout = signal<number>(10);
+  readonly draftDefaultUpscale = signal<string>('');
+  readonly draftDefaultEdit = signal<string>('');
+  readonly draftDefaultInpaint = signal<string>('');
 
   readonly isDirty = computed((): boolean => {
     const cfg = this.config();
@@ -50,13 +48,12 @@ export class ComfyUISection {
       this.draftBaseUrl() !== cfg.baseUrl ||
       this.draftClientId() !== cfg.clientId ||
       this.draftOutputDir() !== cfg.outputDir ||
-      this.draftTimeout() !== cfg.timeout
+      this.draftTimeout() !== cfg.timeout ||
+      this.draftDefaultUpscale() !== cfg.defaultUpscale ||
+      this.draftDefaultEdit() !== cfg.defaultEdit ||
+      this.draftDefaultInpaint() !== cfg.defaultInpaint
     );
   });
-
-  readonly editingWorkflow = signal<ComfyUIWorkflow | null>(null);
-  readonly editName = signal<string>('');
-  readonly editCategory = signal<string>('generic');
 
   constructor() {
     effect(() => {
@@ -69,6 +66,9 @@ export class ComfyUISection {
       this.draftClientId.set(cfg.clientId);
       this.draftOutputDir.set(cfg.outputDir);
       this.draftTimeout.set(cfg.timeout);
+      this.draftDefaultUpscale.set(cfg.defaultUpscale);
+      this.draftDefaultEdit.set(cfg.defaultEdit);
+      this.draftDefaultInpaint.set(cfg.defaultInpaint);
     });
     effect(() => {
       this.store.dispatch(comfyuiActions.loadWorkflows());
@@ -101,6 +101,18 @@ export class ComfyUISection {
     this.store.dispatch(comfyuiActions.clearTestResult());
   }
 
+  onDefaultUpscaleChange(target: HTMLSelectElement): void {
+    this.draftDefaultUpscale.set(target.value);
+  }
+
+  onDefaultEditChange(target: HTMLSelectElement): void {
+    this.draftDefaultEdit.set(target.value);
+  }
+
+  onDefaultInpaintChange(target: HTMLSelectElement): void {
+    this.draftDefaultInpaint.set(target.value);
+  }
+
   save(): void {
     const config: ComfyUIConfig = {
       enabled: this.draftEnabled(),
@@ -108,6 +120,9 @@ export class ComfyUISection {
       clientId: this.draftClientId().trim() || 'photofant',
       outputDir: this.draftOutputDir().trim(),
       timeout: this.draftTimeout(),
+      defaultUpscale: this.draftDefaultUpscale(),
+      defaultEdit: this.draftDefaultEdit(),
+      defaultInpaint: this.draftDefaultInpaint(),
     };
     this.store.dispatch(comfyuiActions.saveConfig({ config }));
   }
@@ -116,70 +131,11 @@ export class ComfyUISection {
     this.store.dispatch(comfyuiActions.testConnection());
   }
 
-  onTemplateUpload(input: HTMLInputElement): void {
-    const file = input.files?.[0];
-    if (!file) return;
-    const name = file.name.replace(/\.api\.json$|\.json$/, '').replace(/[_-]/g, ' ');
-    this.store.dispatch(comfyuiActions.createWorkflow({ file, name, category: 'generic' }));
-    input.value = '';
-  }
-
-  selectWorkflow(workflowId: string): void {
+  selectWorkflow(workflowKey: string): void {
     const current = this.selectedWorkflowId();
-    if (current === workflowId) {
-      this.store.dispatch(comfyuiActions.selectWorkflow({ workflowId: null }));
-      this.editingWorkflow.set(null);
-    } else {
-      this.store.dispatch(comfyuiActions.selectWorkflow({ workflowId }));
-      this.editingWorkflow.set(null);
-    }
-  }
-
-  startEditWorkflow(workflow: ComfyUIWorkflow): void {
-    this.editingWorkflow.set(workflow);
-    this.editName.set(workflow.name);
-    this.editCategory.set(workflow.category);
-  }
-
-  cancelEditWorkflow(): void {
-    this.editingWorkflow.set(null);
-  }
-
-  saveEditWorkflow(): void {
-    const editing = this.editingWorkflow();
-    if (!editing) return;
-
-    const patch: { name?: string; category?: string } = {};
-    if (this.editName() !== editing.name) {
-      patch.name = this.editName();
-    }
-    if (this.editCategory() !== editing.category) {
-      patch.category = this.editCategory();
-    }
-    if (Object.keys(patch).length > 0) {
-      this.store.dispatch(comfyuiActions.updateWorkflow({ workflowId: editing.key, patch }));
-    }
-    this.editingWorkflow.set(null);
-  }
-
-  onEditNameChange(target: HTMLInputElement): void {
-    this.editName.set(target.value);
-  }
-
-  onEditCategoryChange(target: HTMLSelectElement): void {
-    this.editCategory.set(target.value);
-  }
-
-  deleteWorkflow(workflowId: string): void {
-    this.store.dispatch(comfyuiActions.deleteWorkflow({ workflowId }));
-  }
-
-  duplicateWorkflow(workflowId: string): void {
-    this.store.dispatch(comfyuiActions.duplicateWorkflow({ workflowId }));
-  }
-
-  redetectInputs(workflowId: string): void {
-    this.store.dispatch(comfyuiActions.redetectInputs({ workflowId }));
+    this.store.dispatch(comfyuiActions.selectWorkflow({
+      workflowId: current === workflowKey ? null : workflowKey,
+    }));
   }
 
   statusLabel(workflow: ComfyUIWorkflow): string {
@@ -188,43 +144,5 @@ export class ComfyUISection {
 
   statusClass(workflow: ComfyUIWorkflow): string {
     return workflow.isValid ? 'comfyui__status--ok' : 'comfyui__status--fehler';
-  }
-
-  removeInput(workflow: ComfyUIWorkflow, index: number): void {
-    const inputs = [...workflow.inputs];
-    inputs.splice(index, 1);
-    this.store.dispatch(comfyuiActions.updateWorkflow({
-      workflowId: workflow.key,
-      patch: { inputs },
-    }));
-  }
-
-  removeParam(workflow: ComfyUIWorkflow, index: number): void {
-    const params = [...workflow.params];
-    params.splice(index, 1);
-    this.store.dispatch(comfyuiActions.updateWorkflow({
-      workflowId: workflow.key,
-      patch: { params },
-    }));
-  }
-
-  toggleInputRequired(workflow: ComfyUIWorkflow, index: number): void {
-    const inputs = workflow.inputs.map((input: WorkflowInput, idx: number) =>
-      idx === index ? { ...input, required: !input.required } : input
-    );
-    this.store.dispatch(comfyuiActions.updateWorkflow({
-      workflowId: workflow.key,
-      patch: { inputs },
-    }));
-  }
-
-  toggleInputLockable(workflow: ComfyUIWorkflow, index: number): void {
-    const inputs = workflow.inputs.map((input: WorkflowInput, idx: number) =>
-      idx === index ? { ...input, lockable: !input.lockable } : input
-    );
-    this.store.dispatch(comfyuiActions.updateWorkflow({
-      workflowId: workflow.key,
-      patch: { inputs },
-    }));
   }
 }

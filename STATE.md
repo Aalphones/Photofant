@@ -1,9 +1,9 @@
 # STATE
 
-**Aktiver Plan:** P16 — Generativ via ComfyUI (Abriss P9), `docs/planning/2026-06-29_p16-generativ-via-comfyui/` · Phase 4/6 (in Arbeit)
-**Nächster Schritt:** Phase 4 abschließen — Settings-Liste read-only machen (Upload/Duplizieren/Löschen/Redetect-Buttons raus, Ordner-Hinweis rein) + drei Default-Dropdowns (Upscale/Edit/Inpaint). Dann Phase 3 (P9-Abriss) noch offen.
+**Aktiver Plan:** P16 — Generativ via ComfyUI (Abriss P9), `docs/planning/2026-06-29_p16-generativ-via-comfyui/` · Phase 3/6 (pending)
+**Nächster Schritt:** Phase 3 — P9 in-process Backend abreißen (`api/generative.py`, upscale/flux_edit/inpaint/install_generative-Jobs, Manifest-Rollen). Sweep: nur Bild-Generativ-Rollen raus, `heavy_captioner` bleibt.
 
-**Hinweis:** Phase 4 strukturell zu ~60% fertig (Bugfix-Einstieg 2026-06-29: Model/Service/Store/run-leiste auf Discovery-DTO + key-basiert). Noch offen: read-only UI + Defaults.
+**Hinweis:** Phase 4 complete (2026-06-29). Reihenfolge: Phase 3 vor 5, weil Phase 5 auf dem bereinigten Backend aufbaut.
 
 ---
 

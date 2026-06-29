@@ -26,7 +26,7 @@ die ComfyUI ohnehin liefert — koexistierende Doppelpflege ohne Mehrwert.
 | 1 | [Introspection erweitern](phase-1-introspection.md) — Prompt / Resolution / Alpha-Maske erkennen | heikel | complete |
 | 2 | [FS-Discovery, DB raus](phase-2-fs-discovery.md) — Verzeichnis-Scan, Tabelle weg, Default-Zuordnung | heikel | complete |
 | 3 | [P9 abreißen](phase-3-p9-abriss.md) — in-process generatives Backend entfernen | standard | pending |
-| 4 | [Frontend: Settings + Service](phase-4-frontend-settings.md) — Auto-Liste, 3 Default-Dropdowns | standard | pending |
+| 4 | [Frontend: Settings + Service](phase-4-frontend-settings.md) — Auto-Liste, 3 Default-Dropdowns | standard | complete |
 | 5 | [Frontend: Editor + Run-Leiste](phase-5-frontend-editor.md) — 3 Aufgaben + Bulk + generischer Trigger | heikel | pending |
 | 6 | [Docs + ADR](phase-6-docs-adr.md) — ADR-008, code-map/routes/models/AGENTS | mechanisch | pending |
 

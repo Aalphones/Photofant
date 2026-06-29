@@ -37,17 +37,13 @@
 .comfyui__testergebnis--ok { background: var(--success-weak, color-mix(in srgb, var(--accent) 12%, transparent)); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }
 .comfyui__testergebnis--fehler { background: var(--danger-weak); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent); }
 
-/* ── Workflow-Verwaltung ──────────────────────────────── */
+/* ── Workflow-Liste ───────────────────────────────────── */
 
-.comfyui__workflow-toolbar {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+.comfyui__ordner-hinweis {
+  padding: 10px 14px; border-radius: var(--radius-s); font-size: 12.5px;
+  line-height: 1.5; margin-bottom: 12px; color: var(--text-3);
+  background: var(--bg-2); border: 1px solid var(--line);
 }
-.comfyui__upload-label {
-  cursor: pointer;
-  input { display: none; }
-}
-.comfyui__upload-input { display: none; }
-.comfyui__upload-status { font-size: 12px; color: var(--text-3); }
 .comfyui__loading { font-size: 13px; color: var(--text-3); padding: 12px 0; }
 .comfyui__leer {
   font-size: 13px; color: var(--text-3); padding: 20px 16px;

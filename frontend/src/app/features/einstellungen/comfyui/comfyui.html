@@ -10,7 +10,7 @@
   <div class="comfyui__zeile comfyui__zeile--oben">
     <div class="comfyui__zeile-inhalt">
       <div class="comfyui__zeile-titel">ComfyUI-Integration aktivieren</div>
-      <div class="comfyui__zeile-sub">Workflow-Trigger und Import sind nur bei aktivierter Verbindung verfügbar.</div>
+      <div class="comfyui__zeile-sub">Workflow-Trigger sind nur bei aktivierter Verbindung verfügbar.</div>
     </div>
     <div class="comfyui__zeile-steuerung">
       <button
@@ -94,6 +94,57 @@
 
 </div>
 
+<!-- Standard-Workflows -->
+<div class="comfyui__gruppen-label comfyui__gruppen-label--mt">Standard-Workflows</div>
+<div class="comfyui__gruppe">
+
+  <div class="comfyui__zeile comfyui__zeile--oben">
+    <div class="comfyui__zeile-inhalt">
+      <div class="comfyui__zeile-titel">Upscale</div>
+      <div class="comfyui__zeile-sub">Wird für den 1-Klick-Hochskalieren-Auftrag aus der Galerie verwendet.</div>
+    </div>
+    <div class="comfyui__zeile-steuerung">
+      <select class="comfyui__select" (change)="onDefaultUpscaleChange($any($event.target))">
+        <option value="" [selected]="!draftDefaultUpscale()">— keiner —</option>
+        @for (wf of workflows(); track wf.key) {
+          <option [value]="wf.key" [selected]="draftDefaultUpscale() === wf.key">{{ wf.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <div class="comfyui__zeile comfyui__zeile--oben">
+    <div class="comfyui__zeile-inhalt">
+      <div class="comfyui__zeile-titel">Image Edit</div>
+      <div class="comfyui__zeile-sub">Wird im Editor für promptgesteuertes Umschreiben des Bildes verwendet.</div>
+    </div>
+    <div class="comfyui__zeile-steuerung">
+      <select class="comfyui__select" (change)="onDefaultEditChange($any($event.target))">
+        <option value="" [selected]="!draftDefaultEdit()">— keiner —</option>
+        @for (wf of workflows(); track wf.key) {
+          <option [value]="wf.key" [selected]="draftDefaultEdit() === wf.key">{{ wf.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <div class="comfyui__zeile comfyui__zeile--oben">
+    <div class="comfyui__zeile-inhalt">
+      <div class="comfyui__zeile-titel">Inpaint</div>
+      <div class="comfyui__zeile-sub">Wird im Editor für das Füllen markierter Bereiche mit einer gemalten Maske verwendet.</div>
+    </div>
+    <div class="comfyui__zeile-steuerung">
+      <select class="comfyui__select" (change)="onDefaultInpaintChange($any($event.target))">
+        <option value="" [selected]="!draftDefaultInpaint()">— keiner —</option>
+        @for (wf of workflows(); track wf.key) {
+          <option [value]="wf.key" [selected]="draftDefaultInpaint() === wf.key">{{ wf.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+</div>
+
 <!-- Aktions-Zeile -->
 <div class="comfyui__aktionen">
   <button
@@ -143,24 +194,12 @@
   <div class="error-banner">{{ error() }}</div>
 }
 
-<!-- ── Workflow-Verwaltung ──────────────────────────────────── -->
+<!-- ── Workflow-Liste (read-only) ──────────────────────────── -->
 
 <div class="comfyui__gruppen-label comfyui__gruppen-label--mt">Workflows</div>
 
-<div class="comfyui__workflow-toolbar">
-  <label class="comfyui__btn comfyui__btn--akzent comfyui__upload-label">
-    <pf-icon name="plus" [size]="14" />
-    Template hochladen
-    <input
-      type="file"
-      accept=".json"
-      class="comfyui__upload-input"
-      (change)="onTemplateUpload($any($event.target))"
-    >
-  </label>
-  @if (isCreatingWorkflow()) {
-    <span class="comfyui__upload-status">Wird verarbeitet…</span>
-  }
+<div class="comfyui__ordner-hinweis">
+  Workflows werden aus <code>.photofant/workflows/</code> automatisch geladen — eine <code>.json</code> im ComfyUI-API-Format ablegen genügt.
 </div>
 
 @if (workflowError()) {
@@ -176,7 +215,7 @@
 
 @if (!isLoadingWorkflows() && workflows().length === 0) {
   <div class="comfyui__leer">
-    Noch keine Workflows registriert. Lade ein ComfyUI-Template im <strong>API-Format</strong> hoch.
+    Noch keine Workflow-Dateien in <code>.photofant/workflows/</code> gefunden.
   </div>
 }
 
@@ -213,90 +252,18 @@
           </div>
         }
 
-        <!-- Edit-Modus -->
-        @if (editingWorkflow()?.key === workflow.key) {
-          <div class="comfyui__edit-form">
-            <div class="comfyui__edit-zeile">
-              <label>Name</label>
-              <input class="comfyui__texteingabe" [value]="editName()" (change)="onEditNameChange($any($event.target))">
-            </div>
-            <div class="comfyui__edit-zeile">
-              <label>Kategorie</label>
-              <select class="comfyui__select" [value]="editCategory()" (change)="onEditCategoryChange($any($event.target))">
-                @for (cat of categories; track cat) {
-                  <option [value]="cat">{{ cat }}</option>
-                }
-              </select>
-            </div>
-            <div class="comfyui__edit-aktionen">
-              <button class="comfyui__btn comfyui__btn--akzent comfyui__btn--klein" (click)="saveEditWorkflow()">
-                <pf-icon name="check" [size]="12" /> Übernehmen
-              </button>
-              <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="cancelEditWorkflow()">
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- Inputs -->
+        <!-- Bild-Eingaben -->
         @if (workflow.inputs.length > 0) {
           <div class="comfyui__detail-sektion">
-            <div class="comfyui__detail-label">Inputs ({{ workflow.inputs.length }})</div>
-            @for (input of workflow.inputs; track input.key; let inputIndex = $index) {
+            <div class="comfyui__detail-label">Bild-Eingaben ({{ workflow.inputs.length }})</div>
+            @for (input of workflow.inputs; track input.key) {
               <div class="comfyui__input-zeile">
-                <span class="comfyui__input-key">{{ input.key }}</span>
-                <span class="comfyui__input-meta">
-                  → {{ input.node_title }} · {{ input.kind }}
-                  @if (input.required) { · Pflicht }
-                  @if (input.lockable) { · 🔒 }
-                </span>
-                <div class="comfyui__input-actions">
-                  <button class="comfyui__icon-btn" title="Pflicht umschalten" (click)="toggleInputRequired(workflow, inputIndex)">
-                    <pf-icon [name]="input.required ? 'check' : 'minus'" [size]="12" />
-                  </button>
-                  <button class="comfyui__icon-btn" title="Entfernen" (click)="removeInput(workflow, inputIndex)">
-                    <pf-icon name="trash" [size]="12" />
-                  </button>
-                </div>
+                <span class="comfyui__input-key">{{ input.label }}</span>
+                <span class="comfyui__input-meta">{{ input.kind }}@if (input.required) { · Pflicht }</span>
               </div>
             }
           </div>
         }
-
-        <!-- Params -->
-        @if (workflow.params.length > 0) {
-          <div class="comfyui__detail-sektion">
-            <div class="comfyui__detail-label">Parameter ({{ workflow.params.length }})</div>
-            @for (param of workflow.params; track param.key; let paramIndex = $index) {
-              <div class="comfyui__input-zeile">
-                <span class="comfyui__input-key">{{ param.key }}</span>
-                <span class="comfyui__input-meta">→ {{ param.node_title }} · {{ param.type }}</span>
-                <div class="comfyui__input-actions">
-                  <button class="comfyui__icon-btn" title="Entfernen" (click)="removeParam(workflow, paramIndex)">
-                    <pf-icon name="trash" [size]="12" />
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
-        }
-
-        <!-- Aktionen -->
-        <div class="comfyui__workflow-aktionen">
-          <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="startEditWorkflow(workflow)">
-            <pf-icon name="pencil" [size]="12" /> Bearbeiten
-          </button>
-          <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="duplicateWorkflow(workflow.key)">
-            <pf-icon name="copy" [size]="12" /> Duplizieren
-          </button>
-          <button class="comfyui__btn comfyui__btn--rahmen comfyui__btn--klein" (click)="redetectInputs(workflow.key)" title="Inputs neu aus Template erkennen (überschreibt bestehende)">
-            <pf-icon name="scan" [size]="12" /> Inputs neu erkennen
-          </button>
-          <button class="comfyui__btn comfyui__btn--gefahr comfyui__btn--klein" (click)="deleteWorkflow(workflow.key)">
-            <pf-icon name="trash" [size]="12" /> Löschen
-          </button>
-        </div>
 
       </div>
     }

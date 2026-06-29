@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs';
 import type { Observable } from 'rxjs';
-import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, IntrospectionResult, WorkflowInput, WorkflowParam } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, WorkflowParam } from '@photofant/models';
 import { COMFYUI_CONFIG_DEFAULTS } from '@photofant/models';
 
 export interface TestConnectionResponse {
@@ -16,6 +16,9 @@ interface ComfyUIConfigApi {
   client_id: string;
   output_dir: string;
   timeout: number;
+  default_upscale: string;
+  default_edit: string;
+  default_inpaint: string;
 }
 
 interface WorkflowApi {
@@ -44,6 +47,9 @@ function fromApi(raw: ComfyUIConfigApi): ComfyUIConfig {
     clientId: String(raw.client_id ?? COMFYUI_CONFIG_DEFAULTS.clientId),
     outputDir: String(raw.output_dir ?? COMFYUI_CONFIG_DEFAULTS.outputDir),
     timeout: Number(raw.timeout ?? COMFYUI_CONFIG_DEFAULTS.timeout),
+    defaultUpscale: String(raw.default_upscale ?? ''),
+    defaultEdit: String(raw.default_edit ?? ''),
+    defaultInpaint: String(raw.default_inpaint ?? ''),
   };
 }
 
@@ -85,6 +91,9 @@ export class ComfyUIService {
       client_id: config.clientId,
       output_dir: config.outputDir,
       timeout: config.timeout,
+      default_upscale: config.defaultUpscale,
+      default_edit: config.defaultEdit,
+      default_inpaint: config.defaultInpaint,
     };
     return this.http.put<ComfyUIConfigApi>('/api/settings/comfyui', body).pipe(
       map((raw: ComfyUIConfigApi) => fromApi(raw))
@@ -98,47 +107,6 @@ export class ComfyUIService {
   listWorkflows(): Observable<ComfyUIWorkflow[]> {
     return this.http.get<WorkflowApi[]>('/api/comfyui/workflows').pipe(
       map((list: WorkflowApi[]) => list.map((raw: WorkflowApi) => workflowFromApi(raw)))
-    );
-  }
-
-  createWorkflow(file: File, name: string, category: string): Observable<ComfyUIWorkflow> {
-    const formData = new FormData();
-    formData.append('template', file);
-    formData.append('name', name);
-    formData.append('category', category);
-    return this.http.post<WorkflowApi>('/api/comfyui/workflows', formData).pipe(
-      map((raw: WorkflowApi) => workflowFromApi(raw))
-    );
-  }
-
-  updateWorkflow(
-    workflowId: string,
-    patch: { name?: string; category?: string; inputs?: WorkflowInput[]; params?: WorkflowParam[] },
-  ): Observable<ComfyUIWorkflow> {
-    return this.http.patch<WorkflowApi>(`/api/comfyui/workflows/${workflowId}`, patch).pipe(
-      map((raw: WorkflowApi) => workflowFromApi(raw))
-    );
-  }
-
-  deleteWorkflow(workflowKey: string): Observable<void> {
-    return this.http.delete<void>(`/api/comfyui/workflows/${workflowKey}`);
-  }
-
-  duplicateWorkflow(workflowKey: string): Observable<ComfyUIWorkflow> {
-    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowKey}/duplicate`, {}).pipe(
-      map((raw: WorkflowApi) => workflowFromApi(raw))
-    );
-  }
-
-  introspectTemplate(file: File): Observable<IntrospectionResult> {
-    const formData = new FormData();
-    formData.append('template', file);
-    return this.http.post<IntrospectionResult>('/api/comfyui/workflows/introspect', formData);
-  }
-
-  redetectInputs(workflowKey: string): Observable<ComfyUIWorkflow> {
-    return this.http.post<WorkflowApi>(`/api/comfyui/workflows/${workflowKey}/redetect-inputs`, {}).pipe(
-      map((raw: WorkflowApi) => workflowFromApi(raw))
     );
   }
 
