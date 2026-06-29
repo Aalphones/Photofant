@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root, get_data_root_base
 from photofant.db.cache import count_thumbnail_targets, get_cache_db_path
 from photofant.db.engine import get_db_path
+from photofant.db.models import Asset, Face
 from photofant.db.session import get_session
 from photofant.jobs.backup_job import enqueue_backup
 from photofant.jobs.import_job import enqueue_import
@@ -294,6 +297,10 @@ class MaintenanceStatusDto(BaseModel):
     db_size: int            # db.sqlite size in bytes
     thumbnail_count: int    # assets with at least one cached thumbnail
     cache_size: int         # thumbnails.sqlite size in bytes
+    image_count: int        # total assets in the database
+    face_crop_count: int    # total face crops in the database
+    disk_total: int         # total bytes on the filesystem hosting data_root
+    disk_used: int          # used bytes on that filesystem
 
 
 def _file_size(path: Path) -> int:
@@ -301,10 +308,24 @@ def _file_size(path: Path) -> int:
 
 
 @router.get("/status", response_model=MaintenanceStatusDto)
-async def get_status() -> MaintenanceStatusDto:
+async def get_status(session: DbSession) -> MaintenanceStatusDto:
     cache_path = get_cache_db_path()
+    image_count = session.query(func.count(Asset.id)).scalar() or 0
+    face_crop_count = session.query(func.count(Face.id)).scalar() or 0
+    data_root = get_data_root()
+    if data_root.exists():
+        disk = shutil.disk_usage(data_root)
+        disk_total = disk.total
+        disk_used = disk.used
+    else:
+        disk_total = 0
+        disk_used = 0
     return MaintenanceStatusDto(
         db_size=_file_size(get_db_path()),
         thumbnail_count=count_thumbnail_targets(cache_path),
         cache_size=_file_size(cache_path),
+        image_count=image_count,
+        face_crop_count=face_crop_count,
+        disk_total=disk_total,
+        disk_used=disk_used,
     )

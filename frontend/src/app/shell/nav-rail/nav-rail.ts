@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { gallerySelectors, reviewSelectors } from '@photofant/store';
+import { gallerySelectors, maintenanceActions, maintenanceSelectors, reviewSelectors } from '@photofant/store';
 import { Icon } from '../../ui/icon/icon';
 
 interface NavItem {
@@ -26,6 +26,54 @@ export class NavRail {
 
   private readonly galerieCount = this.store.selectSignal(gallerySelectors.selectServerTotal);
   private readonly reviewCount = this.store.selectSignal(reviewSelectors.selectTotal);
+  private readonly storageStatus = this.store.selectSignal(maintenanceSelectors.selectStatus);
+
+  protected readonly diskFreeLabel = computed<string>(() => {
+    const status = this.storageStatus();
+    if (!status || status.disk_total === 0) {
+      return '—';
+    }
+    return this.formatBytes(status.disk_total - status.disk_used) + ' frei';
+  });
+
+  protected readonly diskUsedPercent = computed<number>(() => {
+    const status = this.storageStatus();
+    if (!status || status.disk_total === 0) {
+      return 0;
+    }
+    return Math.round((status.disk_used / status.disk_total) * 100);
+  });
+
+  protected readonly libraryLabel = computed<string>(() => {
+    const status = this.storageStatus();
+    if (!status) {
+      return 'Bibliothek —';
+    }
+    const libraryBytes = status.db_size + status.cache_size;
+    if (libraryBytes === 0) {
+      return 'Bibliothek leer';
+    }
+    return 'Bibliothek ' + this.formatBytes(libraryBytes);
+  });
+
+  constructor() {
+    effect(() => {
+      this.store.dispatch(maintenanceActions.loadStatus());
+    });
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+    if (bytes < 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
 
   // Personen/Alben/Favoriten/Trainingssets have no backend yet (P7/P10) — no count chip until they do.
   protected readonly mainItems = computed<readonly NavItem[]>(() => [

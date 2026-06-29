@@ -52,12 +52,12 @@
   <div class="storage">
     <div class="storage-txt">
       <span class="storage-label">Lokaler Speicher</span>
-      <span class="mono">—</span>
+      <span class="mono">{{ diskFreeLabel() }}</span>
     </div>
-    <div class="storage-bar"><i style="width: 0%"></i></div>
+    <div class="storage-bar"><i [style.width.%]="diskUsedPercent()"></i></div>
     <div class="storage-txt">
-      <span>Bibliothek leer</span>
-      <span>0%</span>
+      <span>{{ libraryLabel() }}</span>
+      <span>{{ diskUsedPercent() }}%</span>
     </div>
   </div>
 </div>

@@ -42,6 +42,12 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
         </div>
 
         <div class="stat">
+          <div class="stat-label">Bilder gesamt</div>
+          <div class="stat-value">{{ status() ? status()!.image_count : '—' }}</div>
+          <div class="stat-sub">Assets in der DB</div>
+        </div>
+
+        <div class="stat">
           <div class="stat-label">Datenbank</div>
           <div class="stat-value">{{ status() ? formatSize(status()!.db_size) : '—' }}</div>
           <div class="stat-sub">db.sqlite</div>
@@ -55,8 +61,8 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
 
         <div class="stat">
           <div class="stat-label">Face-Crops</div>
-          <div class="stat-value muted">—</div>
-          <div class="stat-sub">ab P7</div>
+          <div class="stat-value">{{ status() ? status()!.face_crop_count : '—' }}</div>
+          <div class="stat-sub">Gesichter in der DB</div>
         </div>
       </div>
 
@@ -135,11 +141,15 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
 
     .status-bar {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
     }
 
-    @media (max-width: 640px) {
+    @media (max-width: 760px) {
+      .status-bar { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 480px) {
       .status-bar { grid-template-columns: repeat(2, 1fr); }
     }
 
