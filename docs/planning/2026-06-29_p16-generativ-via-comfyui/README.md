@@ -24,7 +24,7 @@ die ComfyUI ohnehin liefert — koexistierende Doppelpflege ohne Mehrwert.
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | [Introspection erweitern](phase-1-introspection.md) — Prompt / Resolution / Alpha-Maske erkennen | heikel | complete |
-| 2 | [FS-Discovery, DB raus](phase-2-fs-discovery.md) — Verzeichnis-Scan, Tabelle weg, Default-Zuordnung | heikel | pending |
+| 2 | [FS-Discovery, DB raus](phase-2-fs-discovery.md) — Verzeichnis-Scan, Tabelle weg, Default-Zuordnung | heikel | complete |
 | 3 | [P9 abreißen](phase-3-p9-abriss.md) — in-process generatives Backend entfernen | standard | pending |
 | 4 | [Frontend: Settings + Service](phase-4-frontend-settings.md) — Auto-Liste, 3 Default-Dropdowns | standard | pending |
 | 5 | [Frontend: Editor + Run-Leiste](phase-5-frontend-editor.md) — 3 Aufgaben + Bulk + generischer Trigger | heikel | pending |

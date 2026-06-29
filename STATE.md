@@ -1,7 +1,7 @@
 # STATE
 
-**Aktiver Plan:** P16 — Generativ via ComfyUI (Abriss P9), `docs/planning/2026-06-29_p16-generativ-via-comfyui/` · Phase 2/6 (pending)
-**Nächster Schritt:** Phase 2 umsetzen — FS-Discovery (Verzeichnis-Scan, DB-Tabelle entfernen, Default-Zuordnung).
+**Aktiver Plan:** P16 — Generativ via ComfyUI (Abriss P9), `docs/planning/2026-06-29_p16-generativ-via-comfyui/` · Phase 3/6 (pending)
+**Nächster Schritt:** Phase 3 umsetzen — P9 abreißen (in-process generatives Backend entfernen: api/generative.py, Upscale/Flux-Edit/Inpaint/Install-Jobs, Manifest-Rollen).
 
 ---
 

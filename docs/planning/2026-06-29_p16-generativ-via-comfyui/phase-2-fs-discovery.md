@@ -36,14 +36,31 @@
 
 ## Checkliste
 
-- [ ] Discovery-Modul: `scan_workflows()` (Verzeichnis → introspizierte DTOs, gecacht per mtime optional)
-- [ ] `api/comfyui.py`: Routen auf Discovery/`key` umbauen, CRUD/Activate/Duplicate/Redetect raus
-- [ ] Run-Route + Request-Schema um prompt/negative/resolution/mask erweitern; an `patch_template` durchreichen (Prompt/Resolution als param-artige Bindings)
-- [ ] Alpha-Embedding-Helper (`media/`): Bild + Masken-DataURL → RGBA-PNG-Tempfile für Upload
-- [ ] `settings.py`: drei Default-Keys + Defaults; PUT-Validierung (key existiert / leer)
-- [ ] Alembic-Migration: `comfyui_workflow` droppen; `db/models.py` Model entfernen
-- [ ] Unit-Test: Scan über Beispiel-Verzeichnis + Alpha-Embedding (Pflicht-Ausnahme [[private-keine-frontend-tests]])
-- [ ] Doc-Update: `routes.md` (geänderte/entfallene Routen), `models.md` (Tabelle weg)
+- [x] Discovery-Modul: `scan_workflows()` (Verzeichnis → introspizierte DTOs, gecacht per mtime optional)
+- [x] `api/comfyui.py`: Routen auf Discovery/`key` umbauen, CRUD/Activate/Duplicate/Redetect raus
+- [x] Run-Route + Request-Schema um prompt/negative/resolution/mask erweitern; an `patch_template` durchreichen (Prompt/Resolution als param-artige Bindings)
+- [x] Alpha-Embedding-Helper (`media/`): Bild + Masken-DataURL → RGBA-PNG-Tempfile für Upload
+- [x] `settings.py`: drei Default-Keys + Defaults; PUT-Validierung (key existiert / leer)
+- [x] Alembic-Migration: `comfyui_workflow` droppen; `db/models.py` Model entfernen
+- [x] Unit-Test: Scan über Beispiel-Verzeichnis + Alpha-Embedding (Pflicht-Ausnahme [[private-keine-frontend-tests]])
+- [x] Doc-Update: `routes.md` (geänderte/entfallene Routen), `models.md` (Tabelle weg)
 
 ## Report-Back
-_(beim Umsetzen füllen)_
+
+**Commit:** `2d95f8c` — feat(comfyui): P16 Phase 2 — FS-Discovery, DB raus, Alpha-Maske
+
+**Umgesetzt:**
+- `comfyui/discovery.py`: `scan_workflows()`, `load_workflow()`, `load_workflow_template()` — `.api.json` schlägt `.json` für gleichen key
+- `media/alpha_mask.py`: `embed_mask_as_alpha()` via PIL Luminance + ImageOps.invert (Flux-Fill: markiert = transparent)
+- `comfyui/client.py`: `upload_image_bytes()` für In-Memory-PNG-Upload
+- `comfyui_run_job.py`: `mask_input_key` + `mask_data_url` Parameter; Alpha-Embedding im Job-Loop vor Upload
+- `api/comfyui.py`: komplett umgebaut — nur noch FS-Discovery + key-basierter Run + 3 Default-Settings
+- `settings.py` / `models.py`: `ComfyUISettings` um 3 Default-Keys erweitert; `ComfyUIWorkflow` Model entfernt
+- Migration `0022_drop_comfyui_workflow.py` (upgrade: DROP TABLE; downgrade: recreate)
+- 21 Tests (discovery + alpha-mask), alle grün; pre-existing 9 Failures in `test_comfyui_run.py` unberührt
+
+**Abweichung:** Alpha-Embedding nutzt PIL L-mode statt separatem Alpha-Kanal — robuster bei RGBA-Canvas-Masken und opaken Masken-PNGs.
+
+**Offen:** Masken-Richtung (markiert = transparent/opak) sollte beim ersten echten Flux-Fill-Run mit Inpaint.json verifiziert werden. Notiz in Phase-6-Doku.
+
+**Status:** complete
