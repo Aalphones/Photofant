@@ -94,3 +94,36 @@
   max-width: 300px;
   line-height: 1.5;
 }
+
+@media (max-width: 860px) {
+  .review-dupes__header {
+    align-items: stretch;
+    padding: 14px;
+  }
+
+  .review-dupes__header-left {
+    min-width: 0;
+  }
+
+  .review-dupes__title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .review-dupes__scan-btn {
+    justify-content: center;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 520px) {
+  .review-dupes__header {
+    gap: 10px;
+    padding: 12px 10px;
+  }
+
+  .review-dupes__scan-btn {
+    width: 100%;
+  }
+}

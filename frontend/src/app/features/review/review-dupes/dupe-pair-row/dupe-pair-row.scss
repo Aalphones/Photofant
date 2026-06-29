@@ -108,3 +108,61 @@
   &--warn:hover { color: var(--danger); }
   &--ok:hover   { color: var(--good); }
 }
+
+@media (max-width: 860px) {
+  :host {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .dupe-pair__thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .dupe-pair__info {
+    flex-basis: calc(100% - 128px);
+  }
+
+  .dupe-pair__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .dupe-pair__action {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 520px) {
+  :host {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    padding-inline: 10px;
+  }
+
+  .dupe-pair__thumbs {
+    grid-row: span 2;
+  }
+
+  .dupe-pair__thumb {
+    width: 48px;
+    height: 48px;
+  }
+
+  .dupe-pair__info {
+    flex-basis: auto;
+  }
+
+  .dupe-pair__ids {
+    flex-wrap: wrap;
+  }
+
+  .dupe-pair__actions {
+    width: auto;
+  }
+}

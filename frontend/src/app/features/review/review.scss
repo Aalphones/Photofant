@@ -11,6 +11,13 @@
   border-bottom: 1px solid var(--line);
   padding: 0 24px;
   flex: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .review__tab {
@@ -20,6 +27,8 @@
   color: var(--text-3);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
+  min-height: 44px;
+  white-space: nowrap;
   transition: color 0.12s;
 
   &:hover {
@@ -29,6 +38,31 @@
   &--active {
     color: var(--accent);
     border-bottom-color: var(--accent);
+  }
+}
+
+@media (max-width: 860px) {
+  .review__tabs {
+    padding: 0 14px;
+  }
+
+  .review__tab {
+    padding: 10px 14px;
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 520px) {
+  :host {
+    min-height: 0;
+  }
+
+  .review__tabs {
+    padding: 0 10px;
+  }
+
+  .review__tab {
+    padding-inline: 11px;
   }
 }
 

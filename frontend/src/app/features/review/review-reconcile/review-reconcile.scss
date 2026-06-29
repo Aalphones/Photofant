@@ -94,3 +94,27 @@
   flex-direction: column;
   gap: 24px;
 }
+
+@media (max-width: 860px) {
+  .rr__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .rr__scan-btn {
+    min-height: 44px;
+  }
+
+  .rr__sections {
+    padding: 14px;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  .rr__sections {
+    padding: 10px;
+  }
+}
