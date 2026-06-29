@@ -1,7 +1,7 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan — P11 + P15 bereit zur Umsetzung)
-**Nächster Schritt:** Entscheiden welcher Plan als nächstes startet (P11 oder P15).
+**Aktiver Plan:** P16 — Generativ via ComfyUI (Abriss P9), `docs/planning/2026-06-29_p16-generativ-via-comfyui/` · Phase 1/6 (pending)
+**Nächster Schritt:** Phase 1 umsetzen — Introspection erweitern (Prompt/Auflösung/Alpha-Maske erkennen). Start via `/implement`.
 
 ---
 
@@ -18,3 +18,5 @@
 - P11 Duale Duplikaterkennung (pHash=exact-only + CLIP): `docs/planning/2026-06-22_p11-duale-duplikaterkennung/`
 - P13 Person-Bulk-Import: `docs/planning/2026-06-22_p13-person-bulk-import/`
 - P15 Lightbox-Angleichung ans Mockup (6 Phasen): `docs/planning/2026-06-28_p15-lightbox-angleichung/`
+
+**Hinweis:** P16 (aktiv) reißt das oben als abgeschlossen gelistete **P9** (in-process generatives Backend) ab — Upscale/Edit/Inpaint laufen danach nur noch über ComfyUI. ADR-008 ersetzt ADR-002.
