@@ -133,6 +133,11 @@ export const galleryFeature = createFeature({
     on(galleryActions.clearSelection, (state: GalleryState) => ({
       ...state, selectedIds: [], selectionMode: false, anchorId: null,
     })),
+    on(galleryActions.removeFaceItem, (state: GalleryState, { id }) => ({
+      ...state,
+      faceItems: state.faceItems.filter((item: FaceGalleryItemDto) => item.id !== id),
+      faceTotal: Math.max(0, state.faceTotal - 1),
+    })),
   ),
   extraSelectors: ({ selectGalleryState }) => ({
     ...adapter.getSelectors(selectGalleryState),

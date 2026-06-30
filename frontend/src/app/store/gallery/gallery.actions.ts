@@ -35,5 +35,6 @@ export const galleryActions = createActionGroup({
     'Select All':                props<{ ids: number[] }>(),
     'Select Range':              props<{ ids: number[] }>(),
     'Clear Selection':           emptyProps(),
+    'Remove Face Item':          props<{ id: number }>(),
   },
 });

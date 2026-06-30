@@ -248,9 +248,9 @@ export class Galerie {
     this.store.dispatch(galleryActions.openFaceLightbox({ assetId }));
   }
 
-  protected onFaceLightboxDeleted(): void {
+  protected onFaceLightboxDeleted(faceId: number): void {
     this.selectedFaceItem.set(null);
-    this.store.dispatch(galleryActions.reset());
+    this.store.dispatch(galleryActions.removeFaceItem({ id: faceId }));
   }
 
   protected onBindFace(event: { faceId: number; assetId: number | null }): void {

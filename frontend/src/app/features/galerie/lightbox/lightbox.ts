@@ -429,8 +429,8 @@ export class Lightbox {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
+          this.store.dispatch(galleryActions.removeFaceItem({ id: face.id }));
           this.reloadTrigger.update((count: number) => count + 1);
-          this.store.dispatch(galleryActions.reset());
         },
         error: (err: unknown) => {
           console.error('[Lightbox] Face deletion failed:', err);
@@ -471,7 +471,6 @@ export class Lightbox {
           this.selectedFace.set(null);
           this.faceMatches.set([]);
           this.reloadTrigger.update((count: number) => count + 1);
-          this.store.dispatch(galleryActions.reset());
         },
         error: (err: unknown) => {
           console.error('[Lightbox] Face assignment failed:', err);
