@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -40,8 +41,9 @@ export class SearchBox {
   private readonly allPersons     = this.store.selectSignal(personsSelectors.selectAll);
   private readonly recentSearches = signal<string[]>(this.loadRecentSearches());
 
-  protected readonly localQuery = signal('');
-  protected readonly isOpen     = signal(false);
+  protected readonly localQuery  = signal('');
+  protected readonly isOpen      = signal(false);
+  protected readonly activeIndex = signal(-1);
 
   private readonly tagSuggestions = toSignal(
     this.queryInput$.pipe(
@@ -97,6 +99,12 @@ export class SearchBox {
     ).subscribe((query: string) => {
       this.store.dispatch(searchActions.setQuery({ q: query }));
     });
+
+    // Reset keyboard selection whenever the list changes
+    effect(() => {
+      this.suggestions();
+      this.activeIndex.set(-1);
+    });
   }
 
   protected onInput(event: Event): void {
@@ -112,6 +120,34 @@ export class SearchBox {
   protected onBlur(): void {
     // delay so suggestion clicks fire before the dropdown disappears
     setTimeout(() => this.isOpen.set(false), 180);
+  }
+
+  protected onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.clearSearch();
+      return;
+    }
+
+    const items = this.suggestions();
+    if (!this.isOpen() || items.length === 0) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.activeIndex.update((index: number) =>
+        index < items.length - 1 ? index + 1 : 0,
+      );
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.activeIndex.update((index: number) =>
+        index > 0 ? index - 1 : items.length - 1,
+      );
+    } else if (event.key === 'Enter') {
+      const active = this.activeIndex();
+      if (active >= 0 && active < items.length) {
+        event.preventDefault();
+        this.selectSuggestion(items[active]);
+      }
+    }
   }
 
   protected clearSearch(): void {

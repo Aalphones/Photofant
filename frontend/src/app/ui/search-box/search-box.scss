@@ -82,7 +82,8 @@
   cursor: pointer;
   text-align: left;
 
-  &:hover { background: var(--surface-hover); color: var(--text); }
+  &:hover,
+  &--active { background: var(--surface-hover); color: var(--text); }
 
   &--person { color: var(--accent); }
 }

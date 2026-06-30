@@ -12,8 +12,11 @@
     (input)="onInput($event)"
     (focus)="onFocus()"
     (blur)="onBlur()"
-    (keydown.escape)="clearSearch()"
+    (keydown)="onKeydown($event)"
     aria-label="Suche"
+    aria-autocomplete="list"
+    aria-controls="pf-search-dropdown"
+    [attr.aria-activedescendant]="activeIndex() >= 0 ? 'pf-suggestion-' + activeIndex() : null"
     autocomplete="off"
   />
 
@@ -31,11 +34,14 @@
 
 <!-- Autocomplete dropdown -->
 @if (isOpen() && suggestions().length > 0) {
-  <div class="search-box__dropdown" role="listbox">
-    @for (item of suggestions(); track item.type + item.text) {
+  <div class="search-box__dropdown" id="pf-search-dropdown" role="listbox">
+    @for (item of suggestions(); track item.type + item.text; let index = $index) {
       <button
         class="search-box__suggestion"
         [class.search-box__suggestion--person]="item.type === 'person'"
+        [class.search-box__suggestion--active]="activeIndex() === index"
+        [id]="'pf-suggestion-' + index"
+        [attr.aria-selected]="activeIndex() === index"
         type="button"
         role="option"
         (click)="selectSuggestion(item)"
