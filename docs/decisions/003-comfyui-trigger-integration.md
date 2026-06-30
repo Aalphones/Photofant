@@ -1,7 +1,7 @@
 # ADR-003 — ComfyUI Trigger-Integration (Fire-and-Forget, koexistierend)
 
-**Status:** Akzeptiert · 2026-06-21 — **erweitert durch [ADR-008](008-generativ-via-comfyui.md)** (2026-06-29)
-**Querverweise:** [ADR-002](002-generatives-backend.md) (in-process Diffusers — **ersetzt durch ADR-008**) · [ADR-008](008-generativ-via-comfyui.md) (ComfyUI übernimmt alle generativen Aufgaben)
+**Status:** Akzeptiert · 2026-06-21 — **erweitert durch [ADR-008](008-generativ-via-comfyui.md)** (2026-06-29) und [ADR-009](009-comfyui-default-auto-import.md) (2026-06-30)
+**Querverweise:** [ADR-002](002-generatives-backend.md) (in-process Diffusers — **ersetzt durch ADR-008**) · [ADR-008](008-generativ-via-comfyui.md) (ComfyUI übernimmt alle generativen Aufgaben) · [ADR-009](009-comfyui-default-auto-import.md) (Default-Workflows importieren automatisch)
 
 ---
 
@@ -42,7 +42,7 @@ wie in diesem ADR beschrieben) **und** die drei festgelegten generativen Aufgabe
 ## Festgehaltene Regeln
 
 - **API-Format-Pflicht:** Nur ComfyUI-API-Format-JSON (nicht das UI-Workflow-JSON) ist patch- und queuebar.
-- **Kein Auto-Zurückschreiben:** Photofant rührt `output/` nicht an. Bewusstes Speichern nach §8.2.
+- **Kein Auto-Zurückschreiben im generischen Pfad:** Photofant rührt `output/` bei `POST /api/comfyui/workflows/{key}/run` nicht an. Bewusstes Speichern nach §8.2. Ausnahme: ADR-009 erlaubt Auto-Import nur fuer die drei Default-Workflows.
 - **ComfyUI besitzt Modelle und VRAM:** Kein torch/diffusers-Stack auf Photofant-Seite für diesen Pfad.
 - **Gating:** Trigger und Workflow-Dropdown sind disabled, solange `enabled = false` oder Verbindung nicht geprüft (`comfyui_ready = false`).
 - **Offline-Garantie:** Nur Verkehr zur konfigurierten (default lokalen) Instanz; kein impliziter externer Call.
@@ -66,4 +66,4 @@ Szenarien sind real; deshalb koexistieren beide Pfade.~~
 
 - ~~Phase 4 des ComfyUI-Plans (`kind = mask`-Slots) hängt an P9 Phase 4 (Masken-Editor). Bis dahin gegated.~~ (P16: Inpaint-Maske via Alpha-Embedding, unabhängig von P9)
 - ~~Template-Dateien liegen in einem Photofant-verwalteten `workflows/`-Ordner; die Binding-Konfiguration lebt in der DB.~~ (P16: Workflows als Dateien in `.photofant/workflows/`, keine DB-Konfiguration mehr)
-- Output-Cleanup liegt bei ComfyUI; Photofant löscht oder verwaltet keine `output/`-Dateien.
+- Output-Cleanup liegt im generischen Pfad bei ComfyUI; Photofant löscht oder verwaltet dort keine `output/`-Dateien. ADR-009 begrenzt Cleanup auf erfolgreich importierte Default-Run-Ergebnisse.

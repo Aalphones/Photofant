@@ -1,5 +1,7 @@
 # Phase 1 - Kontrakt + ADR
 
+**Status:** complete
+
 **Rating:** heikel
 
 ## Kontext
@@ -27,12 +29,15 @@
 
 ## Checkliste
 
-- [ ] `docs/decisions/009-comfyui-default-auto-import.md` anlegen
-- [ ] ADR-003/-008 um Querverweis ergaenzen
-- [ ] `docs/routes.md` geplante neue Default-Run-Route nachziehen
-- [ ] `docs/code-map.md` Generativ/ComfyUI-Zeile um Auto-Import-Pfad ergaenzen
-- [ ] Settings-Keys finalisieren
+- [x] `docs/decisions/009-comfyui-default-auto-import.md` anlegen
+- [x] ADR-003/-008 um Querverweis ergaenzen
+- [x] `docs/routes.md` geplante neue Default-Run-Route nachziehen
+- [x] `docs/code-map.md` Generativ/ComfyUI-Zeile um Auto-Import-Pfad ergaenzen
+- [x] Settings-Keys finalisieren
 
 ## Report-Back
 
-Noch offen.
+ADR-009 ist angelegt. Der Vertrag fuer den Default-Run steht in README und
+`docs/routes.md`; die Output-Auswahl ist auf `Photofant Output`-Marker oder genau
+einen unmarkierten SaveImage-kompatiblen Output festgelegt. Settings-Keys fuer Polling
+und Timeout sind fuer Phase 2 bestaetigt.

@@ -751,6 +751,7 @@ Workflows liegen als `.json` / `.api.json` in `.photofant/workflows/`. Kein Uplo
 | Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
 | Run-Leiste / Editor | `POST` | `/api/comfyui/workflows/{key}/run` | `RunRequest` | `{ jobs: [{ job_id }] }` |
+| Editor / Galerie Default-Aktionen | `POST` | `/api/comfyui/defaults/{task}/run` | `DefaultRunRequest`, `task = upscale\|edit\|inpaint` | `{ jobs: [{ job_id }] }` |
 | Ergebnisse | `GET` | `/api/comfyui/results` | `prompt_id?` | `{ items: ComfyUIResultItem[] }` |
 | Vorschau | `GET` | `/api/comfyui/results/view` | `filename`, `subfolder?` | Bild-Bytes |
 | Import | `POST` | `/api/comfyui/results/import` | `{ asset_id, filename, subfolder? }` | `ComfyUIImportResponse` |
@@ -792,4 +793,30 @@ interface RunRequest {
   resolution?: { megapixels: number; aspect_ratio: string } | null;
   mask?: { asset_id: number; mask_data_url: string } | null;
 }
+
+interface DefaultRunRequest extends RunRequest {
+  target_asset_ids: number[];
+}
+```
+
+**Default-Run-Regeln:** Der Workflow-Key kommt aus `settings.json`
+(`default_upscale`, `default_edit`, `default_inpaint`), nie aus dem Request. Jeder
+expandierte Job muss genau einem `target_asset_ids`-Eintrag entsprechen. Auto-Import
+ist nur fuer diesen Default-Endpunkt erlaubt; `POST /api/comfyui/workflows/{key}/run`
+bleibt Fire-and-forget.
+
+**Default-Output-Auswahl:** Bevorzugt wird ein Save-Node mit
+`_meta.title = "Photofant Output"`. Ohne Marker ist genau ein SaveImage-kompatibler
+Output erlaubt. Mehrere unmarkierte Outputs oder kein Output machen den Default-Run
+invalid.
+
+**Default-Import-Metadaten:** Importierte Versionen bekommen `type = "comfyui"` und
+`params.source = "comfyui_auto_import"` plus `task`, `workflow_key`, `prompt_id`,
+`source_filename`, `source_subfolder`, `width` und `height`.
+
+**Default-Run-Settings:**
+
+```text
+comfyui.result_poll_interval_seconds = 1.0
+comfyui.result_wait_timeout_seconds = 1800
 ```

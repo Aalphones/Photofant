@@ -4,6 +4,7 @@
 **Querverweise:**
 - [ADR-002](002-generatives-backend.md) — **ersetzt** (diffusers in-process → nicht mehr verwendet)
 - [ADR-003](003-comfyui-trigger-integration.md) — **erweitert** (Fire-and-Forget wird jetzt auch für Upscale/Edit/Inpaint genutzt)
+- [ADR-009](009-comfyui-default-auto-import.md) — **praezisiert** (Default-Workflows importieren Ergebnisse automatisch)
 
 ---
 
@@ -60,6 +61,10 @@ Generativ (Upscale / Edit / Inpaint)
 
 Ergebnis-Import (bewusster Schritt)
     → POST /api/comfyui/results/import  (type = "comfyui")
+
+Default-Import (kuratiert, nicht generisch)
+    → POST /api/comfyui/defaults/{task}/run
+    → wartet auf ComfyUI-History und importiert genau ein definiertes Ergebnis
 
 Workflow-Discovery (Dateisystem)
     → .photofant/workflows/*.json  (kein DB-Eintrag)
@@ -125,3 +130,4 @@ Workflows ohne explizit benannte Nodes bieten kein Prompt-Feld an.
 - `CapabilitiesDto` enthält keine `upscale`/`flux_edit`/`inpaint`-Felder mehr; Gating läuft über `comfyui.enabled`.
 - Editor-Panels zeigen nur Workflow-Parameter (Prompt, Auflösung) — keine Modell-/Step-Regler.
 - Inpaint-Maske wird als Alpha-Kanal in ein Upload-PNG eingebettet; Workflows mit `mask: [load_image_id, 1]`-Pfad unterstützen die gemalte Maske.
+- Auto-Import gilt nur fuer die drei Default-Aufgaben aus den Einstellungen. Der freie Workflow-Run bleibt Fire-and-forget.

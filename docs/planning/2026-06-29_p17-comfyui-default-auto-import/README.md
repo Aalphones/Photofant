@@ -1,7 +1,7 @@
 # P17 - ComfyUI Default-Workflows importieren Ergebnisse automatisch
 
-**Status:** Backlog
-**ADR:** 009 (reserviert; ADR-007 ist in P11 reserviert, ADR-008 existiert)
+**Status:** In Umsetzung
+**ADR:** [009](../../decisions/009-comfyui-default-auto-import.md)
 
 ## Ziel
 
@@ -56,9 +56,10 @@ Regeln:
   ueber den konfigurierten `comfyui.output_dir` sicher aufloesbar ist. Remote-only Abruf ueber
   `/view` kann nicht aufraeumen und wird als sauberer Skip geloggt.
 
-## Vorgeschlagene Settings-Keys
+## Settings-Keys
 
-Diese tunablen Werte gehoeren gemaess Projektregel in `settings.json`, nicht als Modul-Konstanten:
+Diese tunablen Werte sind fuer Phase 2 bestaetigt und gehoeren gemaess Projektregel in
+`settings.json`, nicht als Modul-Konstanten:
 
 ```text
 comfyui.result_poll_interval_seconds = 1.0
@@ -69,7 +70,7 @@ comfyui.result_wait_timeout_seconds = 1800
 
 | Phase | Inhalt | Rating | Status |
 |---|---|---:|---|
-| 1 | [Kontrakt + ADR](phase-1-contract-adr.md) | heikel | pending |
+| 1 | [Kontrakt + ADR](phase-1-contract-adr.md) | heikel | complete |
 | 2 | [Backend: Warten, Ergebnis finden, importieren](phase-2-backend-auto-import.md) | heikel | pending |
 | 3 | [Frontend: Default-Flows umhaengen](phase-3-frontend-default-flows.md) | standard | pending |
 
