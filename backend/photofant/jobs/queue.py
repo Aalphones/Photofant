@@ -63,23 +63,32 @@ _PARALLEL_KINDS: frozenset[JobKind] = frozenset({JobKind.DOWNLOAD})
 # main worker (import, export, ComfyUI) never wait behind a slow caption run.
 # Lower number = higher priority; FIFO within the same priority via a sequence counter.
 #
-# ORDERING CONSTRAINT: FACE must run *after* all jobs that open the asset file by the
-# path captured at enqueue time (HEURISTICS, TAGGING, EMBEDDING, CAPTIONING).
+# ORDERING CONSTRAINT: FACE must run *after* HEURISTICS, EMBEDDING, TAGGING and
+# CAPTIONING for the same asset complete.
 # Reason: FACE calls run_incremental_match → materialize_assignment which physically
 # moves the file to the matched person's folder, invalidating any stale asset_path
 # closures still waiting in the queue.
+#
+# With dedicated TAGGING and CAPTIONING workers (separate queues, see below) the
+# priority-queue order alone cannot enforce this — face_pipeline.py handles it
+# instead: FACE is enqueued *only* after both dedicated workers signal completion.
 _BACKGROUND_PRIORITY: dict[JobKind, int] = {
     JobKind.COMFYUI_RUN: 10,
     JobKind.HEURISTICS: 20,
-    JobKind.TAGGING: 30,
     JobKind.EMBEDDING: 30,
-    JobKind.CAPTIONING: 40,
-    JobKind.FACE: 45,   # must be after all path-based readers (see constraint above)
+    JobKind.FACE: 45,
     JobKind.CLUSTERING: 50,
     JobKind.DUPE_SCAN: 50,
 }
 
 _BACKGROUND_KINDS: frozenset[JobKind] = frozenset(_BACKGROUND_PRIORITY)
+
+# TAGGING (WD14) and CAPTIONING (Florence-2/Qwen/JoyCaption) each run on their own
+# dedicated worker so they can overlap on the GPU without sharing an ONNX session.
+# Two different InferenceSessions (different model files) are safe to run concurrently;
+# two threads sharing the *same* session are not (ONNX Runtime is not re-entrant).
+_TAGGING_KINDS: frozenset[JobKind] = frozenset({JobKind.TAGGING})
+_CAPTIONING_KINDS: frozenset[JobKind] = frozenset({JobKind.CAPTIONING})
 
 
 @dataclass
@@ -92,19 +101,34 @@ class JobQueue:
     def __init__(self) -> None:
         self._queue: asyncio.Queue[_Job] = asyncio.Queue()
         self._background_queue: asyncio.PriorityQueue[tuple[int, int, _Job]] = asyncio.PriorityQueue()
+        self._tagging_queue: asyncio.Queue[_Job] = asyncio.Queue()
+        self._captioning_queue: asyncio.Queue[_Job] = asyncio.Queue()
         self._bg_seq: int = 0
         self._jobs: dict[str, JobStatus] = {}
         self._subscribers: list[asyncio.Queue[JobStatus]] = []
         self._worker_task: asyncio.Task[None] | None = None
         self._background_worker_task: asyncio.Task[None] | None = None
+        self._tagging_worker_task: asyncio.Task[None] | None = None
+        self._captioning_worker_task: asyncio.Task[None] | None = None
         self._parallel_tasks: set[asyncio.Task[None]] = set()
 
     def start(self) -> None:
+        from photofant.jobs.face_pipeline import face_pipeline
+
+        face_pipeline.set_loop(asyncio.get_running_loop())
         self._worker_task = asyncio.create_task(self._worker())
         self._background_worker_task = asyncio.create_task(self._background_worker())
+        self._tagging_worker_task = asyncio.create_task(self._tagging_worker())
+        self._captioning_worker_task = asyncio.create_task(self._captioning_worker())
 
     async def stop(self) -> None:
-        for worker_task in (self._worker_task, self._background_worker_task):
+        all_worker_tasks = (
+            self._worker_task,
+            self._background_worker_task,
+            self._tagging_worker_task,
+            self._captioning_worker_task,
+        )
+        for worker_task in all_worker_tasks:
             if worker_task:
                 worker_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -136,6 +160,10 @@ class JobQueue:
             task = asyncio.create_task(self._run_job(status, coro_factory))
             self._parallel_tasks.add(task)
             task.add_done_callback(self._parallel_tasks.discard)
+        elif kind in _TAGGING_KINDS:
+            await self._tagging_queue.put(job)
+        elif kind in _CAPTIONING_KINDS:
+            await self._captioning_queue.put(job)
         elif kind in _BACKGROUND_KINDS:
             self._bg_seq += 1
             await self._background_queue.put((_BACKGROUND_PRIORITY[kind], self._bg_seq, job))
@@ -177,6 +205,22 @@ class JobQueue:
                 await self._run_job(job.status, job.coro_factory)
             finally:
                 self._background_queue.task_done()
+
+    async def _tagging_worker(self) -> None:
+        while True:
+            job = await self._tagging_queue.get()
+            try:
+                await self._run_job(job.status, job.coro_factory)
+            finally:
+                self._tagging_queue.task_done()
+
+    async def _captioning_worker(self) -> None:
+        while True:
+            job = await self._captioning_queue.get()
+            try:
+                await self._run_job(job.status, job.coro_factory)
+            finally:
+                self._captioning_queue.task_done()
 
 
 job_queue = JobQueue()

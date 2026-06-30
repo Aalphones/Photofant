@@ -437,14 +437,27 @@ async def _enqueue_pipeline(items: list[tuple[int, str]]) -> None:
 
     await enqueue_thumbnails(items)
     await _enqueue_heuristics_batch(items)
-    if settings["auto_tag"]:
+    auto_tag: bool = settings["auto_tag"]
+    auto_caption: bool = settings["auto_caption"]
+    auto_face: bool = settings.get("auto_face", True)  # type: ignore[assignment]
+
+    if auto_tag:
         await _enqueue_tagging_batch(items)
-    if settings["auto_caption"]:
+    if auto_caption:
         await _enqueue_caption_batch(items)
     if settings["auto_embed"]:
         await _enqueue_embedding_batch(items)
-    if settings.get("auto_face", True):
-        await _enqueue_face_batch(items)
+
+    if auto_face:
+        prereq_count = int(auto_tag) + int(auto_caption)
+        if prereq_count == 0:
+            # No TAGGING or CAPTIONING configured — FACE has no prerequisites.
+            await _enqueue_face_batch(items)
+        else:
+            from photofant.jobs.face_pipeline import face_pipeline
+
+            for asset_id, asset_path in items:
+                face_pipeline.register(asset_id, asset_path, prereq_count)
 
 
 async def _enqueue_heuristics_batch(items: list[tuple[int, str]]) -> None:

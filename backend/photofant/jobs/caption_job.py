@@ -177,6 +177,21 @@ def _run_caption_with_preset(
     force: bool = False,
 ) -> None:
     """Blocking: resolve the active captioner, run inference, persist the caption."""
+    from photofant.jobs.face_pipeline import face_pipeline
+
+    try:
+        _run_caption_with_preset_inner(asset_id, asset_path, override_preset_id, force)
+    finally:
+        face_pipeline.signal(asset_id)
+
+
+def _run_caption_with_preset_inner(
+    asset_id: int,
+    asset_path: str,
+    override_preset_id: int | None,
+    force: bool,
+) -> None:
+    """Inner implementation; always called through _run_caption_with_preset."""
     from PIL import Image as PILImage
 
     # Find the active captioner (heavy preferred over Florence).
