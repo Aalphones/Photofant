@@ -119,31 +119,6 @@ export class Galerie {
     this.comfyConfig().enabled && this.upscaleWorkflow() != null
   );
 
-  protected readonly facesMap = computed((): Map<number, FaceGalleryItemDto[]> => {
-    if (this.mediaType() !== 'all') {
-      return new Map<number, FaceGalleryItemDto[]>();
-    }
-    const map = new Map<number, FaceGalleryItemDto[]>();
-    for (const face of this.faceItems()) {
-      if (face.asset_id != null) {
-        const existing = map.get(face.asset_id);
-        if (existing !== undefined) {
-          existing.push(face);
-        } else {
-          map.set(face.asset_id, [face]);
-        }
-      }
-    }
-    return map;
-  });
-
-  protected readonly standaloneFaceItems = computed((): FaceGalleryItemDto[] => {
-    if (this.mediaType() !== 'all') {
-      return [];
-    }
-    return this.faceItems().filter((face: FaceGalleryItemDto) => face.asset_id === null);
-  });
-
   protected readonly versionLightboxHasPrev = computed((): boolean => {
     const version = this.selectedVersionItem();
     if (version === null) { return false; }
@@ -165,9 +140,6 @@ export class Galerie {
     }
     if (this.mediaType() === 'edits') {
       return !this.isLoading() && this.versionItems().length === 0;
-    }
-    if (this.mediaType() === 'all') {
-      return !this.isLoading() && this.groups().length === 0 && this.faceItems().length === 0;
     }
     return !this.isLoading() && this.groups().length === 0;
   });

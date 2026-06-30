@@ -70,14 +70,6 @@
         </div>
       }
     } @else {
-      @if (standaloneFaceItems().length > 0) {
-        <pf-face-grid
-          [faceItems]="standaloneFaceItems()"
-          [isLoading]="false"
-          (openFace)="isArmed() ? onBindFace($event) : onOpenFace($event)"
-          (loadMore)="onFaceLoadMore()"
-        />
-      }
       <pf-galerie-grid
         [groups]="groups()"
         [density]="density()"
@@ -85,7 +77,6 @@
         [selectionMode]="selectionMode()"
         [selectedIds]="selectedIds()"
         [isArmed]="isArmed()"
-        [facesMap]="facesMap()"
         (openAsset)="isArmed() ? onBindAsset($event) : onOpenAsset($event)"
         (batchBind)="onBatchBindAsset($event)"
         (selectAll)="onSelectAll($event)"

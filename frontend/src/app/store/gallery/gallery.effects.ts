@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType, ROOT_EFFECTS_INIT } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
-import { catchError, EMPTY, filter, map, merge, mergeMap, of, switchMap, tap } from 'rxjs';
+import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import type { Action } from '@ngrx/store';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job, VersionsPage } from '@photofant/models';
@@ -142,39 +142,6 @@ export class GalleryEffects {
             of(galleryActions.loadPageFailure({ error: error.message }))
           ),
         );
-
-        // In 'all' mode, fetch all faces (linked + standalone) once on first page.
-        // This covers both inline face crops (via facesMap, asset_id != null)
-        // and standalone face images imported without an asset (asset_id == null).
-        if (params.mediaType === 'all') {
-          return assetFetch$.pipe(
-            mergeMap((assetAction: Action) => {
-              if (assetAction.type !== galleryActions.loadPageSuccess.type) {
-                return of(assetAction);
-              }
-              const successAction = assetAction as ReturnType<typeof galleryActions.loadPageSuccess>;
-              // Only fetch faces on the first page load; they cover all assets.
-              if (successAction.page !== 1) {
-                return of(assetAction);
-              }
-              const faceParams: { page: number; page_size: number; person_id?: number } = {
-                page: 1,
-                page_size: 500,
-              };
-              if (params.personId != null) { faceParams.person_id = params.personId; }
-              const faceFetch$ = this.personService.listFacesGallery(faceParams).pipe(
-                map((result: FacesPage) => galleryActions.loadFacesPageSuccess({
-                  items: result.items,
-                  total: result.total,
-                  page: 1,
-                  pageSize: result.page_size,
-                })),
-                catchError(() => EMPTY),
-              );
-              return merge(of(assetAction), faceFetch$);
-            }),
-          );
-        }
 
         return assetFetch$;
       }),
