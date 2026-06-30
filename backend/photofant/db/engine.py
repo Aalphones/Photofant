@@ -26,12 +26,19 @@ def get_db_path() -> Path:
 def create_db_engine() -> Engine:
     db_path = _resolve_db_path()
     url = f"sqlite:///{db_path}"
-    new_engine = create_engine(url, connect_args={"check_same_thread": False}, poolclass=NullPool)
+    new_engine = create_engine(
+        url,
+        connect_args={"check_same_thread": False, "timeout": 30},
+        poolclass=NullPool,
+    )
 
     @event.listens_for(new_engine, "connect")
-    def _load_vec_extension(dbapi_connection: sqlite3.Connection, _record: Any) -> None:
-        # Every pooled connection needs the sqlite-vec extension so vec0 queries
-        # work through the ORM session (ADR-001).
+    def _configure_connection(dbapi_connection: sqlite3.Connection, _record: Any) -> None:
+        # WAL mode: concurrent readers + one writer, no "database is locked" on parallel jobs.
+        # synchronous=NORMAL is safe with WAL and avoids unnecessary fsync overhead.
+        dbapi_connection.execute("PRAGMA journal_mode=WAL")
+        dbapi_connection.execute("PRAGMA synchronous=NORMAL")
+        # Every connection needs the sqlite-vec extension so vec0 queries work (ADR-001).
         from photofant.db.vector_index import load_vec_extension
 
         load_vec_extension(dbapi_connection)
