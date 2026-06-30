@@ -33,14 +33,20 @@
 
 ## Checkliste
 
-- [ ] `comfyui.service.ts`: `runDefaultWorkflow(task, payload)` ergaenzen
-- [ ] Frontend-Modelle fuer Default-Run-Request/Response ergaenzen
-- [ ] Editor-Store/Effects auf Default-Run umstellen
-- [ ] Upscale/Edit/Inpaint-Panels Payloads mit `target_asset_ids` bauen lassen
-- [ ] Galerie-Bulk und Lightbox-Einzelupscale auf Default-Run umstellen
-- [ ] Run-Leiste explizit unveraendert lassen und ggf. Test/Code-Kommentar fuer Trennung setzen
-- [ ] Relevante Docs (`docs/routes.md`, `docs/code-map.md`, `docs/design-reconciliation.md` falls noetig) final synchronisieren
+- [x] `comfyui.service.ts`: `runDefaultWorkflow(task, payload)` ergaenzen
+- [x] Frontend-Modelle fuer Default-Run-Request/Response ergaenzen (`DefaultRunTask`, `DefaultRunRequest`, `comfyui_run` in JOB_KINDS)
+- [x] Editor-Store/Effects auf Default-Run umstellen (`task` statt `workflowKey`, Effect ruft `runDefaultWorkflow`)
+- [x] Upscale/Edit/Inpaint-Panels unveraendert; `dispatchGenerative` in editor.ts baut `target_asset_ids: [targetId]`
+- [x] Galerie-Bulk und Lightbox-Einzelupscale auf Default-Run umstellen
+- [x] Run-Leiste explizit unveraendert — ruft weiterhin `runWorkflow` (kein Auto-Import)
+- [x] Relevante Docs (`docs/code-map.md`) synchronisiert; `docs/routes.md` war bereits aktuell
 
 ## Report-Back
 
-Noch offen.
+Alle Default-Aktionen (Editor Edit/Inpaint/Upscale, Lightbox-Upscale, Galerie-Bulk-Upscale)
+rufen POST /api/comfyui/defaults/{task}/run auf. Die Run-Leiste bleibt Fire-and-forget.
+
+Lightbox-Refresh: pendingUpscaleJobId signal + effect beobachtet allJobs aus dem SSE-Store;
+bei state=done wird reloadTrigger gebumpt, bei state=error upscaleError gesetzt.
+
+Commit: ae8b302

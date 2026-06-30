@@ -72,7 +72,7 @@ comfyui.result_wait_timeout_seconds = 1800
 |---|---|---:|---|
 | 1 | [Kontrakt + ADR](phase-1-contract-adr.md) | heikel | complete |
 | 2 | [Backend: Warten, Ergebnis finden, importieren](phase-2-backend-auto-import.md) | heikel | complete |
-| 3 | [Frontend: Default-Flows umhaengen](phase-3-frontend-default-flows.md) | standard | pending |
+| 3 | [Frontend: Default-Flows umhaengen](phase-3-frontend-default-flows.md) | standard | complete |
 
 ## Finale Akzeptanzkriterien
 
@@ -101,20 +101,40 @@ comfyui.result_wait_timeout_seconds = 1800
 
 ## Summary
 
-Noch offen.
+Upscale, Edit und Inpaint aus Editor/Galerie rufen jetzt den neuen Default-Run-Endpunkt
+auf (POST /api/comfyui/defaults/{task}/run). Das Backend importiert das Ergebnis automatisch
+als neue Version am Quell-Asset. Die generische Run-Leiste bleibt Fire-and-forget.
+Lightbox refresht nach Job-Abschluss automatisch via SSE-Stream.
 
 ## Files touched
 
-Noch offen.
+**Backend (Phase 2):** `backend/photofant/api/comfyui.py`, `backend/photofant/jobs/comfyui_run_job.py`
+
+**Frontend (Phase 3):**
+- `frontend/src/app/models/comfyui-workflow.model.ts` — DefaultRunTask, DefaultRunRequest
+- `frontend/src/app/models/index.ts` — Re-Export neue Typen
+- `frontend/src/app/models/job.model.ts` — comfyui_run in JOB_KINDS
+- `frontend/src/app/services/comfyui.service.ts` — runDefaultWorkflow()
+- `frontend/src/app/store/editor/editor.actions.ts` — task statt workflowKey
+- `frontend/src/app/store/editor/editor.effects.ts` — ruft runDefaultWorkflow
+- `frontend/src/app/features/editor/editor.ts` — task an dispatchGenerative uebergeben
+- `frontend/src/app/features/galerie/lightbox/lightbox.ts` — Default-Run + Refresh-Effect
+- `frontend/src/app/features/galerie/galerie.ts` — Bulk-Upscale auf Default-Run
+
+**Docs:** `docs/code-map.md`, `docs/decisions/009-comfyui-default-auto-import.md` (Phase 1)
 
 ## Commits
 
-Noch offen.
+- Phase 1+2: mehrere Commits aus vorherigen Sessions
+- Phase 3: ae8b302 feat(comfyui): wire default-run endpoint for editor/galerie upscale actions
 
 ## Deviations from plan
 
-Noch offen.
+Keine wesentlichen Abweichungen. Lightbox-Refresh via Signal/Effect-Muster statt
+separater Action — einfacher und ohne zusaetzlichen Store-State.
 
 ## Follow-ups
 
-Noch offen.
+- Galerie-Grid zeigt nach Bulk-Upscale keine neue Version bis zur naechsten Session
+  (kein Auto-Refresh der Grid-Cells nach Job-Done). Kann spaeter per galleryActions.reset()
+  nach Job-Abschluss ergaenzt werden.
