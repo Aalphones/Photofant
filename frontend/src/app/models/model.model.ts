@@ -1,7 +1,7 @@
 import type { CapabilityDescriptor } from './caption-preset.model';
 
 export type ModelStatus = 'active' | 'available' | 'missing' | 'inplace';
-export type ModelTier = 'core' | 'optional' | 'generativ';
+export type ModelTier = 'core' | 'optional';
 
 export interface ModelDto {
   id: string;
@@ -101,22 +101,7 @@ export const MODEL_ENRICHMENT: Record<string, { tier: ModelTier; desc: string; l
     tier: 'core',
     desc: 'Hintergrundentfernung. Benötigt für Freisteller und saubere Gesichtsextraktion.',
     licenseNc: false,
-  },
-  'flux2-klein-9b': {
-    tier: 'generativ',
-    desc: 'Generatives Editing & Inpainting. Komponenten-Modell: Transformer, Text-Encoder und VAE einzeln wählbar.',
-    licenseNc: true,
-  },
-  'seedvr2-3b': {
-    tier: 'generativ',
-    desc: 'Upscaler (3B). Schnell, moderater VRAM-Bedarf. Ideal für fp8/GGUF auf Consumer-GPUs.',
-    licenseNc: false,
-  },
-  'seedvr2-7b': {
-    tier: 'generativ',
-    desc: 'Upscaler (7B). Bessere Qualität, höherer VRAM-Bedarf. fp8-Variante empfohlen.',
-    licenseNc: false,
-  },
+  }
 };
 
 export const ROLE_META: Record<string, { icon: string; label: string }> = {
@@ -139,11 +124,10 @@ export const STATUS_META: Record<ModelStatus, { label: string; dot: boolean }> =
 
 export const TIER_META: Record<ModelTier, { label: string; desc: string }> = {
   core:      { label: 'Core',             desc: 'Immer aktiv · ONNX Runtime · läuft auch auf CPU' },
-  optional:  { label: 'Optional / Heavy', desc: 'Torch · nur bei Bedarf laden · empfohlen für bessere Qualität' },
-  generativ: { label: 'Generativ',        desc: 'Flux2, SeedVR2 · GPU + zweistellige GB VRAM + Disk' },
+  optional:  { label: 'Optional / Heavy', desc: 'Torch · nur bei Bedarf laden · empfohlen für bessere Qualität' }
 };
 
-export const MODEL_TIERS: ModelTier[] = ['core', 'optional', 'generativ'];
+export const MODEL_TIERS: ModelTier[] = ['core', 'optional'];
 
 export const ERROR_CODE_MESSAGES: Record<string, string> = {
   MODEL_NOT_FOUND:    'Modell nicht im Manifest gefunden — ID prüfen.',
