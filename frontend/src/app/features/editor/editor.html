@@ -38,7 +38,7 @@
           title="Original vs. aktuell vergleichen"
         >
           <pf-icon name="compare" [size]="15" />
-          Vergleich
+          <span>Vergleich</span>
         </button>
       }
 
@@ -52,7 +52,7 @@
   <div class="ed-body">
 
     <!-- Left: Tool panel -->
-    <div class="ed-left">
+    <div class="ed-left" [class.mobile-open]="mobileToolOpen()">
       <div class="ed-tool-tabs">
         <div
           class="ed-tool-tab"
@@ -84,73 +84,75 @@
         </div>
       </div>
 
-      @switch (activeTool()) {
-        @case ('basis') {
-          <pf-basis-panel
-            [cropActive]="cropActive()"
-            [cropRect]="cropRect()"
-            [cropRatio]="cropRatio()"
-            [capabilities]="capabilities()"
-            (applyOp)="onApplyOp($event)"
-            (activateCrop)="onActivateCrop()"
-            (deactivateCrop)="onDeactivateCrop()"
-            (cropRatioChange)="onCropRatioChange($event)"
-          />
-        }
-        @case ('edit') {
-          @if (editAvailable()) {
-            <pf-flux2-panel
-              [generating]="generating()"
-              [resolution]="editWorkflow()?.resolution ?? null"
-              (edit)="onEdit($event)"
+      <div class="ed-tool-content">
+        @switch (activeTool()) {
+          @case ('basis') {
+            <pf-basis-panel
+              [cropActive]="cropActive()"
+              [cropRect]="cropRect()"
+              [cropRatio]="cropRatio()"
+              [capabilities]="capabilities()"
+              (applyOp)="onApplyOp($event)"
+              (activateCrop)="onActivateCrop()"
+              (deactivateCrop)="onDeactivateCrop()"
+              (cropRatioChange)="onCropRatioChange($event)"
             />
-          } @else {
-            <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Image Edit' }" />
           }
-        }
-        @case ('inpaint') {
-          @if (inpaintAvailable()) {
-            <pf-inpaint-panel
-              [generating]="generating()"
-              [maskDataUrl]="maskDataUrl()"
-              [resolution]="inpaintWorkflow()?.resolution ?? null"
-              (inpaint)="onInpaint($event)"
-              (clearMask)="onClearMask()"
-            />
-          } @else {
-            <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Inpaint' }" />
-          }
-        }
-        @case ('upscale') {
-          @if (upscaleAvailable()) {
-            <pf-upscale-panel
-              [generating]="generating()"
-              [resolution]="upscaleWorkflow()?.resolution ?? null"
-              (upscale)="onUpscale($event)"
-            />
-          } @else {
-            <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Upscale' }" />
-          }
-        }
-      }
-
-      <ng-template #toolUnavailable let-toolName>
-        <div class="ed-tool-unavailable">
-          <pf-icon name="alertTriangle" [size]="18" />
-          <p class="ed-tool-unavailable__text">
-            @if (!comfyConfig().enabled) {
-              ComfyUI ist nicht aktiviert. {{ toolName }} läuft über ComfyUI —
-              aktiviere und wähle einen Standard-Workflow in den Einstellungen.
+          @case ('edit') {
+            @if (editAvailable()) {
+              <pf-flux2-panel
+                [generating]="generating()"
+                [resolution]="editWorkflow()?.resolution ?? null"
+                (edit)="onEdit($event)"
+              />
             } @else {
-              Für {{ toolName }} ist kein Standard-Workflow gewählt. Lege in den
-              Einstellungen einen Workflow für diese Aufgabe fest.
+              <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Image Edit' }" />
             }
-          </p>
-          <a class="ed-tool-unavailable__link" routerLink="/einstellungen">
-            Zu den Einstellungen
-          </a>
-        </div>
-      </ng-template>
+          }
+          @case ('inpaint') {
+            @if (inpaintAvailable()) {
+              <pf-inpaint-panel
+                [generating]="generating()"
+                [maskDataUrl]="maskDataUrl()"
+                [resolution]="inpaintWorkflow()?.resolution ?? null"
+                (inpaint)="onInpaint($event)"
+                (clearMask)="onClearMask()"
+              />
+            } @else {
+              <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Inpaint' }" />
+            }
+          }
+          @case ('upscale') {
+            @if (upscaleAvailable()) {
+              <pf-upscale-panel
+                [generating]="generating()"
+                [resolution]="upscaleWorkflow()?.resolution ?? null"
+                (upscale)="onUpscale($event)"
+              />
+            } @else {
+              <ng-container *ngTemplateOutlet="toolUnavailable; context: { $implicit: 'Upscale' }" />
+            }
+          }
+        }
+
+        <ng-template #toolUnavailable let-toolName>
+          <div class="ed-tool-unavailable">
+            <pf-icon name="alertTriangle" [size]="18" />
+            <p class="ed-tool-unavailable__text">
+              @if (!comfyConfig().enabled) {
+                ComfyUI ist nicht aktiviert. {{ toolName }} läuft über ComfyUI —
+                aktiviere und wähle einen Standard-Workflow in den Einstellungen.
+              } @else {
+                Für {{ toolName }} ist kein Standard-Workflow gewählt. Lege in den
+                Einstellungen einen Workflow für diese Aufgabe fest.
+              }
+            </p>
+            <a class="ed-tool-unavailable__link" routerLink="/einstellungen">
+              Zu den Einstellungen
+            </a>
+          </div>
+        </ng-template>
+      </div>
     </div>
 
     <!-- Center: Canvas -->
@@ -204,16 +206,33 @@
       </div>
     }
 
-    <!-- Right: History -->
-    @if (histOpen()) {
-      <pf-step-bar
-        [steps]="steps()"
-        [currentSeq]="currentSeq()"
-        [originalPreviewUrl]="originalPreviewUrl()"
-        [applying]="applying()"
-        (rollback)="onRollback($event)"
-      />
-    }
+    <!-- Right: History (immer im DOM für mobile Slide-Animation) -->
+    <pf-step-bar
+      [class.ed-step-bar--open]="histOpen()"
+      [steps]="steps()"
+      [currentSeq]="currentSeq()"
+      [originalPreviewUrl]="originalPreviewUrl()"
+      [applying]="applying()"
+      (rollback)="onRollback($event)"
+    />
+
+    <!-- Mobile bottom bar (nur ≤ 860px) -->
+    <div class="ed-mobile-bar">
+      <button class="mb-tool" [class.on]="mobileToolOpen()" (click)="toggleMobileTool()">
+        <pf-icon name="settings" [size]="20" />
+        <span>Werkzeuge</span>
+      </button>
+      <div class="mb-sep"></div>
+      <button class="mb-tool" [class.on]="histOpen()" (click)="toggleHist()">
+        <pf-icon name="layers" [size]="20" />
+        <span>Verlauf</span>
+      </button>
+      <div class="mb-sep"></div>
+      <button class="mb-tool" (click)="showSaveModal.set(true)" [disabled]="!hasUnsavedSteps()">
+        <pf-icon name="download" [size]="20" />
+        <span>Speichern</span>
+      </button>
+    </div>
 
   </div>
 

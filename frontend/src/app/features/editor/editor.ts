@@ -82,6 +82,7 @@ export class Editor {
   );
 
   protected readonly histOpen = signal(true);
+  protected readonly mobileToolOpen = signal(false);
   protected readonly showSaveModal = signal(false);
   protected readonly activeTool = signal<EditorTool>('basis');
   protected readonly compareMode = signal(false);
@@ -156,7 +157,15 @@ export class Editor {
   }
 
   protected toggleHist(): void {
-    this.histOpen.update((open: boolean) => !open);
+    const opening = !this.histOpen();
+    this.histOpen.set(opening);
+    if (opening) { this.mobileToolOpen.set(false); }
+  }
+
+  protected toggleMobileTool(): void {
+    const opening = !this.mobileToolOpen();
+    this.mobileToolOpen.set(opening);
+    if (opening) { this.histOpen.set(false); }
   }
 
   protected toggleCompare(): void {
