@@ -1,7 +1,7 @@
 export const SEARCH_MODES = ['tags', 'caption', 'semantic'] as const;
 export type SearchMode = (typeof SEARCH_MODES)[number];
 
-export const MEDIA_TYPES = ['all', 'photos', 'faces', 'edits'] as const;
+export const MEDIA_TYPES = ['photos', 'faces', 'edits'] as const;
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
 export interface TagListItem {

@@ -49,7 +49,6 @@ export class SubToolbar {
   protected readonly mediaType = this.store.selectSignal(filtersSelectors.mediaType);
 
   protected readonly MEDIA_TYPE_LABELS: Record<MediaType, string> = {
-    all:    'Alles',
     photos: 'Fotos',
     faces:  'Gesichter',
     edits:  'Edits',
