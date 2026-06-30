@@ -1,15 +1,14 @@
-import { Injectable, inject } from '@angular/core';
-import { Actions, createEffect, ofType, ROOT_EFFECTS_INIT } from '@ngrx/effects';
-import { Store } from '@ngrx/store';
-import { concatLatestFrom } from '@ngrx/operators';
-import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
-import type { Action } from '@ngrx/store';
 import type { HttpErrorResponse } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
+import { Actions, createEffect, ofType, ROOT_EFFECTS_INIT } from '@ngrx/effects';
+import { concatLatestFrom } from '@ngrx/operators';
+import { Store } from '@ngrx/store';
 import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job, VersionsPage } from '@photofant/models';
 import { AssetService, PersonService, SettingsService, VersionService } from '@photofant/services';
+import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { filtersActions } from '../filters/filters.actions';
-import { searchActions } from '../search/search.actions';
 import { jobsActions } from '../jobs/jobs.actions';
+import { searchActions } from '../search/search.actions';
 import { galleryActions } from './gallery.actions';
 import { gallerySelectors } from './gallery.selectors';
 
