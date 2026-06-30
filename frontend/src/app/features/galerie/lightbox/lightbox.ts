@@ -11,7 +11,6 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import type { AssetDto, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, PersonService, TagService } from '@photofant/services';
@@ -21,6 +20,7 @@ import type { RerunPayload } from '@photofant/ui';
 import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, jobsSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare';
+import { Editor } from '../../editor/editor';
 
 interface GenMetaEntry { key: string; value: string }
 
@@ -63,13 +63,12 @@ function formatDate(dateStr: string | null): string {
 @Component({
   selector: 'pf-lightbox',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ZoomStage, Icon, RerunDialog, DupeCompare, ComfyuiImportDialog],
+  imports: [ZoomStage, Icon, RerunDialog, DupeCompare, ComfyuiImportDialog, Editor],
   templateUrl: './lightbox.html',
   styleUrl: './lightbox.scss',
 })
 export class Lightbox {
   private readonly store              = inject(Store);
-  private readonly router             = inject(Router);
   private readonly assetService       = inject(AssetService);
   private readonly tagService         = inject(TagService);
   private readonly classifyService    = inject(ClassifyService);
@@ -81,6 +80,7 @@ export class Lightbox {
 
   protected readonly showRerunDialog = signal(false);
   protected readonly showComfyuiImportDialog = signal(false);
+  protected readonly showEditorModal = signal(false);
 
   protected readonly isUpscaling  = signal(false);
   protected readonly upscaleError = signal<string | null>(null);
@@ -360,10 +360,12 @@ export class Lightbox {
   // ── Similar assets overlay ────────────────────────────────────────────────
 
   protected openEditor(): void {
-    const asset: AssetDto | null = this.asset();
-    if (asset == null) { return; }
-    this.store.dispatch(galleryActions.closeLightbox());
-    this.router.navigate(['/editor/instance', asset.id]);
+    if (this.asset() == null) { return; }
+    this.showEditorModal.set(true);
+  }
+
+  protected onEditorClosed(): void {
+    this.showEditorModal.set(false);
   }
 
   protected similarityPercent(distance: number): number {

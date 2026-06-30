@@ -454,3 +454,12 @@
     (imported)="onComfyuiImported($event)"
   />
 }
+
+@if (showEditorModal() && asset()) {
+  <pf-editor
+    [modal]="true"
+    [modalKind]="'instance'"
+    [modalId]="asset()!.id"
+    (closed)="onEditorClosed()"
+  />
+}

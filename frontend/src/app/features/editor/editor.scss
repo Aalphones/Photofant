@@ -6,6 +6,14 @@
   background: var(--bg);
 }
 
+:host.modal-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  width: 100%;
+  height: 100%;
+}
+
 .ed-page {
   display: flex;
   flex-direction: column;

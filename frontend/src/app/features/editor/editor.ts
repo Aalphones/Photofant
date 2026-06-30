@@ -5,6 +5,9 @@ import {
   DestroyRef,
   effect,
   inject,
+  input,
+  OnInit,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
@@ -37,13 +40,20 @@ type EditorTool = 'basis' | 'edit' | 'inpaint' | 'upscale';
   imports: [Icon, RouterLink, NgTemplateOutlet, ZoomStage, BasisPanel, Flux2Panel, InpaintPanel, UpscalePanel, MaskOverlay, CropOverlay, StepBar, SaveModal],
   templateUrl: './editor.html',
   styleUrl: './editor.scss',
+  host: { '[class.modal-mode]': 'modal()' },
 })
-export class Editor {
+export class Editor implements OnInit {
   private readonly store = inject(Store);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+
+  // Modal-Modus: vom Parent (z.B. Lightbox) eingebettet statt als Route geöffnet
+  readonly modal = input(false);
+  readonly modalKind = input<EditorTargetKind | null>(null);
+  readonly modalId = input<number | null>(null);
+  readonly closed = output<void>();
 
   protected readonly sessionKey = this.store.selectSignal(editorSelectors.selectSessionKey);
   protected readonly steps = this.store.selectSignal(editorSelectors.selectSteps);
@@ -106,16 +116,26 @@ export class Editor {
 
   protected readonly hasSteps = computed((): boolean => this.steps().length > 0);
 
-  constructor() {
-    const params = this.route.snapshot.params;
-    const kind = params['kind'] as EditorTargetKind;
-    const id = Number(params['id']);
-
-    this.store.dispatch(editorActions.init({ kind, id }));
+  ngOnInit(): void {
+    if (this.modal()) {
+      const kind = this.modalKind();
+      const id = this.modalId();
+      if (kind != null && id != null) {
+        this.store.dispatch(editorActions.init({ kind, id }));
+      }
+    } else {
+      const params = this.route.snapshot.params;
+      this.store.dispatch(editorActions.init({
+        kind: params['kind'] as EditorTargetKind,
+        id: Number(params['id']),
+      }));
+    }
     this.store.dispatch(modelsActions.loadCapabilities());
     this.store.dispatch(comfyuiActions.loadConfig());
     this.store.dispatch(comfyuiActions.loadWorkflows());
+  }
 
+  constructor() {
     const keyHandler = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') { return; }
@@ -155,7 +175,11 @@ export class Editor {
   }
 
   protected goBack(): void {
-    this.router.navigate(['/galerie']);
+    if (this.modal()) {
+      this.closed.emit();
+    } else {
+      this.router.navigate(['/galerie']);
+    }
   }
 
   protected toggleHist(): void {
