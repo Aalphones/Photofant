@@ -7,7 +7,7 @@
   <input
     class="search-box__input"
     type="search"
-    placeholder="Tags & Personen suchen…"
+    placeholder="Tags, Personen & Bilder suchen…"
     [value]="localQuery()"
     (input)="onInput($event)"
     (focus)="onFocus()"
@@ -39,6 +39,7 @@
       <button
         class="search-box__suggestion"
         [class.search-box__suggestion--person]="item.type === 'person'"
+        [class.search-box__suggestion--semantic]="item.type === 'semantic'"
         [class.search-box__suggestion--active]="activeIndex() === index"
         [id]="'pf-suggestion-' + index"
         [attr.aria-selected]="activeIndex() === index"
@@ -46,9 +47,14 @@
         role="option"
         (click)="selectSuggestion(item)"
       >
-        <pf-icon [name]="item.type === 'person' ? 'user' : 'tag'" [size]="12" />
+        <pf-icon
+          [name]="item.type === 'person' ? 'user' : item.type === 'semantic' ? 'sparkle' : 'tag'"
+          [size]="12"
+        />
         <span class="search-box__suggestion-text">{{ item.text }}</span>
-        @if (item.count != null) {
+        @if (item.badge) {
+          <span class="search-box__suggestion-badge">{{ item.badge }}</span>
+        } @else if (item.count != null) {
           <span class="search-box__suggestion-count">{{ item.count }}</span>
         }
       </button>

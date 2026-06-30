@@ -16,8 +16,9 @@ export const searchFeature = createFeature({
   name: 'search',
   reducer: createReducer(
     initialState,
-    on(searchActions.setQuery, (state: SearchState, { q }) => ({ ...state, q })),
-    on(searchActions.setMode,  (state: SearchState, { mode }) => ({ ...state, mode, q: '' })),
-    on(searchActions.clear,    (state: SearchState) => ({ ...state, q: '' })),
+    on(searchActions.setQuery,          (state: SearchState, { q })    => ({ ...state, q })),
+    on(searchActions.setMode,           (state: SearchState, { mode }) => ({ ...state, mode, q: '' })),
+    on(searchActions.setSemanticQuery,  (state: SearchState, { q })    => ({ ...state, mode: 'semantic' as const, q })),
+    on(searchActions.clear,             (state: SearchState)            => ({ ...state, q: '' })),
   ),
 });

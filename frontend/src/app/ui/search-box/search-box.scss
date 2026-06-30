@@ -85,7 +85,8 @@
   &:hover,
   &--active { background: var(--surface-hover); color: var(--text); }
 
-  &--person { color: var(--accent); }
+  &--person   { color: var(--accent); }
+  &--semantic { color: oklch(0.65 0.20 300); }
 }
 
 .search-box__suggestion-text {
@@ -100,6 +101,18 @@
   font-family: var(--mono);
   font-size: 10.5px;
   color: var(--text-3);
+  flex: none;
+}
+
+.search-box__suggestion-badge {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: oklch(0.65 0.20 300);
+  background: oklch(0.65 0.20 300 / .12);
+  border-radius: 3px;
+  padding: 1px 5px;
   flex: none;
 }
 

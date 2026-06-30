@@ -16,10 +16,16 @@ import { filtersActions, personsActions, personsSelectors, searchActions } from 
 import { Icon } from '../icon/icon';
 
 interface AutocompleteItem {
-  type: 'tag' | 'person';
+  type: 'tag' | 'person' | 'semantic';
   text: string;
   id?: number;
   count?: number;
+  badge?: string;
+}
+
+interface RecentSearch {
+  text: string;
+  type: 'tag' | 'semantic';
 }
 
 const RECENT_SEARCHES_KEY = 'pf_recent_searches';
@@ -37,9 +43,9 @@ export class SearchBox {
   private readonly tagService = inject(TagService);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly queryInput$    = new Subject<string>();
-  private readonly allPersons     = this.store.selectSignal(personsSelectors.selectAll);
-  private readonly recentSearches = signal<string[]>(this.loadRecentSearches());
+  private readonly queryInput$ = new Subject<string>();
+  private readonly allPersons  = this.store.selectSignal(personsSelectors.selectAll);
+  private readonly recentSearches = signal<RecentSearch[]>(this.loadRecentSearches());
 
   protected readonly localQuery  = signal('');
   protected readonly isOpen      = signal(false);
@@ -72,21 +78,26 @@ export class SearchBox {
   protected readonly suggestions = computed<AutocompleteItem[]>(() => {
     const query = this.localQuery().trim();
     if (!query) {
-      return this.recentSearches().map((text: string) => ({ type: 'tag' as const, text }));
+      return this.recentSearches().map((recent: RecentSearch): AutocompleteItem => ({
+        type: recent.type,
+        text: recent.text,
+        ...(recent.type === 'semantic' ? { badge: 'CLIP' } : {}),
+      }));
     }
-    const persons = this.personSuggestions().map((person: PersonDto) => ({
-      type: 'person' as const,
+    const persons = this.personSuggestions().map((person: PersonDto): AutocompleteItem => ({
+      type: 'person',
       text: person.name!,
       id: person.id,
       count: person.count,
     }));
-    const tags = this.tagSuggestions().map((tag: TagListItem) => ({
-      type: 'tag' as const,
+    const tags = this.tagSuggestions().map((tag: TagListItem): AutocompleteItem => ({
+      type: 'tag',
       text: tag.name,
       id: tag.id,
       count: tag.count,
     }));
-    return [...persons, ...tags];
+    const semantic: AutocompleteItem = { type: 'semantic', text: query, badge: 'CLIP' };
+    return [...persons, ...tags, semantic];
   });
 
   constructor() {
@@ -143,9 +154,10 @@ export class SearchBox {
       );
     } else if (event.key === 'Enter') {
       const active = this.activeIndex();
-      if (active >= 0 && active < items.length) {
+      const item = items[active];
+      if (active >= 0 && item !== undefined) {
         event.preventDefault();
-        this.selectSuggestion(items[active]);
+        this.selectSuggestion(item);
       }
     }
   }
@@ -161,28 +173,47 @@ export class SearchBox {
       this.store.dispatch(filtersActions.setPersonId({ personId: item.id! }));
       this.localQuery.set('');
       this.queryInput$.next('');
+    } else if (item.type === 'semantic') {
+      this.store.dispatch(searchActions.setSemanticQuery({ q: item.text }));
+      this.saveRecentSearch(item.text, 'semantic');
     } else {
       this.localQuery.set(item.text);
       this.queryInput$.next(item.text);
       this.store.dispatch(searchActions.setQuery({ q: item.text }));
-      this.saveRecentSearch(item.text);
+      this.saveRecentSearch(item.text, 'tag');
     }
     this.isOpen.set(false);
   }
 
-  private loadRecentSearches(): string[] {
+  private loadRecentSearches(): RecentSearch[] {
     try {
       const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
-      return raw ? (JSON.parse(raw) as string[]) : [];
+      if (!raw) return [];
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      // migrate old format (plain strings) to RecentSearch objects
+      return parsed.map((entry: unknown): RecentSearch => {
+        if (typeof entry === 'string') return { text: entry, type: 'tag' };
+        if (typeof entry === 'object' && entry !== null && 'text' in entry) {
+          const typed = entry as { text: unknown; type?: unknown };
+          const text = typeof typed.text === 'string' ? typed.text : '';
+          const type = typed.type === 'semantic' ? 'semantic' : 'tag';
+          return { text, type };
+        }
+        return { text: String(entry), type: 'tag' };
+      }).filter((entry: RecentSearch) => entry.text.trim() !== '');
     } catch {
       return [];
     }
   }
 
-  private saveRecentSearch(text: string): void {
+  private saveRecentSearch(text: string, type: 'tag' | 'semantic'): void {
     const trimmed = text.trim();
     if (!trimmed) return;
-    const next = [trimmed, ...this.recentSearches().filter((s: string) => s !== trimmed)].slice(0, MAX_RECENT);
+    const filtered = this.recentSearches().filter(
+      (entry: RecentSearch) => !(entry.text === trimmed && entry.type === type),
+    );
+    const next = [{ text: trimmed, type }, ...filtered].slice(0, MAX_RECENT);
     this.recentSearches.set(next);
     try {
       localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
