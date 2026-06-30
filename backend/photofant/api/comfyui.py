@@ -1,4 +1,4 @@
-"""
+﻿"""
 GET  /api/settings/comfyui              -- read ComfyUI settings block
 PUT  /api/settings/comfyui              -- replace ComfyUI settings block
 POST /api/comfyui/test-connection       -- probe ComfyUI /system_stats
@@ -12,29 +12,22 @@ POST /api/comfyui/results/import        -- import a ComfyUI output as Edit-Versi
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-import uuid as _uuid
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import Response as _FastAPIResponse
-from PIL import Image as _Image
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from photofant.comfyui.client import ComfyUIClient, ComfyUIError
 from photofant.comfyui.discovery import load_workflow, load_workflow_template, scan_workflows
+from photofant.comfyui.importer import ComfyUIOutputRef, import_comfyui_output, select_default_output_node_id
 from photofant.comfyui.introspect import introspect_template
-from photofant.config import get_data_root, get_data_root_base
-from photofant.db.cache import get_cache_db_path, init_cache_db, store_thumbnail
-from photofant.db.models import AssetInstance, Person, Version
+from photofant.config import get_data_root_base
 from photofant.db.session import get_session
-from photofant.media.person_folders import ensure_person_folder
-from photofant.media.thumbnails import generate_thumbnail
 from photofant.settings import load_settings, save_settings
 
 log = logging.getLogger(__name__)
@@ -152,6 +145,10 @@ class RunRequest(BaseModel):
     negative_prompt: str | None = None
     resolution: ResolutionRunRequest | None = None
     mask: MaskRunRequest | None = None
+
+
+class DefaultRunRequest(RunRequest):
+    target_asset_ids: list[int]
 
 
 class RunJobDto(BaseModel):
@@ -479,6 +476,177 @@ async def run_workflow(key: str, body: RunRequest) -> RunResponse:
     return RunResponse(jobs=[RunJobDto(job_id=status.id) for status in statuses])
 
 
+@comfyui_router.post("/defaults/{task}/run", response_model=RunResponse)
+async def run_default_workflow(task: str, body: DefaultRunRequest) -> RunResponse:
+    from photofant.jobs.comfyui_run_job import enqueue_comfyui_runs, expand_batch
+
+    default_fields = {
+        "upscale": "default_upscale",
+        "edit": "default_edit",
+        "inpaint": "default_inpaint",
+    }
+    default_field = default_fields.get(task)
+    if default_field is None:
+        raise HTTPException(status_code=404, detail=f"Default-Task '{task}' nicht bekannt")
+
+    client, comfyui_cfg = _get_comfyui_client()
+    _check_connection(client)
+
+    key = str(comfyui_cfg.get(default_field, "")).strip()
+    if not key:
+        raise HTTPException(status_code=422, detail=f"Kein Default-Workflow fuer '{task}' gesetzt")
+
+    workflows_dir = _workflows_dir()
+    workflow_item = load_workflow(workflows_dir, key)
+    if workflow_item is None:
+        raise HTTPException(status_code=404, detail=f"Default-Workflow '{key}' nicht gefunden")
+
+    if not workflow_item.is_valid:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Workflow '{key}' ist nicht valide: {'; '.join(workflow_item.errors)}",
+        )
+
+    template = load_workflow_template(workflows_dir, key)
+    if template is None:
+        raise HTTPException(status_code=500, detail=f"Template fuer '{key}' konnte nicht geladen werden")
+
+    try:
+        output_node_id = select_default_output_node_id(template)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    from photofant.comfyui.introspect import load_and_introspect
+
+    workflow_path = None
+    for suffix in [f"{key}.api.json", f"{key}.json"]:
+        candidate = workflows_dir / suffix
+        if candidate.is_file():
+            workflow_path = candidate
+            break
+    if workflow_path is None:
+        raise HTTPException(status_code=404, detail=f"Workflow-Datei fuer '{key}' nicht gefunden")
+
+    introspection = load_and_introspect(workflow_path)
+    input_bindings: list[dict[str, Any]] = [
+        {
+            "key": suggestion.key,
+            "label": suggestion.label,
+            "node_title": suggestion.node_title,
+            "node_id": suggestion.node_id,
+            "field": suggestion.field,
+            "kind": suggestion.kind,
+            "required": suggestion.required,
+            "lockable": suggestion.lockable,
+        }
+        for suggestion in introspection.input_suggestions
+    ]
+
+    required_keys = {binding["key"] for binding in input_bindings if binding.get("required", True)}
+    all_provided = set(body.inputs.keys()) | set(body.face_inputs.keys())
+    if body.mask and introspection.mask:
+        mask_suggestion = next(
+            (
+                suggestion
+                for suggestion in introspection.input_suggestions
+                if suggestion.node_id == introspection.mask.image_node_id
+            ),
+            None,
+        )
+        if mask_suggestion:
+            all_provided.add(mask_suggestion.key)
+    missing = required_keys - all_provided
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Pflicht-Inputs fehlen: {', '.join(sorted(missing))}")
+
+    resolved_inputs = dict(body.inputs)
+    mask_input_key: str | None = None
+    mask_data_url: str | None = None
+
+    if body.mask and introspection.mask and introspection.mask.mode == "alpha":
+        mask_suggestion = next(
+            (
+                suggestion
+                for suggestion in introspection.input_suggestions
+                if suggestion.node_id == introspection.mask.image_node_id
+            ),
+            None,
+        )
+        if mask_suggestion:
+            mask_input_key = mask_suggestion.key
+            mask_data_url = body.mask.mask_data_url
+            resolved_inputs[mask_input_key] = body.mask.asset_id
+
+    param_bindings: list[dict[str, Any]] = []
+    param_values: dict[str, Any] = {}
+
+    if body.prompt and introspection.prompt:
+        param_bindings.append({
+            "key": "_prompt",
+            "node_title": "",
+            "node_id": introspection.prompt.node_id,
+            "field": introspection.prompt.field,
+        })
+        param_values["_prompt"] = body.prompt
+
+    if body.negative_prompt and introspection.negative_prompt:
+        param_bindings.append({
+            "key": "_negative_prompt",
+            "node_title": "",
+            "node_id": introspection.negative_prompt.node_id,
+            "field": introspection.negative_prompt.field,
+        })
+        param_values["_negative_prompt"] = body.negative_prompt
+
+    if body.resolution and introspection.resolution:
+        resolution = introspection.resolution
+        param_bindings.append({
+            "key": "_resolution_mp",
+            "node_title": "",
+            "node_id": resolution.node_id,
+            "field": resolution.megapixels_field,
+        })
+        param_values["_resolution_mp"] = body.resolution.megapixels
+        param_bindings.append({
+            "key": "_resolution_ar",
+            "node_title": "",
+            "node_id": resolution.node_id,
+            "field": resolution.aspect_field,
+        })
+        param_values["_resolution_ar"] = body.resolution.aspect_ratio
+
+    try:
+        expanded = expand_batch(resolved_inputs, input_bindings, body.face_inputs)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if len(body.target_asset_ids) != len(expanded):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "target_asset_ids muss genau zur Anzahl expandierter Jobs passen "
+                f"(erwartet {len(expanded)}, erhalten {len(body.target_asset_ids)})"
+            ),
+        )
+
+    statuses = await enqueue_comfyui_runs(
+        workflow_template=template,
+        input_bindings=input_bindings,
+        param_bindings=param_bindings,
+        expanded_inputs=expanded,
+        params=param_values,
+        workflow_name=workflow_item.name,
+        mask_input_key=mask_input_key,
+        mask_data_url=mask_data_url,
+        auto_import_targets=body.target_asset_ids,
+        auto_import_task=task,
+        auto_import_workflow_key=key,
+        auto_import_output_node_id=output_node_id,
+    )
+
+    return RunResponse(jobs=[RunJobDto(job_id=status.id) for status in statuses])
+
+
 # ── Results ───────────────────────────────────────────────────────────────────
 
 _IMAGE_EXTS = frozenset({".png", ".jpg", ".jpeg", ".webp"})
@@ -613,104 +781,32 @@ class ComfyUIImportResponse(BaseModel):
 @comfyui_router.post("/results/import", response_model=ComfyUIImportResponse, status_code=201)
 async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> ComfyUIImportResponse:
     """Fetch a ComfyUI output image and import it as an Edit-Version (type=comfyui)."""
-    instance = db.query(AssetInstance).filter(
-        AssetInstance.asset_id == body.asset_id,
-        AssetInstance.deleted_at.is_(None),
-    ).first()
-    if instance is None:
-        raise HTTPException(status_code=404, detail="Asset nicht gefunden")
-
-    person = db.get(Person, instance.person_id)
-    if person is None:
-        raise HTTPException(status_code=500, detail="Person nicht gefunden")
-
     cfg = load_settings()
     comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
     base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
     timeout = float(comfyui_cfg.get("timeout", 10))
     output_dir = str(comfyui_cfg.get("output_dir", ""))
 
-    import contextlib
-
-    image_bytes: bytes | None = None
-
     import_client = ComfyUIClient(base_url=base_url, timeout=timeout)
-    with contextlib.suppress(ComfyUIError):
-        image_bytes = import_client.view_image(body.filename, body.subfolder)
-
-    if image_bytes is None:
-        for candidate in [
-            Path(output_dir) / body.subfolder / body.filename if body.subfolder else None,
-            Path(output_dir) / body.filename if output_dir else None,
-        ]:
-            if candidate is not None and candidate.is_file():
-                image_bytes = candidate.read_bytes()
-                break
-
-    if image_bytes is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Datei '{body.filename}' nicht abrufbar — weder via ComfyUI noch in output_dir",
-        )
-
-    data_root_path = Path(get_data_root())
-    person_dir = ensure_person_folder(data_root_path, person)
-    edits_dir = person_dir / "edits"
-    edits_dir.mkdir(parents=True, exist_ok=True)
-
-    ext = Path(body.filename).suffix.lower() or ".png"
-    dest_name = f"comfyui_{_uuid.uuid4().hex[:12]}{ext}"
-    dest = edits_dir / dest_name
-    dest.write_bytes(image_bytes)
-
     try:
-        with _Image.open(dest) as img:
-            width, height = img.size
-    except Exception:
-        width, height = None, None
+        imported = import_comfyui_output(
+            db,
+            import_client,
+            asset_id=body.asset_id,
+            output=ComfyUIOutputRef(filename=body.filename, subfolder=body.subfolder),
+            output_dir=output_dir,
+            params={"source": "comfyui"},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    siblings = db.query(Version).filter(
-        Version.instance_id == instance.id,
-        Version.is_current.is_(True),
-    )
-    for sibling in siblings.all():
-        sibling.is_current = False
-
-    version = Version(
-        instance_id=instance.id,
-        face_id=None,
-        type="comfyui",
-        parent_id=None,
-        path=str(dest.resolve()),
-        is_current=True,
-        params={
-            "width": width,
-            "height": height,
-            "source": "comfyui",
-            "source_filename": body.filename,
-            "source_subfolder": body.subfolder,
-        },
-        created_at=datetime.now(UTC),
-    )
-    db.add(version)
-    db.commit()
-    db.refresh(version)
-
-    cache_path = get_cache_db_path()
-    init_cache_db(cache_path)
-    for thumb_size in (256, 512):
-        try:
-            thumb = await asyncio.to_thread(generate_thumbnail, dest, thumb_size)
-            await asyncio.to_thread(store_thumbnail, cache_path, version.id, thumb_size, thumb, "edit")
-        except Exception:
-            log.warning("Thumbnail-Generierung fehlgeschlagen für %s (size %d)", dest, thumb_size)
-
-    log.info("comfyui import: asset %d → version %d (%s)", body.asset_id, version.id, body.filename)
     return ComfyUIImportResponse(
-        version_id=version.id,
-        type=version.type or "comfyui",
-        path=version.path,
-        is_current=version.is_current,
-        params=version.params,
-        thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+        version_id=imported.version_id,
+        type=imported.version_type,
+        path=imported.path,
+        is_current=imported.is_current,
+        params=imported.params,
+        thumbnail_url=imported.thumbnail_url,
     )

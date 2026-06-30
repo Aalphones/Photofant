@@ -125,22 +125,22 @@ class TestPatchTemplate:
 class TestExpandBatch:
     def test_single_scalar_input_gives_one_job(self) -> None:
         expanded = expand_batch({"source": 42}, INPUT_BINDINGS)
-        assert expanded == [{"source": 42}]
+        assert expanded == [({"source": 42}, {})]
 
     def test_list_input_gives_n_jobs(self) -> None:
         expanded = expand_batch({"source": [10, 20, 30]}, INPUT_BINDINGS)
         assert len(expanded) == 3
-        assert [job["source"] for job in expanded] == [10, 20, 30]
+        assert [asset_inputs["source"] for asset_inputs, _face_inputs in expanded] == [10, 20, 30]
 
     def test_constant_unchanged_across_batch(self) -> None:
         expanded = expand_batch({"reference": 99, "source": [1, 2, 3]}, MULTI_INPUT_BINDINGS)
         assert len(expanded) == 3
-        for job in expanded:
-            assert job["reference"] == 99
+        for asset_inputs, _face_inputs in expanded:
+            assert asset_inputs["reference"] == 99
 
     def test_batch_axis_varies_per_job(self) -> None:
         expanded = expand_batch({"reference": 99, "source": [1, 2, 3]}, MULTI_INPUT_BINDINGS)
-        assert [job["source"] for job in expanded] == [1, 2, 3]
+        assert [asset_inputs["source"] for asset_inputs, _face_inputs in expanded] == [1, 2, 3]
 
     def test_mask_input_not_batchable(self) -> None:
         with pytest.raises(ValueError, match="kind=mask"):
@@ -189,6 +189,7 @@ class TestComfyUIRunWorker:
                 input_bindings=INPUT_BINDINGS,
                 param_bindings=[],
                 job_inputs={"source": 42},
+                job_face_inputs={},
                 params={},
                 base_url="http://127.0.0.1:8188",
                 client_id="photofant",
@@ -230,6 +231,7 @@ class TestComfyUIRunWorker:
                     input_bindings=INPUT_BINDINGS,
                     param_bindings=[],
                     job_inputs={"source": 42},
+                    job_face_inputs={},
                     params={},
                     base_url="http://127.0.0.1:8188",
                     client_id="photofant",
@@ -268,6 +270,7 @@ class TestComfyUIRunWorker:
                     input_bindings=INPUT_BINDINGS,
                     param_bindings=[],
                     job_inputs={"source": 42},
+                    job_face_inputs={},
                     params={},
                     base_url="http://127.0.0.1:8188",
                     client_id="photofant",
@@ -295,6 +298,7 @@ class TestComfyUIRunWorker:
                     input_bindings=INPUT_BINDINGS,
                     param_bindings=[],
                     job_inputs={"source": 999},
+                    job_face_inputs={},
                     params={},
                     base_url="http://127.0.0.1:8188",
                     client_id="photofant",
@@ -332,6 +336,7 @@ class TestComfyUIRunWorker:
                 input_bindings=INPUT_BINDINGS,
                 param_bindings=PARAM_BINDINGS,
                 job_inputs={"source": 42},
+                job_face_inputs={},
                 params={"scale": 2.0},
                 base_url="http://127.0.0.1:8188",
                 client_id="photofant",

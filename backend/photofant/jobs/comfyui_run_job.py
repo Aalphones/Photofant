@@ -9,9 +9,16 @@ import asyncio
 import copy
 import logging
 from pathlib import Path
+from time import monotonic
 from typing import Any
 
 from photofant.comfyui.client import ComfyUIClient
+from photofant.comfyui.importer import (
+    ComfyUIOutputRef,
+    delete_imported_local_output,
+    import_comfyui_output,
+    select_output_from_history,
+)
 from photofant.db.models import Asset, AssetInstance, Face
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
@@ -223,6 +230,7 @@ async def run_comfyui_run_job(
     timeout: float,
     mask_input_key: str | None = None,
     mask_data_url: str | None = None,
+    auto_import: dict[str, Any] | None = None,
 ) -> None:
     """Execute one ComfyUI run: upload all inputs → patch template → POST /prompt.
 
@@ -280,6 +288,85 @@ async def run_comfyui_run_job(
     prompt_id = await asyncio.to_thread(client.submit_prompt, patched, client_id)
     log.info("Prompt submitted: job_id=%s prompt_id=%s", status.id, prompt_id)
 
+    if auto_import is not None:
+        await _wait_and_import_output(
+            status=status,
+            client=client,
+            prompt_id=prompt_id,
+            auto_import=auto_import,
+        )
+
+
+async def _wait_and_import_output(
+    status: JobStatus,
+    client: ComfyUIClient,
+    prompt_id: str,
+    auto_import: dict[str, Any],
+) -> None:
+    output_node_id = str(auto_import["output_node_id"])
+    poll_interval_seconds = float(auto_import["poll_interval_seconds"])
+    wait_timeout_seconds = float(auto_import["wait_timeout_seconds"])
+    output_dir = str(auto_import["output_dir"])
+    target_asset_id = int(auto_import["target_asset_id"])
+    workflow_key = str(auto_import["workflow_key"])
+    task = str(auto_import["task"])
+
+    job_queue.update(status, progress=0.6, state=JobState.RUNNING)
+    deadline = monotonic() + wait_timeout_seconds
+    output: ComfyUIOutputRef | None = None
+
+    while monotonic() < deadline:
+        history = await asyncio.to_thread(client.get_history, prompt_id)
+        try:
+            output = select_output_from_history(history, prompt_id, output_node_id)
+            break
+        except ValueError:
+            remaining = max(deadline - monotonic(), 0.0)
+            progress = 0.6 + 0.25 * (1.0 - (remaining / wait_timeout_seconds))
+            job_queue.update(status, progress=min(progress, 0.85), state=JobState.RUNNING)
+            await asyncio.sleep(poll_interval_seconds)
+
+    if output is None:
+        raise TimeoutError(f"Timeout beim Warten auf ComfyUI-Output fuer Prompt {prompt_id}")
+
+    job_queue.update(status, progress=0.9, state=JobState.RUNNING)
+    await asyncio.to_thread(
+        _import_and_cleanup,
+        client,
+        target_asset_id,
+        output,
+        output_dir,
+        task,
+        workflow_key,
+        prompt_id,
+    )
+
+
+def _import_and_cleanup(
+    client: ComfyUIClient,
+    target_asset_id: int,
+    output: ComfyUIOutputRef,
+    output_dir: str,
+    task: str,
+    workflow_key: str,
+    prompt_id: str,
+) -> None:
+    with SessionLocal() as session:
+        import_comfyui_output(
+            session,
+            client,
+            asset_id=target_asset_id,
+            output=output,
+            output_dir=output_dir,
+            params={
+                "source": "comfyui_auto_import",
+                "task": task,
+                "workflow_key": workflow_key,
+                "prompt_id": prompt_id,
+            },
+        )
+    delete_imported_local_output(output_dir, output)
+
 
 # ── Enqueueing ────────────────────────────────────────────────────────────────
 
@@ -292,6 +379,10 @@ async def enqueue_comfyui_runs(
     workflow_name: str,
     mask_input_key: str | None = None,
     mask_data_url: str | None = None,
+    auto_import_targets: list[int] | None = None,
+    auto_import_task: str | None = None,
+    auto_import_workflow_key: str | None = None,
+    auto_import_output_node_id: str | None = None,
 ) -> list[JobStatus]:
     """Enqueue N jobs (one per entry in *expanded_inputs*). Returns their JobStatus list."""
     cfg = load_settings()
@@ -299,6 +390,9 @@ async def enqueue_comfyui_runs(
     base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
     client_id = str(comfyui_cfg.get("client_id", "photofant"))
     timeout = float(comfyui_cfg.get("timeout", 10))
+    output_dir = str(comfyui_cfg.get("output_dir", ""))
+    poll_interval_seconds = float(comfyui_cfg.get("result_poll_interval_seconds", 1.0))
+    wait_timeout_seconds = float(comfyui_cfg.get("result_wait_timeout_seconds", 1800))
 
     total = len(expanded_inputs)
     statuses: list[JobStatus] = []
@@ -308,10 +402,22 @@ async def enqueue_comfyui_runs(
         if total > 1:
             label += f" ({index + 1}/{total})"
 
+        auto_import: dict[str, Any] | None = None
+        if auto_import_targets is not None:
+            auto_import = {
+                "target_asset_id": auto_import_targets[index],
+                "task": auto_import_task,
+                "workflow_key": auto_import_workflow_key,
+                "output_node_id": auto_import_output_node_id,
+                "output_dir": output_dir,
+                "poll_interval_seconds": poll_interval_seconds,
+                "wait_timeout_seconds": wait_timeout_seconds,
+            }
+
         status = await job_queue.enqueue(
             kind=JobKind.COMFYUI_RUN,
             label=label,
-            coro_factory=lambda js, ji=job_inputs, jfi=job_face_inputs: run_comfyui_run_job(
+            coro_factory=lambda js, ji=job_inputs, jfi=job_face_inputs, ai=auto_import: run_comfyui_run_job(
                 js,
                 workflow_template,
                 input_bindings,
@@ -324,6 +430,7 @@ async def enqueue_comfyui_runs(
                 timeout,
                 mask_input_key=mask_input_key,
                 mask_data_url=mask_data_url,
+                auto_import=ai,
             ),
         )
         statuses.append(status)

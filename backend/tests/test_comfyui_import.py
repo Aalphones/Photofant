@@ -216,11 +216,11 @@ class TestComfyUIImport:
                 }
             }),
             patch("photofant.api.comfyui.ComfyUIClient") as mock_cls,
-            patch("photofant.api.comfyui.get_data_root", return_value=str(tmp_path)),
-            patch("photofant.api.comfyui.get_cache_db_path", return_value=str(tmp_path / "cache.db")),
-            patch("photofant.api.comfyui.init_cache_db"),
-            patch("photofant.api.comfyui.store_thumbnail"),
-            patch("photofant.api.comfyui.generate_thumbnail", return_value=b"\xff\xd8"),
+            patch("photofant.comfyui.importer.get_data_root", return_value=tmp_path),
+            patch("photofant.comfyui.importer.get_cache_db_path", return_value=tmp_path / "cache.db"),
+            patch("photofant.comfyui.importer.init_cache_db"),
+            patch("photofant.comfyui.importer.store_thumbnail"),
+            patch("photofant.comfyui.importer.generate_thumbnail", return_value=b"\xff\xd8"),
         ):
             mock_client = MagicMock()
             mock_client.view_image.return_value = fake_png
@@ -290,11 +290,11 @@ class TestComfyUIImport:
                 }
             }),
             patch("photofant.api.comfyui.ComfyUIClient") as mock_cls,
-            patch("photofant.api.comfyui.get_data_root", return_value=str(tmp_path)),
-            patch("photofant.api.comfyui.get_cache_db_path", return_value=str(tmp_path / "cache.db")),
-            patch("photofant.api.comfyui.init_cache_db"),
-            patch("photofant.api.comfyui.store_thumbnail"),
-            patch("photofant.api.comfyui.generate_thumbnail", return_value=b"\xff\xd8"),
+            patch("photofant.comfyui.importer.get_data_root", return_value=tmp_path),
+            patch("photofant.comfyui.importer.get_cache_db_path", return_value=tmp_path / "cache.db"),
+            patch("photofant.comfyui.importer.init_cache_db"),
+            patch("photofant.comfyui.importer.store_thumbnail"),
+            patch("photofant.comfyui.importer.generate_thumbnail", return_value=b"\xff\xd8"),
         ):
             mock_client = MagicMock()
             mock_client.view_image.side_effect = ComfyUIError("x", "y", "z")

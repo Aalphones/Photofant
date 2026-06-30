@@ -1,6 +1,7 @@
 # Phase 2 - Backend: Warten, Ergebnis finden, importieren
 
 **Rating:** heikel
+**Status:** complete
 
 ## Kontext
 
@@ -52,15 +53,29 @@
 
 ## Checkliste
 
-- [ ] Settings-TypedDict/Defaults um Polling-Keys ergaenzen
-- [ ] Default-Run-DTOs und Route implementieren
-- [ ] Output-Auswahl aus Introspection/History implementieren
-- [ ] Import-Helper aus `results/import` extrahieren
-- [ ] Cleanup-Helper fuer importierte lokale Outputs mit Resolve-Pruefung implementieren
-- [ ] Job-Polling + Fortschritt + Timeout implementieren
-- [ ] Backend-Tests ergaenzen
-- [ ] `docs/models.md` nur anfassen, falls DB-/Version-Felder neu entstehen
+- [x] Settings-TypedDict/Defaults um Polling-Keys ergaenzen
+- [x] Default-Run-DTOs und Route implementieren
+- [x] Output-Auswahl aus Introspection/History implementieren
+- [x] Import-Helper aus `results/import` extrahieren
+- [x] Cleanup-Helper fuer importierte lokale Outputs mit Resolve-Pruefung implementieren
+- [x] Job-Polling + Fortschritt + Timeout implementieren
+- [x] Backend-Tests ergaenzen
+- [x] `docs/models.md` nur anfassen, falls DB-/Version-Felder neu entstehen
 
 ## Report-Back
 
-Noch offen.
+- Implementiert: `POST /api/comfyui/defaults/{task}/run` fuer `upscale|edit|inpaint`,
+  Default-Key aus Settings, Output-Node-Gate, explizite `target_asset_ids`-Zuordnung.
+- Auto-Import laeuft optional im bestehenden ComfyUI-Job: Prompt submitten, History pollen,
+  eindeutigen Output importieren, Version-Metadaten setzen, Thumbnails erzeugen, lokalen Output
+  defensiv loeschen.
+- Manuelle `results/import` nutzt denselben Import-Helper; generischer `workflows/{key}/run`
+  bleibt Fire-and-forget.
+- Verifikation: `uv run pytest tests\test_comfyui_run.py tests\test_comfyui_import.py
+  tests\test_comfyui_workflow.py tests\test_comfyui_discovery.py tests\test_comfyui_auto_import.py -q`
+  -> 75 passed, 1 bestehende StarletteDeprecationWarning.
+- Target-Lint: `uv run ruff check photofant\api\comfyui.py photofant\jobs\comfyui_run_job.py
+  photofant\comfyui\importer.py photofant\settings.py tests\test_comfyui_run.py
+  tests\test_comfyui_auto_import.py tests\test_comfyui_import.py` -> gruen.
+- Full Backend-Ruff: `uv run ruff check .` bleibt rot wegen bestehender Altlasten ausserhalb der
+  Phase (`alembic/versions/0020_prompt_template.py` E501, `photofant/api/assets.py` B008).

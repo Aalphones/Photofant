@@ -25,6 +25,8 @@ class ComfyUISettings(TypedDict):
     default_upscale: str   # Workflow-key für Upscale-Aufgabe (leer = keiner)
     default_edit: str      # Workflow-key für Image-Edit-Aufgabe
     default_inpaint: str   # Workflow-key für Inpaint-Aufgabe
+    result_poll_interval_seconds: float
+    result_wait_timeout_seconds: int
 
 
 class AppSettings(TypedDict):
@@ -94,6 +96,8 @@ SETTINGS_DEFAULTS: AppSettings = {
         "default_upscale": "",
         "default_edit": "",
         "default_inpaint": "",
+        "result_poll_interval_seconds": 1.0,
+        "result_wait_timeout_seconds": 1800,
     },
 }
 

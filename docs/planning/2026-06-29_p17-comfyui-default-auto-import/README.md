@@ -71,7 +71,7 @@ comfyui.result_wait_timeout_seconds = 1800
 | Phase | Inhalt | Rating | Status |
 |---|---|---:|---|
 | 1 | [Kontrakt + ADR](phase-1-contract-adr.md) | heikel | complete |
-| 2 | [Backend: Warten, Ergebnis finden, importieren](phase-2-backend-auto-import.md) | heikel | pending |
+| 2 | [Backend: Warten, Ergebnis finden, importieren](phase-2-backend-auto-import.md) | heikel | complete |
 | 3 | [Frontend: Default-Flows umhaengen](phase-3-frontend-default-flows.md) | standard | pending |
 
 ## Finale Akzeptanzkriterien
