@@ -86,10 +86,9 @@
             <pf-icon name="text" [size]="13" /> Caption
           </button>
           <button
-            class="add-trig__tab add-trig__tab--disabled"
+            class="add-trig__tab"
             [class.add-trig__tab--on]="addTab() === 'person'"
             (click)="setAddTab('person')"
-            title="Personen-Trigger kommen mit der Gesichtserkennung (P7)"
           >
             <pf-icon name="face" [size]="13" /> Person
           </button>
@@ -140,9 +139,25 @@
         }
 
         @if (addTab() === 'person') {
-          <div class="add-trig__person-note">
-            <pf-icon name="info" [size]="14" />
-            <span>Personen-Trigger werden mit der Gesichtserkennung aktiv (P7).</span>
+          <div class="add-trig__search">
+            <pf-icon name="search" [size]="13" />
+            <input
+              [value]="personQuery()"
+              (input)="personQuery.set($any($event.target).value)"
+              placeholder="Person suchen…"
+            />
+          </div>
+          <div class="add-trig__list">
+            @for (person of availablePersons(); track person.id) {
+              <button class="add-trig__row" (click)="addPersonTrigger(person.id)">
+                <pf-icon name="face" [size]="13" />
+                <span>{{ person.name ?? 'Unbenannt' }}</span>
+                <span class="add-trig__count">+{{ person.count }}</span>
+              </button>
+            }
+            @if (availablePersons().length === 0) {
+              <div class="trig-empty">Keine Personen gefunden.</div>
+            }
           </div>
         }
       </div>

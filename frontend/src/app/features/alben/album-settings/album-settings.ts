@@ -8,8 +8,8 @@ import {
   signal,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { CollectionDetail, MatchMode, TagListItem, Trigger, TriggerType } from '@photofant/models';
-import { collectionsActions, tagsActions, tagsSelectors } from '@photofant/store';
+import type { CollectionDetail, MatchMode, PersonDto, TagListItem, Trigger, TriggerType } from '@photofant/models';
+import { collectionsActions, personsActions, personsSelectors, tagsActions, tagsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
 type AddTab = TriggerType;
@@ -30,10 +30,12 @@ export class AlbumSettings {
   readonly close = output<void>();
 
   private readonly allTags = this.store.selectSignal(tagsSelectors.selectAll);
+  private readonly allPersons = this.store.selectSignal(personsSelectors.selectAll);
 
   protected readonly addTab = signal<AddTab>('tag');
   protected readonly adding = signal(false);
   protected readonly tagQuery = signal('');
+  protected readonly personQuery = signal('');
   protected readonly phrase = signal('');
 
   protected readonly smartOn = computed((): boolean => this.collection().kind === 'smart_album');
@@ -51,8 +53,20 @@ export class AlbumSettings {
       .slice(0, 18);
   });
 
+  protected readonly availablePersons = computed((): PersonDto[] => {
+    const usedPersonIds = new Set(
+      this.triggers().filter((trigger: Trigger) => trigger.type === 'person').map((trigger: Trigger) => trigger.person_id),
+    );
+    const query = this.personQuery().toLowerCase().trim();
+    return this.allPersons()
+      .filter((person: PersonDto) => !person.is_unknown && !usedPersonIds.has(person.id))
+      .filter((person: PersonDto) => (query ? (person.name ?? '').toLowerCase().includes(query) : true))
+      .slice(0, 18);
+  });
+
   constructor() {
     this.store.dispatch(tagsActions.load());
+    this.store.dispatch(personsActions.loadPersons());
   }
 
   protected toggleSmart(): void {
@@ -94,6 +108,15 @@ export class AlbumSettings {
     this.adding.set(false);
   }
 
+  protected addPersonTrigger(personId: number): void {
+    this.store.dispatch(collectionsActions.addTrigger({
+      collectionId: this.collection().id,
+      request: { type: 'person', person_id: personId },
+    }));
+    this.personQuery.set('');
+    this.adding.set(false);
+  }
+
   protected onPhraseKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter') { this.addCaptionTrigger(); }
   }
@@ -116,7 +139,8 @@ export class AlbumSettings {
   protected triggerLabel(trigger: Trigger): string {
     if (trigger.type === 'tag') { return (trigger.tag_name ?? '').replaceAll('_', ' '); }
     if (trigger.type === 'caption') { return `„${trigger.phrase}"`; }
-    return 'Person';
+    if (trigger.type === 'person') { return trigger.person_name ?? 'Unbekannte Person'; }
+    return '';
   }
 
   protected triggerIcon(trigger: Trigger): string {

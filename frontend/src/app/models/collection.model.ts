@@ -11,6 +11,7 @@ export interface Trigger {
   id: number;
   type: TriggerType;
   person_id: number | null;
+  person_name: string | null;
   tag_id: number | null;
   tag_name: string | null;
   phrase: string | null;

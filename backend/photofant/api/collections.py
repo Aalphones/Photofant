@@ -20,6 +20,7 @@ from photofant.db.models import (
     AssetInstance,
     Collection,
     CollectionItem,
+    Person,
     SmartTrigger,
     Tag,
 )
@@ -43,6 +44,7 @@ class TriggerDto(BaseModel):
     id: int
     type: str
     person_id: int | None
+    person_name: str | None
     tag_id: int | None
     tag_name: str | None
     phrase: str | None
@@ -131,10 +133,15 @@ def _build_trigger_dto(session: Session, trigger: SmartTrigger) -> TriggerDto:
     if trigger.type == "tag" and trigger.tag_id is not None:
         tag = session.get(Tag, trigger.tag_id)
         tag_name = tag.name if tag is not None else None
+    person_name: str | None = None
+    if trigger.type == "person" and trigger.person_id is not None:
+        person = session.get(Person, trigger.person_id)
+        person_name = person.name if person is not None else None
     return TriggerDto(
         id=trigger.id,
         type=trigger.type,
         person_id=trigger.person_id,
+        person_name=person_name,
         tag_id=trigger.tag_id,
         tag_name=tag_name,
         phrase=trigger.phrase,
