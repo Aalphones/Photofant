@@ -13,7 +13,7 @@ import { Store } from '@ngrx/store';
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { Icon } from '@photofant/ui';
 import { comfyuiActions, comfyuiSelectors, editorActions, editorSelectors, modelsActions, modelsSelectors } from '@photofant/store';
-import type { ComfyUIWorkflow, CropRatio, CropRect, EditorTargetKind } from '@photofant/models';
+import type { ComfyUIWorkflow, CropRatio, CropRect, DefaultRunTask, EditorTargetKind } from '@photofant/models';
 import { ZoomStage } from '../galerie/lightbox/zoom-stage';
 import { BasisPanel } from './basis-panel/basis-panel';
 import type { OpEvent } from './basis-panel/basis-panel';
@@ -218,7 +218,7 @@ export class Editor {
   }
 
   protected onEdit(event: EditEvent): void {
-    this.dispatchGenerative(this.editWorkflow(), {
+    this.dispatchGenerative('edit', this.editWorkflow(), {
       prompt: event.prompt,
       resolution: event.resolution,
       maskDataUrl: null,
@@ -226,7 +226,7 @@ export class Editor {
   }
 
   protected onInpaint(event: InpaintEvent): void {
-    this.dispatchGenerative(this.inpaintWorkflow(), {
+    this.dispatchGenerative('inpaint', this.inpaintWorkflow(), {
       prompt: event.prompt.trim().length > 0 ? event.prompt : null,
       resolution: event.resolution,
       maskDataUrl: event.maskDataUrl,
@@ -234,7 +234,7 @@ export class Editor {
   }
 
   protected onUpscale(event: UpscaleEvent): void {
-    this.dispatchGenerative(this.upscaleWorkflow(), {
+    this.dispatchGenerative('upscale', this.upscaleWorkflow(), {
       prompt: null,
       resolution: event.resolution,
       maskDataUrl: null,
@@ -247,6 +247,7 @@ export class Editor {
   }
 
   private dispatchGenerative(
+    task: DefaultRunTask,
     workflow: ComfyUIWorkflow | null,
     run: { prompt: string | null; resolution: EditEvent['resolution']; maskDataUrl: string | null },
   ): void {
@@ -254,7 +255,7 @@ export class Editor {
     const imageSlot = workflow.inputs.find((input) => input.kind === 'image');
     if (imageSlot == null) { return; }
     this.store.dispatch(editorActions.runGenerative({
-      workflowKey: workflow.key,
+      task,
       imageSlotKey: imageSlot.key,
       prompt: run.prompt,
       resolution: run.resolution,

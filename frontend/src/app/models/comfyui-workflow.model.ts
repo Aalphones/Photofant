@@ -93,3 +93,17 @@ export interface ComfyUIImportResponse {
   params: Record<string, unknown> | null;
   thumbnail_url: string;
 }
+
+/** Task-Typ für den kuratieren Default-Run-Endpunkt. */
+export type DefaultRunTask = 'upscale' | 'edit' | 'inpaint';
+
+/** Request-Body für POST /api/comfyui/defaults/{task}/run */
+export interface DefaultRunRequest {
+  target_asset_ids: number[];
+  inputs: Record<string, number | number[]>;
+  face_inputs?: Record<string, number | number[]>;
+  prompt?: string | null;
+  negative_prompt?: string | null;
+  resolution?: ResolutionRun | null;
+  mask?: { asset_id: number; mask_data_url: string } | null;
+}

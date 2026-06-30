@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs';
 import type { Observable } from 'rxjs';
-import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, ResolutionRun } from '@photofant/models';
+import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, DefaultRunRequest, DefaultRunTask, ResolutionRun } from '@photofant/models';
 import { COMFYUI_CONFIG_DEFAULTS } from '@photofant/models';
 
 /** Optionale Run-Parameter, die der Workflow erkannt hat (Prompt/Auflösung/Maske). */
@@ -149,6 +149,25 @@ export class ComfyUIService {
         negative_prompt: extras.negativePrompt ?? null,
         resolution: extras.resolution ?? null,
         mask: extras.mask ?? null,
+      },
+    );
+  }
+
+  /** Ruft den kuratierten Default-Endpunkt auf — importiert das Ergebnis automatisch als Version. */
+  runDefaultWorkflow(
+    task: DefaultRunTask,
+    payload: DefaultRunRequest,
+  ): Observable<{ jobs: { job_id: string }[] }> {
+    return this.http.post<{ jobs: { job_id: string }[] }>(
+      `/api/comfyui/defaults/${task}/run`,
+      {
+        target_asset_ids: payload.target_asset_ids,
+        inputs: payload.inputs,
+        face_inputs: payload.face_inputs ?? {},
+        prompt: payload.prompt ?? null,
+        negative_prompt: payload.negative_prompt ?? null,
+        resolution: payload.resolution ?? null,
+        mask: payload.mask ?? null,
       },
     );
   }

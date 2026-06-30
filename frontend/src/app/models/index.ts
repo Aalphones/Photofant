@@ -74,6 +74,8 @@ export type {
   ComfyUIResultItem,
   ComfyUIResultsResponse,
   ComfyUIImportResponse,
+  DefaultRunTask,
+  DefaultRunRequest,
 } from './comfyui-workflow.model';
 export { WORKFLOW_CATEGORIES } from './comfyui-workflow.model';
 

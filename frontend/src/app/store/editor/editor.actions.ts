@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { EditorStep, EditorTargetKind, ResolutionRun } from '@photofant/models';
+import type { DefaultRunTask, EditorStep, EditorTargetKind, ResolutionRun } from '@photofant/models';
 
 export const editorActions = createActionGroup({
   source: 'Editor',
@@ -12,11 +12,12 @@ export const editorActions = createActionGroup({
     'Apply Step Failure': props<{ error: string }>(),
     'Rollback': props<{ toSeq: number }>(),
     'Rollback Success': props<{ seq: number }>(),
-    // Generativer Run über ComfyUI (Edit / Inpaint / Upscale).
+    // Generativer Run über den Default-Run-Endpunkt (Edit / Inpaint / Upscale).
+    // task bestimmt, welcher Default-Workflow aus den Einstellungen verwendet wird.
     // imageSlotKey = der Bild-Slot des Workflows, an den das Editor-Asset gebunden wird.
     // maskDataUrl gesetzt → Inpaint (Backend bettet die Maske als Alpha ins Upload-PNG).
     'Run Generative': props<{
-      workflowKey: string;
+      task: DefaultRunTask;
       imageSlotKey: string;
       prompt: string | null;
       resolution: ResolutionRun | null;

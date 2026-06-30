@@ -375,12 +375,16 @@ export class Galerie {
     if (workflow == null || ids.length === 0) { return; }
     const imageSlot = workflow.inputs.find((input) => input.kind === 'image');
     if (imageSlot == null) { return; }
-    this.comfyuiService.runWorkflow(workflow.key, { [imageSlot.key]: ids }, {}, {})
+    // Default-Pfad: Backend importiert Ergebnis jedes Jobs automatisch als neue Version.
+    this.comfyuiService.runDefaultWorkflow('upscale', {
+      target_asset_ids: ids,
+      inputs: { [imageSlot.key]: ids },
+    })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (response) => {
+        next: (response: { jobs: { job_id: string }[] }) => {
           const count = response.jobs.length;
-          this.showRunToast(`${count} Upscale-Job${count !== 1 ? 's' : ''} an ComfyUI gesendet`);
+          this.showRunToast(`${count} Upscale-Job${count !== 1 ? 's' : ''} gestartet — Ergebnis wird automatisch importiert`);
         },
         error: (error: unknown) => {
           const message = error instanceof Error ? error.message : 'Fehler beim Senden an ComfyUI';

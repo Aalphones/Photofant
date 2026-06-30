@@ -18,7 +18,7 @@ import { AssetService, ClassifyService, ComfyUIService, PersonService, TagServic
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
-import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, jobsSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare';
 
@@ -84,6 +84,10 @@ export class Lightbox {
 
   protected readonly isUpscaling  = signal(false);
   protected readonly upscaleError = signal<string | null>(null);
+
+  // Job-ID des laufenden Default-Upscale-Jobs; null wenn keiner aktiv.
+  private readonly pendingUpscaleJobId = signal<string | null>(null);
+  private readonly allJobs = this.store.selectSignal(jobsSelectors.allJobs);
 
   protected readonly asset    = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
   protected readonly presets  = this.store.selectSignal(presetsSelectors.selectPresets);
@@ -248,6 +252,20 @@ export class Lightbox {
   }
 
   constructor() {
+    // Wenn der Default-Upscale-Job fertig ist, Detail neu laden damit die neue Version sichtbar wird.
+    effect((): void => {
+      const jobId = this.pendingUpscaleJobId();
+      if (jobId == null) { return; }
+      const job = this.allJobs().find((runningJob) => runningJob.id === jobId);
+      if (job?.state === 'done') {
+        this.pendingUpscaleJobId.set(null);
+        this.reloadTrigger.update((count: number) => count + 1);
+      } else if (job?.state === 'error') {
+        this.pendingUpscaleJobId.set(null);
+        this.upscaleError.set(job.error ?? 'Upscale fehlgeschlagen');
+      }
+    });
+
     effect((): void => {
       const asset: AssetDto | null = this.asset();
       this.showGenMeta.set(asset?.source != null && asset.source !== 'original');
@@ -628,11 +646,20 @@ export class Lightbox {
     this.isUpscaling.set(true);
     this.upscaleError.set(null);
 
-    this.comfyuiService.runWorkflow(workflow.key, { [imageSlot.key]: asset.id }, {}, {})
+    // Default-Pfad: Backend importiert Ergebnis automatisch als neue Version am Asset.
+    this.comfyuiService.runDefaultWorkflow('upscale', {
+      target_asset_ids: [asset.id],
+      inputs: { [imageSlot.key]: asset.id },
+    })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (response: { jobs: { job_id: string }[] }) => {
           this.isUpscaling.set(false);
+          const jobId = response.jobs[0]?.job_id ?? null;
+          if (jobId != null) {
+            // Sobald der Job done ist, Detail neu laden → neue Version sichtbar.
+            this.pendingUpscaleJobId.set(jobId);
+          }
         },
         error: (err: unknown) => {
           this.isUpscaling.set(false);

@@ -77,15 +77,16 @@ export class EditorEffects {
     this.actions$.pipe(
       ofType(editorActions.runGenerative),
       concatLatestFrom(() => this.store.select(editorSelectors.selectTargetId)),
-      concatMap(([{ workflowKey, imageSlotKey, prompt, resolution, maskDataUrl }, targetId]) => {
+      concatMap(([{ task, imageSlotKey, prompt, resolution, maskDataUrl }, targetId]) => {
         if (targetId == null) { return EMPTY; }
         // Editor-Asset an den Bild-Slot binden. Bei Inpaint trägt zusätzlich die Maske
         // dieselbe asset_id — das Backend injiziert sie in den Masken-Slot.
-        const inputs: Record<string, number> = { [imageSlotKey]: targetId };
         const mask = maskDataUrl != null
           ? { asset_id: targetId, mask_data_url: maskDataUrl }
           : null;
-        return this.comfyuiService.runWorkflow(workflowKey, inputs, {}, {
+        return this.comfyuiService.runDefaultWorkflow(task, {
+          target_asset_ids: [targetId],
+          inputs: { [imageSlotKey]: targetId },
           prompt,
           resolution,
           mask,
