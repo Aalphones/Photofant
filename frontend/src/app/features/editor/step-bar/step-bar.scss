@@ -132,6 +132,67 @@
   &.inpaint { background: var(--semantic-weak); color: oklch(0.78 0.13 305); }
 }
 
+// ── Generative Skeleton ───────────────────────────────────────────────────────
+
+@keyframes ed-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.ed-step--generating {
+  pointer-events: none;
+  cursor: default;
+}
+
+.ed-step-thumb--skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-hover) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: ed-shimmer 1.4s infinite;
+}
+
+.ed-step-skeleton-line {
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-hover) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: ed-shimmer 1.4s infinite;
+
+  &--title {
+    height: 11px;
+    width: 72%;
+    margin-bottom: 4px;
+  }
+
+  &--meta {
+    height: 9px;
+    width: 48%;
+  }
+}
+
+.ed-step-skeleton-badge {
+  height: 14px;
+  width: 46px;
+  border-radius: 5px;
+  margin-top: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-hover) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: ed-shimmer 1.4s infinite;
+}
+
 .ed-rollback {
   position: absolute;
   right: 10px;

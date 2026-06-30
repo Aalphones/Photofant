@@ -101,14 +101,6 @@
             Ähnliche Bilder
           </button>
         </div>
-        @if (comfyuiConfig().enabled) {
-          <div class="pbtn-row">
-            <button class="pbtn pbtn--ghost" (click)="openComfyuiImportDialog()">
-              <pf-icon name="sparkle" [size]="15" />
-              Aus ComfyUI importieren
-            </button>
-          </div>
-        }
         @if (canUpscale()) {
           <div class="pbtn-row">
             <button

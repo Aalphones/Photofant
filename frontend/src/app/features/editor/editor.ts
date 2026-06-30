@@ -56,6 +56,8 @@ export class Editor {
   protected readonly capabilities = this.store.selectSignal(modelsSelectors.selectCapabilities);
 
   protected readonly generating = this.store.selectSignal(editorSelectors.selectGenerating);
+  protected readonly generativeResult = this.store.selectSignal(editorSelectors.selectGenerativeResult);
+  protected readonly generativeSelected = this.store.selectSignal(editorSelectors.selectGenerativeSelected);
 
   // ── Generative Tools über ComfyUI-Default-Workflows ──
   protected readonly comfyConfig = this.store.selectSignal(comfyuiSelectors.selectConfig);
@@ -270,5 +272,9 @@ export class Editor {
   protected onClearMask(): void {
     this.maskOverlayRef()?.clearMask();
     this.maskDataUrl.set(null);
+  }
+
+  protected onSelectGenerativeResult(): void {
+    this.store.dispatch(editorActions.selectGenerativeResult());
   }
 }

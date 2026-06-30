@@ -24,7 +24,9 @@ export const editorActions = createActionGroup({
       maskDataUrl: string | null;
     }>(),
     'Run Generative Success': props<{ jobId: string }>(),
+    'Run Generative Done': props<{ versionId: number; previewUrl: string; thumbnailUrl: string }>(),
     'Run Generative Failure': props<{ error: string }>(),
+    'Select Generative Result': emptyProps(),
     'Close': emptyProps(),
   },
 });

@@ -1,14 +1,30 @@
 import { createSelector } from '@ngrx/store';
 import type { EditorStep } from '@photofant/models';
+import type { GenerativeResult } from './editor.reducer';
 import { editorFeature } from './editor.reducer';
 
-const { selectSessionKey, selectSteps, selectCurrentSeq, selectOriginalPreviewUrl, selectApplying, selectError, selectTargetId, selectGenerating, selectGenerativeJobId } = editorFeature;
+const {
+  selectSessionKey, selectSteps, selectCurrentSeq, selectOriginalPreviewUrl,
+  selectApplying, selectError, selectTargetId, selectGenerating, selectGenerativeJobId,
+  selectGenerativeResult, selectGenerativeSelected,
+} = editorFeature;
 
 const selectCurrentPreviewUrl = createSelector(
   selectSteps,
   selectCurrentSeq,
   selectOriginalPreviewUrl,
-  (steps: EditorStep[], currentSeq: number, originalUrl: string | null): string | null => {
+  selectGenerativeSelected,
+  selectGenerativeResult,
+  (
+    steps: EditorStep[],
+    currentSeq: number,
+    originalUrl: string | null,
+    generativeSelected: boolean,
+    generativeResult: GenerativeResult | null,
+  ): string | null => {
+    if (generativeSelected && generativeResult) {
+      return generativeResult.previewUrl;
+    }
     if (currentSeq === 0) {
       return originalUrl;
     }
@@ -43,4 +59,6 @@ export const editorSelectors = {
   selectTargetId,
   selectGenerating,
   selectGenerativeJobId,
+  selectGenerativeResult,
+  selectGenerativeSelected,
 };

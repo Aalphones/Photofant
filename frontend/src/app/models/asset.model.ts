@@ -114,6 +114,7 @@ export interface AssetDetailDto extends AssetDto {
   captioner: string | null;
   caption_preset_id: number | null;
   faces: FaceDto[];
+  versions?: VersionDto[];
 }
 
 export interface AssetsPage {

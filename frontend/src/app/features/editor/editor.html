@@ -213,7 +213,11 @@
       [currentSeq]="currentSeq()"
       [originalPreviewUrl]="originalPreviewUrl()"
       [applying]="applying()"
+      [generating]="generating()"
+      [generativeResult]="generativeResult()"
+      [generativeSelected]="generativeSelected()"
       (rollback)="onRollback($event)"
+      (selectGenerativeResult)="onSelectGenerativeResult()"
     />
 
     <!-- Mobile bottom bar (nur ≤ 860px) -->

@@ -2,10 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
-import { catchError, EMPTY, map, of, switchMap, concatMap } from 'rxjs';
+import { catchError, EMPTY, filter, map, of, switchMap, concatMap, take } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { ApplyStepResponse, CreateSessionResponse, EditorStep, RollbackResponse } from '@photofant/models';
-import { ComfyUIService, EditSessionService } from '@photofant/services';
+import type { ApplyStepResponse, AssetDetailDto, CreateSessionResponse, EditorStep, Job, RollbackResponse, VersionDto } from '@photofant/models';
+import { AssetService, ComfyUIService, EditSessionService, JobsService } from '@photofant/services';
 import { editorActions } from './editor.actions';
 import { editorSelectors } from './editor.selectors';
 
@@ -15,6 +15,8 @@ export class EditorEffects {
   private readonly store = inject(Store);
   private readonly editSessionService = inject(EditSessionService);
   private readonly comfyuiService = inject(ComfyUIService);
+  private readonly jobsService = inject(JobsService);
+  private readonly assetService = inject(AssetService);
 
   readonly onInit$ = createEffect(() =>
     this.actions$.pipe(
@@ -79,8 +81,6 @@ export class EditorEffects {
       concatLatestFrom(() => this.store.select(editorSelectors.selectTargetId)),
       concatMap(([{ task, imageSlotKey, prompt, resolution, maskDataUrl }, targetId]) => {
         if (targetId == null) { return EMPTY; }
-        // Editor-Asset an den Bild-Slot binden. Bei Inpaint trägt zusätzlich die Maske
-        // dieselbe asset_id — das Backend injiziert sie in den Masken-Slot.
         const mask = maskDataUrl != null
           ? { asset_id: targetId, mask_data_url: maskDataUrl }
           : null;
@@ -95,6 +95,56 @@ export class EditorEffects {
             editorActions.runGenerativeSuccess({ jobId: response.jobs[0]?.job_id ?? '' })
           ),
           catchError((error: HttpErrorResponse) =>
+            of(editorActions.runGenerativeFailure({ error: error.message }))
+          ),
+        );
+      }),
+    )
+  );
+
+  // SSE-Polling: wartet bis der ComfyUI-Job DONE/ERROR ist, dann holt die neue Version
+  readonly onRunGenerativePoll$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(editorActions.runGenerativeSuccess),
+      concatLatestFrom(() => this.store.select(editorSelectors.selectTargetId)),
+      switchMap(([{ jobId }, targetId]) => {
+        if (!jobId || targetId == null) { return EMPTY; }
+        return this.jobsService.streamJobs().pipe(
+          filter((job: Job) => job.id === jobId && (job.state === 'done' || job.state === 'error')),
+          take(1),
+          switchMap((job: Job) => {
+            if (job.state === 'error') {
+              return of(editorActions.runGenerativeFailure({
+                error: job.error ?? 'Generierung in ComfyUI fehlgeschlagen',
+              }));
+            }
+            return this.assetService.getAsset(targetId).pipe(
+              map((asset: AssetDetailDto) => {
+                const versions = asset.versions ?? [];
+                const newest = versions
+                  .filter((version: VersionDto) => version.params?.['source'] === 'comfyui_auto_import')
+                  .sort((versionA: VersionDto, versionB: VersionDto) => {
+                    const timeA = versionA.created_at ? new Date(versionA.created_at).getTime() : 0;
+                    const timeB = versionB.created_at ? new Date(versionB.created_at).getTime() : 0;
+                    return timeB - timeA;
+                  })[0];
+                if (!newest) {
+                  return editorActions.runGenerativeFailure({
+                    error: 'Importiertes Ergebnis nicht in den Versionen gefunden',
+                  });
+                }
+                return editorActions.runGenerativeDone({
+                  versionId: newest.id,
+                  previewUrl: `/api/versions/${newest.id}/file`,
+                  thumbnailUrl: newest.thumbnail_url,
+                });
+              }),
+              catchError((error: HttpErrorResponse) =>
+                of(editorActions.runGenerativeFailure({ error: error.message }))
+              ),
+            );
+          }),
+          catchError((error: Error) =>
             of(editorActions.runGenerativeFailure({ error: error.message }))
           ),
         );

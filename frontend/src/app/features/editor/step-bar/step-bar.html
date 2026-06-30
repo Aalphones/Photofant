@@ -6,6 +6,36 @@
 
   <div class="ed-steps">
 
+    <!-- Generative: Skeleton während Job läuft -->
+    @if (generating()) {
+      <div class="ed-step ed-step--generating">
+        <div class="ed-step-thumb ed-step-thumb--skeleton"></div>
+        <div class="ed-step-meta-col">
+          <div class="ed-step-skeleton-line ed-step-skeleton-line--title"></div>
+          <div class="ed-step-skeleton-line ed-step-skeleton-line--meta"></div>
+          <div class="ed-step-skeleton-badge"></div>
+        </div>
+      </div>
+    }
+
+    <!-- Generative: Ergebnis nach Import -->
+    @if (!generating() && generativeResult(); as result) {
+      <div
+        class="ed-step"
+        [class.on]="generativeSelected()"
+        (click)="onSelectGenerativeResult()"
+      >
+        <div class="ed-step-thumb">
+          <img [src]="result.thumbnailUrl" alt="ComfyUI Edit" loading="lazy" />
+        </div>
+        <div class="ed-step-meta-col">
+          <div class="ed-step-op">ComfyUI Edit</div>
+          <div class="ed-step-meta">Generiert</div>
+          <span class="ed-step-badge flux">comfyui</span>
+        </div>
+      </div>
+    }
+
     <!-- Steps in reverse (newest on top) -->
     @for (step of steps().slice().reverse(); track step.seq) {
       <div class="ed-step" [class.on]="isStepCurrent(step)" (click)="onRollback(step.seq)">
