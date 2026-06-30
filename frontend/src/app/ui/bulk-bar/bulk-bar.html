@@ -3,17 +3,32 @@
   <div class="bulkbar__divider"></div>
 
   @if (showTagInput()) {
-    <div class="bulkbar__tag-input">
-      <pf-icon name="tag" [size]="14" />
-      <input
-        class="bulkbar__tag-field"
-        [value]="tagInput()"
-        (input)="tagInput.set($any($event.target).value)"
-        (keydown)="onTagKeyDown($event)"
-        (blur)="applyTags()"
-        placeholder="Tags kommagetrennt…"
-        autofocus
-      />
+    <div class="bulkbar__tag-wrap">
+      <div class="bulkbar__tag-input">
+        <pf-icon name="tag" [size]="14" />
+        <input
+          class="bulkbar__tag-field"
+          [value]="tagInput()"
+          (input)="tagInput.set($any($event.target).value)"
+          (keydown)="onTagKeyDown($event)"
+          (blur)="applyTags()"
+          placeholder="Tags kommagetrennt…"
+          autofocus
+        />
+      </div>
+      @if (tagSuggestions().length > 0) {
+        <div class="bulkbar__tag-suggestions">
+          @for (suggestion of tagSuggestions(); track suggestion.id) {
+            <button
+              class="bulkbar__tag-suggestion"
+              (mousedown)="pickSuggestion(suggestion.name)"
+            >
+              {{ suggestion.name.replace('_', ' ') }}
+              <span class="bulkbar__tag-suggestion__count">{{ suggestion.count }}</span>
+            </button>
+          }
+        </div>
+      }
     </div>
   } @else {
     <button class="bulkbar__action" (click)="openTagInput()">

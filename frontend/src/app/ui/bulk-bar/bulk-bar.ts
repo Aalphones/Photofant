@@ -2,11 +2,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  inject,
   input,
   output,
   signal,
 } from '@angular/core';
+import { of, switchMap } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Icon } from '../icon/icon';
+import { TagService } from '../../services/tag.service';
+import type { TagListItem } from '@photofant/models';
 
 export interface BulkAlbumOption {
   id: number;
@@ -34,9 +39,23 @@ export class BulkBar {
   readonly dupeScanAction = output<void>();
   readonly trashAction = output<void>();
 
+  private readonly tagService = inject(TagService);
+
   protected readonly showTagInput = signal(false);
   protected readonly tagInput = signal('');
   protected readonly showAlbumMenu = signal(false);
+
+  protected readonly tagSuggestions = toSignal(
+    toObservable(this.tagInput).pipe(
+      switchMap((value: string) => {
+        const lastSegment = value.split(',').pop()?.trim() ?? '';
+        return lastSegment.length >= 1
+          ? this.tagService.listTags(lastSegment, 8)
+          : of([]);
+      }),
+    ),
+    { initialValue: [] as TagListItem[] },
+  );
 
   protected readonly countLabel = computed((): string => {
     const n = this.count();
@@ -45,6 +64,14 @@ export class BulkBar {
 
   protected openTagInput(): void {
     this.showTagInput.set(true);
+  }
+
+  protected pickSuggestion(name: string): void {
+    const raw = this.tagInput();
+    const lastComma = raw.lastIndexOf(',');
+    const prefix = lastComma === -1 ? '' : raw.slice(0, lastComma + 1) + ' ';
+    this.tagInput.set(prefix + name);
+    this.applyTags();
   }
 
   protected applyTags(): void {
