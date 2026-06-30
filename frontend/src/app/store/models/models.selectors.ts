@@ -1,7 +1,7 @@
 import { createSelector } from '@ngrx/store';
-import { modelsFeature } from './models.reducer';
-import { MODEL_ENRICHMENT, MODEL_TIERS } from '@photofant/models';
 import type { ModelDto, ModelTier, ModelView } from '@photofant/models';
+import { MODEL_ENRICHMENT, MODEL_TIERS } from '@photofant/models';
+import { modelsFeature } from './models.reducer';
 
 const {
   selectModels,
@@ -34,7 +34,7 @@ const selectModelViews = createSelector(selectModels, (models: ModelDto[]) =>
 );
 
 const selectModelsByTier = createSelector(selectModelViews, (models: ModelView[]) => {
-  const grouped: Record<ModelTier, ModelView[]> = { core: [], optional: [], generativ: [] };
+  const grouped: Record<ModelTier, ModelView[]> = { core: [], optional: [] };
   for (const model of models) {
     const bucket = grouped[model.tier];
     if (bucket !== undefined) {
