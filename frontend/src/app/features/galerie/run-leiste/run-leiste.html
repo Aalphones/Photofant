@@ -55,33 +55,6 @@
       }
     </div>
 
-    <!-- Prompt (nur falls der Workflow ihn erkennt) -->
-    @if (workflow.prompt) {
-      <input
-        type="text"
-        class="rleiste__prompt"
-        [value]="prompt()"
-        placeholder="Prompt …"
-        (input)="onPromptInput($event)"
-      />
-    }
-
-    <!-- Auflösung (nur falls der Workflow sie erkennt) -->
-    @if (workflow.resolution; as res) {
-      <div class="rleiste__res" [title]="'Format: ' + res.aspectDefault">
-        <input
-          type="number"
-          class="rleiste__res-mp"
-          [min]="0.25"
-          [max]="8"
-          [step]="0.25"
-          [value]="megapixels()"
-          (input)="onMegapixelsInput($event)"
-        />
-        <span class="rleiste__res-unit">MP · {{ res.aspectDefault }}</span>
-      </div>
-    }
-
     <!-- Fire + Reset -->
     <div class="rleiste__actions">
       <button

@@ -501,10 +501,7 @@ export class Galerie {
   protected onRunFire(payload: RunFirePayload): void {
     if (this.isFiring()) { return; }
     this.isFiring.set(true);
-    this.comfyuiService.runWorkflow(payload.workflowKey, payload.inputs, payload.faceInputs, {
-      prompt: payload.prompt,
-      resolution: payload.resolution,
-    })
+    this.comfyuiService.runWorkflow(payload.workflowKey, payload.inputs, payload.faceInputs)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
       next: (response) => {

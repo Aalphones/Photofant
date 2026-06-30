@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import type { ComfyUIWorkflow, ResolutionRun } from '@photofant/models';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import type { ComfyUIWorkflow } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { Icon } from '@photofant/ui';
 
@@ -7,8 +7,6 @@ export interface RunFirePayload {
   workflowKey: string;
   inputs: Record<string, number | number[]>;
   faceInputs: Record<string, number | number[]>;
-  prompt: string | null;
-  resolution: ResolutionRun | null;
 }
 
 @Component({
@@ -34,22 +32,6 @@ export class RunLeiste {
   readonly slotArmed       = output<string | null>();
   readonly fire            = output<RunFirePayload>();
   readonly closed          = output<void>();
-
-  protected readonly prompt      = signal('');
-  protected readonly megapixels  = signal(1.0);
-
-  constructor() {
-    // Prompt/Auflösung zurücksetzen, wenn der Workflow wechselt.
-    let lastKey: string | null = null;
-    effect((): void => {
-      const key = this.activeWorkflow()?.key ?? null;
-      if (key !== lastKey) {
-        lastKey = key;
-        this.prompt.set('');
-        this.megapixels.set(1.0);
-      }
-    });
-  }
 
   protected readonly fireCount = computed((): number => {
     const batchKey = this.batchAxisKey();
@@ -121,28 +103,11 @@ export class RunLeiste {
   protected onFire(): void {
     const workflow = this.activeWorkflow();
     if (!workflow || !this.canFire() || this.isFiring()) { return; }
-    const promptText = this.prompt().trim();
-    const resolution = workflow.resolution;
     this.fire.emit({
       workflowKey: workflow.key,
       inputs: this.bindings(),
       faceInputs: this.faceBindings(),
-      prompt: workflow.prompt != null && promptText.length > 0 ? promptText : null,
-      resolution: resolution != null
-        ? { megapixels: this.megapixels(), aspect_ratio: resolution.aspectDefault }
-        : null,
     });
-  }
-
-  protected onPromptInput(event: Event): void {
-    this.prompt.set((event.target as HTMLInputElement).value);
-  }
-
-  protected onMegapixelsInput(event: Event): void {
-    const value = Number((event.target as HTMLInputElement).value);
-    if (Number.isFinite(value) && value > 0) {
-      this.megapixels.set(value);
-    }
   }
 
   protected onWorkflowSelect(event: Event): void {
