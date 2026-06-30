@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
+from sqlalchemy.pool import NullPool
 
 from photofant.config import get_data_root_base
 from photofant.settings import load_settings
@@ -25,7 +26,7 @@ def get_db_path() -> Path:
 def create_db_engine() -> Engine:
     db_path = _resolve_db_path()
     url = f"sqlite:///{db_path}"
-    new_engine = create_engine(url, connect_args={"check_same_thread": False})
+    new_engine = create_engine(url, connect_args={"check_same_thread": False}, poolclass=NullPool)
 
     @event.listens_for(new_engine, "connect")
     def _load_vec_extension(dbapi_connection: sqlite3.Connection, _record: Any) -> None:
