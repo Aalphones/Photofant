@@ -7,6 +7,7 @@ export interface RunFirePayload {
   workflowKey: string;
   inputs: Record<string, number | number[]>;
   faceInputs: Record<string, number | number[]>;
+  versionInputs: Record<string, number | number[]>;
 }
 
 @Component({
@@ -21,9 +22,10 @@ export class RunLeiste {
 
   readonly workflows    = input.required<ComfyUIWorkflow[]>();
   readonly activeWorkflow = input<ComfyUIWorkflow | null>(null);
-  readonly bindings     = input<Record<string, number | number[]>>({});
-  readonly faceBindings = input<Record<string, number | number[]>>({});
-  readonly hashMap      = input<Record<number, string>>({});
+  readonly bindings        = input<Record<string, number | number[]>>({});
+  readonly faceBindings    = input<Record<string, number | number[]>>({});
+  readonly versionBindings = input<Record<string, number | number[]>>({});
+  readonly hashMap         = input<Record<number, string>>({});
   readonly armedSlotKey = input<string | null>(null);
   readonly batchAxisKey = input<string | null>(null);
   readonly isFiring     = input<boolean>(false);
@@ -48,14 +50,16 @@ export class RunLeiste {
     if (!workflow) { return false; }
     const bindings = this.bindings();
     const faceBindings = this.faceBindings();
+    const versionBindings = this.versionBindings();
     return workflow.inputs
       .filter((inp) => inp.kind !== 'mask')
       .every((inp) => {
         const assetValue = bindings[inp.key];
-        const assetBound = assetValue != null && (!Array.isArray(assetValue) || assetValue.length > 0);
-        if (assetBound) { return true; }
+        if (assetValue != null && (!Array.isArray(assetValue) || assetValue.length > 0)) { return true; }
         const faceValue = faceBindings[inp.key];
-        return faceValue != null && (!Array.isArray(faceValue) || faceValue.length > 0);
+        if (faceValue != null && (!Array.isArray(faceValue) || faceValue.length > 0)) { return true; }
+        const versionValue = versionBindings[inp.key];
+        return versionValue != null && (!Array.isArray(versionValue) || versionValue.length > 0);
       });
   });
 
@@ -64,6 +68,11 @@ export class RunLeiste {
     if (faceBinding != null) {
       const faceId = Array.isArray(faceBinding) ? faceBinding[0] ?? null : faceBinding;
       if (faceId != null) { return `/api/faces/${faceId}/thumbnail`; }
+    }
+    const versionBinding = this.versionBindings()[slotKey];
+    if (versionBinding != null) {
+      const versionId = Array.isArray(versionBinding) ? versionBinding[0] ?? null : versionBinding;
+      if (versionId != null) { return `/api/versions/${versionId}/thumbnail`; }
     }
     const binding = this.bindings()[slotKey];
     if (binding == null) { return null; }
@@ -76,7 +85,9 @@ export class RunLeiste {
     const assetBinding = this.bindings()[slotKey];
     if (Array.isArray(assetBinding)) { return assetBinding.length; }
     const faceBinding = this.faceBindings()[slotKey];
-    return Array.isArray(faceBinding) ? faceBinding.length : 0;
+    if (Array.isArray(faceBinding)) { return faceBinding.length; }
+    const versionBinding = this.versionBindings()[slotKey];
+    return Array.isArray(versionBinding) ? versionBinding.length : 0;
   }
 
   protected isSlotArmed(slotKey: string): boolean {
@@ -91,7 +102,9 @@ export class RunLeiste {
     const assetValue = this.bindings()[slotKey];
     if (assetValue != null && (!Array.isArray(assetValue) || assetValue.length > 0)) { return true; }
     const faceValue = this.faceBindings()[slotKey];
-    return faceValue != null && (!Array.isArray(faceValue) || faceValue.length > 0);
+    if (faceValue != null && (!Array.isArray(faceValue) || faceValue.length > 0)) { return true; }
+    const versionValue = this.versionBindings()[slotKey];
+    return versionValue != null && (!Array.isArray(versionValue) || versionValue.length > 0);
   }
 
   protected onSlotClick(slotKey: string, kind: string): void {
@@ -107,6 +120,7 @@ export class RunLeiste {
       workflowKey: workflow.key,
       inputs: this.bindings(),
       faceInputs: this.faceBindings(),
+      versionInputs: this.versionBindings(),
     });
   }
 

@@ -1,0 +1,67 @@
+<div class="vlb-scrim" (click)="close.emit()"></div>
+
+<div class="vlb" role="dialog" aria-modal="true">
+
+  <!-- Stage -->
+  <div class="vlb-stage">
+    <button class="vlb-btn vlb-close" (click)="close.emit()" aria-label="Schließen">
+      <pf-icon name="x" [size]="20" />
+    </button>
+
+    <button
+      class="vlb-btn vlb-nav vlb-prev"
+      [disabled]="!hasPrev()"
+      (click)="prev.emit()"
+      aria-label="Vorheriger Edit"
+    >
+      <pf-icon name="arrowLeft" [size]="22" />
+    </button>
+
+    <button
+      class="vlb-btn vlb-nav vlb-next"
+      [disabled]="!hasNext()"
+      (click)="next.emit()"
+      aria-label="Nächster Edit"
+    >
+      <pf-icon name="arrowRight" [size]="22" />
+    </button>
+
+    <pf-zoom-stage [imageUrl]="imageUrl()" />
+  </div>
+
+  <!-- Panel -->
+  <div class="vlb-panel">
+
+    <div class="vlb-panel-sec vlb-panel-header">
+      <span class="vlb-id">Edit #{{ version().id }}</span>
+      <span class="vlb-badge">{{ typeLabel() }}</span>
+    </div>
+
+    <div class="vlb-panel-sec">
+      <div class="vlb-sec-title">Aktionen</div>
+      <div class="vlb-btn-row">
+        <button class="vlb-pbtn vlb-pbtn--ghost" (click)="openInEditor()">
+          <pf-icon name="crop" [size]="15" />
+          Im Editor öffnen
+        </button>
+        @if (version().parent_asset_id != null) {
+          <button class="vlb-pbtn vlb-pbtn--ghost" (click)="onOpenOriginal()">
+            <pf-icon name="gallery" [size]="15" />
+            Zum Original
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="vlb-panel-sec">
+      <div class="vlb-sec-title">Metadaten</div>
+      <dl class="vlb-kv">
+        <dt>Typ</dt><dd>{{ typeLabel() }}</dd>
+        <dt>Datum</dt><dd>{{ formattedDate() }}</dd>
+        <dt>Dimensionen</dt><dd>{{ dimensions() }}</dd>
+        <dt>Aktuell</dt><dd>{{ version().is_current ? 'Ja' : 'Nein' }}</dd>
+      </dl>
+    </div>
+
+  </div>
+</div>

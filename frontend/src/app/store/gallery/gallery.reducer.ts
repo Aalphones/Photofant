@@ -1,6 +1,6 @@
 import { createEntityAdapter, type EntityAdapter, type EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { AssetDto, Facets, FaceGalleryItemDto } from '@photofant/models';
+import type { AssetDto, Facets, FaceGalleryItemDto, VersionGalleryItemDto } from '@photofant/models';
 import { galleryActions } from './gallery.actions';
 
 const PAGE_SIZE = 100;
@@ -20,6 +20,8 @@ export interface GalleryState extends EntityState<AssetDto> {
   anchorId: number | null;
   faceItems: FaceGalleryItemDto[];
   faceTotal: number;
+  versionItems: VersionGalleryItemDto[];
+  versionTotal: number;
 }
 
 const adapter: EntityAdapter<AssetDto> = createEntityAdapter<AssetDto>({
@@ -41,6 +43,8 @@ const initialState: GalleryState = adapter.getInitialState({
   anchorId: null,
   faceItems: [],
   faceTotal: 0,
+  versionItems: [],
+  versionTotal: 0,
 });
 
 export const galleryFeature = createFeature({
@@ -63,7 +67,7 @@ export const galleryFeature = createFeature({
       error: null,
     })),
     on(galleryActions.reset, (state: GalleryState) =>
-      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null, faceItems: [], faceTotal: 0, lightboxContextIds: null })
+      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null, faceItems: [], faceTotal: 0, versionItems: [], versionTotal: 0, lightboxContextIds: null })
     ),
     on(galleryActions.loadFacesPageSuccess, (state: GalleryState, { items, total, page }) => ({
       ...state,
@@ -137,6 +141,14 @@ export const galleryFeature = createFeature({
       ...state,
       faceItems: state.faceItems.filter((item: FaceGalleryItemDto) => item.id !== id),
       faceTotal: Math.max(0, state.faceTotal - 1),
+    })),
+    on(galleryActions.loadVersionsPageSuccess, (state: GalleryState, { items, total, page }) => ({
+      ...state,
+      versionItems: page === 1 ? items : [...state.versionItems, ...items],
+      versionTotal: total,
+      page,
+      isLoading: false,
+      error: null,
     })),
   ),
   extraSelectors: ({ selectGalleryState }) => ({

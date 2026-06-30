@@ -52,6 +52,7 @@ export class SubToolbar {
     all:    'Alles',
     photos: 'Fotos',
     faces:  'Gesichter',
+    edits:  'Edits',
   };
 
   protected readonly MEDIA_TYPE_LIST: MediaType[] = [...MEDIA_TYPES];

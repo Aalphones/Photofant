@@ -13,7 +13,7 @@ export type {
 } from './caption-preset.model';
 export { JOB_STATES, JOB_KINDS } from './job.model';
 
-export type { AssetDto, AssetDetailDto, AssetsPage, AssetGroup, TagDto, FaceDto, FacetItem, TagFacetItem, Facets, Density, SortKey, SortOrder, GroupKey, SearchMode, TagListItem, SimilarAsset, MediaType, FaceGalleryItemDto, FacesPage, VersionDto } from './asset.model';
+export type { AssetDto, AssetDetailDto, AssetsPage, AssetGroup, TagDto, FaceDto, FacetItem, TagFacetItem, Facets, Density, SortKey, SortOrder, GroupKey, SearchMode, TagListItem, SimilarAsset, MediaType, FaceGalleryItemDto, FacesPage, VersionDto, VersionGalleryItemDto, VersionsPage } from './asset.model';
 export type { PersonDto, PersonFace, FaceMatch, PersonDupePair, FaceImportResult, PersonImportResponse, ClusterResult } from './person.model';
 export { DENSITIES, DENSITY_THUMB_SIZE, SORT_KEYS, SORT_ORDERS, GROUP_KEYS, BASE_HEIGHTS, SEARCH_MODES, MEDIA_TYPES } from './asset.model';
 

@@ -19,7 +19,7 @@ from photofant.comfyui.importer import (
     import_comfyui_output,
     select_output_from_history,
 )
-from photofant.db.models import Asset, AssetInstance, Face
+from photofant.db.models import Asset, AssetInstance, Face, Version
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.settings import load_settings
@@ -110,20 +110,22 @@ def expand_batch(
     inputs: dict[str, int | list[int]],
     input_bindings: list[dict[str, Any]],
     face_inputs: dict[str, int | list[int]] | None = None,
-) -> list[tuple[dict[str, int], dict[str, int]]]:
-    """Expand inputs into N (asset_inputs, face_inputs) tuples — one per batch job.
+    version_inputs: dict[str, int | list[int]] | None = None,
+) -> list[tuple[dict[str, int], dict[str, int], dict[str, int]]]:
+    """Expand inputs into N (asset_inputs, face_inputs, version_inputs) tuples — one per batch job.
 
     Rules:
-    - At most one batch axis across BOTH inputs and face_inputs.
+    - At most one batch axis across inputs, face_inputs, and version_inputs.
     - kind=mask inputs cannot be the batch axis.
-    - A second array input (in either map) raises ValueError.
+    - A second array input (in any map) raises ValueError.
     - No array input → one job (pass-through).
     """
     resolved_face_inputs: dict[str, int | list[int]] = face_inputs or {}
+    resolved_version_inputs: dict[str, int | list[int]] = version_inputs or {}
     kind_map = {b["key"]: b.get("kind", "image") for b in input_bindings}
 
     batch_key: str | None = None
-    batch_in_faces = False
+    batch_source: str = "assets"  # "assets" | "faces" | "versions"
 
     for key, value in inputs.items():
         if not isinstance(value, list):
@@ -138,7 +140,7 @@ def expand_batch(
                 "Nur ein Input darf eine Liste sein."
             )
         batch_key = key
-        batch_in_faces = False
+        batch_source = "assets"
 
     for key, value in resolved_face_inputs.items():
         if not isinstance(value, list):
@@ -149,7 +151,18 @@ def expand_batch(
                 "Nur ein Input darf eine Liste sein."
             )
         batch_key = key
-        batch_in_faces = True
+        batch_source = "faces"
+
+    for key, value in resolved_version_inputs.items():
+        if not isinstance(value, list):
+            continue
+        if batch_key is not None:
+            raise ValueError(
+                f"Mehrere Batch-Achsen: '{batch_key}' und '{key}'. "
+                "Nur ein Input darf eine Liste sein."
+            )
+        batch_key = key
+        batch_source = "versions"
 
     if batch_key is None:
         single_assets: dict[str, int] = {
@@ -160,28 +173,44 @@ def expand_batch(
             key: (value[0] if isinstance(value, list) else value)
             for key, value in resolved_face_inputs.items()
         }
-        return [(single_assets, single_faces)]
+        single_versions: dict[str, int] = {
+            key: (value[0] if isinstance(value, list) else value)
+            for key, value in resolved_version_inputs.items()
+        }
+        return [(single_assets, single_faces, single_versions)]
 
-    source_map = resolved_face_inputs if batch_in_faces else inputs
+    if batch_source == "assets":
+        source_map = inputs
+    elif batch_source == "faces":
+        source_map = resolved_face_inputs
+    else:
+        source_map = resolved_version_inputs
     batch_items: list[int] = source_map[batch_key]  # type: ignore[assignment]
 
-    result: list[tuple[dict[str, int], dict[str, int]]] = []
+    result: list[tuple[dict[str, int], dict[str, int], dict[str, int]]] = []
     for item_id in batch_items:
         job_assets: dict[str, int] = {}
         for key, value in inputs.items():
-            if key == batch_key and not batch_in_faces:
+            if key == batch_key and batch_source == "assets":
                 job_assets[key] = item_id
             else:
                 job_assets[key] = value[0] if isinstance(value, list) else value  # type: ignore[assignment]
 
         job_faces: dict[str, int] = {}
         for key, value in resolved_face_inputs.items():
-            if key == batch_key and batch_in_faces:
+            if key == batch_key and batch_source == "faces":
                 job_faces[key] = item_id
             else:
                 job_faces[key] = value[0] if isinstance(value, list) else value  # type: ignore[assignment]
 
-        result.append((job_assets, job_faces))
+        job_versions: dict[str, int] = {}
+        for key, value in resolved_version_inputs.items():
+            if key == batch_key and batch_source == "versions":
+                job_versions[key] = item_id
+            else:
+                job_versions[key] = value[0] if isinstance(value, list) else value  # type: ignore[assignment]
+
+        result.append((job_assets, job_faces, job_versions))
     return result
 
 
@@ -215,6 +244,19 @@ def _resolve_face_paths(face_ids: list[int]) -> dict[int, str]:
     return {int(row[0]): str(row[1]) for row in rows}
 
 
+def _resolve_version_paths(version_ids: list[int]) -> dict[int, str]:
+    """Return {version_id: file_path} for the given version IDs."""
+    if not version_ids:
+        return {}
+    with SessionLocal() as session:
+        rows = (
+            session.query(Version.id, Version.path)
+            .filter(Version.id.in_(version_ids))
+            .all()
+        )
+    return {int(row[0]): str(row[1]) for row in rows}
+
+
 # ── Job coroutine ─────────────────────────────────────────────────────────────
 
 async def run_comfyui_run_job(
@@ -224,6 +266,7 @@ async def run_comfyui_run_job(
     param_bindings: list[dict[str, Any]],
     job_inputs: dict[str, int],
     job_face_inputs: dict[str, int],
+    job_version_inputs: dict[str, int],
     params: dict[str, Any],
     base_url: str,
     client_id: str,
@@ -241,9 +284,10 @@ async def run_comfyui_run_job(
 
     client = ComfyUIClient(base_url=base_url, timeout=timeout)
 
-    # 1. Resolve file paths for assets and faces
+    # 1. Resolve file paths for assets, faces, and versions
     path_map = await asyncio.to_thread(_resolve_asset_paths, list(job_inputs.values()))
     face_path_map = await asyncio.to_thread(_resolve_face_paths, list(job_face_inputs.values()))
+    version_path_map = await asyncio.to_thread(_resolve_version_paths, list(job_version_inputs.values()))
 
     # 2. Upload each input image to ComfyUI; collect assigned filenames
     asset_filenames: dict[str, str] = {}
@@ -272,6 +316,14 @@ async def run_comfyui_run_job(
         uploaded_name = await asyncio.to_thread(client.upload_image, Path(file_path_str))
         asset_filenames[key] = uploaded_name
         log.info("Uploaded face %d as '%s' (job %s)", face_id, uploaded_name, status.id)
+
+    for key, version_id in job_version_inputs.items():
+        file_path_str = version_path_map.get(version_id)
+        if file_path_str is None:
+            raise ValueError(f"Version {version_id} nicht gefunden")
+        uploaded_name = await asyncio.to_thread(client.upload_image, Path(file_path_str))
+        asset_filenames[key] = uploaded_name
+        log.info("Uploaded version %d as '%s' (job %s)", version_id, uploaded_name, status.id)
 
     job_queue.update(status, progress=0.5, state=JobState.RUNNING)
 
@@ -374,7 +426,7 @@ async def enqueue_comfyui_runs(
     workflow_template: dict[str, Any],
     input_bindings: list[dict[str, Any]],
     param_bindings: list[dict[str, Any]],
-    expanded_inputs: list[tuple[dict[str, int], dict[str, int]]],
+    expanded_inputs: list[tuple[dict[str, int], dict[str, int], dict[str, int]]],
     params: dict[str, Any],
     workflow_name: str,
     mask_input_key: str | None = None,
@@ -397,7 +449,7 @@ async def enqueue_comfyui_runs(
     total = len(expanded_inputs)
     statuses: list[JobStatus] = []
 
-    for index, (job_inputs, job_face_inputs) in enumerate(expanded_inputs):
+    for index, (job_inputs, job_face_inputs, job_version_inputs) in enumerate(expanded_inputs):
         label = f"ComfyUI: {workflow_name}"
         if total > 1:
             label += f" ({index + 1}/{total})"
@@ -417,13 +469,14 @@ async def enqueue_comfyui_runs(
         status = await job_queue.enqueue(
             kind=JobKind.COMFYUI_RUN,
             label=label,
-            coro_factory=lambda js, ji=job_inputs, jfi=job_face_inputs, ai=auto_import: run_comfyui_run_job(
+            coro_factory=lambda js, ji=job_inputs, jfi=job_face_inputs, jvi=job_version_inputs, ai=auto_import: run_comfyui_run_job(
                 js,
                 workflow_template,
                 input_bindings,
                 param_bindings,
                 ji,
                 jfi,
+                jvi,
                 params,
                 base_url,
                 client_id,

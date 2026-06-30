@@ -21,6 +21,8 @@ const {
   selectAnchorId,
   selectFaceItems,
   selectFaceTotal,
+  selectVersionItems,
+  selectVersionTotal,
 } = galleryFeature;
 
 function formatMonthLabel(dateStr: string | null): string {
@@ -104,6 +106,11 @@ const selectFaceHasMore = createSelector(
   (total: number, page: number) => total > page * FACE_PAGE_SIZE,
 );
 
+const selectVersionHasMore = createSelector(
+  selectVersionTotal, selectPage, selectPageSize,
+  (total: number, page: number, pageSize: number) => total > page * pageSize,
+);
+
 const selectLightboxAsset = createSelector(
   selectEntities,
   selectLightboxId,
@@ -183,4 +190,7 @@ export const gallerySelectors = {
   selectFaceTotal,
   selectFaceHasMore,
   selectHashMap,
+  selectVersionItems,
+  selectVersionTotal,
+  selectVersionHasMore,
 };

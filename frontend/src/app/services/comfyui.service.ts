@@ -139,12 +139,14 @@ export class ComfyUIService {
     inputs: Record<string, number | number[]>,
     faceInputs: Record<string, number | number[]> = {},
     extras: RunExtras = {},
+    versionInputs: Record<string, number | number[]> = {},
   ): Observable<{ jobs: { job_id: string }[] }> {
     return this.http.post<{ jobs: { job_id: string }[] }>(
       `/api/comfyui/workflows/${workflowKey}/run`,
       {
         inputs,
         face_inputs: faceInputs,
+        version_inputs: versionInputs,
         prompt: extras.prompt ?? null,
         negative_prompt: extras.negativePrompt ?? null,
         resolution: extras.resolution ?? null,

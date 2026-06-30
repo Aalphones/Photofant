@@ -1,7 +1,7 @@
 export const SEARCH_MODES = ['tags', 'caption', 'semantic'] as const;
 export type SearchMode = (typeof SEARCH_MODES)[number];
 
-export const MEDIA_TYPES = ['all', 'photos', 'faces'] as const;
+export const MEDIA_TYPES = ['all', 'photos', 'faces', 'edits'] as const;
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
 export interface TagListItem {
@@ -145,6 +145,25 @@ export interface FaceGalleryItemDto {
 
 export interface FacesPage {
   items: FaceGalleryItemDto[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface VersionGalleryItemDto {
+  id: number;
+  type: string | null;
+  is_current: boolean;
+  params: Record<string, unknown> | null;
+  created_at: string | null;
+  thumbnail_url: string;
+  parent_asset_id: number | null;
+  width: number | null;
+  height: number | null;
+}
+
+export interface VersionsPage {
+  items: VersionGalleryItemDto[];
   total: number;
   page: number;
   page_size: number;

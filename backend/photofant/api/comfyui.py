@@ -141,6 +141,7 @@ class ResolutionRunRequest(BaseModel):
 class RunRequest(BaseModel):
     inputs: dict[str, int | list[int]]
     face_inputs: dict[str, int | list[int]] = {}
+    version_inputs: dict[str, int | list[int]] = {}
     prompt: str | None = None
     negative_prompt: str | None = None
     resolution: ResolutionRunRequest | None = None
@@ -457,7 +458,7 @@ async def run_workflow(key: str, body: RunRequest) -> RunResponse:
 
     # 8. Expand batch
     try:
-        expanded = expand_batch(resolved_inputs, input_bindings, body.face_inputs)
+        expanded = expand_batch(resolved_inputs, input_bindings, body.face_inputs, body.version_inputs)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -616,7 +617,7 @@ async def run_default_workflow(task: str, body: DefaultRunRequest) -> RunRespons
         param_values["_resolution_ar"] = body.resolution.aspect_ratio
 
     try:
-        expanded = expand_batch(resolved_inputs, input_bindings, body.face_inputs)
+        expanded = expand_batch(resolved_inputs, input_bindings, body.face_inputs, body.version_inputs)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

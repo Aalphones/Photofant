@@ -1,0 +1,17 @@
+<div class="version-cell__thumb">
+  <img
+    class="version-cell__img"
+    [src]="version().thumbnail_url"
+    alt=""
+    loading="lazy"
+  />
+  <span class="version-cell__badge">{{ typeLabel() }}</span>
+  @if (isArmed()) {
+    <div class="version-cell__armed-overlay">
+      <span class="version-cell__armed-hint">↑ binden</span>
+    </div>
+  }
+</div>
+<div class="version-cell__meta">
+  <span class="version-cell__date">{{ formattedDate() }}</span>
+</div>

@@ -50,6 +50,31 @@
   line-height: 1.5;
 }
 
+.galerie-versions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.galerie-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.load-more-btn {
+  padding: 8px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover { background: var(--surface-2); }
+}
+
 .galerie__toast {
   position: fixed;
   bottom: 80px;

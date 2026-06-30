@@ -126,6 +126,25 @@ class VersionDto(BaseModel):
     thumbnail_url: str
 
 
+class VersionGalleryDto(BaseModel):
+    id: int
+    type: str | None
+    is_current: bool
+    params: dict | None  # type: ignore[type-arg]
+    created_at: datetime | None
+    thumbnail_url: str
+    parent_asset_id: int | None
+    width: int | None
+    height: int | None
+
+
+class VersionsPage(BaseModel):
+    items: list[VersionGalleryDto]
+    total: int
+    page: int
+    page_size: int
+
+
 # ── Render pipeline ───────────────────────────────────────────────────────────
 
 def _render_image(
@@ -715,6 +734,52 @@ async def _generate_version_thumbnail(version_id: int, file_path: Path) -> None:
 
 
 # ── Versions router (thumbnail + file) ──────────────────────────────────────
+
+@versions_router.get("", response_model=VersionsPage)
+def list_versions(
+    session: DbSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> VersionsPage:
+    """List all saved edit versions (newest first) for the gallery."""
+    query = session.query(Version)
+    total = query.count()
+    versions: list[Version] = (
+        query
+        .order_by(Version.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    items: list[VersionGalleryDto] = []
+    for version in versions:
+        parent_asset_id: int | None = None
+        if version.instance_id is not None:
+            instance = session.get(AssetInstance, version.instance_id)
+            if instance is not None:
+                parent_asset_id = instance.asset_id
+
+        width: int | None = None
+        height: int | None = None
+        if version.params:
+            width = version.params.get("width")
+            height = version.params.get("height")
+
+        items.append(VersionGalleryDto(
+            id=version.id,
+            type=version.type,
+            is_current=version.is_current,
+            params=version.params,
+            created_at=version.created_at,
+            thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+            parent_asset_id=parent_asset_id,
+            width=width,
+            height=height,
+        ))
+
+    return VersionsPage(items=items, total=total, page=page, page_size=page_size)
+
 
 @versions_router.get("/{version_id}/thumbnail")
 async def get_version_thumbnail(
