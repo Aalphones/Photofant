@@ -3,7 +3,9 @@
 **Tier:** heikel
 **Status:** pending
 
-Voraussetzung für alle anderen Phasen.
+Voraussetzung für alle anderen Phasen. Ersetzt die ursprüngliche Fassung (Dual-Listing
+mit Stapel-Kopf + Original-Echo) durch das flache Modell aus der README (Korrektur
+2026-07-01): jede Version ist ein eigener, gleichberechtigter Eintrag.
 
 ---
 
@@ -13,63 +15,86 @@ Voraussetzung für alle anderen Phasen.
   (Zeile ~56), `get_asset_thumbnail` (Zeile ~379)
 - `backend/photofant/api/faces.py` — bestehende Face-Liste/Query
 - `backend/photofant/db/models.py` — `Asset.original_id`, `Version` (XOR `instance_id`/`face_id`,
-  `is_current`), `AssetInstance`
+  `is_current`, `type`), `AssetInstance` (Multi-Instanz-Semantik P7 Phase 3)
 - `docs/models.md` — Sektionen `asset`, `asset_instance`, `version`, `face`
-- README dieses Plans — Kontrakt-Sektion „Stapel" (Definition Gruppe, Dual-Listing-Regel)
+- README dieses Plans — Kontrakt-Sektion „Stapel" + Pipeline-Scope-Entscheidung
+  (ComfyUI-Edits volle Pipeline, Editor-Dialog-Edits ohne eigene Faces/Captions/Tags)
 
 ---
 
 ## Abnahme-Kriterien
 
-- [ ] `GET /api/assets` liefert pro Original mit Edit-Gruppe **1 oder 2** Einträge
-  (Stapel-Kopf immer; Original-Echo nur wenn Original nicht selbst das neueste Mitglied ist)
-  gemäß der Regel im README
-- [ ] Jeder Eintrag hat `stack_size`, `list_role`, `effective_date`, `thumbnail_source_id`
-- [ ] Sortierung nach Datum nutzt `effective_date`, nicht `asset.created_at`
+- [ ] `GET /api/assets` (Fotos-Tab) listet **jede** `version`-Zeile (Editor-Dialog-Edits,
+  `instance_id` gesetzt) und **jedes** `original_id`-Kind-Asset (ComfyUI-Edits) als
+  eigenständigen Eintrag neben dem Original — kein Kollabieren, keine Aggregation
+- [ ] Jeder Eintrag hat `stack_size` (Gruppengröße) und `stack_group_id`
+- [ ] Sortierung nach Datum nutzt weiterhin das **eigene** `created_at` jedes Eintrags
+  (kein Gruppen-Aggregat-Datum — dieses Konzept entfällt gegenüber der Vorfassung)
+- [ ] Version-Pseudo-Einträge liefern Tags/Captions/Faces/Person **des Original-Assets**
+  (sie haben keine eigenen — Editor-Dialog-Edits sind dieselbe Bild-Identität, nur
+  anders gerendert); `original_id`-Kind-Assets liefern ihre **eigenen** (haben sie schon)
 - [ ] `GET /api/faces` liefert dieselbe Logik für Face-Edit-Gruppen (über `version.face_id`)
-- [ ] Thumbnail-Auslieferung für einen Stapel-Kopf-Eintrag zeigt das Bild des neuesten
-  Gruppenmitglieds, nicht das des Assets selbst
-- [ ] Bestehende Filter (Person, Tags, Quelle, Favorit, Suche) funktionieren weiterhin korrekt
-  auf den expandierten Einträgen (kein Filter verliert Treffer durch die Umstellung)
-- [ ] Verifiziert: Verhalten bei Personen-Umhängung eines Edits (🟡 im README) — Befund dokumentiert,
-  auch wenn kein Fix in dieser Phase nötig ist
+- [ ] Thumbnail-Auslieferung für einen Version-Eintrag zeigt das Bild dieser Version,
+  nicht das des Original-Assets
+- [ ] Bestehende Filter (Person, Tags, Quelle, Favorit, Suche) funktionieren weiterhin
+  korrekt — Filter auf Tags/Caption/Quelle greifen bei Version-Pseudo-Einträgen über
+  das Original-Asset (siehe oben), bei `original_id`-Kindern über sich selbst
+- [ ] Cross-Person-Wanderung eines Edits: befund­et **und** falls fehlend gebaut (siehe
+  Checkliste „Untersuchung zuerst") — das ist der Kern dieser Phase, nicht nur
+  Beiwerk zur Anzeige
 
 ---
 
 ## Checkliste
 
-### Untersuchung zuerst
+### Untersuchung zuerst (Chesterton's Fence — nicht annehmen)
 
-- [ ] Nachvollziehen, wie `Version.path` heute beim Anlegen gesetzt wird — folgt es dem
-  Personen-Ordner der zugehörigen `Face`/`AssetInstance` zum Anlage-Zeitpunkt, und was passiert,
-  wenn die Person danach wechselt? (Chesterton's Fence — Befund vor Änderung, nicht annehmen)
-- [ ] Klären: kann eine Edit-Gruppe (Fotos) Mitglieder aus **beiden** Quellen gleichzeitig haben
-  (mehrere `version`-Zeilen UND ein `original_id`-Kind)? Falls ja: `latest_activity_at` muss
-  beide Quellen mergen, nicht nur eine
+- [ ] Nachvollziehen, wie `Version.path` heute beim Anlegen gesetzt wird. Bestätigt vom
+  User: ein Editor-Edit eines Fotos von Person X, dessen Gesichtserkennung Person Y
+  ergibt, muss physisch unter `personY/edits/` landen, während das Original bei
+  `personX/photos/` bleibt. Prüfen: existiert diese Umhänge-Logik für `version`-Zeilen
+  bereits (analog zur Multi-Instanz-Semantik für Original-Fotos, P7 Phase 3), oder
+  läuft ein Edit heute immer im Personen-Ordner seiner Quelle? Falls letzteres: das ist
+  der zentrale Fix dieser Phase, nicht nur ein Anzeige-Detail
+- [ ] Gleiche Frage für `original_id`-Kind-Assets: laufen die schon durch die normale
+  Clustering-Pipeline (P7) und landen dadurch automatisch beim erkannten Gesicht —
+  vermutlich ja, weil sie vollwertige neue Assets sind, aber verifizieren
+- [ ] Bestätigt vom User: eine Gruppe kann Mitglieder aus **beiden** Quellen gleichzeitig
+  haben (mehrere `version`-Zeilen UND `original_id`-Kinder) — Gruppierungs-Logik muss
+  beide mergen
 
-### Query-Umbau
+### Query-Umbau — Fotos
 
-- [ ] Gruppierungs-Hilfsfunktion: pro Asset alle Gruppenmitglieder ermitteln
-  (`version`-Zeilen der zugehörigen `asset_instance` + Assets mit `original_id == asset.id`)
-- [ ] `latest_activity_at` je Gruppe berechnen (SQL-Aggregation bevorzugt vor Python-Post-Processing,
-  wegen Pagination — Performance im Blick behalten, siehe Critical Rule 5 „UI blockiert nie")
-- [ ] `list_assets`: nach Filtern/Facetten die Dual-Listing-Expansion anwenden, dann paginieren
-  (Reihenfolge wichtig: Filter zuerst auf Asset-Ebene, Expansion danach, sonst zählt `total` falsch)
-- [ ] `AssetDto` um `stack_size`, `list_role`, `effective_date`, `thumbnail_source_id` erweitern
-- [ ] `get_asset_thumbnail`: bei Stapel-Kopf-Eintrag `thumbnail_source_id` statt `asset_id` für
-  Datei-Auflösung nutzen (Route bleibt `/assets/{id}/thumbnail`, Auflösung intern umgeleitet —
-  🟡 oder braucht es einen eigenen Query-Parameter? Im Zweifel: Route-Parameter `version_id`
-  optional ergänzen, Rückwärtskompatibilität für bestehende Aufrufer prüfen)
+- [ ] Gruppierungs-Hilfsfunktion: pro Original alle Gruppenmitglieder ermitteln
+  (`version`-Zeilen der zugehörigen `asset_instance` + Assets mit `original_id == asset.id`),
+  daraus `stack_size` ableiten (1 + Anzahl Mitglieder)
+- [ ] `list_assets`: bestehende Asset-Query bleibt (liefert Original + `original_id`-Kinder
+  bereits heute, nur ohne Stapel-Metadaten) — zusätzlich `version`-Zeilen (nur
+  `instance_id` gesetzt, nicht `face_id`) als Pseudo-Einträge in dieselbe Ergebnisliste
+  einmischen (UNION oder zweiter Query-Pass + Merge vor Pagination)
+- [ ] Filter (Tags/Caption/Quelle/Person/Favorit/Suche) müssen bei Version-Pseudo-
+  Einträgen über das zugehörige Original-Asset ausgewertet werden — nicht separat
+  filterbar, da sie keine eigenen Tags/Captions haben
+- [ ] `AssetDto` um `stack_size: number`, `stack_group_id: number | null` erweitern;
+  Version-Pseudo-Einträge brauchen ein Unterscheidungsmerkmal (z.B. `kind: 'asset' | 'version'`
+  + `version_id` wenn `kind === 'version'`) — Frontend braucht das für den Lightbox-Einstieg
+  (Phase 4: „öffne Asset X mit initial gewählter Version Y" statt eigenes Detail-Objekt)
+- [ ] `get_asset_thumbnail`: Version-Pseudo-Eintrag löst über `version_id` statt `asset_id`
+  auf — bestehende Route für Versionen-Thumbnails prüfen (`VersionDto.thumbnail_url` —
+  gibt es dafür schon einen Endpunkt? Falls ja, wiederverwenden statt duplizieren)
 
 ### Faces-Äquivalent
 
-- [ ] `api/faces.py`: gleiche Gruppierung über `version.face_id`, gleiche vier neuen Felder
-  auf `FaceGalleryItemDto`
+- [ ] `api/faces.py`: gleiche Gruppierung + gleiches Merge-Verfahren über `version.face_id`,
+  gleiche zwei neuen Felder auf `FaceGalleryItemDto`
 
 ### Performance
 
 - [ ] Bei großen Bibliotheken (Tausende Assets): Index-Check auf `version.instance_id`,
   `version.face_id`, `asset.original_id` — vorhanden laut `docs/models.md`? Ergänzen falls nicht.
+- [ ] Merge zweier Query-Ergebnisse vor Pagination: im Blick behalten, dass das nicht zu
+  einem Full-Table-Scan wird (Critical Rule 5 „UI blockiert nie") — ggf. Sortierung/Limit
+  auf SQL-Ebene je Teilquery vor dem Merge anwenden
 
 ---
 

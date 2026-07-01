@@ -18,7 +18,7 @@
 
 ## Abnahme-Kriterien
 
-- [ ] `docs/decisions/012-galerie-stapel-dual-listing.md` angelegt
+- [ ] `docs/decisions/012-galerie-stapel-flache-einzeleintraege.md` angelegt
 - [ ] `docs/code-map.md`, `docs/models.md`, `docs/routes.md` spiegeln die neuen Felder/Endpunkte
 - [ ] `STATE.md`-Backlog-Zeile für P21 auf „archiviert" bzw. entfernt (macht `mode-implementing`
   beim Archivieren, hier nur zur Erinnerung)
@@ -29,28 +29,31 @@
 
 - [ ] ADR-012 schreiben (Kontext / Optionen / Entscheidung / Konsequenzen, ~10 Zeilen):
   ```markdown
-  # ADR-012 — Galerie-Stapel: Dual-Listing statt reiner Stapel-Kopf
+  # ADR-012 — Galerie-Stapel: flache Einzeleinträge statt kollabiertem Stapel-Kopf
 
   ## Kontext
-  Originale mit Edits sollen sowohl an ihrer eigenen chronologischen Stelle als auch
-  nach vorne (Datum des neuesten Edits) sichtbar sein — eine reine "nur Stapel-Kopf"-
-  Darstellung würde das Original in der Zeitleiste verschwinden lassen.
+  Ein Original mit mehreren Edits soll in der Galerie sichtbar bleiben, wie viele
+  Edits es hat und wann jedes einzelne entstand — nicht nur "es gibt ein neuestes Edit".
 
   ## Betrachtete Optionen
-  - A: Dual-Listing — Original bekommt bei Bedarf einen zweiten Galerie-Eintrag (gewählt)
-  - B: Nur Stapel-Kopf, Original nur über Versionen-Navigation erreichbar (einfacher,
-    aber Original ist an seiner Zeitstelle unsichtbar — vom User explizit abgelehnt)
-  - C: Client-seitige Duplizierung nach Fetch (verworfen — bricht Server-seitige
-    Pagination/Facetten)
+  - A: Flache Einzeleinträge — jede Version (Original + jedes Edit) ist ein eigener,
+    gleichberechtigter Galerie-Eintrag an seiner eigenen chronologischen Stelle (gewählt)
+  - B: Kollabierter Stapel-Kopf (nur neuestes Edit sichtbar, Original als zweiter
+    Echo-Eintrag) — erste Fassung dieses Plans, vom User als zu wenig granular
+    verworfen: bei 10 Edits will man 10 Einträge sehen, nicht 2
+  - C: Client-seitige Gruppierung nach Fetch (verworfen — Sortierung/Pagination
+    müsste dann clientseitig laufen, bricht bei großen Bibliotheken)
 
   ## Entscheidung
-  Option A. `total`/`items` zählen Einträge nach Expansion, nicht Assets 1:1.
+  Option A. `total`/`items` bleiben 1:1 zu physischen Objekten (Asset oder Version) —
+  einfacher als Option B, weil keine Aggregation/Kollabier-Logik nötig ist. Jeder
+  Eintrag trägt `stack_size`/`stack_group_id` fürs Icon, keine Zeitpunkt-Aggregation.
 
   ## Konsequenzen
-  - Pagination zählt Einträge, nicht Assets — Kommentar im Code, damit niemand die
-    Prämisse "1 Asset = 1 Zeile" später stillschweigend wiederherstellt
-  - Bulk-Aktionen müssen Dual-Listing-Einträge auf dieselbe Asset-ID zurückführen
-    (siehe Phase 2 Checkliste)
+  - `version`-Zeilen (bisher nur im separaten Edits-Tab sichtbar) erscheinen jetzt
+    auch im Fotos-/Gesichter-Tab als Pseudo-Einträge (Query mischt zwei Quellen)
+  - Bulk-Aktionen wirken pro Eintrag (Original, Version, `original_id`-Kind je einzeln),
+    nicht pro Gruppe — kein Sonderfall für "doppelte Aktion auf demselben Asset"
   ```
 - [ ] `docs/code-map.md` Zeile „Galerie & Lightbox": Stapel-Logik erwähnen, falls die
   Query-Grobstruktur sich änderte (z.B. neue Hilfsfunktion/Modul)

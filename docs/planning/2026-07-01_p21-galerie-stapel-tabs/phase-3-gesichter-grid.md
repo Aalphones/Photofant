@@ -19,24 +19,24 @@ für `features/galerie/face-grid/` statt `grid/`.
 ## Abnahme-Kriterien
 
 - [ ] Face-Zelle zeigt dasselbe Stapel-Icon wie Foto-Zelle (Phase 2), wenn `stack_size > 1`
-- [ ] Ein Face mit Edit-Version zeigt den Stapel: Thumbnail = neueste Face-Version,
-  Sortierdatum = deren `created_at`
-- [ ] Das Original-Face erscheint zusätzlich separat an seiner eigenen Stelle (gleiche Regel
-  wie bei Fotos: nur wenn nicht selbst das neueste Mitglied)
-- [ ] Wurde das Face zwischenzeitlich einer anderen Person zugewiesen, zeigt die Personensuche
-  beide Personen an der jeweils korrekten Stelle (Original bei alter Person, falls dort
-  physisch verblieben; Edit bei neuer Person — abhängig vom Phase-1-Befund zur Umhängung)
+- [ ] Ein Face mit Edit-Version(en) zeigt **jede** Version als eigene Kachel (nicht nur
+  die neueste) — Original-Face + jede Face-Version einzeln, je mit eigenem Datum
+- [ ] Wurde eine Face-Version zwischenzeitlich einer anderen Person zugewiesen, zeigt die
+  Personensuche jede Kachel bei der Person, zu der sie aktuell physisch gehört (Original
+  ggf. bei alter Person, Edit bei neuer — abhängig vom Phase-1-Befund zur Umhängung)
 
 ---
 
 ## Checkliste
 
-- [ ] `FaceGalleryItemDto` um die vier Stapel-Felder ergänzen (Typen wie in Phase 2)
+- [ ] `FaceGalleryItemDto` um `stack_size: number`, `stack_group_id: number | null` ergänzen
+  (Typen wie in Phase 2; Faces haben kein `kind`-Unterscheidungsfeld nötig, da alle
+  Face-Versionen über `version.face_id` laufen — kein `original_id`-Äquivalent für Faces)
 - [ ] `face-cell.ts`/`.html`: Stapel-Badge analog zu `cell` (Phase 2) einbauen — gleiche
   SCSS-Klasse wiederverwenden statt duplizieren
-- [ ] Sortierung im Face-Grid folgt `effective_date`
+- [ ] Sortierung im Face-Grid folgt dem eigenen Datum jedes Eintrags
 - [ ] Klick-Verhalten (`openFace`/`onOpenFace`) bleibt erhalten, liefert aber jetzt bei
-  Stapel-Kopf die neueste Face-Version als Ziel (siehe Phase 4 für Lightbox-Seite)
+  einem Version-Eintrag dessen `version_id` mit (siehe Phase 4 für Lightbox-Seite)
 
 ---
 

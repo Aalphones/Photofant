@@ -3,15 +3,40 @@
 **Status:** pending
 
 Ziel: Die Galerie hat nur noch **zwei** Tabs (Fotos, Gesichter) statt aktuell drei
-(`photos`/`faces`/`edits`). Edits verschwinden als eigener Tab und tauchen stattdessen
-als **Stapel** unter ihrem Original auf — bei Fotos oder bei Gesichtern, je nachdem
-was editiert wurde. Ein Edit kann physisch in einem anderen Personen-Ordner liegen
-als sein Original (Person wurde beim Edit umgehängt); trotzdem gehören sie in der
-Anzeige zusammen. Koordiniert sich mit P15 (Lightbox-Angleichung, insbesondere
-Phase 4 Versionen-Sektion und Phase 7 Gesichter-Modus) und mit dem noch nicht
-gestarteten P20 (Virtual-Scroll-Galerie) — beide fassen das Grid-Datenmodell an,
-P20 sollte P21 **nach** dessen Abschluss aufsetzen (oder umgekehrt koordiniert
-werden), nicht parallel im selben Query-Codepfad.
+(`photos`/`faces`/`edits`). Edits verschwinden als eigener Tab. Stattdessen zeigt die
+Galerie **jede Version einzeln** — das Original und jedes einzelne Edit bekommen je
+eine eigene Kachel, an ihrer jeweils eigenen chronologischen Stelle, mit eigenem
+Thumbnail. Ein Original mit 10 Edits erscheint also als 11 Kacheln, verstreut über
+die Zeitleiste. Alle Kacheln einer Gruppe tragen ein Stapel-Icon und sind über die
+Lightbox-Versionen-Sektion untereinander navigierbar. **Kein Kollabieren auf einen
+bevorzugten „Kopf"-Eintrag** — jede Version ist gleichberechtigt sichtbar (Korrektur
+2026-07-01: eine frühere Fassung dieses Plans hatte fälschlich nur 2 Einträge
+[„Stapel-Kopf" + „Original"] vorgesehen).
+
+Ein Edit kann physisch in einem anderen Personen-Ordner liegen als sein Original —
+**bestätigt**, nicht nur Verdacht: editiert man ein Foto von Person X und die
+Gesichtserkennung auf dem Edit erkennt Person Y, bleibt das Original bei Person X,
+das Edit landet unter Person Y `edits/`. Eine Gruppe kann also über Personengrenzen
+verteilt sein; Personen-Filter/-Suche zeigt jeweils nur die Mitglieder, die aktuell
+zur gefilterten Person gehören (mit Stapel-Icon als Hinweis auf Geschwister anderswo).
+
+Ein Original kann Edits aus **beiden** Mechanismen gleichzeitig haben — leichte
+Editor-Versionen (`version`-Tabelle) und separat angestoßene ComfyUI-Workflow-Imports
+(eigene Assets über `original_id`) — beide zählen zur selben Gruppe, beide bekommen
+eine eigene Galerie-Kachel. **Unterschiedliche Pipeline-Tiefe bleibt aber bestehen**
+(Entscheidung 2026-07-01): ComfyUI-Workflow-Edits sind echte neue Bild-Dateien und
+laufen komplett durch die normale Pipeline (eigene Faces/Captions/Tags — das gibt es
+schon, keine neue Arbeit). Leichte Editor-Dialog-Edits (Crop/Rotate/Freistellen,
+auch In-Place-ComfyUI über den Editor) bleiben bewusst **ohne** eigene Faces/Captions/
+Tags — es ist dasselbe Foto, nur zugeschnitten/rotiert. Die Pipeline (Face-/Tag-/
+Caption-Jobs, `processing_ledger`) wird in P21 **nicht** erweitert, um auch auf
+`version`-Zeilen zu laufen.
+
+Koordiniert sich mit P15 (Lightbox-Angleichung, insbesondere Phase 4 Versionen-Sektion
+und Phase 7 Gesichter-Modus) und mit dem noch nicht gestarteten P20 (Virtual-Scroll-
+Galerie) — beide fassen das Grid-Datenmodell an, P20 sollte P21 **nach** dessen
+Abschluss aufsetzen (oder umgekehrt koordiniert werden), nicht parallel im selben
+Query-Codepfad.
 
 ---
 
@@ -38,48 +63,57 @@ werden), nicht parallel im selben Query-Codepfad.
 
 ## Kontrakt (Backend → Frontend)
 
-### Neues Konzept: „Stapel" (Edit-Gruppe)
+### Neues Konzept: „Stapel" (Edit-Gruppe) — flache Einzel-Einträge
 
 Eine Stapel-Gruppe ist die Menge aller Bilder, die zu **einem** Original gehören:
 das Original selbst + alle `version`-Zeilen seiner `asset_instance` + alle Assets
 mit `original_id == asset.id`. Für Gesichter analog über `version.face_id`
 (Gesichter haben keine `original_id`-Kette, nur die `version`-Tabelle).
 
-- **`latest_activity_at`** = `max(created_at)` über alle Gruppenmitglieder
-- **Stapel-Kopf-Eintrag**: Thumbnail + Sortierdatum = neuestes Gruppenmitglied;
-  Klick öffnet die Lightbox auf genau diesem neuesten Mitglied
-- **Original-Eintrag**: Thumbnail + Sortierdatum = `asset.created_at` (eigener
-  Zeitpunkt); erscheint **zusätzlich**, nur wenn die Gruppe >1 Mitglied hat
-  **und** das Original nicht selbst das neueste Mitglied ist (sonst wäre es
-  identisch zum Stapel-Kopf → keine Dopplung)
-- Beide Einträge zeigen ein Stapel-Icon, wenn die Gruppe >1 Mitglied hat; beide
-  öffnen dieselbe Lightbox-Instanz, aus der heraus über die Versionen-Sektion
-  (P15 Phase 4) zwischen allen Gruppenmitgliedern navigiert werden kann
+- **Jedes Gruppenmitglied ist ein eigener, gleichberechtigter Galerie-Eintrag** —
+  eigenes Thumbnail (sein eigenes Bild, nicht das der Gruppe), eigenes Sortierdatum
+  (sein eigenes `created_at`). Kein Kollabieren, kein bevorzugter „Kopf"
+- **`stack_size`** = Anzahl Mitglieder der Gruppe (1 = kein Stapel, kein Icon)
+- **`stack_group_id`** = stabile ID der Gruppe (z.B. `id` des Originals) — identisch
+  für alle Mitglieder derselben Gruppe; UI nutzt sie fürs Stapel-Icon/Tooltip
+  („Stapel · N Versionen"), nicht für Aggregation
+- Jeder Eintrag mit `stack_size > 1` zeigt das Stapel-Icon; Klick öffnet die Lightbox
+  **auf genau diesem Eintrag** (nicht auf einem anderen Gruppenmitglied), von dort
+  über die Versionen-Sektion (P15 Phase 4) zu allen Geschwistern navigierbar
+- Gruppenzugehörigkeit ist **unabhängig von der aktuellen Person** — ein Edit, das
+  zu Person Y umgehängt wurde, bleibt trotzdem Mitglied der Gruppe seines Originals
+  bei Person X; nur die *Sichtbarkeit* pro Personen-Filter richtet sich nach der
+  aktuellen Person des jeweiligen Eintrags
 
-🟡 **Zu verifizieren in Phase 1** (Chesterton's Fence, nicht annehmen): Folgt eine
-`version`-Datei eines Edits automatisch dem Personen-Ordner, wenn das zugehörige
-Face später einer anderen Person zugewiesen wird? Falls nicht, ist das ein
-Vorfund, der eine eigene Korrektur braucht (nicht stillschweigend im Stapel-Query
-mit-fixen).
+**Bestätigt in Phase 1 zu bauen/verifizieren** (Chesterton's Fence — erst verstehen,
+was heute existiert, dann ergänzen): Ein Edit kann zu einer anderen Person wandern,
+wenn die Gesichtserkennung auf dem editierten Bild eine andere Person erkennt. Für
+originale Fotos gibt es dafür bereits die „Multi-Instanz-Semantik" (P7 Phase 3,
+`docs/models.md` → `asset_instance`). Ob dieselbe Umhänge-Logik heute schon für
+`version`-Zeilen (Editor-Edits) und für `original_id`-Kind-Assets (ComfyUI-Edits)
+greift, ist zu prüfen — falls nicht, ist das der eigentliche Kern von Phase 1, nicht
+nur die Anzeige-Logik.
 
 ### `AssetDto` (Galerie-Listenzeile) — neue Felder
 
 ```typescript
 stack_size:      number        // 1 = kein Stapel; sonst Anzahl Gruppenmitglieder
-list_role:       'solo' | 'stack_head' | 'original_echo'
-effective_date:  string        // Sortierdatum dieses Eintrags (siehe oben)
-thumbnail_source_id: number    // Asset- oder Version-ID, aus der das Thumbnail stammt
+stack_group_id:  number | null // gemeinsame ID über alle Mitglieder einer Gruppe
 ```
 
-Gleiche vier Felder auf `FaceGalleryItemDto` (Gesichter-Tab), Gruppierung über
+Gleiche zwei Felder auf `FaceGalleryItemDto` (Gesichter-Tab), Gruppierung über
 `version.face_id` statt `asset.original_id`.
 
 ### `GET /api/assets` (und `/api/faces`-Äquivalent) — Antwortsemantik
 
-`total`/`page`/`items` zählen **Einträge** (nach Dual-Listing-Expansion), nicht
-Assets — ein Original mit Edit kann für 2 Einträge sorgen. Diese Entscheidung
-und ihre Kosten (Pagination-Zählung ist nicht mehr 1:1 zur Asset-Tabelle) stehen
-in ADR-012 (Phase 5).
+`total`/`page`/`items` zählen weiterhin **1:1 wie heute** — jedes physische Bild
+(Original, jede `version`-Zeile, jedes `original_id`-Kind-Asset) ist genau ein Eintrag.
+Kein Expansions-/Dual-Listing-Schritt mehr nötig — das vereinfacht Phase 1 gegenüber
+der ursprünglichen Fassung dieses Plans erheblich. Die einzige neue Arbeit ist: auch
+`version`-Zeilen und `original_id`-Kind-Assets müssen als vollwertige Zeilen in der
+Fotos-Galerie erscheinen (heute tun das nur `original_id`-Kind-Assets; `version`-Zeilen
+stecken nur im separaten `edits`-Tab). Diese Entscheidung + Trade-offs stehen in
+ADR-012 (Phase 5).
 
 ---
 
@@ -98,18 +132,19 @@ in ADR-012 (Phase 5).
 ## Abnahme-Kriterien (Gesamt)
 
 - [ ] Sub-Toolbar zeigt nur noch „Alles / Fotos / Gesichter" — kein `edits`-Segment mehr
-- [ ] Ein Original mit Edit(s) zeigt im Fotos-Tab einen Stapel: Thumbnail = neuestes
-  Edit, Sortierdatum = Datum des neuesten Edits, Stapel-Icon unten rechts
-- [ ] Dasselbe Original erscheint zusätzlich separat an seiner eigenen chronologischen
-  Stelle (mit Stapel-Icon), sofern es nicht selbst das neueste Mitglied ist
-- [ ] Klick auf den Stapel-Kopf öffnet die Lightbox auf dem neuesten Edit; Klick auf
-  den separaten Original-Eintrag öffnet sie auf dem Original — beide navigierbar
-  zu allen Versionen über die Versionen-Sektion
-- [ ] Gleiches Verhalten im Gesichter-Tab (Face mit Edit-Version zeigt Stapel; Original-
-  Face separat, ggf. unter anderer Person wenn umgehängt)
+- [ ] Ein Original mit N Edits zeigt im Fotos-Tab N+1 einzelne Kacheln (Original + jedes
+  Edit), jede an ihrer eigenen chronologischen Stelle, jede mit eigenem Thumbnail
+- [ ] Alle Kacheln einer Gruppe zeigen das Stapel-Icon (unten rechts); Klick auf eine
+  Kachel öffnet die Lightbox exakt auf dieser Version, navigierbar zu allen
+  Geschwistern über die Versionen-Sektion
+- [ ] Gleiches Verhalten im Gesichter-Tab (jede Face-Version eine eigene Kachel;
+  Original-Face ggf. unter anderer Person als seine Edits, wenn umgehängt)
+- [ ] Editor-Dialog-Edits (Crop/Rotate/Freistellen) bekommen weiterhin **keine** eigenen
+  Faces/Captions/Tags; ComfyUI-Workflow-Edits behalten ihre bereits vorhandene volle
+  Pipeline-Anbindung — keine Regression in beide Richtungen
 - [ ] Kein Datenverlust/keine Dopplung in Bulk-Operationen (Auswählen/Löschen/Favorisieren) —
-  🟡 Phase 2/3 müssen prüfen, dass Dual-Listing nicht zu doppelten Bulk-Aktionen auf
-  demselben Asset führt
+  jeder Eintrag ist ein eigenständiges physisches Objekt, Bulk-Aktionen wirken pro
+  Eintrag, nicht pro Gruppe
 
 ---
 
