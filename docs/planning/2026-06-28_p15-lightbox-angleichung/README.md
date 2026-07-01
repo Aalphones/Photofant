@@ -1,6 +1,6 @@
 # P15 — Lightbox: Angleichung ans Design-Mockup
 
-**Status:** in progress (Phase 3/7)
+**Status:** in progress (Phase 4/7)
 
 Ziel: Die Angular-Lightbox an `docs/design/js/detail.jsx` + `compare.jsx` +
 `relation.jsx` angleichen. Alle sechs unten aufgelisteten Abweichungsbereiche
@@ -95,7 +95,7 @@ Backend: `AssetDetailDto` braucht `quality: float | None`, `framing: str | None`
 | 1 | Backend-Erweiterungen (Detail-DTO + Patch) | heikel | complete |
 | 2 | Stage-Toolbar + Panel-Header | standard | complete |
 | 3 | Gesichter-Redesign + PersonPicker-Modal | standard | complete |
-| 4 | Versionen-Sektion + VersionCompare-Modal | standard | pending |
+| 4 | Versionen-Sektion + VersionCompare-Modal | standard | complete |
 | 5 | Beziehungen-Sektion + RelationBrowser-Modal | standard | pending |
 | 6 | Metadaten: editierbar + fehlende Felder | standard | pending |
 | 7 | Gesichter-Modus der Lightbox (Face als eigenständiges Ziel) | heikel | pending |
@@ -146,8 +146,8 @@ FaceDetailDto {
 - [ ] Panel-Header zeigt Avatar des ersten Gesichts + Personenname
 - [ ] Gesichter sind nach Caption/Tags, vor Versionen; Quick-Assign-Grid sichtbar
 - [ ] PersonPicker-Modal liegt über der Lightbox (korrekte z-index-Hierarchie)
-- [ ] Versionen-Sektion zeigt vollständige Liste mit Thumbnails + Badges
-- [ ] VersionCompare-Modal öffnet sich, linke und rechte Seite wählbar
+- [x] Versionen-Sektion zeigt vollständige Liste mit Thumbnails + Badges
+- [x] VersionCompare-Modal öffnet sich, linke und rechte Seite wählbar
 - [ ] Beziehungen-Sektion zeigt Original + Edits; RelationBrowser öffnet sich
 - [ ] Metadaten: Quelle + Framing sind editierbar; Qualität + Seitenverhältnis sichtbar
 - [ ] Gesichter-Modus: Caption/Tags/Gesichter-Zuweisung ausgeblendet, Versionen sichtbar,

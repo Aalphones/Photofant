@@ -12,7 +12,7 @@ import { DOCUMENT } from '@angular/common';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem } from '@photofant/models';
+import type { AssetDto, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -23,6 +23,33 @@ import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare
 import { Editor } from '../../editor/editor';
 
 interface GenMetaEntry { key: string; value: string }
+
+type CompareTag = 'current' | 'version' | 'original' | 'edit';
+
+interface CompareItem {
+  id: number;
+  label: string;
+  tag: CompareTag;
+  thumbnailUrl: string;
+  resolution: string;
+  source: string;
+  date: string;
+}
+
+const COMPARE_TAG_META: Record<CompareTag, { label: string; className: string }> = {
+  current:  { label: 'Aktuell',  className: 'vc-tag--cur' },
+  version:  { label: 'Version',  className: 'vc-tag--ver' },
+  original: { label: 'Original', className: 'vc-tag--orig' },
+  edit:     { label: 'Edit',     className: 'vc-tag--edit' },
+};
+
+const VERSION_TYPE_LABELS: Record<string, string> = {
+  crop: 'Crop',
+  rotate: 'Rotiert',
+  upscale: 'Upscale',
+  comfyui: 'ComfyUI-Edit',
+  edit: 'Edit',
+};
 
 function extractGenMeta(meta: Record<string, unknown>): GenMetaEntry[] {
   const known: GenMetaEntry[] = [];
@@ -81,8 +108,11 @@ export class Lightbox {
   protected readonly showRerunDialog = signal(false);
   protected readonly showComfyuiImportDialog = signal(false);
   protected readonly showEditorModal = signal(false);
-  // Stub für Phase 4 (VersionCompare-Modal existiert dort noch nicht)
+
+  // ── VersionCompare-Modal ──────────────────────────────────────────────────
   protected readonly showVersionCompare = signal(false);
+  protected readonly leftIdx  = signal(0);
+  protected readonly rightIdx = signal(0);
 
   protected readonly isUpscaling  = signal(false);
   protected readonly upscaleError = signal<string | null>(null);
@@ -103,7 +133,7 @@ export class Lightbox {
   // Reload trigger: bump to force a fresh detail fetch
   private readonly reloadTrigger = signal(0);
 
-  private readonly detail = toSignal(
+  protected readonly detail = toSignal(
     combineLatest([
       this.store.select(gallerySelectors.selectLightboxAsset),
       toObservable(this.reloadTrigger),
@@ -280,8 +310,9 @@ export class Lightbox {
     return name?.trim().split(' ')[0] ?? '?';
   }
 
-  protected readonly sourceLabel = computed((): string => {
-    const source = this.asset()?.source;
+  protected readonly sourceLabel = computed((): string => this.sourceLabelFor(this.asset()?.source ?? null));
+
+  protected sourceLabelFor(source: string | null): string {
     if (!source) return '—';
     const labels: Record<string, string> = {
       original: 'Original',
@@ -289,7 +320,66 @@ export class Lightbox {
       sdxl: 'SDXL',
     };
     return labels[source] ?? source;
+  }
+
+  // ── VersionCompare: Panel-Items ──────────────────────────────────────────
+
+  protected readonly compareItems = computed((): CompareItem[] => {
+    const detail = this.detail();
+    const asset  = this.asset();
+    if (detail == null || asset == null) { return []; }
+
+    const items: CompareItem[] = [{
+      id: asset.id,
+      label: 'Aktuell',
+      tag: 'current',
+      thumbnailUrl: this.assetService.fileUrl(asset.id),
+      resolution: this.dimensions(),
+      source: this.sourceLabel(),
+      date: this.formattedDate(),
+    }];
+
+    for (const version of detail.versions ?? []) {
+      items.push({
+        id: version.id,
+        label: this.versionLabel(version),
+        tag: 'version',
+        thumbnailUrl: version.thumbnail_url,
+        resolution: version.res != null ? `${version.res.width} × ${version.res.height}` : '—',
+        source: this.sourceLabel(),
+        date: formatDate(version.created_at),
+      });
+    }
+
+    if (detail.original_id != null) {
+      items.push({
+        id: detail.original_id,
+        label: `Original #${detail.original_id}`,
+        tag: 'original',
+        thumbnailUrl: this.assetService.fileUrl(detail.original_id),
+        resolution: '—',
+        source: '—',
+        date: '—',
+      });
+    }
+
+    for (const edit of detail.linked_edits ?? []) {
+      items.push({
+        id: edit.id,
+        label: `${this.sourceLabelFor(edit.source)} #${edit.id}`,
+        tag: 'edit',
+        thumbnailUrl: this.assetService.fileUrl(edit.id),
+        resolution: edit.width != null && edit.height != null ? `${edit.width} × ${edit.height}` : '—',
+        source: this.sourceLabelFor(edit.source),
+        date: formatDate(edit.created_at),
+      });
+    }
+
+    return items;
   });
+
+  protected readonly leftItem  = computed((): CompareItem | null => this.compareItems()[this.leftIdx()] ?? null);
+  protected readonly rightItem = computed((): CompareItem | null => this.compareItems()[this.rightIdx()] ?? null);
 
   // Optimistic hidden tag IDs (removed but not yet reloaded)
   private readonly hiddenTagIds = signal<number[]>([]);
@@ -438,9 +528,52 @@ export class Lightbox {
     this.showEditorModal.set(false);
   }
 
-  // Modal-Inhalt folgt in Phase 4 (Versionen-Sektion + VersionCompare-Modal).
+  // ── Versionen-Sektion ─────────────────────────────────────────────────────
+
+  protected versionLabel(version: VersionDto): string {
+    if (version.type == null) { return 'Version'; }
+    return VERSION_TYPE_LABELS[version.type] ?? version.type;
+  }
+
+  protected versionMeta(version: VersionDto): string {
+    const parts: string[] = [];
+    if (version.res != null) { parts.push(`${version.res.width} × ${version.res.height}`); }
+    parts.push(formatDate(version.created_at));
+    const params = version.params;
+    const strength = params?.['strength'];
+    if (strength != null) { parts.push(`str ${strength}`); }
+    const model = params?.['model'];
+    if (model != null) { parts.push(String(model)); }
+    return parts.join(' · ');
+  }
+
+  // ── VersionCompare-Modal ──────────────────────────────────────────────────
+
   protected openVersionCompare(): void {
+    const itemCount = this.compareItems().length;
+    this.leftIdx.set(0);
+    this.rightIdx.set(Math.min(1, Math.max(0, itemCount - 1)));
     this.showVersionCompare.set(true);
+  }
+
+  protected closeVersionCompare(): void {
+    this.showVersionCompare.set(false);
+  }
+
+  protected setLeftIdx(index: number): void {
+    this.leftIdx.set(index);
+  }
+
+  protected setRightIdx(index: number): void {
+    this.rightIdx.set(index);
+  }
+
+  protected compareTagLabel(tag: CompareTag): string {
+    return COMPARE_TAG_META[tag].label;
+  }
+
+  protected compareTagClass(tag: CompareTag): string {
+    return `vc-tag ${COMPARE_TAG_META[tag].className}`;
   }
 
   protected similarityPercent(distance: number): number {

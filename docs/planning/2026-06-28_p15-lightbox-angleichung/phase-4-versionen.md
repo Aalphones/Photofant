@@ -1,7 +1,7 @@
 # Phase 4 — Versionen-Sektion + VersionCompare-Modal
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete
 
 Setzt Phase 1 voraus (`versions: VersionDto[]` im Detail-DTO).
 
@@ -18,15 +18,15 @@ Setzt Phase 1 voraus (`versions: VersionDto[]` im Detail-DTO).
 
 ## Abnahme-Kriterien
 
-- [ ] Versionen-Sektion zeigt alle `detail().versions` als Liste
-- [ ] Jede Zeile: Thumbnail + Label + „Aktiv"-Badge (wenn `is_current`) + Datum + Params (wenn vorhanden)
-- [ ] Aktive Version ist visuell hervorgehoben
-- [ ] „Vergleichen"-Link in Sektion-Header → öffnet VersionCompare-Modal
-- [ ] VersionCompare-Modal: Side-by-Side, jede Seite hat Panel-Selektor (Tabs)
-- [ ] Panel-Selektor enthält: aktuelle Ansicht + alle Versionen + verlinktes Original + verknüpfte Edits
-- [ ] Footer jeder Seite: Auflösung + Quelle + Datum
-- [ ] Overlay schließt per Klick auf Scrim oder X-Button
-- [ ] „Neue Version ergänzen"-Button vorhanden (Drag-Drop für spätere Umsetzung; vorerst nur visuell)
+- [x] Versionen-Sektion zeigt alle `detail().versions` als Liste
+- [x] Jede Zeile: Thumbnail + Label + „Aktiv"-Badge (wenn `is_current`) + Datum + Params (wenn vorhanden)
+- [x] Aktive Version ist visuell hervorgehoben
+- [x] „Vergleichen"-Link in Sektion-Header → öffnet VersionCompare-Modal
+- [x] VersionCompare-Modal: Side-by-Side, jede Seite hat Panel-Selektor (Tabs)
+- [x] Panel-Selektor enthält: aktuelle Ansicht + alle Versionen + verlinktes Original + verknüpfte Edits
+- [x] Footer jeder Seite: Auflösung + Quelle + Datum
+- [x] Overlay schließt per Klick auf Scrim oder X-Button
+- [x] „Neue Version ergänzen"-Button vorhanden (Drag-Drop für spätere Umsetzung; vorerst nur visuell)
 
 ---
 
@@ -34,7 +34,7 @@ Setzt Phase 1 voraus (`versions: VersionDto[]` im Detail-DTO).
 
 ### Versionen-Liste
 
-- [ ] Stub-Kommentar ersetzen durch echte Sektion:
+- [x] Stub-Kommentar ersetzen durch echte Sektion:
   ```html
   <div class="panel-sec">
     <div class="psec-title psec-title--row">
@@ -64,19 +64,19 @@ Setzt Phase 1 voraus (`versions: VersionDto[]` im Detail-DTO).
     </button>
   </div>
   ```
-- [ ] `versionLabel(v: VersionDto): string` — `v.type ?? 'Version'` + Fallback-Logik
-- [ ] `versionMeta(v: VersionDto): string` — Auflösung + Datum + ggf. Strength/Modell aus `params`
+- [x] `versionLabel(v: VersionDto): string` — `v.type ?? 'Version'` + Fallback-Logik
+- [x] `versionMeta(v: VersionDto): string` — Auflösung + Datum + ggf. Strength/Modell aus `params`
 
 ### VersionCompare-Modal
 
-- [ ] Neue Signal-Komponente oder Inline-Modal: `showVersionCompare = signal(false)`
-- [ ] `openVersionCompare()` in `lightbox.ts`
-- [ ] `compareItems = computed(...)` — baut Liste nach Mockup-`buildItems()`:
+- [x] Neue Signal-Komponente oder Inline-Modal: `showVersionCompare = signal(false)`
+- [x] `openVersionCompare()` in `lightbox.ts`
+- [x] `compareItems = computed(...)` — baut Liste nach Mockup-`buildItems()`:
   1. Aktuelles Asset (tag: 'current')
   2. Jede Version (tag: 'version')
   3. Verlinktes Original wenn `detail().original_id` gesetzt (tag: 'original')
   4. Verknüpfte Edits aus `detail().linked_edits` (tag: 'edit')
-- [ ] Modal-Template außerhalb `.lb` (Scrim-Ebene analog zu PersonPicker):
+- [x] Modal-Template außerhalb `.lb` (Scrim-Ebene analog zu PersonPicker):
   ```html
   @if (showVersionCompare()) {
     <div class="vc-scrim" (click)="closeVersionCompare()">
@@ -100,12 +100,17 @@ Setzt Phase 1 voraus (`versions: VersionDto[]` im Detail-DTO).
     </div>
   }
   ```
-- [ ] `leftIdx = signal(0)`, `rightIdx = signal(1)` (Default: aktuell links, erste Version rechts)
-- [ ] `compareItemImageUrl(item)`: `/api/assets/{id}/file` für Asset-Items, `version.thumbnail_url` für Versionen
-- [ ] SCSS: `.vc-scrim`, `.vc-modal`, `.vc-panels`, `.vc-panel`, `.vc-panel-sel`, `.vc-panel-foot`, `.vc-divider`, `.vc-tag`
+- [x] `leftIdx = signal(0)`, `rightIdx = signal(1)` (Default: aktuell links, erste Version rechts)
+- [x] `compareItemImageUrl(item)`: `/api/assets/{id}/file` für Asset-Items, `version.thumbnail_url` für Versionen
+- [x] SCSS: `.vc-scrim`, `.vc-modal`, `.vc-panels`, `.vc-panel`, `.vc-panel-sel`, `.vc-panel-foot`, `.vc-divider`, `.vc-tag`
 
 ---
 
 ## Report-Back
 
-_Hier trägt der Umsetzer nach Abschluss ein was abwich oder auffiel._
+Umgesetzt wie geplant. Eine Abweichung: `compareItemImageUrl` gibt es nicht als eigene Methode —
+die URL wird direkt beim Bauen von `compareItems()` pro Item vorberechnet (`thumbnailUrl`-Feld),
+das spart eine zusätzliche Methode pro Template-Render. Für das „Original"-Item (nur `original_id`
+als Zahl, keine Metadaten in `AssetDetailDto`) zeigt der Footer „—" für Auflösung/Quelle/Datum —
+volle Original-Metadaten kommen erst mit Phase 5 (Beziehungen-Sektion), falls das Kontrakt dort
+erweitert wird. „Neue Version ergänzen" ist wie gefordert nur visuell (kein Click-Handler).

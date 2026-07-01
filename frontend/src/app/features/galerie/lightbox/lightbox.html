@@ -317,7 +317,34 @@
         </div>
       }
 
-      <!-- Stub: Versionen (P8) -->
+      <!-- Versionen -->
+      <div class="panel-sec">
+        <div class="psec-title psec-title--row">
+          Versionen · {{ detail()?.versions?.length ?? 0 }}
+          <button class="psec-act" (click)="openVersionCompare()">Vergleichen</button>
+        </div>
+        <div class="vers">
+          @for (version of detail()?.versions ?? []; track version.id) {
+            <div class="vrow" [class.vrow--cur]="version.is_current">
+              <div class="vthumb"><img [src]="version.thumbnail_url" alt="" /></div>
+              <div class="vinfo">
+                <div class="vname">
+                  {{ versionLabel(version) }}
+                  @if (version.is_current) { <span class="vtag vtag--cur">Aktiv</span> }
+                </div>
+                <div class="vmeta">{{ versionMeta(version) }}</div>
+              </div>
+            </div>
+          }
+        </div>
+        <button class="lb-newver" title="Neue Version importieren (Drag-Drop folgt)">
+          <pf-icon name="upload" [size]="16" />
+          <div>
+            <div class="nv-t">Neue Version ergänzen</div>
+            <div class="nv-s">Edit hierher ziehen oder klicken</div>
+          </div>
+        </button>
+      </div>
 
     }
   </div>
@@ -420,6 +447,78 @@
           Neue Person anlegen
         </button>
       }
+    </div>
+  </div>
+}
+
+@if (showVersionCompare()) {
+  <div class="vc-scrim" (click)="closeVersionCompare()">
+    <div class="vc-modal" (click)="$event.stopPropagation()">
+      <div class="vc-head">
+        <pf-icon name="compare" [size]="15" />
+        <span class="vc-head-title">Versionsvergleich · #{{ asset()?.id }}</span>
+        <span class="vc-head-count">{{ compareItems().length }} Varianten</span>
+        <button class="vc-head-close" (click)="closeVersionCompare()" aria-label="Schließen">
+          <pf-icon name="x" [size]="14" />
+        </button>
+      </div>
+      <div class="vc-panels">
+        <div class="vc-panel">
+          <div class="vc-panel-sel">
+            @for (item of compareItems(); track item.tag + '-' + item.id; let i = $index) {
+              <button
+                class="vc-sel-btn"
+                [class.vc-sel-btn--on]="leftIdx() === i"
+                (click)="setLeftIdx(i)"
+              >{{ item.label }}</button>
+            }
+          </div>
+          <div class="vc-img-wrap">
+            @if (leftItem(); as item) {
+              <img [src]="item.thumbnailUrl" alt="" />
+              <div class="vc-tag-layer">
+                <span [class]="compareTagClass(item.tag)">{{ compareTagLabel(item.tag) }}</span>
+              </div>
+            }
+          </div>
+          @if (leftItem(); as item) {
+            <div class="vc-panel-foot">
+              <span>{{ item.resolution }}</span>
+              <span>{{ item.source }}</span>
+              <span>{{ item.date }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="vc-divider"></div>
+
+        <div class="vc-panel">
+          <div class="vc-panel-sel">
+            @for (item of compareItems(); track item.tag + '-' + item.id; let i = $index) {
+              <button
+                class="vc-sel-btn"
+                [class.vc-sel-btn--on]="rightIdx() === i"
+                (click)="setRightIdx(i)"
+              >{{ item.label }}</button>
+            }
+          </div>
+          <div class="vc-img-wrap">
+            @if (rightItem(); as item) {
+              <img [src]="item.thumbnailUrl" alt="" />
+              <div class="vc-tag-layer">
+                <span [class]="compareTagClass(item.tag)">{{ compareTagLabel(item.tag) }}</span>
+              </div>
+            }
+          </div>
+          @if (rightItem(); as item) {
+            <div class="vc-panel-foot">
+              <span>{{ item.resolution }}</span>
+              <span>{{ item.source }}</span>
+              <span>{{ item.date }}</span>
+            </div>
+          }
+        </div>
+      </div>
     </div>
   </div>
 }
