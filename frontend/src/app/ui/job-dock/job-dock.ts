@@ -15,6 +15,7 @@ const ICON_MAP: Record<string, string> = {
   embedding:      'layers',
   heuristics:     'sparkle',
   rerun:          'refresh',
+  captions:       'training',
 };
 
 @Component({

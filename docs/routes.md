@@ -61,6 +61,9 @@ interface TagListItem { id: number; name: string; count: number; alias_of: numbe
 | `/trainingssets` (Caption-Override pro Bild · P10 Phase 2) | `PATCH` | `/api/collections/{id}/items/{asset_id}` | `{ caption_override: string \| null }` | `204` — wirkt nur im Set, Galerie-Caption unangetastet |
 | `/trainingssets` (Stats-Dashboard · P10 Phase 2) | `GET` | `/api/collections/{id}/stats` | — | `TrainingSetStatsDto` — Framing/Tag-Häufigkeiten/Qualitäts-Histogramm/AR-Buckets (Kohya-Style)/Near-Dupe-Quote; live berechnet, kein Cache (siehe `photofant/collections/stats.py`) |
 | `/galerie` (Bulk-Bar „Zu Trainingsset" · P10 Phase 2) | `POST` | `/api/collections/{id}/items` | `{ asset_ids: number[] }` | `204` — gleicher Endpoint wie „Zu Album", nur andere Ziel-Collection (`kind=training_set`) |
+| `/trainingssets` (Caption-Tools · P10 Phase 3) | `POST` | `/api/collections/{id}/captions` | `{ action: "trigger_word"\|"prefix"\|"suffix"\|"find_replace", params }` | `{ job_id }` (202) — Queue-Job, schreibt nur `caption_override` (Galerie-Caption unangetastet); idempotent formuliert (kein doppeltes Voranstellen) |
+| `/trainingssets` (Near-Dupe-Paare · P10 Phase 3) | `GET` | `/api/collections/{id}/duplicates` | Query `threshold?` (Hamming-Distanz, default = `settings.dupe_threshold`) | `CollectionDupePairDto[]` — live berechnet wie `/stats` (kein Cache, siehe `photofant/collections/stats.py`-Begründung) |
+| `/trainingssets` (Near-Dupe-Entscheidung · P10 Phase 3) | `POST` | `/api/collections/{id}/duplicates/resolve` | `{ asset_a_id, asset_b_id, resolution: "keep_left"\|"keep_right"\|"keep_both" }` | `204` — verworfene Seite wandert in den Papierkorb (`moves.soft_delete`); `keep_both` ist reines Client-Dismiss, nicht persistiert |
 
 ```typescript
 type CollectionKind = 'album' | 'smart_album' | 'training_set';

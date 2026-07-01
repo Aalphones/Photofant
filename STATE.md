@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p10-trainingssets-export/`
-**Phase:** 2/4 — Trainingssets & Statistiken (abgeschlossen, ungetestet)
-**Nächster Schritt:** Smoke-Test Phase 2 (siehe Akzeptanzkriterien in phase-2-trainingssets-stats.md), dann `/clear` + Phase 3 (Caption-Tools & Near-Dupes)
+**Phase:** 3/4 — Caption-Tools & Near-Dupes (Backend+Frontend fertig, Lint/Build grün — noch nicht smoke-getestet)
+**Nächster Schritt:** Smoke-Test Phase 3 durch dich (Caption-Tools + Near-Dupe-Review im laufenden Frontend prüfen), dann Phase 4 (Export-Workflows) starten — siehe phase-4-export.md
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p21-galerie-stapel-tabs/`
 
 ---

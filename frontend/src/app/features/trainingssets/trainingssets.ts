@@ -1,21 +1,23 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetsPage, CollectionDetail, TrainingSetItem, TrainingSetStats } from '@photofant/models';
+import type { AssetsPage, CaptionAction, CollectionDetail, TrainingSetItem, TrainingSetStats } from '@photofant/models';
 import { AssetService, ClassifyService, CollectionService } from '@photofant/services';
-import { collectionsActions, collectionsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { collectionsActions, collectionsSelectors, jobsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
+import { TrainingSetCaptions } from './training-set-captions/training-set-captions';
+import { TrainingSetDupes } from './training-set-dupes/training-set-dupes';
 import { TrainingSetItemCell } from './training-set-item/training-set-item';
 import { TrainingSetSettingsPanel } from './training-set-settings/training-set-settings';
 import { TrainingSetStatsPanel } from './training-set-stats/training-set-stats';
 
-type SidePanel = 'none' | 'settings' | 'stats';
+type SidePanel = 'none' | 'settings' | 'stats' | 'dupes';
 
 @Component({
   selector: 'pf-trainingssets',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, TrainingSetItemCell, TrainingSetSettingsPanel, TrainingSetStatsPanel, RerunDialog],
+  imports: [Icon, TrainingSetItemCell, TrainingSetSettingsPanel, TrainingSetStatsPanel, TrainingSetCaptions, TrainingSetDupes, RerunDialog],
   templateUrl: './trainingssets.html',
   styleUrl: './trainingssets.scss',
 })
@@ -31,12 +33,14 @@ export class Trainingssets {
   protected readonly detail = this.store.selectSignal(collectionsSelectors.selectDetail);
   protected readonly isLoading = this.store.selectSignal(collectionsSelectors.selectIsLoading);
   protected readonly rerunPresets = this.store.selectSignal(presetsSelectors.selectPresets);
+  private readonly allJobs = this.store.selectSignal(jobsSelectors.allJobs);
 
   protected readonly selectedId = signal<number | null>(null);
   protected readonly items = signal<TrainingSetItem[]>([]);
   protected readonly stats = signal<TrainingSetStats | null>(null);
   protected readonly sidePanel = signal<SidePanel>('none');
   protected readonly showRerunDialog = signal(false);
+  protected readonly showCaptionsDialog = signal(false);
 
   protected readonly creating = signal(false);
   protected readonly newName = signal('');
@@ -49,6 +53,7 @@ export class Trainingssets {
 
   private lastFetchedId = -1;
   private lastFetchedCount = -1;
+  private pendingCaptionsJobId: string | null = null;
 
   constructor() {
     this.store.dispatch(collectionsActions.load());
@@ -67,6 +72,18 @@ export class Trainingssets {
         this.lastFetchedId = id;
         this.lastFetchedCount = count;
         this.fetchItems(id);
+      }
+    });
+
+    // Caption-Tool läuft als Queue-Job (Critical Rule 5) — Items erst neu laden, wenn er durch ist.
+    effect((): void => {
+      const jobId = this.pendingCaptionsJobId;
+      if (jobId == null) { return; }
+      const job = this.allJobs().find((current) => current.id === jobId);
+      if (job != null && job.state === 'done') {
+        this.pendingCaptionsJobId = null;
+        const id = this.selectedId();
+        if (id != null) { this.fetchItems(id); }
       }
     });
   }
@@ -104,6 +121,17 @@ export class Trainingssets {
     this.sidePanel.update((panel: SidePanel) => (panel === 'stats' ? 'none' : 'stats'));
     const id = this.selectedId();
     if (opening && id != null) { this.fetchStats(id); }
+  }
+
+  protected toggleDupes(): void {
+    this.sidePanel.update((panel: SidePanel) => (panel === 'dupes' ? 'none' : 'dupes'));
+  }
+
+  protected onDupesResolved(): void {
+    const set = this.openSet();
+    if (set == null) { return; }
+    this.fetchItems(set.id);
+    this.store.dispatch(collectionsActions.loadDetail({ id: set.id }));
   }
 
   protected deleteOpen(): void {
@@ -225,5 +253,22 @@ export class Trainingssets {
       steps: payload.steps,
       ...(payload.captionPresetId != null ? { caption_preset_id: payload.captionPresetId } : {}),
     }).subscribe();
+  }
+
+  protected onCaptionsOpen(): void {
+    this.showCaptionsDialog.set(true);
+  }
+
+  protected onCaptionsCancel(): void {
+    this.showCaptionsDialog.set(false);
+  }
+
+  protected onCaptionsApply(event: { action: CaptionAction; params: Record<string, string> }): void {
+    this.showCaptionsDialog.set(false);
+    const set = this.openSet();
+    if (set == null) { return; }
+    this.collectionService.applyCaptionAction(set.id, event.action, event.params)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ job_id }) => { this.pendingCaptionsJobId = job_id; });
   }
 }

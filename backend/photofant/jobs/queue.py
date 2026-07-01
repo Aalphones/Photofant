@@ -41,6 +41,7 @@ class JobKind(StrEnum):
     BULK_EDIT = "bulk_edit"
     COMFYUI_RUN = "comfyui_run"
     EXPORT = "export"
+    CAPTIONS = "captions"
 
 
 @dataclass

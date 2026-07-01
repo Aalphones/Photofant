@@ -18,8 +18,19 @@
           </div>
         </div>
         <div class="tdh__actions">
+          <button class="pbtn pbtn--ghost" (click)="onCaptionsOpen()">
+            <pf-icon name="training" [size]="14" /> Caption-Tools
+          </button>
           <button class="pbtn pbtn--ghost" (click)="onRerunOpen()">
             <pf-icon name="refresh" [size]="14" /> Klassifizieren
+          </button>
+          <button
+            class="iconbtn"
+            [class.iconbtn--on]="sidePanel() === 'dupes'"
+            (click)="toggleDupes()"
+            title="Near-Dupes"
+          >
+            <pf-icon name="compare" [size]="17" />
           </button>
           <button
             class="iconbtn"
@@ -71,6 +82,13 @@
     @if (sidePanel() === 'stats' && stats(); as currentStats) {
       <pf-training-set-stats [stats]="currentStats" (close)="sidePanel.set('none')" />
     }
+    @if (sidePanel() === 'dupes') {
+      <pf-training-set-dupes
+        [collectionId]="set.id"
+        (close)="sidePanel.set('none')"
+        (resolved)="onDupesResolved()"
+      />
+    }
   </div>
 
   @if (showRerunDialog()) {
@@ -79,6 +97,14 @@
       [presets]="rerunPresets()"
       (confirm)="onRerunConfirm($event)"
       (cancel)="onRerunCancel()"
+    />
+  }
+
+  @if (showCaptionsDialog()) {
+    <pf-training-set-captions
+      [items]="items()"
+      (apply)="onCaptionsApply($event)"
+      (cancel)="onCaptionsCancel()"
     />
   }
 } @else {

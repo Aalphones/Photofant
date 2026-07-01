@@ -2,10 +2,13 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
+  CaptionAction,
   Collection,
   CollectionDetail,
+  CollectionDupePair,
   CreateCollectionRequest,
   CreateTriggerRequest,
+  DupeReviewResolution,
   TrainingSetItem,
   TrainingSetStats,
   Trigger,
@@ -72,5 +75,31 @@ export class CollectionService {
 
   getStats(collectionId: number): Observable<TrainingSetStats> {
     return this.http.get<TrainingSetStats>(`/api/collections/${collectionId}/stats`);
+  }
+
+  applyCaptionAction(
+    collectionId: number,
+    action: CaptionAction,
+    params: Record<string, string>,
+  ): Observable<{ job_id: string }> {
+    return this.http.post<{ job_id: string }>(`/api/collections/${collectionId}/captions`, { action, params });
+  }
+
+  getDuplicates(collectionId: number, threshold?: number): Observable<CollectionDupePair[]> {
+    const query = threshold != null ? `?threshold=${threshold}` : '';
+    return this.http.get<CollectionDupePair[]>(`/api/collections/${collectionId}/duplicates${query}`);
+  }
+
+  resolveDuplicate(
+    collectionId: number,
+    assetAId: number,
+    assetBId: number,
+    resolution: DupeReviewResolution,
+  ): Observable<void> {
+    return this.http.post<void>(`/api/collections/${collectionId}/duplicates/resolve`, {
+      asset_a_id: assetAId,
+      asset_b_id: assetBId,
+      resolution,
+    });
   }
 }

@@ -35,8 +35,12 @@ export type {
   TagFrequency,
   HistogramBucket,
   TrainingSetStats,
+  CaptionAction,
+  CaptionActionRequest,
+  DupeReviewResolution,
+  CollectionDupePair,
 } from './collection.model';
-export { COLLECTION_KINDS, MATCH_MODES, TRIGGER_TYPES } from './collection.model';
+export { COLLECTION_KINDS, MATCH_MODES, TRIGGER_TYPES, CAPTION_ACTIONS, DUPE_REVIEW_RESOLUTIONS } from './collection.model';
 
 export type {
   ModelDto,

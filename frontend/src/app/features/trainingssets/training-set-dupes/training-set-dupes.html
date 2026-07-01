@@ -1,0 +1,95 @@
+<div class="set-head">
+  <div class="set-head__title">
+    <pf-icon name="compare" [size]="14" />
+    <span>Near-Dupes</span>
+  </div>
+  <button class="iconbtn" (click)="onClose()" aria-label="Schließen">
+    <pf-icon name="x" [size]="16" />
+  </button>
+</div>
+
+<div class="threshold-row">
+  <label class="rules-block__label" for="ts-dupe-threshold">Schwelle (Hamming-Distanz)</label>
+  <div class="threshold-control">
+    <input
+      id="ts-dupe-threshold"
+      type="range"
+      min="0"
+      max="24"
+      [value]="threshold()"
+      (input)="onThresholdChange(+$any($event.target).value)"
+    />
+    <span class="mono">{{ threshold() }}</span>
+  </div>
+  <button class="pbtn pbtn--ghost" (click)="fetch()">
+    <pf-icon name="refresh" [size]="13" /> Neu suchen
+  </button>
+</div>
+
+@if (isLoading()) {
+  <div class="trig-empty">Suche Near-Dupes…</div>
+} @else if (pairs().length === 0) {
+  <div class="trig-empty">Keine Near-Dupes über dieser Schwelle.</div>
+} @else {
+  <div class="dupe-list">
+    @for (pair of pairs(); track pair.asset_a_id + '-' + pair.asset_b_id) {
+      <div class="dupe-row">
+        <div class="dupe-row__thumbs">
+          <img [src]="thumbnailUrl(pair.asset_a_id, pair.asset_a_content_hash)" alt="" loading="lazy" />
+          <img [src]="thumbnailUrl(pair.asset_b_id, pair.asset_b_content_hash)" alt="" loading="lazy" />
+        </div>
+        <div class="dupe-row__info">
+          <span class="mono">{{ pair.similarity_pct }}% ähnlich</span>
+        </div>
+        <div class="dupe-row__actions">
+          <button class="iconbtn" title="Vergleichen" (click)="onCompare(pair)">
+            <pf-icon name="compare" [size]="14" />
+          </button>
+          <button class="iconbtn" title="Links behalten" (click)="resolve(pair, 'keep_left')">
+            <pf-icon name="arrowLeft" [size]="14" />
+          </button>
+          <button class="iconbtn" title="Rechts behalten" (click)="resolve(pair, 'keep_right')">
+            <pf-icon name="arrowRight" [size]="14" />
+          </button>
+          <button class="iconbtn" title="Beide behalten" (click)="resolve(pair, 'keep_both')">
+            <pf-icon name="check" [size]="14" />
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@if (comparePair(); as pair) {
+  <div class="dc-scrim" (click)="onCloseCompare()">
+    <div class="dc-modal" (click)="$event.stopPropagation()">
+      <div class="dc-head">
+        <span>Vergleich · {{ pair.similarity_pct }}% ähnlich</span>
+        <button class="iconbtn" (click)="onCloseCompare()" aria-label="Schließen">
+          <pf-icon name="x" [size]="14" />
+        </button>
+      </div>
+      <div class="dc-panels">
+        <div class="dc-panel">
+          <img [src]="fullUrl(pair.asset_a_id)" [alt]="'Asset #' + pair.asset_a_id" />
+          <div class="dc-foot">#{{ pair.asset_a_id }}</div>
+        </div>
+        <div class="dc-panel">
+          <img [src]="fullUrl(pair.asset_b_id)" [alt]="'Asset #' + pair.asset_b_id" />
+          <div class="dc-foot">#{{ pair.asset_b_id }}</div>
+        </div>
+      </div>
+      <div class="dc-footer">
+        <button class="pbtn pbtn--primary" (click)="resolve(pair, 'keep_left')">
+          <pf-icon name="arrowLeft" [size]="13" /> Links behalten (←)
+        </button>
+        <button class="pbtn pbtn--primary" (click)="resolve(pair, 'keep_right')">
+          Rechts behalten (→) <pf-icon name="arrowRight" [size]="13" />
+        </button>
+        <button class="pbtn pbtn--ghost" (click)="resolve(pair, 'keep_both')">
+          Beide behalten (B)
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,112 @@
+<div class="cap-scrim" (click)="onScrimClick()"></div>
+
+<div class="cap-modal" (click)="$event.stopPropagation()">
+  <div class="cap-head">
+    <div class="cap-head__icon">
+      <pf-icon name="training" [size]="18" />
+    </div>
+    <div class="cap-head__info">
+      <div class="cap-title">Caption-Tools</div>
+      <div class="cap-sub">Wirkt auf den Caption-Override — Galerie-Captions bleiben unangetastet</div>
+    </div>
+    <button class="cap-close" (click)="handleCancel()" aria-label="Schließen">
+      <pf-icon name="x" [size]="17" />
+    </button>
+  </div>
+
+  <div class="cap-body">
+    <div class="cap-actions">
+      @for (option of ACTIONS; track option.key) {
+        <button
+          class="cap-action"
+          [class.cap-action--on]="action() === option.key"
+          (click)="selectAction(option.key)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
+    <div class="cap-action-desc">
+      {{ activeActionDesc() }}
+    </div>
+
+    @if (action() === 'trigger_word') {
+      <label class="cap-field-lbl" for="cap-word">Trigger-Word</label>
+      <input
+        id="cap-word"
+        class="cap-input"
+        placeholder="z.B. lena_v1"
+        [value]="word()"
+        (input)="onWordInput($any($event.target).value)"
+      />
+    }
+    @if (action() === 'prefix') {
+      <label class="cap-field-lbl" for="cap-prefix">Prefix</label>
+      <input
+        id="cap-prefix"
+        class="cap-input"
+        placeholder="Text vor der Caption…"
+        [value]="prefixText()"
+        (input)="onPrefixInput($any($event.target).value)"
+      />
+    }
+    @if (action() === 'suffix') {
+      <label class="cap-field-lbl" for="cap-suffix">Suffix</label>
+      <input
+        id="cap-suffix"
+        class="cap-input"
+        placeholder="Text nach der Caption…"
+        [value]="suffixText()"
+        (input)="onSuffixInput($any($event.target).value)"
+      />
+    }
+    @if (action() === 'find_replace') {
+      <label class="cap-field-lbl" for="cap-find">Suchen</label>
+      <input
+        id="cap-find"
+        class="cap-input"
+        placeholder="Suchbegriff…"
+        [value]="findText()"
+        (input)="onFindInput($any($event.target).value)"
+      />
+      <label class="cap-field-lbl" for="cap-replace">Ersetzen durch</label>
+      <input
+        id="cap-replace"
+        class="cap-input"
+        placeholder="Ersatz (leer = entfernen)…"
+        [value]="replaceText()"
+        (input)="onReplaceInput($any($event.target).value)"
+      />
+    }
+
+    <div class="cap-preview-lbl">Vorschau ({{ previewSamples().length }} von {{ items().length }})</div>
+    <div class="cap-preview-list">
+      @for (sample of previewSamples(); track $index) {
+        <div class="cap-preview-row">
+          <div class="cap-preview-before">{{ sample.before || '(keine Caption)' }}</div>
+          <pf-icon name="arrowRight" [size]="12" />
+          <div class="cap-preview-after" [class.cap-preview-after--changed]="sample.after !== sample.before">
+            {{ sample.after || '(keine Caption)' }}
+          </div>
+        </div>
+      }
+      @if (previewSamples().length === 0) {
+        <div class="cap-preview-empty">Set ist leer — keine Vorschau möglich.</div>
+      }
+    </div>
+  </div>
+
+  <div class="cap-foot">
+    <div class="cap-foot__info">
+      <pf-icon name="info" [size]="13" />
+      Läuft als Hintergrund-Job über die Queue.
+    </div>
+    <div class="cap-foot__actions">
+      <button class="md-btn ghost" (click)="handleCancel()">Abbrechen</button>
+      <button class="md-btn primary" [disabled]="isDisabled()" (click)="handleApply()">
+        <pf-icon name="check" [size]="15" />
+        Anwenden
+      </button>
+    </div>
+  </div>
+</div>

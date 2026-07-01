@@ -8,7 +8,7 @@ rows but keeps the hand-picked ones.
 from __future__ import annotations
 
 import logging
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -16,7 +16,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from photofant.api.assets import TagDto
+from photofant.collections.captions import CaptionAction
 from photofant.collections.stats import compute_training_set_stats
+from photofant.config import get_data_root
 from photofant.db.models import (
     Asset,
     AssetInstance,
@@ -31,6 +33,7 @@ from photofant.db.session import get_session
 from photofant.jobs.collections_job import (
     enqueue_reevaluate_collection,
 )
+from photofant.media.phash import hamming_distance
 
 router = APIRouter(prefix="/collections")
 
@@ -161,6 +164,31 @@ class AddItemsRequest(BaseModel):
 
 class JobStarted(BaseModel):
     job_id: str
+
+
+DupeResolution = Literal["keep_left", "keep_right", "keep_both"]
+
+_DUPE_MAX_THRESHOLD = 32
+
+
+class CaptionActionRequest(BaseModel):
+    action: CaptionAction
+    params: dict[str, str] = {}
+
+
+class CollectionDupePairDto(BaseModel):
+    asset_a_id: int
+    asset_b_id: int
+    asset_a_content_hash: str
+    asset_b_content_hash: str
+    phash_distance: int
+    similarity_pct: int
+
+
+class ResolveDuplicateRequest(BaseModel):
+    asset_a_id: int
+    asset_b_id: int
+    resolution: DupeResolution
 
 
 def _member_asset_ids(session: Session, collection_id: int, limit: int | None = None) -> list[int]:
@@ -548,6 +576,111 @@ async def get_training_set_stats(collection_id: int, session: DbSession) -> Trai
         ar_buckets=[DistItemDto(value=item.value, count=item.count) for item in stats.ar_buckets],
         near_dupe_rate=stats.near_dupe_rate,
     )
+
+
+@router.post("/{collection_id}/captions", response_model=JobStarted, status_code=202)
+async def apply_caption_action_to_set(
+    collection_id: int, body: CaptionActionRequest, session: DbSession
+) -> JobStarted:
+    """Set-wide caption tool (Trigger-Word/Prefix/Suffix/Find-Replace) — queued (Critical Rule 5).
+
+    Writes only `caption_override`; the gallery's original `caption` is never touched.
+    """
+    from photofant.jobs.captions_job import enqueue_apply_captions
+
+    _get_collection_or_404(session, collection_id)
+
+    if body.action == "trigger_word" and not (body.params.get("word") or "").strip():
+        raise HTTPException(status_code=422, detail="trigger_word needs 'word'")
+    if body.action in ("prefix", "suffix") and not (body.params.get("text") or "").strip():
+        raise HTTPException(status_code=422, detail=f"{body.action} needs 'text'")
+    if body.action == "find_replace" and not (body.params.get("find") or ""):
+        raise HTTPException(status_code=422, detail="find_replace needs 'find'")
+
+    status = await enqueue_apply_captions(collection_id, body.action, body.params)
+    return JobStarted(job_id=status.id)
+
+
+@router.get("/{collection_id}/duplicates", response_model=list[CollectionDupePairDto])
+async def list_collection_duplicates(
+    collection_id: int, session: DbSession, threshold: int | None = None
+) -> list[CollectionDupePairDto]:
+    """Near-dupe pairs (pHash) among active set members, for the Links-Rechts-Review.
+
+    Computed live, same reasoning as `compute_training_set_stats`: at training-set sizes
+    (bis niedrige Hunderte) the O(n²) pHash comparison is well under a second, so a
+    persisted review queue (like the library-wide `review_item` table) would be
+    overengineering here.
+    """
+    from photofant.settings import load_settings
+
+    _get_collection_or_404(session, collection_id)
+    settings = load_settings()
+    effective_threshold = threshold if threshold is not None else settings["dupe_threshold"]
+    effective_threshold = max(0, min(effective_threshold, _DUPE_MAX_THRESHOLD))
+
+    rows = (
+        session.query(Asset.id, Asset.phash, Asset.content_hash)
+        .join(CollectionItem, CollectionItem.asset_id == Asset.id)
+        .join(AssetInstance, AssetInstance.asset_id == Asset.id)
+        .filter(
+            CollectionItem.collection_id == collection_id,
+            AssetInstance.deleted_at.is_(None),
+            Asset.phash.is_not(None),
+        )
+        .distinct()
+        .all()
+    )
+    assets = [(row[0], row[1], row[2]) for row in rows]
+
+    pairs: list[CollectionDupePairDto] = []
+    for i in range(len(assets)):
+        for j in range(i + 1, len(assets)):
+            id_a, phash_a, hash_a = assets[i]
+            id_b, phash_b, hash_b = assets[j]
+            distance = hamming_distance(phash_a, phash_b)
+            if distance > effective_threshold:
+                continue
+            similarity_pct = round((1.0 - distance / 64.0) * 100)
+            pairs.append(
+                CollectionDupePairDto(
+                    asset_a_id=id_a,
+                    asset_b_id=id_b,
+                    asset_a_content_hash=hash_a,
+                    asset_b_content_hash=hash_b,
+                    phash_distance=distance,
+                    similarity_pct=similarity_pct,
+                )
+            )
+    pairs.sort(key=lambda pair: pair.phash_distance)
+    return pairs
+
+
+@router.post("/{collection_id}/duplicates/resolve", status_code=204)
+async def resolve_collection_duplicate(
+    collection_id: int, body: ResolveDuplicateRequest, session: DbSession
+) -> Response:
+    """Discard the losing side of a near-dupe pair into the trash (Papierkorb, P2-Strecke).
+
+    `keep_both` is a client-side dismiss only (not persisted) — same trade-off as the
+    live-computed pair list above: reopening the review may resurface a dismissed pair.
+    """
+    from photofant.media import moves
+
+    _get_collection_or_404(session, collection_id)
+    if body.resolution == "keep_both":
+        return Response(status_code=204)
+
+    loser_asset_id = body.asset_b_id if body.resolution == "keep_left" else body.asset_a_id
+    instance = (
+        session.query(AssetInstance)
+        .filter(AssetInstance.asset_id == loser_asset_id, AssetInstance.deleted_at.is_(None))
+        .first()
+    )
+    if instance is not None:
+        data_root = get_data_root()
+        await moves.soft_delete(session, instance, data_root)
+    return Response(status_code=204)
 
 
 @router.put("/{collection_id}/order", status_code=204)

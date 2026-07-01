@@ -113,3 +113,23 @@ export interface TrainingSetStats {
   ar_buckets: DistItem[];
   near_dupe_rate: number;
 }
+
+export const CAPTION_ACTIONS = ['trigger_word', 'prefix', 'suffix', 'find_replace'] as const;
+export type CaptionAction = (typeof CAPTION_ACTIONS)[number];
+
+export interface CaptionActionRequest {
+  action: CaptionAction;
+  params: Record<string, string>;
+}
+
+export const DUPE_REVIEW_RESOLUTIONS = ['keep_left', 'keep_right', 'keep_both'] as const;
+export type DupeReviewResolution = (typeof DUPE_REVIEW_RESOLUTIONS)[number];
+
+export interface CollectionDupePair {
+  asset_a_id: number;
+  asset_b_id: number;
+  asset_a_content_hash: string;
+  asset_b_content_hash: string;
+  phash_distance: number;
+  similarity_pct: number;
+}
