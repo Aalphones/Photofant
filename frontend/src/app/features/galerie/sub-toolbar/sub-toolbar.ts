@@ -51,7 +51,6 @@ export class SubToolbar {
   protected readonly MEDIA_TYPE_LABELS: Record<MediaType, string> = {
     photos: 'Fotos',
     faces:  'Gesichter',
-    edits:  'Edits',
   };
 
   protected readonly MEDIA_TYPE_LIST: MediaType[] = [...MEDIA_TYPES];

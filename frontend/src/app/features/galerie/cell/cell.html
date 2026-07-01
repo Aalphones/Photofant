@@ -10,22 +10,24 @@
 
 <div class="cell__veil"></div>
 
-<!-- Selection checkbox (visible in selmode or when selected) -->
-<button
-  class="cell__pick"
-  [class.cell__pick--selected]="isSelected()"
-  (click)="onPickClick($event)"
-  [attr.aria-label]="isSelected() ? 'Abwählen' : 'Auswählen'"
-  [attr.aria-pressed]="isSelected()"
->
-  @if (isSelected()) {
-    <pf-icon name="check" [size]="13" />
-  }
-</button>
+<!-- Selection checkbox (visible in selmode or when selected) — nicht für Version-Pseudo-Einträge (teilen ihre asset.id mit dem Original) -->
+@if (!isVersionEntry()) {
+  <button
+    class="cell__pick"
+    [class.cell__pick--selected]="isSelected()"
+    (click)="onPickClick($event)"
+    [attr.aria-label]="isSelected() ? 'Abwählen' : 'Auswählen'"
+    [attr.aria-pressed]="isSelected()"
+  >
+    @if (isSelected()) {
+      <pf-icon name="check" [size]="13" />
+    }
+  </button>
 
-<button class="cell__fav" [class.cell__fav--on]="asset().favourite" (click)="onFavClick($event)" aria-label="Favorit">
-  <pf-icon name="star" [size]="16" />
-</button>
+  <button class="cell__fav" [class.cell__fav--on]="asset().favourite" (click)="onFavClick($event)" aria-label="Favorit">
+    <pf-icon name="star" [size]="16" />
+  </button>
+}
 
 @if (badgeLabel()) {
   <div class="cell__badges">
@@ -33,9 +35,9 @@
   </div>
 }
 
-@if (hasVersions()) {
-  <div class="cell__versions">
+@if (isStacked()) {
+  <div class="cell__stack-badge" [title]="stackTooltip()">
     <pf-icon name="layers" [size]="11" />
-    <span>{{ asset().version_count }}</span>
+    <span>{{ asset().stack_size }}</span>
   </div>
 }

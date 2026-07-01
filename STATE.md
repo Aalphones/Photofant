@@ -1,11 +1,10 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p21-galerie-stapel-tabs/`
-**Phase:** 2/5 — Frontend Galerie-Grid: Stapel-Icon + Tab-Konsolidierung (standard)
-**Nächster Schritt:** Phase 1 (Backend) ist komplett + committet. Phase 2 starten:
-Sub-Toolbar auf zwei Segmente (Alles/Fotos/Gesichter) reduzieren, Stapel-Icon im
-Grid zeigen (`stack_size > 1`), Thumbnail-URL je `kind`/`version_id` wählen
-(FINDINGS.md → Phase 2/3 Einträge lesen).
+**Phase:** 3/5 — Frontend Gesichter-Grid: Stapel-Äquivalent (standard)
+**Nächster Schritt:** Phase 2 (Fotos-Grid) ist fertig, noch nicht committet (siehe
+`mode-committing`). Phase 3 startet analog zu Phase 2 für den Gesichter-Tab:
+`face-cell` bekommt Stapel-Icon + Thumbnail-Auflösung nach `kind`/`version_id`.
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p15-lightbox-angleichung/`
 
 ---

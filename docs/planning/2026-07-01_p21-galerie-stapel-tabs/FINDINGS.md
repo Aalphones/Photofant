@@ -11,7 +11,40 @@ Format: `- [ ] → Phase N: <Erkenntnis / Abweichung / Folgefund>`
   als vollwertige Asset-Kacheln erscheinen (nicht mehr im `edits`-Tab-Modell), inkl. eigener
   Tags/Caption/Faces sichtbar in der Detailansicht — keine Sonderbehandlung nötig, aber beim
   Testen im Blick behalten.
-- [ ] → Phase 2/3: `AssetDto`/`FaceGalleryItemDto` liefern jetzt `kind: "asset"|"version"|"face"`
+- [x] → Phase 2/3: `AssetDto`/`FaceGalleryItemDto` liefern jetzt `kind: "asset"|"version"|"face"`
   + `version_id`. Frontend muss die Thumbnail-URL danach wählen: `kind==="version"` →
   `/api/versions/{version_id}/thumbnail`, sonst `/api/assets/{id}/thumbnail` bzw.
   `/api/faces/{id}/thumbnail`. Stapel-Icon zeigen, wenn `stack_size > 1`.
+  Eingearbeitet in Phase 2 für den Fotos-Tab.
+
+- [x] → Phase 2 (kritisch, während Umsetzung entdeckt): `AssetDto.id` ist bei
+  Version-Pseudo-Einträgen (`kind==='version'`) **identisch** mit der `id` des
+  Originals — die NgRx-EntityAdapter-Map im `gallery`-Slice nutzte bisher `asset.id`
+  als Key, was Original und seine Editor-Versionen gegenseitig überschrieben hätte
+  (nur die zuletzt geladene Zeile hätte überlebt → Stapel-AK „N+1 Kacheln" wäre
+  gebrochen). Behoben: Entity-Key ist jetzt `String(id)` für `kind==='asset'`,
+  `` `v${version_id}` `` für `kind==='version'` (`gallery.reducer.ts`). **Bekannte
+  Einschränkung:** `onRangeSelect`/`selectGroups` scannen weiterhin nach `.id`
+  (Business-Feld, nicht Entity-Key) — wenn eine Version-Kachel und ihr Original
+  gleichzeitig sichtbar sind, kann `findIndex` bei Shift-Klick-Rangeauswahl die
+  falsche Grenze treffen (Edge Case, dokumentierter Kompromiss analog zum
+  Backend-„single-hop"-Kompromiss aus Phase 1).
+
+- [ ] → Phase 5 (ADR-012): Es gibt **keinen** Backend-Endpunkt, der Favorit/Löschen
+  gezielt auf einer `version`-Zeile setzt (nur auf dem Original-Asset). Version-
+  Pseudo-Einträge im Fotos-Grid haben deshalb in Phase 2 **kein** Auswählen/Favorit
+  bekommen (Cell zeigt nur Stapel-Icon + Klick-zum-Öffnen) — sonst hätte ein Klick
+  versehentlich das Original getroffen. Muss in ADR-012 als bewusste Entscheidung
+  festgehalten werden: entweder Backend-Endpunkt für Version-Favorit/-Löschen
+  nachziehen, oder das „jeder Eintrag ist ein eigenständiges Auswahl-Ziel"-AK aus
+  dem README für `kind==='version'` explizit einschränken.
+
+- [ ] → Phase 4 (Lightbox-Anbindung): Die Workflow-Run-Leiste hatte bisher einen
+  Weg, eine Editor-Version direkt als ComfyUI-Input zu binden (`onBindVersion` im
+  jetzt entfernten Edits-Tab, `pf-version-cell` → Bind-Klick). Mit dem Wegfall des
+  Edits-Tabs gibt es **keinen** UI-Einstiegspunkt mehr dafür — `versionSlotBindings`
+  in `galerie.ts` bleibt verdrahtet (Run-Leiste zeigt/verarbeitet Version-Bindings
+  weiterhin), wird aber nie mehr befüllt. Phase 4 sollte prüfen, ob ein Bind-Button
+  in der Lightbox-Versionen-Sektion (P15 Phase 4) diese Lücke schließen soll, oder
+  ob die Version-Bindung als Workflow-Input ersatzlos entfällt (Kontrakt-Entscheidung,
+  gehört ins README/ADR-012).

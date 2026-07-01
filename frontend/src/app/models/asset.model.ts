@@ -1,7 +1,7 @@
 export const SEARCH_MODES = ['tags', 'caption', 'semantic'] as const;
 export type SearchMode = (typeof SEARCH_MODES)[number];
 
-export const MEDIA_TYPES = ['photos', 'faces', 'edits'] as const;
+export const MEDIA_TYPES = ['photos', 'faces'] as const;
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
 export interface TagListItem {
@@ -74,6 +74,11 @@ export interface AssetDto {
   version_count: number;
   generation_meta: Record<string, unknown> | null;
   has_phash: boolean;
+  // P21 — Stapel: Original + Editor-Dialog-Versionen + ComfyUI-original_id-Kinder
+  kind: 'asset' | 'version';
+  version_id: number | null;
+  stack_size: number;
+  stack_group_id: number | null;
 }
 
 // Note: distinct from `AssetSummary` in review.model.ts (different shape, different feature)
@@ -185,21 +190,3 @@ export interface FacesPage {
   page_size: number;
 }
 
-export interface VersionGalleryItemDto {
-  id: number;
-  type: string | null;
-  is_current: boolean;
-  params: Record<string, unknown> | null;
-  created_at: string | null;
-  thumbnail_url: string;
-  parent_asset_id: number | null;
-  width: number | null;
-  height: number | null;
-}
-
-export interface VersionsPage {
-  items: VersionGalleryItemDto[];
-  total: number;
-  page: number;
-  page_size: number;
-}

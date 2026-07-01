@@ -1,6 +1,6 @@
 import { createEntityAdapter, type EntityAdapter, type EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { AssetDto, Facets, FaceGalleryItemDto, VersionGalleryItemDto } from '@photofant/models';
+import type { AssetDto, Facets, FaceGalleryItemDto } from '@photofant/models';
 import { galleryActions } from './gallery.actions';
 
 const PAGE_SIZE = 100;
@@ -22,12 +22,13 @@ export interface GalleryState extends EntityState<AssetDto> {
   anchorId: number | null;
   faceItems: FaceGalleryItemDto[];
   faceTotal: number;
-  versionItems: VersionGalleryItemDto[];
-  versionTotal: number;
 }
 
+// P21: Version-Pseudo-Einträge teilen ihre `asset.id` mit dem Original — als Entity-Key
+// braucht es darum den `version_id` statt `id` für kind === 'version', sonst würde das
+// Original oder eine seiner Versionen die andere in der EntityAdapter-Map überschreiben.
 const adapter: EntityAdapter<AssetDto> = createEntityAdapter<AssetDto>({
-  selectId: (asset: AssetDto) => asset.id,
+  selectId: (asset: AssetDto) => asset.kind === 'version' ? `v${asset.version_id}` : String(asset.id),
 });
 
 const initialState: GalleryState = adapter.getInitialState({
@@ -47,8 +48,6 @@ const initialState: GalleryState = adapter.getInitialState({
   anchorId: null,
   faceItems: [],
   faceTotal: 0,
-  versionItems: [],
-  versionTotal: 0,
 });
 
 export const galleryFeature = createFeature({
@@ -71,7 +70,7 @@ export const galleryFeature = createFeature({
       error: null,
     })),
     on(galleryActions.reset, (state: GalleryState) =>
-      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null, faceItems: [], faceTotal: 0, versionItems: [], versionTotal: 0, lightboxContextIds: null })
+      adapter.removeAll({ ...state, page: 1, total: 0, isLoading: true, error: null, facets: null, faceItems: [], faceTotal: 0, lightboxContextIds: null })
     ),
     on(galleryActions.loadFacesPageSuccess, (state: GalleryState, { items, total, page }) => ({
       ...state,
@@ -114,16 +113,16 @@ export const galleryFeature = createFeature({
     })),
     on(galleryActions.lightboxMarkPendingNext, (state: GalleryState) => ({ ...state, lightboxPendingNext: true })),
     on(galleryActions.toggleFavourite, (state: GalleryState, { id, value }) =>
-      adapter.updateOne({ id, changes: { favourite: value } }, state)
+      adapter.updateOne({ id: String(id), changes: { favourite: value } }, state)
     ),
     on(galleryActions.toggleFavouriteSuccess, (state: GalleryState, { asset }) =>
-      adapter.updateOne({ id: asset.id, changes: asset }, state)
+      adapter.updateOne({ id: String(asset.id), changes: asset }, state)
     ),
     on(galleryActions.toggleFavouriteFailure, (state: GalleryState, { id, previous }) =>
-      adapter.updateOne({ id, changes: { favourite: previous } }, state)
+      adapter.updateOne({ id: String(id), changes: { favourite: previous } }, state)
     ),
     on(galleryActions.deleteAssetSuccess, (state: GalleryState, { id }) => {
-      const removed = adapter.removeOne(id, state);
+      const removed = adapter.removeOne(String(id), state);
       return state.lightboxId === id ? { ...removed, lightboxId: null } : removed;
     }),
     // Selection
@@ -154,14 +153,6 @@ export const galleryFeature = createFeature({
       ...state,
       faceItems: state.faceItems.filter((item: FaceGalleryItemDto) => item.id !== id),
       faceTotal: Math.max(0, state.faceTotal - 1),
-    })),
-    on(galleryActions.loadVersionsPageSuccess, (state: GalleryState, { items, total, page }) => ({
-      ...state,
-      versionItems: page === 1 ? items : [...state.versionItems, ...items],
-      versionTotal: total,
-      page,
-      isLoading: false,
-      error: null,
     })),
   ),
   extraSelectors: ({ selectGalleryState }) => ({

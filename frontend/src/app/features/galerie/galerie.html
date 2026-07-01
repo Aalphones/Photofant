@@ -38,9 +38,6 @@
         @if (mediaType() === 'faces') {
           <h2 class="empty-title">Keine Gesichter gefunden</h2>
           <p class="empty-sub">Gesichter werden automatisch beim Klassifizieren extrahiert.</p>
-        } @else if (mediaType() === 'edits') {
-          <h2 class="empty-title">Keine Edits gefunden</h2>
-          <p class="empty-sub">Gespeicherte Bearbeitungen aus dem Editor erscheinen hier.</p>
         } @else {
           <h2 class="empty-title">Noch keine Bilder</h2>
           <p class="empty-sub">Bilder hierher ziehen oder den Import-Button oben rechts nutzen.</p>
@@ -53,22 +50,6 @@
         (openFace)="isArmed() ? onBindFace($event) : onOpenFace($event)"
         (loadMore)="onFaceLoadMore()"
       />
-    } @else if (mediaType() === 'edits') {
-      <div class="galerie-versions-grid">
-        @for (version of versionItems(); track version.id) {
-          <pf-version-cell
-            [version]="version"
-            [isArmed]="isArmed()"
-            (openVersion)="onOpenVersion($event)"
-            (bindVersion)="onBindVersion($event)"
-          />
-        }
-      </div>
-      @if (versionHasMore()) {
-        <div class="galerie-load-more">
-          <button class="load-more-btn" (click)="onVersionLoadMore()">Mehr laden</button>
-        </div>
-      }
     } @else {
       <pf-galerie-grid
         [groups]="groups()"
@@ -103,18 +84,6 @@
 
 @if (lightboxId() != null) {
   <pf-lightbox />
-}
-
-@if (selectedVersionItem(); as versionItem) {
-  <pf-version-lightbox
-    [version]="versionItem"
-    [hasPrev]="versionLightboxHasPrev()"
-    [hasNext]="versionLightboxHasNext()"
-    (close)="selectedVersionItem.set(null)"
-    (prev)="onVersionLightboxPrev()"
-    (next)="onVersionLightboxNext()"
-    (openOriginal)="onVersionLightboxOpenOriginal($event)"
-  />
 }
 
 @if (selectedCount() > 0) {

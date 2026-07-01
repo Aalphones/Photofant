@@ -21,4 +21,3 @@ export { PromptTemplateService } from './prompt-template.service';
 export { ExportService } from './export.service';
 export type { ExportFilterParams, ExportRandomParams, ExportJobStarted } from './export.service';
 export { VersionService } from './version.service';
-export type { ListVersionsParams } from './version.service';

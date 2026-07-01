@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { AssetDto, Facets, FaceGalleryItemDto, VersionGalleryItemDto } from '@photofant/models';
+import type { AssetDto, Facets, FaceGalleryItemDto } from '@photofant/models';
 
 export const galleryActions = createActionGroup({
   source: 'Gallery',
@@ -38,6 +38,5 @@ export const galleryActions = createActionGroup({
     'Select Range':              props<{ ids: number[] }>(),
     'Clear Selection':           emptyProps(),
     'Remove Face Item':          props<{ id: number }>(),
-    'Load Versions Page Success': props<{ items: VersionGalleryItemDto[]; total: number; page: number; pageSize: number }>(),
   },
 });

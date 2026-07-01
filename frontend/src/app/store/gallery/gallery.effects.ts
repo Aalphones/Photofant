@@ -3,8 +3,8 @@ import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType, ROOT_EFFECTS_INIT } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
-import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job, VersionsPage } from '@photofant/models';
-import { AssetService, PersonService, SettingsService, VersionService } from '@photofant/services';
+import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job } from '@photofant/models';
+import { AssetService, PersonService, SettingsService } from '@photofant/services';
 import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import { filtersActions } from '../filters/filters.actions';
 import { jobsActions } from '../jobs/jobs.actions';
@@ -19,7 +19,6 @@ export class GalleryEffects {
   private readonly assetService = inject(AssetService);
   private readonly personService = inject(PersonService);
   private readonly settingsService = inject(SettingsService);
-  private readonly versionService = inject(VersionService);
 
   readonly initDensity$ = createEffect(() =>
     this.actions$.pipe(
@@ -80,23 +79,6 @@ export class GalleryEffects {
       ofType(galleryActions.requestPage, galleryActions.requestNextPage, galleryActions.reset),
       concatLatestFrom(() => this.store.select(gallerySelectors.selectFetchParams)),
       switchMap(([, params]) => {
-        if (params.mediaType === 'edits') {
-          return this.versionService.listVersions({
-            page: params.page,
-            page_size: params.pageSize,
-          }).pipe(
-            map((result: VersionsPage) => galleryActions.loadVersionsPageSuccess({
-              items: result.items,
-              total: result.total,
-              page: result.page,
-              pageSize: result.page_size,
-            })),
-            catchError((error: HttpErrorResponse) =>
-              of(galleryActions.loadPageFailure({ error: error.message }))
-            ),
-          );
-        }
-
         if (params.mediaType === 'faces') {
           const faceParams: { page: number; page_size: number; person_id?: number } = {
             page: params.page,

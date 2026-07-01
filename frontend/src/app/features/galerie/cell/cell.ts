@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { Store } from '@ngrx/store';
 import { DENSITY_THUMB_SIZE } from '@photofant/models';
 import type { AssetDto, Density } from '@photofant/models';
-import { AssetService } from '@photofant/services';
+import { AssetService, VersionService } from '@photofant/services';
 import { galleryActions } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
@@ -30,6 +30,7 @@ function sourceLabel(source: string | null): string {
 })
 export class GalerieCell {
   private readonly assetService = inject(AssetService);
+  private readonly versionService = inject(VersionService);
   private readonly store = inject(Store);
 
   readonly asset         = input.required<AssetDto>();
@@ -54,15 +55,32 @@ export class GalerieCell {
 
   protected readonly thumbnailSrc = computed((): string => {
     const asset: AssetDto = this.asset();
-    return this.assetService.thumbnailUrl(asset.id, DENSITY_THUMB_SIZE[this.density()], asset.content_hash);
+    const size = DENSITY_THUMB_SIZE[this.density()];
+    if (asset.kind === 'version' && asset.version_id != null) {
+      return this.versionService.thumbnailUrl(asset.version_id, size);
+    }
+    return this.assetService.thumbnailUrl(asset.id, size, asset.content_hash);
   });
 
   protected readonly badgeLabel = computed((): string =>
     sourceLabel(this.asset().source)
   );
 
-  protected readonly hasVersions = computed((): boolean =>
-    this.asset().version_count > 1
+  protected readonly isStacked = computed((): boolean =>
+    this.asset().stack_size > 1
+  );
+
+  protected readonly stackTooltip = computed((): string =>
+    `Stapel · ${this.asset().stack_size} Versionen`
+  );
+
+  // Version-Pseudo-Einträge (kind === 'version') teilen ihre `asset.id` mit dem
+  // Original — Auswählen/Favorisieren würde also das Original treffen, nicht die
+  // Version selbst. Backend hat (noch) keinen eigenen Favourite/Delete-Endpunkt für
+  // Version-Zeilen (siehe FINDINGS → Phase 5 / ADR-012), darum bleiben Pick + Favorit
+  // für diese Einträge deaktiviert statt eine falsche Ziel-ID zu benutzen.
+  protected readonly isVersionEntry = computed((): boolean =>
+    this.asset().kind === 'version'
   );
 
   protected onCellClick(event: MouseEvent): void {
@@ -73,6 +91,11 @@ export class GalerieCell {
       } else {
         this.openAsset.emit(this.asset().id);
       }
+      return;
+    }
+
+    if (this.isVersionEntry()) {
+      this.openAsset.emit(this.asset().id);
       return;
     }
 

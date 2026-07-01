@@ -12,16 +12,14 @@ import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
 import { RunLeiste } from './run-leiste/run-leiste';
 import type { RunFirePayload } from './run-leiste/run-leiste';
-import { VersionCell } from './version-cell/version-cell';
-import { VersionLightbox } from './version-lightbox/version-lightbox';
 import { BulkBar, BulkEditDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { BulkEditPayload, RerunPayload } from '@photofant/ui';
-import type { FaceGalleryItemDto, VersionGalleryItemDto } from '@photofant/models';
+import type { FaceGalleryItemDto } from '@photofant/models';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, FaceGrid, FaceLightbox, Lightbox, FilterRail, RunLeiste, VersionCell, VersionLightbox, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
+  imports: [SubToolbar, GalerieGrid, FaceGrid, FaceLightbox, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
   host: { '(document:keydown.escape)': 'onEscape()' },
@@ -47,8 +45,6 @@ export class Galerie {
   protected readonly mediaType     = this.store.selectSignal(filtersSelectors.mediaType);
   protected readonly faceItems     = this.store.selectSignal(gallerySelectors.selectFaceItems);
   protected readonly faceHasMore   = this.store.selectSignal(gallerySelectors.selectFaceHasMore);
-  protected readonly versionItems  = this.store.selectSignal(gallerySelectors.selectVersionItems);
-  protected readonly versionHasMore = this.store.selectSignal(gallerySelectors.selectVersionHasMore);
 
   private readonly filterSources      = this.store.selectSignal(filtersSelectors.sources);
   private readonly filterQualityMin   = this.store.selectSignal(filtersSelectors.qualityMin);
@@ -61,7 +57,6 @@ export class Galerie {
   protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAll);
 
   protected readonly selectedFaceItem    = signal<FaceGalleryItemDto | null>(null);
-  protected readonly selectedVersionItem = signal<VersionGalleryItemDto | null>(null);
 
   protected readonly faceLightboxHasPrev = computed((): boolean => {
     const face = this.selectedFaceItem();
@@ -119,27 +114,9 @@ export class Galerie {
     this.comfyConfig().enabled && this.upscaleWorkflow() != null
   );
 
-  protected readonly versionLightboxHasPrev = computed((): boolean => {
-    const version = this.selectedVersionItem();
-    if (version === null) { return false; }
-    const items = this.versionItems();
-    return items.findIndex((item: VersionGalleryItemDto) => item.id === version.id) > 0;
-  });
-
-  protected readonly versionLightboxHasNext = computed((): boolean => {
-    const version = this.selectedVersionItem();
-    if (version === null) { return false; }
-    const items = this.versionItems();
-    const index = items.findIndex((item: VersionGalleryItemDto) => item.id === version.id);
-    return index >= 0 && index < items.length - 1;
-  });
-
   protected readonly isEmpty = computed((): boolean => {
     if (this.mediaType() === 'faces') {
       return !this.isLoading() && this.faceItems().length === 0;
-    }
-    if (this.mediaType() === 'edits') {
-      return !this.isLoading() && this.versionItems().length === 0;
     }
     return !this.isLoading() && this.groups().length === 0;
   });
@@ -408,10 +385,6 @@ export class Galerie {
       this.selectedFaceItem.set(null);
       return;
     }
-    if (this.selectedVersionItem() !== null) {
-      this.selectedVersionItem.set(null);
-      return;
-    }
     if (this.armedSlotKey() !== null) {
       this.armedSlotKey.set(null);
     }
@@ -502,57 +475,6 @@ export class Galerie {
       this.slotBindings.set({ ...currentBindings, [armedKey]: updatedArray });
     }
     this.batchAxisKey.set(armedKey);
-  }
-
-  protected onVersionLoadMore(): void {
-    if (!this.isLoading() && this.versionHasMore()) {
-      this.store.dispatch(galleryActions.requestNextPage());
-    }
-  }
-
-  protected onOpenVersion(id: number): void {
-    const item = this.versionItems().find((v: VersionGalleryItemDto) => v.id === id);
-    if (item != null) {
-      this.selectedVersionItem.set(item);
-    }
-  }
-
-  protected onVersionLightboxPrev(): void {
-    const version = this.selectedVersionItem();
-    if (version === null) { return; }
-    const items = this.versionItems();
-    const index = items.findIndex((item: VersionGalleryItemDto) => item.id === version.id);
-    if (index > 0) { this.selectedVersionItem.set(items[index - 1]!); }
-  }
-
-  protected onVersionLightboxNext(): void {
-    const version = this.selectedVersionItem();
-    if (version === null) { return; }
-    const items = this.versionItems();
-    const index = items.findIndex((item: VersionGalleryItemDto) => item.id === version.id);
-    if (index >= 0 && index < items.length - 1) { this.selectedVersionItem.set(items[index + 1]!); }
-  }
-
-  protected onVersionLightboxOpenOriginal(assetId: number): void {
-    this.selectedVersionItem.set(null);
-    this.store.dispatch(galleryActions.openLightbox({ id: assetId }));
-  }
-
-  protected onBindVersion(versionId: number): void {
-    const armedKey = this.armedSlotKey();
-    if (armedKey === null) {
-      this.onOpenVersion(versionId);
-      return;
-    }
-    const currentAssetBindings = { ...this.slotBindings() };
-    delete currentAssetBindings[armedKey];
-    this.slotBindings.set(currentAssetBindings);
-    const currentFaceBindings = { ...this.faceSlotBindings() };
-    delete currentFaceBindings[armedKey];
-    this.faceSlotBindings.set(currentFaceBindings);
-    if (this.batchAxisKey() === armedKey) { this.batchAxisKey.set(null); }
-    this.versionSlotBindings.set({ ...this.versionSlotBindings(), [armedKey]: versionId });
-    this.armedSlotKey.set(null);
   }
 
   protected onRunFire(payload: RunFirePayload): void {
