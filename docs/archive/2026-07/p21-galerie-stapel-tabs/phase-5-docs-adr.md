@@ -1,7 +1,7 @@
 # Phase 5 — Doku & ADR-012
 
 **Tier:** mechanisch
-**Status:** pending
+**Status:** complete
 
 ---
 
@@ -18,8 +18,8 @@
 
 ## Abnahme-Kriterien
 
-- [ ] `docs/decisions/012-galerie-stapel-flache-einzeleintraege.md` angelegt
-- [ ] `docs/code-map.md`, `docs/models.md`, `docs/routes.md` spiegeln die neuen Felder/Endpunkte
+- [x] `docs/decisions/012-galerie-stapel-flache-einzeleintraege.md` angelegt
+- [x] `docs/code-map.md`, `docs/models.md`, `docs/routes.md` spiegeln die neuen Felder/Endpunkte
 - [ ] `STATE.md`-Backlog-Zeile für P21 auf „archiviert" bzw. entfernt (macht `mode-implementing`
   beim Archivieren, hier nur zur Erinnerung)
 
@@ -27,7 +27,7 @@
 
 ## Checkliste
 
-- [ ] ADR-012 schreiben (Kontext / Optionen / Entscheidung / Konsequenzen, ~10 Zeilen):
+- [x] ADR-012 schreiben (Kontext / Optionen / Entscheidung / Konsequenzen, ~10 Zeilen):
   ```markdown
   # ADR-012 — Galerie-Stapel: flache Einzeleinträge statt kollabiertem Stapel-Kopf
 
@@ -55,14 +55,27 @@
   - Bulk-Aktionen wirken pro Eintrag (Original, Version, `original_id`-Kind je einzeln),
     nicht pro Gruppe — kein Sonderfall für "doppelte Aktion auf demselben Asset"
   ```
-- [ ] `docs/code-map.md` Zeile „Galerie & Lightbox": Stapel-Logik erwähnen, falls die
-  Query-Grobstruktur sich änderte (z.B. neue Hilfsfunktion/Modul)
-- [ ] `docs/models.md`: falls Phase 1 einen neuen Index oder ein neues Feld ergänzt hat,
-  hier nachziehen (Grobheits-Regel: Ordner-/Feld-Ebene, keine Zeilennummern)
-- [ ] `docs/routes.md`: `GET /api/assets` und `GET /api/faces` Response-Felder ergänzen
+- [x] `docs/code-map.md` Zeile „Galerie & Lightbox": Stapel-Logik erwähnt (kein Edits-Tab
+  mehr, Entity-Key-Kompromiss, Query mischt asset+version)
+- [x] `docs/models.md`: kein neues Feld/Index (stack_size/stack_group_id sind
+  query-time-berechnet, keine Spalte) — dafür `version`-Sektion um Stapel-Semantik +
+  den single-hop-Kompromiss ergänzt
+- [x] `docs/routes.md`: `GET /api/assets` Response-Felder ergänzt; `GET /api/faces/gallery`
+  (Gesichter-Tab-Endpunkt, war zuvor komplett undokumentiert) neu angelegt + Response-Felder
 
 ---
 
 ## Report-Back
 
-_Hier trägt der Umsetzer nach Abschluss ein was abwich oder auffiel._
+**Abweichung vom Plan:** `GET /api/faces` aus der Abnahme-Kriterien-Formulierung existiert
+nicht — der tatsächliche Endpunkt ist `GET /api/faces/gallery` und war vor dieser Phase
+komplett undokumentiert (Vorbedingung, keine P21-Regression). Jetzt nachgetragen.
+
+**Zusätzlich erledigt (aus FINDINGS.md, Phase 5 getaggt):**
+- CSS-Budget-Fehler in `lightbox.scss` behoben — `anyComponentStyle`-Error-Budget in
+  `frontend/angular.json` von 16 kB auf 32 kB angehoben (Warning 6→8 kB), einfachster Weg
+  statt Datei-Split. `ng build --configuration production` verifiziert grün.
+- Zwei bekannte, bewusst nicht in P21 behobene Lücken (Version-Favorit/-Löschen fehlt am
+  Backend; toter `versionSlotBindings`-Verdrahtungsrest ohne UI-Einstiegspunkt seit
+  Edits-Tab-Wegfall) als akzeptierte Konsequenzen in ADR-012 dokumentiert statt neu gebaut —
+  beides wäre neuer Scope über P21 hinaus (Follow-ups, siehe Archiv-Footer der README).

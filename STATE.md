@@ -1,12 +1,9 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-01_p21-galerie-stapel-tabs/`
-**Phase:** 5/5 — Doku & ADR-012 (mechanisch)
-**Nächster Schritt:** Phase 4 ist fertig und committet. Phase 5 schreibt ADR-012 (Trade-offs:
-Version-Pseudo-Einträge ohne eigenes Favorit/Löschen, verschwundene ComfyUI-Version-Bindung,
-CSS-Budget-Fehler in `lightbox.scss`) und zieht die code-reference docs (`models.md`,
-`routes.md`, `code-map.md`) auf den P21-Stand nach.
-**Letzter abgeschlossener Plan:** `docs/archive/2026-07/p15-lightbox-angleichung/`
+**Aktiver Plan:** (kein aktiver Plan)
+**Nächster Schritt:** Nächsten Plan aus dem Backlog auswählen (Tabelle unten) und `/plan`
+oder `/implement` starten.
+**Letzter abgeschlossener Plan:** `docs/archive/2026-07/p21-galerie-stapel-tabs/`
 
 ---
 

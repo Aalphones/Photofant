@@ -2,7 +2,7 @@
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable), `collection_id` (Mitglied einer Sammlung), `q` (Suchtext), `q_mode` (`tags\|caption\|semantic`) | `AssetsPage { items, total, page, page_size, facets }` |
+| `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable), `collection_id` (Mitglied einer Sammlung), `q` (Suchtext), `q_mode` (`tags\|caption\|semantic`) | `AssetsPage { items, total, page, page_size, facets }` — `items[]` sind P21 flache Einzeleinträge (Asset **oder** Version-Pseudo-Eintrag), je mit `kind` (`asset\|version`), `version_id`, `stack_size` (1 = kein Stapel), `stack_group_id` (ADR-012) |
 | `/galerie` (cell thumbnail) | `GET` | `/api/assets/{id}/thumbnail` | `size` (256\|512\|1024) | JPEG blob — `ETag: "{hash}-{size}"`, `Cache-Control: immutable` |
 | `/galerie` (lightbox) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
 | `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`, `tags`, `faces`, `versions`, `original_id`, `linked_edits`, `quality`, `framing`) |
@@ -523,6 +523,7 @@ Der Rerun-Step `heuristics` liest vorhandene Face-Zeilen und aktualisiert `asset
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
+| `/galerie` (Gesichter-Tab, P21) | `GET` | `/api/faces/gallery` | `page`, `page_size`, `person_id` (optional), `asset_ids[]` (repeatable, optional) | `FacesGalleryPage { items, total, page, page_size }` — `items[]` sind flache Einzeleinträge (Face **oder** Version-Pseudo-Eintrag), je mit `kind` (`face\|version`), `version_id`, `stack_size`, `stack_group_id` (ADR-012) |
 | Lightbox (Face-Matches) | `GET` | `/api/faces/{face_id}/matches` | — | `FaceMatchDto[]` |
 | Lightbox (Face-Thumbnail) | `GET` | `/api/faces/{face_id}/thumbnail` | — | JPEG blob (256 px) |
 | `/einstellungen` / manuell | `POST` | `/api/faces/cluster` | — | `{ job_id: string }` |

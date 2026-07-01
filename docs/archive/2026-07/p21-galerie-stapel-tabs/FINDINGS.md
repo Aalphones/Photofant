@@ -30,7 +30,7 @@ Format: `- [ ] → Phase N: <Erkenntnis / Abweichung / Folgefund>`
   falsche Grenze treffen (Edge Case, dokumentierter Kompromiss analog zum
   Backend-„single-hop"-Kompromiss aus Phase 1).
 
-- [ ] → Phase 5 (ADR-012): Es gibt **keinen** Backend-Endpunkt, der Favorit/Löschen
+- [x] → Phase 5 (ADR-012): Es gibt **keinen** Backend-Endpunkt, der Favorit/Löschen
   gezielt auf einer `version`-Zeile setzt (nur auf dem Original-Asset). Version-
   Pseudo-Einträge im Fotos-Grid haben deshalb in Phase 2 **kein** Auswählen/Favorit
   bekommen (Cell zeigt nur Stapel-Icon + Klick-zum-Öffnen) — sonst hätte ein Klick
@@ -38,6 +38,7 @@ Format: `- [ ] → Phase N: <Erkenntnis / Abweichung / Folgefund>`
   festgehalten werden: entweder Backend-Endpunkt für Version-Favorit/-Löschen
   nachziehen, oder das „jeder Eintrag ist ein eigenständiges Auswahl-Ziel"-AK aus
   dem README für `kind==='version'` explizit einschränken.
+  Als akzeptierte Konsequenz in ADR-012 dokumentiert; Endpunkt-Nachbau ist Follow-up.
 
 - [x] → Phase 2/3: `face-grid.html`s `@for`-Track lief auf `face.id` — Backend vergibt
   Version-Pseudo-Einträgen (Face-Edits) dieselbe `id` wie ihrem zugehörigen Face
@@ -54,13 +55,14 @@ Format: `- [ ] → Phase N: <Erkenntnis / Abweichung / Folgefund>`
   löschen, Explorer-Reveal, Vor/Zurück durch alle Gesichter) dort nachgebaut. Details:
   Report-Back Phase 4.
 
-- [ ] → Phase 5 (ADR-012): `ng build --configuration production` schlägt an einem
+- [x] → Phase 5 (ADR-012): `ng build --configuration production` schlägt an einem
   CSS-Budget-Fehler in `lightbox.scss` (23.32 kB, Error-Schwelle 16 kB) fehl. Bereits vor
   Phase 4 vorhanden (Wachstum über P15 hinweg), keine Regression dieser Phase — aber bisher
   nirgends dokumentiert oder behoben. Phase 5 sollte entscheiden: Budget in `angular.json`
   anheben (einfachster Weg) oder `lightbox.scss` aufteilen.
+  Behoben: Budget in `frontend/angular.json` auf 32 kB angehoben, Build grün verifiziert.
 
-- [ ] → Phase 5 (ADR-012, verschoben aus Phase 4 — nicht Teil der Phase-4-Checkliste,
+- [x] → Phase 5 (ADR-012, verschoben aus Phase 4 — nicht Teil der Phase-4-Checkliste,
   weiterhin offen): Die Workflow-Run-Leiste hatte bisher einen
   Weg, eine Editor-Version direkt als ComfyUI-Input zu binden (`onBindVersion` im
   jetzt entfernten Edits-Tab, `pf-version-cell` → Bind-Klick). Mit dem Wegfall des
@@ -70,3 +72,5 @@ Format: `- [ ] → Phase N: <Erkenntnis / Abweichung / Folgefund>`
   in der Lightbox-Versionen-Sektion (P15 Phase 4) diese Lücke schließen soll, oder
   ob die Version-Bindung als Workflow-Input ersatzlos entfällt (Kontrakt-Entscheidung,
   gehört ins README/ADR-012).
+  Entschieden: ersatzlos akzeptiert (kein bekannter aktiver Anwendungsfall), in
+  ADR-012 dokumentiert. Ein Bind-Button in der Lightbox wäre Follow-up, kein P21-Scope.

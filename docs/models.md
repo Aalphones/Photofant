@@ -337,6 +337,13 @@ Saved edit versions per asset_instance or face. Exactly one of `instance_id`/`fa
 
 Indexes: `ix_version_instance_id`, `ix_version_face_id`. Check constraint: `ck_version_xor`.
 
+**Galerie-Stapel (P21, ADR-012):** Jede `version`-Zeile erscheint als eigener,
+gleichberechtigter Galerie-Eintrag (kein Kollabieren) — `stack_size`/`stack_group_id`
+werden zur Query-Zeit berechnet (Original + seine `version`-Zeilen + seine
+`original_id`-Kind-Assets), keine eigene Spalte. Bewusster Kompromiss: `original_id`-
+Ketten (ComfyUI-Edit-eines-Edits) werden für die Größen-Zählung nur single-hop
+gezählt, die Gruppen-Identität selbst löst bounded-rekursiv (Tiefe 5) auf.
+
 ---
 
 ### `prompt_template` (migration 0020)

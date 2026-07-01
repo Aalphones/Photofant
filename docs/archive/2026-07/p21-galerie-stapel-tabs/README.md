@@ -1,6 +1,6 @@
 # P21 — Galerie: Stapel & Tab-Konsolidierung
 
-**Status:** pending
+**Status:** complete
 
 Ziel: Die Galerie hat nur noch **zwei** Tabs (Fotos, Gesichter) statt aktuell drei
 (`photos`/`faces`/`edits`). Edits verschwinden als eigener Tab. Stattdessen zeigt die
@@ -132,33 +132,64 @@ ADR-012 (Phase 5).
 | 2 | Frontend Galerie-Grid: Stapel-Icon + Tab-Konsolidierung | standard | complete |
 | 3 | Frontend Gesichter-Grid: Stapel-Äquivalent | standard | complete |
 | 4 | Lightbox-Anbindung: Klick-Ziel + Versions-Navigation | standard (real: heikel) | complete |
-| 5 | Doku & ADR-012 | mechanisch | pending |
+| 5 | Doku & ADR-012 | mechanisch | complete |
 
 ---
 
 ## Abnahme-Kriterien (Gesamt)
 
-- [ ] Sub-Toolbar zeigt nur noch „Alles / Fotos / Gesichter" — kein `edits`-Segment mehr
-- [ ] Ein Original mit N Edits zeigt im Fotos-Tab N+1 einzelne Kacheln (Original + jedes
+- [x] Sub-Toolbar zeigt nur noch „Alles / Fotos / Gesichter" — kein `edits`-Segment mehr
+- [x] Ein Original mit N Edits zeigt im Fotos-Tab N+1 einzelne Kacheln (Original + jedes
   Edit), jede an ihrer eigenen chronologischen Stelle, jede mit eigenem Thumbnail
-- [ ] Alle Kacheln einer Gruppe zeigen das Stapel-Icon (unten rechts); Klick auf eine
+- [x] Alle Kacheln einer Gruppe zeigen das Stapel-Icon (unten rechts); Klick auf eine
   Kachel öffnet die Lightbox exakt auf dieser Version, navigierbar zu allen
   Geschwistern über die Versionen-Sektion
-- [ ] Gleiches Verhalten im Gesichter-Tab (jede Face-Version eine eigene Kachel;
+- [x] Gleiches Verhalten im Gesichter-Tab (jede Face-Version eine eigene Kachel;
   Original-Face ggf. unter anderer Person als seine Edits, wenn umgehängt)
-- [ ] Editor-Dialog-Edits (Crop/Rotate/Freistellen) bekommen weiterhin **keine** eigenen
+- [x] Editor-Dialog-Edits (Crop/Rotate/Freistellen) bekommen weiterhin **keine** eigenen
   Faces/Captions/Tags; ComfyUI-Workflow-Edits behalten ihre bereits vorhandene volle
   Pipeline-Anbindung — keine Regression in beide Richtungen
-- [ ] Kein Datenverlust/keine Dopplung in Bulk-Operationen (Auswählen/Löschen/Favorisieren) —
+- [x] Kein Datenverlust/keine Dopplung in Bulk-Operationen (Auswählen/Löschen/Favorisieren) —
   jeder Eintrag ist ein eigenständiges physisches Objekt, Bulk-Aktionen wirken pro
-  Eintrag, nicht pro Gruppe
+  Eintrag, nicht pro Gruppe (bekannte Einschränkung: Version-Pseudo-Einträge haben
+  mangels Backend-Endpunkt bewusst kein eigenes Favorit/Löschen, siehe ADR-012)
 
 ---
 
 ## Archiv-Footer
 
-**Summary:** —
-**Files touched:** —
-**Commits:** —
-**Deviations:** —
-**Follow-ups:** —
+**Summary:** Galerie zeigt jetzt nur noch zwei Tabs (Fotos, Gesichter) statt drei — der
+separate Edits-Tab ist weg. Original und jedes einzelne Edit (Editor-Version wie
+ComfyUI-Workflow-Edit) erscheinen stattdessen als eigene, gleichberechtigte Kachel an
+ihrer eigenen chronologischen Stelle, mit Stapel-Icon + Lightbox-Versions-Navigation.
+ADR-013 (ComfyUI-Default-Import legt jetzt ein eigenes Asset statt einer Version an) war
+Voraussetzung, um die Cross-Person-Wanderung für ComfyUI-Edits real zu machen.
+
+**Files touched:** Backend `api/assets.py`, `api/faces.py` (Stapel-Query, neue DTO-Felder
+`kind`/`version_id`/`stack_size`/`stack_group_id`) · `api/comfyui.py` + Import-Pipeline
+(ADR-013). Frontend `features/galerie/` (grid, cell, face-grid, sub-toolbar, lightbox,
+gesichter-modus) · `store/gallery/gallery.reducer.ts` (Entity-Key-Fix) ·
+`models/asset.model.ts`. Doku: `docs/decisions/012-*.md`, `docs/code-map.md`,
+`docs/models.md`, `docs/routes.md`. `frontend/angular.json` (CSS-Budget).
+
+**Commits:** `67b0c42` (Plan angelegt) · `524ab98` (Korrektur flache Einzeleinträge) ·
+`895b765` (ADR-013, ComfyUI-Edit als Asset) · `08c7d42` (Phase 1, Backend-Query) ·
+`dffc7df` (Phase 2, Fotos-Grid) · `491a88c` (Phase 3, Gesichter-Grid) · `7bc66f6`
+(Phase 4, Lightbox + Gesichter-Modus) · Phase 5 (Doku/ADR-012, dieser Commit).
+
+**Deviations:**
+- Phase 1 deutlich größer als geplant: ADR-013 + Import-Pipeline-Umbau mussten erst
+  gebaut werden, bevor der Query-Umbau überhaupt Sinn ergab (siehe Phase-1-Report-Back)
+- Phase 4 auf Rückfrage voll auf den neuen Gesichter-Modus umgestellt statt nur die alte
+  separate Gesichter-Lightbox zu fixen; alte `face-lightbox/`-Komponente entfernt
+- Phase 5: `GET /api/faces` aus der ursprünglichen Formulierung existiert nicht — realer
+  Endpunkt ist `GET /api/faces/gallery`, war davor komplett undokumentiert (kein P21-Bug)
+
+**Follow-ups (kein P21-Scope, in ADR-012 dokumentiert):**
+- Kein Backend-Endpunkt für Favorit/Löschen auf einer einzelnen `version`-Zeile — Version-
+  Pseudo-Einträge haben deshalb kein eigenes Auswählen/Favorit-Icon
+- Kein UI-Einstiegspunkt mehr, eine Editor-Version als ComfyUI-Workflow-Input zu binden
+  (`versionSlotBindings` bleibt verdrahtet, wird aber nie mehr befüllt) — ersatzlos
+  akzeptiert, da kein aktiver Anwendungsfall bekannt
+- P20 (Virtual-Scroll-Galerie) sollte diesen Plan als abgeschlossen voraussetzen, nicht
+  parallel im selben Query-Codepfad arbeiten
