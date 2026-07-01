@@ -1,5 +1,5 @@
 import { createSelector } from '@ngrx/store';
-import type { AssetDto, AssetGroup, GroupKey } from '@photofant/models';
+import type { AssetDto, AssetGroup, FaceGalleryItemDto, GroupKey } from '@photofant/models';
 import { filtersFeature } from '../filters/filters.reducer';
 import { personsFeature } from '../persons/persons.reducer';
 import { searchFeature } from '../search/search.reducer';
@@ -16,6 +16,7 @@ const {
   selectLightboxId,
   selectLightboxKind,
   selectLightboxFaceId,
+  selectLightboxVersionId,
   selectLightboxContextIds,
   selectFacets,
   selectSelectionMode,
@@ -149,6 +150,34 @@ const selectLightboxNavContext = createSelector(
     ({ assets, lightboxId, hasMore, isLoading, contextIds }),
 );
 
+// P21-Stapel: Face-Modus-Navigation über die Gesichter-Grid-Liste statt der Asset-Liste.
+// Version-Pseudo-Einträge teilen ihre `id` mit dem Original-Face (Backend-Design,
+// analog zu AssetDto) — Matching braucht darum (id, version_id) statt nur id.
+const selectLightboxFaceIndex = createSelector(
+  selectFaceItems,
+  selectLightboxFaceId,
+  selectLightboxVersionId,
+  (items: FaceGalleryItemDto[], faceId: number | null, versionId: number | null) =>
+    faceId == null ? -1 : items.findIndex((item: FaceGalleryItemDto) => item.id === faceId && item.version_id === versionId),
+);
+
+const selectLightboxFaceNavContext = createSelector(
+  selectFaceItems,
+  selectLightboxFaceIndex,
+  (items: FaceGalleryItemDto[], index: number) => ({ items, index }),
+);
+
+const selectLightboxHasPrevFace = createSelector(
+  selectLightboxFaceIndex,
+  (index: number) => index > 0,
+);
+
+const selectLightboxHasNextFace = createSelector(
+  selectLightboxFaceIndex,
+  selectFaceItems,
+  (index: number, items: FaceGalleryItemDto[]) => index >= 0 && index < items.length - 1,
+);
+
 const selectHashMap = createSelector(
   selectEntities,
   (entities): Record<number, string> => {
@@ -175,10 +204,14 @@ export const gallerySelectors = {
   selectLightboxId,
   selectLightboxKind,
   selectLightboxFaceId,
+  selectLightboxVersionId,
   selectLightboxAsset,
   selectLightboxHasPrev,
   selectLightboxHasNext,
   selectLightboxNavContext,
+  selectLightboxHasPrevFace,
+  selectLightboxHasNextFace,
+  selectLightboxFaceNavContext,
   selectSelectionMode,
   selectSelectedIds,
   selectAnchorId,

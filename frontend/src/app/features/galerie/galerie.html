@@ -69,20 +69,7 @@
   </div>
 </div>
 
-@if (selectedFaceItem(); as faceItem) {
-  <pf-face-lightbox
-    [faceItem]="faceItem"
-    [hasPrev]="faceLightboxHasPrev()"
-    [hasNext]="faceLightboxHasNext()"
-    (close)="closeFaceLightbox()"
-    (prev)="onFaceLightboxPrev()"
-    (next)="onFaceLightboxNext()"
-    (openAsset)="onFaceLightboxOpenAsset($event)"
-    (faceDeleted)="onFaceLightboxDeleted($event)"
-  />
-}
-
-@if (lightboxId() != null) {
+@if (lightboxId() != null || lightboxKind() === 'face') {
   <pf-lightbox />
 }
 

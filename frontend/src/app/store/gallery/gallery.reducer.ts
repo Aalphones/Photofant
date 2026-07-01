@@ -14,6 +14,8 @@ export interface GalleryState extends EntityState<AssetDto> {
   lightboxId: number | null;
   lightboxKind: 'asset' | 'face';
   lightboxFaceId: number | null;
+  // P21-Stapel: initiale Stage-Auswahl beim Öffnen (welche Version zuerst gezeigt wird)
+  lightboxVersionId: number | null;
   lightboxPendingNext: boolean;
   lightboxContextIds: number[] | null;
   facets: Facets | null;
@@ -40,6 +42,7 @@ const initialState: GalleryState = adapter.getInitialState({
   lightboxId: null,
   lightboxKind: 'asset',
   lightboxFaceId: null,
+  lightboxVersionId: null,
   lightboxPendingNext: false,
   lightboxContextIds: null,
   facets: null,
@@ -96,20 +99,23 @@ export const galleryFeature = createFeature({
     on(galleryActions.injectAsset, (state: GalleryState, { asset }) =>
       adapter.upsertOne(asset, state)
     ),
-    on(galleryActions.openLightbox, (state: GalleryState, { id }) => ({
+    on(galleryActions.openLightbox, (state: GalleryState, { id, versionId }) => ({
       ...state, lightboxId: id, lightboxKind: 'asset' as const, lightboxFaceId: null,
+      lightboxVersionId: versionId ?? null,
     })),
-    on(galleryActions.openFaceLightbox, (state: GalleryState, { faceId }) => ({
+    on(galleryActions.openFaceLightbox, (state: GalleryState, { faceId, versionId }) => ({
       ...state, lightboxId: null, lightboxKind: 'face' as const, lightboxFaceId: faceId,
+      lightboxVersionId: versionId ?? null,
     })),
     on(galleryActions.closeLightbox, (state: GalleryState) => ({
-      ...state, lightboxId: null, lightboxKind: 'asset' as const, lightboxFaceId: null, lightboxPendingNext: false, lightboxContextIds: null,
+      ...state, lightboxId: null, lightboxKind: 'asset' as const, lightboxFaceId: null,
+      lightboxVersionId: null, lightboxPendingNext: false, lightboxContextIds: null,
     })),
     on(galleryActions.setLightboxContext, (state: GalleryState, { assets }) =>
       adapter.upsertMany(assets, { ...state, lightboxContextIds: assets.map((asset: AssetDto) => asset.id) })
     ),
     on(galleryActions.lightboxGoTo, (state: GalleryState, { id }) => ({
-      ...state, lightboxId: id, lightboxKind: 'asset' as const, lightboxFaceId: null,
+      ...state, lightboxId: id, lightboxKind: 'asset' as const, lightboxFaceId: null, lightboxVersionId: null,
     })),
     on(galleryActions.lightboxMarkPendingNext, (state: GalleryState) => ({ ...state, lightboxPendingNext: true })),
     on(galleryActions.toggleFavourite, (state: GalleryState, { id, value }) =>

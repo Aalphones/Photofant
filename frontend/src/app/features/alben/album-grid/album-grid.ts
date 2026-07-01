@@ -23,7 +23,7 @@ export class AlbumGrid {
 
   protected readonly baseHeight = computed((): number => BASE_HEIGHTS[this.density()]);
 
-  protected onOpen(id: number): void {
-    this.openAsset.emit(id);
+  protected onOpen(event: { id: number; versionId: number | null }): void {
+    this.openAsset.emit(event.id);
   }
 }

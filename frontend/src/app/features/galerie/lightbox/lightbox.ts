@@ -134,12 +134,23 @@ export class Lightbox {
   protected readonly asset    = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
   protected readonly lightboxKind   = this.store.selectSignal(gallerySelectors.selectLightboxKind);
   protected readonly lightboxFaceId = this.store.selectSignal(gallerySelectors.selectLightboxFaceId);
+  protected readonly lightboxVersionId = this.store.selectSignal(gallerySelectors.selectLightboxVersionId);
   protected readonly isFaceMode = computed((): boolean => this.lightboxKind() === 'face');
   protected readonly presets  = this.store.selectSignal(presetsSelectors.selectPresets);
   protected readonly comfyuiConfig    = this.store.selectSignal(comfyuiSelectors.selectConfig);
   private readonly activeWorkflows    = this.store.selectSignal(comfyuiSelectors.selectActiveWorkflows);
-  protected readonly hasPrev  = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
-  protected readonly hasNext  = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
+  private readonly hasPrevAsset = this.store.selectSignal(gallerySelectors.selectLightboxHasPrev);
+  private readonly hasNextAsset = this.store.selectSignal(gallerySelectors.selectLightboxHasNext);
+  private readonly hasPrevFace  = this.store.selectSignal(gallerySelectors.selectLightboxHasPrevFace);
+  private readonly hasNextFace  = this.store.selectSignal(gallerySelectors.selectLightboxHasNextFace);
+
+  protected readonly hasPrev = computed((): boolean =>
+    this.isFaceMode() ? this.hasPrevFace() : this.hasPrevAsset()
+  );
+
+  protected readonly hasNext = computed((): boolean =>
+    this.isFaceMode() ? this.hasNextFace() : this.hasNextAsset()
+  );
 
   protected readonly showGenMeta = signal(false);
 
@@ -178,6 +189,14 @@ export class Lightbox {
     this.isFaceMode() ? (this.faceDetail()?.versions ?? []) : (this.detail()?.versions ?? [])
   );
 
+  // P21-Stapel: explizit gewählte initiale Stage-Version (Klick auf eine Stapel-Kachel).
+  // Ändert nicht `is_current` — nur, welche Version beim Öffnen zuerst angezeigt wird.
+  protected readonly stageVersion = computed((): VersionDto | null => {
+    const versionId = this.lightboxVersionId();
+    if (versionId == null) { return null; }
+    return this.activeVersions().find((version: VersionDto) => version.id === versionId) ?? null;
+  });
+
   // ── Tag autocomplete ──────────────────────────────────────────────────────
 
   protected readonly addingTag       = signal(false);
@@ -204,8 +223,10 @@ export class Lightbox {
   protected readonly selectedSimilarPair = signal<DupePair | null>(null);
 
   // ── Face matches (PersonPicker-Modal) ─────────────────────────────────────
+  // Nur die faceId wird gebraucht (Zuweisen/Vergleich mit Löschziel) — funktioniert
+  // damit gleichermaßen für Asset-Modus-`FaceDto` wie für den Gesichter-Modus.
   protected readonly showPersonPicker   = signal(false);
-  protected readonly selectedFace       = signal<FaceDto | null>(null);
+  protected readonly selectedFaceId     = signal<number | null>(null);
   protected readonly faceMatches        = signal<FaceMatch[]>([]);
   protected readonly faceMatchesLoading = signal(false);
   protected readonly creatingNewPerson  = signal(false);
@@ -272,15 +293,19 @@ export class Lightbox {
 
   protected readonly imageUrl = computed((): string => {
     if (this.isFaceMode()) { return this.faceStageUrl(); }
+    const stageVersion = this.stageVersion();
+    if (stageVersion != null) { return `/api/versions/${stageVersion.id}/file`; }
     const asset = this.asset();
     return asset != null ? this.assetService.fileUrl(asset.id) : '';
   });
 
-  // Stage-Bild im Gesichter-Modus: aktuelle Face-Version, sonst der ursprüngliche Crop
+  // Stage-Bild im Gesichter-Modus: explizit gewählte Stapel-Version, sonst die aktuelle
+  // Face-Version, sonst der ursprüngliche Crop
   private faceStageUrl(): string {
     const face = this.faceDetail();
     if (face == null) { return ''; }
-    const current = face.versions.find((version: VersionDto) => version.is_current);
+    const selected = this.stageVersion();
+    const current = selected ?? face.versions.find((version: VersionDto) => version.is_current);
     return current != null ? `/api/versions/${current.id}/file` : '/api' + face.crop_url;
   }
 
@@ -334,6 +359,8 @@ export class Lightbox {
 
   protected readonly downloadUrl = computed((): string => {
     if (this.isFaceMode()) { return this.faceStageUrl() || '#'; }
+    const stageVersion = this.stageVersion();
+    if (stageVersion != null) { return `/api/versions/${stageVersion.id}/file`; }
     const asset = this.asset();
     return asset != null ? this.assetService.fileUrl(asset.id) : '#';
   });
@@ -519,7 +546,7 @@ export class Lightbox {
       this.selectedSimilarPair.set(null);
       // Reset PersonPicker-Modal state
       this.showPersonPicker.set(false);
-      this.selectedFace.set(null);
+      this.selectedFaceId.set(null);
       this.faceMatches.set([]);
       this.creatingNewPerson.set(false);
       this.newPersonName.set('');
@@ -606,9 +633,9 @@ export class Lightbox {
   }
 
   protected revealInExplorer(): void {
-    const asset: AssetDto | null = this.asset();
-    if (asset != null) {
-      this.assetService.revealAsset(asset.id).subscribe();
+    const assetId = this.isFaceMode() ? this.faceDetail()?.source_asset_id ?? null : this.asset()?.id ?? null;
+    if (assetId != null) {
+      this.assetService.revealAsset(assetId).subscribe();
     }
   }
 
@@ -906,7 +933,7 @@ export class Lightbox {
   // ── Face deletion ─────────────────────────────────────────────────────────
 
   protected deleteFaceFromAsset(face: FaceDto): void {
-    if (this.selectedFace()?.id === face.id) { this.closePersonPicker(); }
+    if (this.selectedFaceId() === face.id) { this.closePersonPicker(); }
     this.personService.deleteFace(face.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -920,17 +947,46 @@ export class Lightbox {
       });
   }
 
+  // Gesichter-Modus: das aktuell geöffnete Face selbst löschen (nicht eines der
+  // Gesichter *auf* einem Asset) — danach gibt es nichts mehr anzuzeigen, Lightbox schließt.
+  protected deleteFaceInFaceMode(): void {
+    const faceId = this.lightboxFaceId();
+    if (faceId == null) { return; }
+    if (this.selectedFaceId() === faceId) { this.closePersonPicker(); }
+    this.personService.deleteFace(faceId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.store.dispatch(galleryActions.removeFaceItem({ id: faceId }));
+          this.close();
+        },
+        error: (err: unknown) => {
+          console.error('[Lightbox] Face deletion failed:', err);
+        },
+      });
+  }
+
   // ── PersonPicker-Modal ─────────────────────────────────────────────────────
 
   protected openPersonPicker(face: FaceDto): void {
-    this.selectedFace.set(face);
+    this.openPersonPickerFor(face.id);
+  }
+
+  // Gesichter-Modus: Person für das aktuell geöffnete Face zuweisen
+  protected openFacePersonPicker(): void {
+    const faceId = this.lightboxFaceId();
+    if (faceId != null) { this.openPersonPickerFor(faceId); }
+  }
+
+  private openPersonPickerFor(faceId: number): void {
+    this.selectedFaceId.set(faceId);
     this.showPersonPicker.set(true);
     this.personSearchQuery.set('');
     this.creatingNewPerson.set(false);
     this.faceMatchesLoading.set(true);
     this.faceMatches.set([]);
     this.store.dispatch(personsActions.loadPersons());
-    this.personService.getFaceMatches(face.id)
+    this.personService.getFaceMatches(faceId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (matches: FaceMatch[]) => {
@@ -943,7 +999,7 @@ export class Lightbox {
 
   protected closePersonPicker(): void {
     this.showPersonPicker.set(false);
-    this.selectedFace.set(null);
+    this.selectedFaceId.set(null);
     this.faceMatches.set([]);
     this.creatingNewPerson.set(false);
     this.newPersonName.set('');
@@ -981,8 +1037,8 @@ export class Lightbox {
 
   protected confirmCreatePerson(): void {
     const name = this.newPersonName().trim();
-    const face = this.selectedFace();
-    if (!name || face == null) {
+    const faceId = this.selectedFaceId();
+    if (!name || faceId == null) {
       this.cancelCreatePerson();
       return;
     }
@@ -992,7 +1048,7 @@ export class Lightbox {
         next: (person: PersonDto) => {
           this.creatingNewPerson.set(false);
           this.newPersonName.set('');
-          this.assignFaceToPerson(face.id, person.id);
+          this.assignFaceToPerson(faceId, person.id);
         },
         error: () => {
           this.creatingNewPerson.set(false);

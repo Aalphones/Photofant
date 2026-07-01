@@ -6,7 +6,6 @@ import { collectionsActions, collectionsSelectors, comfyuiActions, comfyuiSelect
 import { AssetService, ClassifyService, ComfyUIService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { FaceGrid } from './face-grid/face-grid';
-import { FaceLightbox } from './face-lightbox/face-lightbox';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
 import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
@@ -14,12 +13,11 @@ import { RunLeiste } from './run-leiste/run-leiste';
 import type { RunFirePayload } from './run-leiste/run-leiste';
 import { BulkBar, BulkEditDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { BulkEditPayload, RerunPayload } from '@photofant/ui';
-import type { FaceGalleryItemDto } from '@photofant/models';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, FaceGrid, FaceLightbox, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
+  imports: [SubToolbar, GalerieGrid, FaceGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
   host: { '(document:keydown.escape)': 'onEscape()' },
@@ -38,6 +36,7 @@ export class Galerie {
   protected readonly isLoading     = this.store.selectSignal(gallerySelectors.selectIsLoading);
   protected readonly hasMore       = this.store.selectSignal(gallerySelectors.selectHasMore);
   protected readonly lightboxId    = this.store.selectSignal(gallerySelectors.selectLightboxId);
+  protected readonly lightboxKind  = this.store.selectSignal(gallerySelectors.selectLightboxKind);
   protected readonly selectionMode = this.store.selectSignal(gallerySelectors.selectSelectionMode);
   protected readonly selectedIds   = this.store.selectSignal(gallerySelectors.selectSelectedIds);
   private readonly allAssets       = this.store.selectSignal(gallerySelectors.selectAll);
@@ -55,23 +54,6 @@ export class Galerie {
   private readonly filterOrder        = this.store.selectSignal(filtersSelectors.order);
 
   protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAll);
-
-  protected readonly selectedFaceItem    = signal<FaceGalleryItemDto | null>(null);
-
-  protected readonly faceLightboxHasPrev = computed((): boolean => {
-    const face = this.selectedFaceItem();
-    if (face === null || this.mediaType() !== 'faces') { return false; }
-    const items = this.faceItems();
-    return items.findIndex((item: FaceGalleryItemDto) => item.id === face.id) > 0;
-  });
-
-  protected readonly faceLightboxHasNext = computed((): boolean => {
-    const face = this.selectedFaceItem();
-    if (face === null || this.mediaType() !== 'faces') { return false; }
-    const items = this.faceItems();
-    const index = items.findIndex((item: FaceGalleryItemDto) => item.id === face.id);
-    return index >= 0 && index < items.length - 1;
-  });
 
   protected readonly railOpen = signal(false);
   protected readonly showBulkRerunDialog = signal(false);
@@ -189,41 +171,12 @@ export class Galerie {
     }
   }
 
-  protected onOpenFace(event: { faceId: number; assetId: number | null }): void {
-    const faceItem = this.faceItems().find((item: FaceGalleryItemDto) => item.id === event.faceId);
-    if (faceItem != null) {
-      this.selectedFaceItem.set(faceItem);
-    }
-  }
-
-  protected onFaceLightboxPrev(): void {
-    const face = this.selectedFaceItem();
-    if (face === null) { return; }
-    const items = this.faceItems();
-    const index = items.findIndex((item: FaceGalleryItemDto) => item.id === face.id);
-    if (index > 0) { this.selectedFaceItem.set(items[index - 1]!); }
-  }
-
-  protected onFaceLightboxNext(): void {
-    const face = this.selectedFaceItem();
-    if (face === null) { return; }
-    const items = this.faceItems();
-    const index = items.findIndex((item: FaceGalleryItemDto) => item.id === face.id);
-    if (index >= 0 && index < items.length - 1) { this.selectedFaceItem.set(items[index + 1]!); }
-  }
-
-  protected closeFaceLightbox(): void {
-    this.selectedFaceItem.set(null);
-  }
-
-  protected onFaceLightboxOpenAsset(assetId: number): void {
-    this.selectedFaceItem.set(null);
-    this.store.dispatch(galleryActions.openAssetLightbox({ assetId }));
-  }
-
-  protected onFaceLightboxDeleted(faceId: number): void {
-    this.selectedFaceItem.set(null);
-    this.store.dispatch(galleryActions.removeFaceItem({ id: faceId }));
+  // Face-Stapel-Klick öffnet die vereinheitlichte Lightbox im Gesichter-Modus (P15 Phase 7);
+  // versionId (Stapel-Version, Phase 3) wählt darin die initiale Stage-Version.
+  protected onOpenFace(event: { faceId: number; assetId: number | null; versionId: number | null }): void {
+    this.store.dispatch(galleryActions.openFaceLightbox({
+      faceId: event.faceId, assetId: event.assetId, versionId: event.versionId,
+    }));
   }
 
   protected onBindFace(event: { faceId: number; assetId: number | null }): void {
@@ -238,8 +191,8 @@ export class Galerie {
     this.armedSlotKey.set(null);
   }
 
-  protected onOpenAsset(id: number): void {
-    this.store.dispatch(galleryActions.openLightbox({ id }));
+  protected onOpenAsset(event: { id: number; versionId: number | null }): void {
+    this.store.dispatch(galleryActions.openLightbox({ id: event.id, versionId: event.versionId }));
   }
 
   protected toggleSelectionMode(): void {
@@ -381,10 +334,6 @@ export class Galerie {
   // --- Workflow-Modus ---
 
   protected onEscape(): void {
-    if (this.selectedFaceItem() !== null) {
-      this.selectedFaceItem.set(null);
-      return;
-    }
     if (this.armedSlotKey() !== null) {
       this.armedSlotKey.set(null);
     }
@@ -422,10 +371,11 @@ export class Galerie {
   }
 
   /** Galerie-Klick wenn ein Slot scharf: Einzelbild binden + entschärfen */
-  protected onBindAsset(assetId: number): void {
+  protected onBindAsset(event: { id: number; versionId: number | null }): void {
+    const assetId = event.id;
     const armedKey = this.armedSlotKey();
     if (armedKey === null) {
-      this.onOpenAsset(assetId);
+      this.onOpenAsset(event);
       return;
     }
     // Gesicht-Bindung für diesen Slot löschen (Asset überschreibt Gesicht)

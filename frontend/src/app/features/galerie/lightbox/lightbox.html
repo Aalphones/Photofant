@@ -8,25 +8,23 @@
       <pf-icon name="x" [size]="20" />
     </button>
 
-    @if (!isFaceMode()) {
-      <button
-        class="lb-btn lb-nav lb-prev"
-        [disabled]="!hasPrev()"
-        (click)="prev()"
-        aria-label="Vorheriges Bild"
-      >
-        <pf-icon name="arrowLeft" [size]="22" />
-      </button>
+    <button
+      class="lb-btn lb-nav lb-prev"
+      [disabled]="!hasPrev()"
+      (click)="prev()"
+      aria-label="Vorheriges Bild"
+    >
+      <pf-icon name="arrowLeft" [size]="22" />
+    </button>
 
-      <button
-        class="lb-btn lb-nav lb-next"
-        [disabled]="!hasNext()"
-        (click)="next()"
-        aria-label="Nächstes Bild"
-      >
-        <pf-icon name="arrowRight" [size]="22" />
-      </button>
-    }
+    <button
+      class="lb-btn lb-nav lb-next"
+      [disabled]="!hasNext()"
+      (click)="next()"
+      aria-label="Nächstes Bild"
+    >
+      <pf-icon name="arrowRight" [size]="22" />
+    </button>
 
     <div class="lb-toolbar">
       @if (!isFaceMode()) {
@@ -411,6 +409,31 @@
 
       @if (isFaceMode()) {
 
+      <!-- Aktionen (Gesichter-Modus): reduziertes Set passend zu FaceDetailDto -->
+      <div class="panel-sec">
+        <div class="psec-title">Aktionen</div>
+        <div class="pbtn-row">
+          <button class="pbtn pbtn--ghost" (click)="openFacePersonPicker()">
+            <pf-icon name="face" [size]="15" />
+            Person zuweisen
+          </button>
+          <button class="pbtn pbtn--ghost" (click)="deleteFaceInFaceMode()" aria-label="Gesicht löschen">
+            <pf-icon name="trash" [size]="15" />
+            Löschen
+          </button>
+        </div>
+        <div class="pbtn-row">
+          <button
+            class="pbtn pbtn--ghost"
+            (click)="revealInExplorer()"
+            title="Datei im Windows Explorer anzeigen und markieren"
+          >
+            <pf-icon name="folder" [size]="15" />
+            Im Explorer anzeigen
+          </button>
+        </div>
+      </div>
+
       <!-- Quelle (Gesichter-Modus): Link zurück zum Asset, aus dem dieses Face extrahiert wurde -->
       <div class="panel-sec">
         <div class="psec-title">Quelle</div>
@@ -506,7 +529,7 @@
             @for (match of faceMatches().slice(0, 5); track match.person_id) {
               <button
                 class="pp-chip"
-                (click)="assignFaceToPerson(selectedFace()!.id, match.person_id)"
+                (click)="assignFaceToPerson(selectedFaceId()!,match.person_id)"
                 [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
               >
                 <img [src]="'/api/faces/' + match.best_face_id + '/thumbnail'" alt="" />
@@ -527,7 +550,7 @@
           @for (person of pickerList(); track person.id) {
             <button
               class="pp-row"
-              (click)="assignFaceToPerson(selectedFace()!.id, person.id)"
+              (click)="assignFaceToPerson(selectedFaceId()!,person.id)"
               [title]="'Zuweisen zu ' + (person.name ?? 'Person #' + person.id)"
             >
               @if (person.portrait_face_id != null) {

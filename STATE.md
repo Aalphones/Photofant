@@ -1,12 +1,11 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p21-galerie-stapel-tabs/`
-**Phase:** 4/5 — Lightbox-Anbindung: Klick-Ziel + Versions-Navigation (standard)
-**Nächster Schritt:** Phase 3 (Gesichter-Grid) ist fertig, noch nicht committet (siehe
-`mode-committing`). Phase 4 muss laut FINDINGS.md zuerst das Matching in `galerie.ts`
-(`onOpenFace`/`onFaceLightboxPrev`/`onFaceLightboxNext`) von reinem `item.id`-Vergleich
-auf `(faceId, versionId)` umstellen — sonst öffnet ein Klick auf eine Stapel-Version
-im Zweifel die falsche Kachel.
+**Phase:** 5/5 — Doku & ADR-012 (mechanisch)
+**Nächster Schritt:** Phase 4 ist fertig und committet. Phase 5 schreibt ADR-012 (Trade-offs:
+Version-Pseudo-Einträge ohne eigenes Favorit/Löschen, verschwundene ComfyUI-Version-Bindung,
+CSS-Budget-Fehler in `lightbox.scss`) und zieht die code-reference docs (`models.md`,
+`routes.md`, `code-map.md`) auf den P21-Stand nach.
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p15-lightbox-angleichung/`
 
 ---

@@ -122,8 +122,8 @@ export class Favoriten {
     }
   }
 
-  protected onOpenAsset(id: number): void {
-    this.store.dispatch(galleryActions.openLightbox({ id }));
+  protected onOpenAsset(event: { id: number; versionId: number | null }): void {
+    this.store.dispatch(galleryActions.openLightbox({ id: event.id, versionId: event.versionId }));
   }
 
   protected toggleSelectionMode(): void {

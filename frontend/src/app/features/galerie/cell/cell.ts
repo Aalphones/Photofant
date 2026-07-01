@@ -40,7 +40,9 @@ export class GalerieCell {
   readonly selectionMode = input<boolean>(false);
   readonly isArmed       = input<boolean>(false);
 
-  readonly openAsset    = output<number>();
+  // P21-Stapel: versionId ist gesetzt, wenn diese Kachel ein Version-Pseudo-Eintrag ist —
+  // Lightbox zeigt dann initial diese Version statt des Originals.
+  readonly openAsset    = output<{ id: number; versionId: number | null }>();
   readonly batchBind    = output<number>();
   readonly rangeSelect  = output<number>();
 
@@ -83,19 +85,24 @@ export class GalerieCell {
     this.asset().kind === 'version'
   );
 
+  private emitOpenAsset(): void {
+    const asset: AssetDto = this.asset();
+    this.openAsset.emit({ id: asset.id, versionId: asset.kind === 'version' ? asset.version_id : null });
+  }
+
   protected onCellClick(event: MouseEvent): void {
     if (this.isArmed()) {
       event.stopPropagation();
       if (event.ctrlKey || event.shiftKey || event.metaKey) {
         this.batchBind.emit(this.asset().id);
       } else {
-        this.openAsset.emit(this.asset().id);
+        this.emitOpenAsset();
       }
       return;
     }
 
     if (this.isVersionEntry()) {
-      this.openAsset.emit(this.asset().id);
+      this.emitOpenAsset();
       return;
     }
 
@@ -109,7 +116,7 @@ export class GalerieCell {
       return;
     }
 
-    this.openAsset.emit(this.asset().id);
+    this.emitOpenAsset();
   }
 
   protected onPickClick(event: MouseEvent): void {

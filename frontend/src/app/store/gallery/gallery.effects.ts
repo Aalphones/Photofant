@@ -6,6 +6,7 @@ import { Store } from '@ngrx/store';
 import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job } from '@photofant/models';
 import { AssetService, PersonService, SettingsService } from '@photofant/services';
 import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
+import type { FaceGalleryItemDto } from '@photofant/models';
 import { filtersActions } from '../filters/filters.actions';
 import { jobsActions } from '../jobs/jobs.actions';
 import { searchActions } from '../search/search.actions';
@@ -142,6 +143,8 @@ export class GalleryEffects {
   readonly onLightboxNext$ = createEffect(() =>
     this.actions$.pipe(
       ofType(galleryActions.lightboxNext),
+      concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxKind)),
+      filter(([, kind]) => kind === 'asset'),
       concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxNavContext)),
       mergeMap(([, { assets, lightboxId, hasMore, isLoading, contextIds }]) => {
         const list = contextIds != null
@@ -163,6 +166,8 @@ export class GalleryEffects {
   readonly onLightboxPrev$ = createEffect(() =>
     this.actions$.pipe(
       ofType(galleryActions.lightboxPrev),
+      concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxKind)),
+      filter(([, kind]) => kind === 'asset'),
       concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxNavContext)),
       mergeMap(([, { assets, lightboxId, contextIds }]) => {
         const list = contextIds != null
@@ -173,6 +178,36 @@ export class GalleryEffects {
           return of(galleryActions.lightboxGoTo({ id: list[index - 1]!.id }));
         }
         return EMPTY;
+      }),
+    )
+  );
+
+  // P21-Stapel: Face-Modus navigiert über die Gesichter-Grid-Liste statt der Asset-Liste —
+  // Zielobjekt wechselt komplett (faceId + eigene versionId), kein `lightboxGoTo` (Asset-only).
+  readonly onLightboxFaceNext$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(galleryActions.lightboxNext),
+      concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxKind)),
+      filter(([, kind]) => kind === 'face'),
+      concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxFaceNavContext)),
+      mergeMap(([, { items, index }]) => {
+        if (index < 0 || index >= items.length - 1) { return EMPTY; }
+        const next: FaceGalleryItemDto = items[index + 1]!;
+        return of(galleryActions.openFaceLightbox({ faceId: next.id, assetId: next.asset_id, versionId: next.version_id }));
+      }),
+    )
+  );
+
+  readonly onLightboxFacePrev$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(galleryActions.lightboxPrev),
+      concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxKind)),
+      filter(([, kind]) => kind === 'face'),
+      concatLatestFrom(() => this.store.select(gallerySelectors.selectLightboxFaceNavContext)),
+      mergeMap(([, { items, index }]) => {
+        if (index <= 0) { return EMPTY; }
+        const prevItem: FaceGalleryItemDto = items[index - 1]!;
+        return of(galleryActions.openFaceLightbox({ faceId: prevItem.id, assetId: prevItem.asset_id, versionId: prevItem.version_id }));
       }),
     )
   );

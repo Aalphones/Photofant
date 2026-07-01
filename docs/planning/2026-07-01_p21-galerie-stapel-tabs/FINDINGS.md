@@ -46,23 +46,27 @@ Format: `- [ ] → Phase N: <Erkenntnis / Abweichung / Folgefund>`
   Entity-Key-Fund aus Phase 2 für `AssetDto`). Behoben in Phase 3: Track-Funktion nutzt
   `versionId != null ? 'v'+versionId : 'f'+id`.
 
-- [ ] → Phase 4 (Lightbox-Anbindung, kritisch): `galerie.ts`s `onOpenFace`/
-  `onFaceLightboxPrev`/`onFaceLightboxNext` matchen weiterhin nur über `item.id` per
-  `.find()`/`.findIndex()` — bei einem Stapel teilen alle Mitglieder dieselbe `id`
-  (s.o.), `.find()` liefert also immer den **ersten** Treffer in der Liste, nie
-  notwendigerweise die tatsächlich angeklickte Version. Der Klick-Event trägt seit
-  Phase 3 bereits `versionId` mit (`face-cell`/`face-grid` → `{faceId, assetId,
-  versionId}`), wird aber von `galerie.ts` noch nicht ausgewertet. Phase 4 muss das
-  Matching auf `(faceId, versionId)` umstellen, sonst öffnet ein Klick auf eine
-  Stapel-Version im Zweifel die falsche Kachel und Prev/Next navigiert nicht
-  zuverlässig durch den eigenen Stapel.
+- [x] → Phase 4 (Lightbox-Anbindung, kritisch): Widerspruch zwischen dieser Notiz (Phase 4
+  soll nur das `item.id`-Matching in der *alten* separaten Gesichter-Lightbox fixen) und
+  der Phase-4-Datei selbst (verlangt Umstieg auf den *neuen* Gesichter-Modus). Per
+  Rückfrage an den User aufgelöst: voll auf den neuen Gesichter-Modus umgestellt, alte
+  `face-lightbox/`-Komponente entfernt, fehlende Fähigkeiten (Person zuweisen, Gesicht
+  löschen, Explorer-Reveal, Vor/Zurück durch alle Gesichter) dort nachgebaut. Details:
+  Report-Back Phase 4.
 
-- [ ] → Phase 4 (Lightbox-Anbindung): Die Workflow-Run-Leiste hatte bisher einen
+- [ ] → Phase 5 (ADR-012): `ng build --configuration production` schlägt an einem
+  CSS-Budget-Fehler in `lightbox.scss` (23.32 kB, Error-Schwelle 16 kB) fehl. Bereits vor
+  Phase 4 vorhanden (Wachstum über P15 hinweg), keine Regression dieser Phase — aber bisher
+  nirgends dokumentiert oder behoben. Phase 5 sollte entscheiden: Budget in `angular.json`
+  anheben (einfachster Weg) oder `lightbox.scss` aufteilen.
+
+- [ ] → Phase 5 (ADR-012, verschoben aus Phase 4 — nicht Teil der Phase-4-Checkliste,
+  weiterhin offen): Die Workflow-Run-Leiste hatte bisher einen
   Weg, eine Editor-Version direkt als ComfyUI-Input zu binden (`onBindVersion` im
   jetzt entfernten Edits-Tab, `pf-version-cell` → Bind-Klick). Mit dem Wegfall des
   Edits-Tabs gibt es **keinen** UI-Einstiegspunkt mehr dafür — `versionSlotBindings`
   in `galerie.ts` bleibt verdrahtet (Run-Leiste zeigt/verarbeitet Version-Bindings
-  weiterhin), wird aber nie mehr befüllt. Phase 4 sollte prüfen, ob ein Bind-Button
+  weiterhin), wird aber nie mehr befüllt. Phase 5 sollte prüfen, ob ein Bind-Button
   in der Lightbox-Versionen-Sektion (P15 Phase 4) diese Lücke schließen soll, oder
   ob die Version-Bindung als Workflow-Input ersatzlos entfällt (Kontrakt-Entscheidung,
   gehört ins README/ADR-012).

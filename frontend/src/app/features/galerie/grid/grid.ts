@@ -36,8 +36,8 @@ export class GalerieGrid {
 
   readonly facesMap   = input<Map<number, FaceGalleryItemDto[]>>(new Map());
 
-  readonly openAsset    = output<number>();
-  readonly openFace     = output<{ faceId: number; assetId: number | null }>();
+  readonly openAsset    = output<{ id: number; versionId: number | null }>();
+  readonly openFace     = output<{ faceId: number; assetId: number | null; versionId: number | null }>();
   readonly selectAll    = output<number[]>();
   readonly loadMore     = output<void>();
   readonly batchBind    = output<number>();
@@ -76,7 +76,7 @@ export class GalerieGrid {
     return this.facesMap().get(assetId) ?? [];
   }
 
-  protected onOpenFace(event: { faceId: number; assetId: number | null }): void {
+  protected onOpenFace(event: { faceId: number; assetId: number | null; versionId: number | null }): void {
     this.openFace.emit(event);
   }
 
@@ -84,8 +84,8 @@ export class GalerieGrid {
     return group.assets.map((asset: AssetDto) => asset.id);
   }
 
-  protected onOpenAsset(id: number): void {
-    this.openAsset.emit(id);
+  protected onOpenAsset(event: { id: number; versionId: number | null }): void {
+    this.openAsset.emit(event);
   }
 
   protected onBatchBind(id: number): void {
