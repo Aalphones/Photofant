@@ -136,11 +136,62 @@
       <div class="panel-sec">
         <div class="psec-title">Metadaten</div>
         <dl class="kv">
-          <dt>Dimensionen</dt><dd>{{ dimensions() }}</dd>
+          <dt>Quelle</dt>
+          <dd>
+            <select
+              class="kv-select"
+              [value]="sourceDraft() ?? ''"
+              (change)="onSourceChange($any($event.target).value)"
+            >
+              <option value="original">Original</option>
+              <option value="flux">FLUX</option>
+              <option value="sdxl">SDXL</option>
+            </select>
+          </dd>
+
+          <dt>Originalvorlage</dt>
+          <dd>
+            @if (detail()?.original_id != null) {
+              <span class="orig-chip">
+                <img class="orig-thumb" [src]="originalThumbnailUrl()" alt="" />
+                #{{ detail()!.original_id }}
+                <button class="orig-edit" (click)="openRelationBrowser('origin')" aria-label="Anderes Original wählen">
+                  <pf-icon name="pencil" [size]="11" />
+                </button>
+              </span>
+            } @else {
+              <button class="orig-link" (click)="openRelationBrowser('origin')">
+                <pf-icon name="link" [size]="13" /> Zuordnen
+              </button>
+            }
+          </dd>
+
+          <dt>Framing</dt>
+          <dd>
+            <select
+              class="kv-select"
+              [value]="framingDraft() ?? ''"
+              (change)="onFramingChange($any($event.target).value)"
+            >
+              <option value="" disabled>—</option>
+              <option value="close_up">{{ framingLabel('close_up') }}</option>
+              <option value="medium">{{ framingLabel('medium') }}</option>
+              <option value="full_body">{{ framingLabel('full_body') }}</option>
+            </select>
+          </dd>
+
+          <dt>Auflösung</dt><dd>{{ dimensions() }}</dd>
+          <dt>Seitenverhältnis</dt><dd>{{ aspectRatio() }}</dd>
           <dt>Format</dt><dd>{{ asset.format?.toUpperCase() ?? '—' }}</dd>
           <dt>Größe</dt><dd>{{ fileSize() }}</dd>
-          <dt>Quelle</dt><dd>{{ sourceLabel() }}</dd>
-          <dt>Datum</dt><dd>{{ formattedDate() }}</dd>
+          <dt>Qualität</dt>
+          <dd>
+            @if (qualityDisplay(); as quality) {
+              <span [class]="qualityClass()">{{ quality }} / 100</span>
+            } @else {
+              <span>—</span>
+            }
+          </dd>
           <dt>Hash</dt><dd class="kv-hash">{{ hashShort() }}</dd>
         </dl>
       </div>

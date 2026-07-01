@@ -1,6 +1,6 @@
 # P15 — Lightbox: Angleichung ans Design-Mockup
 
-**Status:** in progress (Phase 5/7)
+**Status:** in progress (Phase 6/7)
 
 Ziel: Die Angular-Lightbox an `docs/design/js/detail.jsx` + `compare.jsx` +
 `relation.jsx` angleichen. Alle sechs unten aufgelisteten Abweichungsbereiche
@@ -97,7 +97,7 @@ Backend: `AssetDetailDto` braucht `quality: float | None`, `framing: str | None`
 | 3 | Gesichter-Redesign + PersonPicker-Modal | standard | complete |
 | 4 | Versionen-Sektion + VersionCompare-Modal | standard | complete |
 | 5 | Beziehungen-Sektion + RelationBrowser-Modal | standard | complete |
-| 6 | Metadaten: editierbar + fehlende Felder | standard | pending |
+| 6 | Metadaten: editierbar + fehlende Felder | standard | complete |
 | 7 | Gesichter-Modus der Lightbox (Face als eigenständiges Ziel) | heikel | pending |
 
 ---
@@ -149,7 +149,7 @@ FaceDetailDto {
 - [x] Versionen-Sektion zeigt vollständige Liste mit Thumbnails + Badges
 - [x] VersionCompare-Modal öffnet sich, linke und rechte Seite wählbar
 - [x] Beziehungen-Sektion zeigt Original + Edits; RelationBrowser öffnet sich
-- [ ] Metadaten: Quelle + Framing sind editierbar; Qualität + Seitenverhältnis sichtbar
+- [x] Metadaten: Quelle + Framing sind editierbar; Qualität + Seitenverhältnis sichtbar
 - [ ] Gesichter-Modus: Caption/Tags/Gesichter-Zuweisung ausgeblendet, Versionen sichtbar,
   Link auf Source-Asset vorhanden; Fotos und Edits laufen weiterhin mit vollem Funktionsumfang
 

@@ -1,7 +1,7 @@
 # Phase 6 — Metadaten: editierbar + fehlende Felder
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete
 
 Setzt Phase 1 voraus (`framing`, `quality` im Detail-DTO, `patchAsset()` in Service).
 
@@ -18,12 +18,12 @@ Setzt Phase 1 voraus (`framing`, `quality` im Detail-DTO, `patchAsset()` in Serv
 
 ## Abnahme-Kriterien
 
-- [ ] Quelle: editierbares Dropdown (original / flux / sdxl / …); Änderung wird per `patchAsset()` gespeichert
-- [ ] Framing: editierbares Dropdown (Nahaufnahme / Halbkörper / Ganzkörper); Änderung wird gespeichert
-- [ ] Seitenverhältnis sichtbar (read-only, aus width/height berechnet)
-- [ ] Qualitätsscore sichtbar (read-only, farbig: ≥ 80 grün, ≥ 60 gelb, darunter gedimmt)
-- [ ] Originalvorlage-Chip in Metadaten: kleines Thumbnail + `#ID` + Pencil → öffnet RelationBrowser (nutzt Phase-5-Logik)
-- [ ] Alle geänderten Werte werden beim Navigieren zum nächsten Bild gespeichert (kein implizites Discard)
+- [x] Quelle: editierbares Dropdown (original / flux / sdxl / …); Änderung wird per `patchAsset()` gespeichert
+- [x] Framing: editierbares Dropdown (Nahaufnahme / Halbkörper / Ganzkörper); Änderung wird gespeichert
+- [x] Seitenverhältnis sichtbar (read-only, aus width/height berechnet)
+- [x] Qualitätsscore sichtbar (read-only, farbig: ≥ 80 grün, ≥ 60 gelb, darunter gedimmt)
+- [x] Originalvorlage-Chip in Metadaten: kleines Thumbnail + `#ID` + Pencil → öffnet RelationBrowser (nutzt Phase-5-Logik)
+- [x] Alle geänderten Werte werden beim Navigieren zum nächsten Bild gespeichert (kein implizites Discard)
 
 ---
 
@@ -31,26 +31,26 @@ Setzt Phase 1 voraus (`framing`, `quality` im Detail-DTO, `patchAsset()` in Serv
 
 ### Fehlende Computed-Werte
 
-- [ ] `aspectRatio = computed((): string => ...)`:
+- [x] `aspectRatio = computed((): string => ...)`:
   - GGT von `width` und `height` berechnen → z.B. `16:9`, `3:4`
   - Hilfsfunktion `gcd(a, b)` (Euklidischer Algorithmus)
-- [ ] `qualityDisplay = computed((): number | null => ...)`:
+- [x] `qualityDisplay = computed((): number | null => ...)`:
   - `Math.round((detail()?.quality ?? 0) * 100)` oder `null`
-- [ ] `qualityClass = computed((): string => ...)`:
+- [x] `qualityClass = computed((): string => ...)`:
   - `q >= 80 → 'quality--good'`, `q >= 60 → 'quality--warn'`, sonst `'quality--low'`
 
 ### Editierbare Felder (Signals + Handler)
 
-- [ ] `sourceDraft = signal<string | null>(null)` — gesetzt beim Öffnen der Lightbox
-- [ ] `framingDraft = signal<string | null>(null)` — gesetzt beim Öffnen der Lightbox
-- [ ] In Effect bei asset-Wechsel beide Drafts aus `asset()` initialisieren
-- [ ] `onSourceChange(value: string)`: `sourceDraft.set(value)`, sofort `patchAsset({source: value})` + reload
-- [ ] `onFramingChange(value: string)`: analog
-- [ ] Kein separater „Speichern"-Button nötig — Dropdown `(change)` feuert direkt
+- [x] `sourceDraft = signal<string | null>(null)` — gesetzt beim Öffnen der Lightbox
+- [x] `framingDraft = signal<string | null>(null)` — gesetzt beim Öffnen der Lightbox
+- [x] Drafts werden per Effect aus `detail()` initialisiert (nicht `asset()` — `framing` lebt nur im Detail-DTO, `asset()` aus dem Store würde nach dem Patch nicht mitziehen)
+- [x] `onSourceChange(value: string)`: `sourceDraft.set(value)`, sofort `patchAsset({source: value})` + reload
+- [x] `onFramingChange(value: string)`: analog
+- [x] Kein separater „Speichern"-Button nötig — Dropdown `(change)` feuert direkt
 
 ### Template-Umbau Metadaten
 
-- [ ] `<dl class="kv">` erweitern/umbauen:
+- [x] `<dl class="kv">` erweitern/umbauen:
   ```html
   <dt>Quelle</dt>
   <dd>
@@ -98,11 +98,16 @@ Setzt Phase 1 voraus (`framing`, `quality` im Detail-DTO, `patchAsset()` in Serv
   </dd>
   <dt>Hash</dt><dd class="kv-hash">{{ hashShort() }}</dd>
   ```
-- [ ] Bestehende `<dt>Datum</dt>` entfernen (Datum steht bereits im Panel-Header)
-- [ ] SCSS: `.kv-select` (inline, unstyled-like), `.orig-chip`, `.orig-thumb`, `.orig-edit`, `.orig-link`, `.quality--good`, `.quality--warn`, `.quality--low`
+- [x] Bestehende `<dt>Datum</dt>` entfernen (Datum steht bereits im Panel-Header)
+- [x] SCSS: `.kv-select` (inline, unstyled-like), `.orig-chip`, `.orig-thumb`, `.orig-edit`, `.orig-link`, `.quality--good`, `.quality--warn`, `.quality--low`
 
 ---
 
 ## Report-Back
 
-_Hier trägt der Umsetzer nach Abschluss ein was abwich oder auffiel._
+Wie geplant umgesetzt, eine Abweichung: Die Drafts (`sourceDraft`/`framingDraft`) werden
+nicht im Asset-Wechsel-Effect initialisiert, sondern in einem eigenen Effect auf `detail()`.
+Grund: `framing` existiert nur im `AssetDetailDto` (async nachgeladen), nicht im `AssetDto`
+aus dem Store — und `asset()` selbst zieht nach einem `patchAsset()`-Aufruf nicht nach
+(nur `detail()` wird per `reloadTrigger` neu geladen). Ein Draft-Init aus `asset()` hätte
+`framing` nie sauber gesetzt und wäre nach dem ersten Edit stehengeblieben.

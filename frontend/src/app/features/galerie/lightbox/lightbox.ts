@@ -12,7 +12,7 @@ import { DOCUMENT } from '@angular/common';
 import { combineLatest, forkJoin, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetLinkSummary, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import type { AssetDto, AssetLinkSummary, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, Framing, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -50,6 +50,16 @@ const VERSION_TYPE_LABELS: Record<string, string> = {
   comfyui: 'ComfyUI-Edit',
   edit: 'Edit',
 };
+
+const FRAMING_LABELS: Record<Framing, string> = {
+  close_up: 'Nahaufnahme',
+  medium: 'Halbkörper',
+  full_body: 'Ganzkörper',
+};
+
+function gcd(a: number, b: number): number {
+  return b === 0 ? a : gcd(b, a % b);
+}
 
 function extractGenMeta(meta: Record<string, unknown>): GenMetaEntry[] {
   const known: GenMetaEntry[] = [];
@@ -196,6 +206,10 @@ export class Lightbox {
     });
   });
 
+  // ── Metadaten (editierbar) ─────────────────────────────────────────────────
+  protected readonly sourceDraft  = signal<string | null>(null);
+  protected readonly framingDraft = signal<Framing | null>(null);
+
   // ── Quick-Assign (Gesicht 1, immer sichtbar im Panel) ─────────────────────
   protected readonly quickAssignMatches = signal<FaceMatch[]>([]);
 
@@ -260,6 +274,28 @@ export class Lightbox {
   protected readonly hashShort = computed((): string => {
     const hash = this.asset()?.content_hash;
     return hash ? hash.slice(0, 8) + '…' : '—';
+  });
+
+  protected readonly aspectRatio = computed((): string => {
+    const asset = this.asset();
+    const width = asset?.width;
+    const height = asset?.height;
+    if (!width || !height) { return '—'; }
+    const divisor = gcd(width, height);
+    return `${width / divisor}:${height / divisor}`;
+  });
+
+  protected readonly qualityDisplay = computed((): number | null => {
+    const quality = this.detail()?.quality;
+    return quality != null ? Math.round(quality * 100) : null;
+  });
+
+  protected readonly qualityClass = computed((): string => {
+    const quality = this.qualityDisplay();
+    if (quality == null) { return 'quality--low'; }
+    if (quality >= 80) { return 'quality--good'; }
+    if (quality >= 60) { return 'quality--warn'; }
+    return 'quality--low';
   });
 
   protected readonly downloadUrl = computed((): string => {
@@ -338,6 +374,10 @@ export class Lightbox {
       sdxl: 'SDXL',
     };
     return labels[source] ?? source;
+  }
+
+  protected framingLabel(framing: Framing): string {
+    return FRAMING_LABELS[framing];
   }
 
   // ── VersionCompare: Panel-Items ──────────────────────────────────────────
@@ -446,6 +486,15 @@ export class Lightbox {
       this.showRelationBrowser.set(null);
       this.relationBrowserQuery.set('');
       this.relationBrowserSelected.set([]);
+    });
+
+    // Metadaten-Drafts aus `detail()` initialisieren (framing lebt nur dort) —
+    // läuft bei jedem Laden/Reload neu, damit Drafts nie den Server-Stand überholen.
+    effect((): void => {
+      const detail = this.detail();
+      if (detail == null) { return; }
+      this.sourceDraft.set(detail.source);
+      this.framingDraft.set(detail.framing);
     });
 
     // Quick-Assign: Top-Matches für das erste Gesicht automatisch nachladen,
@@ -567,6 +616,27 @@ export class Lightbox {
     const model = params?.['model'];
     if (model != null) { parts.push(String(model)); }
     return parts.join(' · ');
+  }
+
+  // ── Metadaten (editierbar) ─────────────────────────────────────────────────
+
+  protected onSourceChange(value: string): void {
+    const assetId = this.asset()?.id;
+    if (assetId == null) { return; }
+    this.sourceDraft.set(value);
+    this.assetService.patchAsset(assetId, { source: value })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => { this.reloadTrigger.update((count: number) => count + 1); } });
+  }
+
+  protected onFramingChange(value: string): void {
+    const assetId = this.asset()?.id;
+    if (assetId == null) { return; }
+    const framing = value as Framing;
+    this.framingDraft.set(framing);
+    this.assetService.patchAsset(assetId, { framing })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => { this.reloadTrigger.update((count: number) => count + 1); } });
   }
 
   // ── Beziehungen-Sektion ────────────────────────────────────────────────────
