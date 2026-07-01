@@ -36,6 +36,22 @@ Icon-Toolbar im Stage.
 - Kein Quick-Assign-Grid; stattdessen inline expandierende Match-Liste
 - Kein separates Modal; Personensuche inline
 
+### G — Gesichter-Modus der Lightbox (Face als eigenständiges Ziel) — ergänzt 2026-07-01
+**Anforderung:** Die Lightbox ist **eine** Komponente für Fotos, Edits **und** Gesichter —
+keine separate Komponente pro Bildart. Fotos und Edits laufen identisch (voller Funktionsumfang).
+Für Gesichter greift ein reduzierter Modus derselben Komponente:
+- Caption-, Tags- und Gesichter-Extraktion/-Zuweisungs-Sektionen (A–C oben) **ausgeblendet** —
+  für ein Face werden keine weiteren Gesichter extrahiert und keine Captions/Tags gepflegt.
+- Versionen-Sektion (D) bleibt **sichtbar** — ein Face kann selbst editiert werden (Crop/Rotate/
+  Comfy-Edit über `version.face_id`), diese Kette muss im Gesichter-Modus navigierbar sein.
+- Statt der „Erkannte Gesichter"-Liste zeigt der Panel-Header/eine Beziehungs-Zeile einen Link
+  auf das **ursprüngliche Source-Bild** (das Asset, aus dem dieses Face extrahiert wurde).
+
+**Aktuell:** Es gibt keinen Face-Modus. `openFaceLightbox({ assetId })`
+(`store/gallery/gallery.effects.ts:210`) verwirft die `faceId` komplett und öffnet die Lightbox
+auf dem zugrundeliegenden Asset — ein Face hat keine eigene Detail-Ansicht, kein eigener
+Backend-Endpunkt liefert Face-Detail + Face-Versionen. Siehe neue **Phase 7**.
+
 ### D — Versionen-Sektion
 **Mockup:**
 - Version-Liste: Thumbnail + Label + „Aktiv"-Badge + Datum + Params (Strength, Modell)
@@ -82,6 +98,7 @@ Backend: `AssetDetailDto` braucht `quality: float | None`, `framing: str | None`
 | 4 | Versionen-Sektion + VersionCompare-Modal | standard | pending |
 | 5 | Beziehungen-Sektion + RelationBrowser-Modal | standard | pending |
 | 6 | Metadaten: editierbar + fehlende Felder | standard | pending |
+| 7 | Gesichter-Modus der Lightbox (Face als eigenständiges Ziel) | heikel | pending |
 
 ---
 
@@ -105,6 +122,22 @@ framing:      str | None
 original_id:  int | None    # null = Zuordnung entfernen
 ```
 
+### `GET /api/faces/{id}` — neuer Detail-Endpunkt (Phase 7)
+
+```typescript
+FaceDetailDto {
+  id:              number
+  person_id:       number | null
+  person_name:     string | null
+  crop_url:        string
+  score:           number | null
+  age:             number | null
+  source_asset_id: number | null       // Asset, aus dem dieses Face extrahiert wurde
+  versions:        VersionDto[]        // via version.face_id, gleiche Form wie AssetDetailDto.versions
+  created_at:      string | null
+}
+```
+
 ---
 
 ## Abnahme-Kriterien (Gesamt)
@@ -117,6 +150,8 @@ original_id:  int | None    # null = Zuordnung entfernen
 - [ ] VersionCompare-Modal öffnet sich, linke und rechte Seite wählbar
 - [ ] Beziehungen-Sektion zeigt Original + Edits; RelationBrowser öffnet sich
 - [ ] Metadaten: Quelle + Framing sind editierbar; Qualität + Seitenverhältnis sichtbar
+- [ ] Gesichter-Modus: Caption/Tags/Gesichter-Zuweisung ausgeblendet, Versionen sichtbar,
+  Link auf Source-Asset vorhanden; Fotos und Edits laufen weiterhin mit vollem Funktionsumfang
 
 ---
 
