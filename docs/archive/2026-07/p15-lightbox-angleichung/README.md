@@ -1,6 +1,6 @@
 # P15 — Lightbox: Angleichung ans Design-Mockup
 
-**Status:** in progress (Phase 6/7)
+**Status:** complete (7/7)
 
 Ziel: Die Angular-Lightbox an `docs/design/js/detail.jsx` + `compare.jsx` +
 `relation.jsx` angleichen. Alle sechs unten aufgelisteten Abweichungsbereiche
@@ -98,7 +98,7 @@ Backend: `AssetDetailDto` braucht `quality: float | None`, `framing: str | None`
 | 4 | Versionen-Sektion + VersionCompare-Modal | standard | complete |
 | 5 | Beziehungen-Sektion + RelationBrowser-Modal | standard | complete |
 | 6 | Metadaten: editierbar + fehlende Felder | standard | complete |
-| 7 | Gesichter-Modus der Lightbox (Face als eigenständiges Ziel) | heikel | pending |
+| 7 | Gesichter-Modus der Lightbox (Face als eigenständiges Ziel) | heikel | complete |
 
 ---
 
@@ -142,23 +142,38 @@ FaceDetailDto {
 
 ## Abnahme-Kriterien (Gesamt)
 
-- [ ] Stage-Toolbar zeigt 4 Icon-Buttons; Panel „Aktionen" entfällt oder wird kompakter
-- [ ] Panel-Header zeigt Avatar des ersten Gesichts + Personenname
-- [ ] Gesichter sind nach Caption/Tags, vor Versionen; Quick-Assign-Grid sichtbar
-- [ ] PersonPicker-Modal liegt über der Lightbox (korrekte z-index-Hierarchie)
+- [x] Stage-Toolbar zeigt 4 Icon-Buttons; Panel „Aktionen" entfällt oder wird kompakter
+- [x] Panel-Header zeigt Avatar des ersten Gesichts + Personenname
+- [x] Gesichter sind nach Caption/Tags, vor Versionen; Quick-Assign-Grid sichtbar
+- [x] PersonPicker-Modal liegt über der Lightbox (korrekte z-index-Hierarchie)
 - [x] Versionen-Sektion zeigt vollständige Liste mit Thumbnails + Badges
 - [x] VersionCompare-Modal öffnet sich, linke und rechte Seite wählbar
 - [x] Beziehungen-Sektion zeigt Original + Edits; RelationBrowser öffnet sich
 - [x] Metadaten: Quelle + Framing sind editierbar; Qualität + Seitenverhältnis sichtbar
-- [ ] Gesichter-Modus: Caption/Tags/Gesichter-Zuweisung ausgeblendet, Versionen sichtbar,
+- [x] Gesichter-Modus: Caption/Tags/Gesichter-Zuweisung ausgeblendet, Versionen sichtbar,
   Link auf Source-Asset vorhanden; Fotos und Edits laufen weiterhin mit vollem Funktionsumfang
 
 ---
 
 ## Archiv-Footer
 
-**Summary:** —
-**Files touched:** —
-**Commits:** —
-**Deviations:** —
-**Follow-ups:** —
+**Summary:** Die Angular-Lightbox ist jetzt auf allen 6 Abweichungsbereichen ans
+Design-Mockup angeglichen (Stage-Toolbar, Panel-Header, Gesichter-Redesign +
+PersonPicker, Versionen + VersionCompare, Beziehungen + RelationBrowser,
+editierbare Metadaten) und beherrscht zusätzlich einen reduzierten Gesichter-Modus
+für Faces als eigenständiges Lightbox-Ziel.
+**Files touched:** Backend: `api/assets.py` (DTO-Erweiterungen, Patch-Endpunkt),
+`api/faces.py` (neuer `GET /{face_id}` Detail-Endpunkt), `tests/test_faces_api.py`
+(neu). Frontend: `features/galerie/lightbox/*` (Komponente, Template, Styles),
+`store/gallery/*` (Actions/Reducer/Selectors/Effects), `services/person.service.ts`,
+`models/asset.model.ts` + `index.ts`, `features/galerie/galerie.ts`.
+**Commits:** siehe `git log` seit 2026-06-28 auf diesem Zweig (7 Phasen-Commits).
+**Deviations:** Phase 7 hat den `LightboxTarget`-Union-Typ aus der Checkliste durch
+zwei einfache State-Felder ersetzt (gleiche Wirkung, weniger Umbau); Reduzierter
+Face-Modus blendet zusätzlich Aktionen/Metadaten/GenMeta/Beziehungen aus (nicht nur
+A–C), da `FaceDetailDto` diese Daten nicht führt. Details je Phase in den
+Phasen-Dateien.
+**Follow-ups:** P21 (Galerie: Stapel & Tab-Konsolidierung) verlinkt das Öffnen eines
+Face-Stapels auf den neuen Gesichter-Modus und ersetzt dabei voraussichtlich das
+separate `FaceLightbox`-Widget im Face-Grid (`features/galerie/face-lightbox/`) —
+bewusst unangetastet gelassen, siehe Report-Back Phase 7.

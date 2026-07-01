@@ -241,7 +241,7 @@ export class Galerie {
 
   protected onFaceLightboxOpenAsset(assetId: number): void {
     this.selectedFaceItem.set(null);
-    this.store.dispatch(galleryActions.openFaceLightbox({ assetId }));
+    this.store.dispatch(galleryActions.openAssetLightbox({ assetId }));
   }
 
   protected onFaceLightboxDeleted(faceId: number): void {

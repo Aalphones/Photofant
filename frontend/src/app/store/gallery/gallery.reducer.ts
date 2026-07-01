@@ -12,6 +12,8 @@ export interface GalleryState extends EntityState<AssetDto> {
   isLoading: boolean;
   error: string | null;
   lightboxId: number | null;
+  lightboxKind: 'asset' | 'face';
+  lightboxFaceId: number | null;
   lightboxPendingNext: boolean;
   lightboxContextIds: number[] | null;
   facets: Facets | null;
@@ -35,6 +37,8 @@ const initialState: GalleryState = adapter.getInitialState({
   isLoading: false,
   error: null,
   lightboxId: null,
+  lightboxKind: 'asset',
+  lightboxFaceId: null,
   lightboxPendingNext: false,
   lightboxContextIds: null,
   facets: null,
@@ -93,12 +97,21 @@ export const galleryFeature = createFeature({
     on(galleryActions.injectAsset, (state: GalleryState, { asset }) =>
       adapter.upsertOne(asset, state)
     ),
-    on(galleryActions.openLightbox, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),
-    on(galleryActions.closeLightbox, (state: GalleryState) => ({ ...state, lightboxId: null, lightboxPendingNext: false, lightboxContextIds: null })),
+    on(galleryActions.openLightbox, (state: GalleryState, { id }) => ({
+      ...state, lightboxId: id, lightboxKind: 'asset' as const, lightboxFaceId: null,
+    })),
+    on(galleryActions.openFaceLightbox, (state: GalleryState, { faceId }) => ({
+      ...state, lightboxId: null, lightboxKind: 'face' as const, lightboxFaceId: faceId,
+    })),
+    on(galleryActions.closeLightbox, (state: GalleryState) => ({
+      ...state, lightboxId: null, lightboxKind: 'asset' as const, lightboxFaceId: null, lightboxPendingNext: false, lightboxContextIds: null,
+    })),
     on(galleryActions.setLightboxContext, (state: GalleryState, { assets }) =>
       adapter.upsertMany(assets, { ...state, lightboxContextIds: assets.map((asset: AssetDto) => asset.id) })
     ),
-    on(galleryActions.lightboxGoTo, (state: GalleryState, { id }) => ({ ...state, lightboxId: id })),
+    on(galleryActions.lightboxGoTo, (state: GalleryState, { id }) => ({
+      ...state, lightboxId: id, lightboxKind: 'asset' as const, lightboxFaceId: null,
+    })),
     on(galleryActions.lightboxMarkPendingNext, (state: GalleryState) => ({ ...state, lightboxPendingNext: true })),
     on(galleryActions.toggleFavourite, (state: GalleryState, { id, value }) =>
       adapter.updateOne({ id, changes: { favourite: value } }, state)

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
   ClusterResult,
+  FaceDetailDto,
   FaceImportResult,
   FaceMatch,
   FacesPage,
@@ -44,6 +45,10 @@ export class PersonService {
 
   getFaceMatches(faceId: number): Observable<FaceMatch[]> {
     return this.http.get<FaceMatch[]>(`/api/faces/${faceId}/matches`);
+  }
+
+  getFace(faceId: number): Observable<FaceDetailDto> {
+    return this.http.get<FaceDetailDto>(`/api/faces/${faceId}`);
   }
 
   assignFace(faceId: number, personId: number): Observable<unknown> {

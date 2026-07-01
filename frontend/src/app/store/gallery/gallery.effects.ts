@@ -207,9 +207,11 @@ export class GalleryEffects {
     )
   );
 
-  readonly openFaceLightbox$ = createEffect(() =>
+  // Asset könnte außerhalb der aktuell geladenen Galerie-Seite liegen (z.B. Quelle
+  // eines Face aus einem anderen Zeitraum) — erst laden + injecten, dann öffnen.
+  readonly openAssetLightbox$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(galleryActions.openFaceLightbox),
+      ofType(galleryActions.openAssetLightbox),
       mergeMap(({ assetId }) =>
         this.assetService.getAsset(assetId).pipe(
           mergeMap((detail: AssetDetailDto) => [

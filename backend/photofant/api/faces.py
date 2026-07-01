@@ -21,8 +21,9 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from photofant.api.assets import ResDto, VersionDto
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
-from photofant.db.models import Face, Person
+from photofant.db.models import Face, Person, Version
 from photofant.db.session import get_session
 from photofant.media.thumbnails import generate_thumbnail
 
@@ -81,6 +82,18 @@ class FacesGalleryPage(BaseModel):
     page_size: int
 
 
+class FaceDetailDto(BaseModel):
+    id: int
+    person_id: int | None
+    person_name: str | None
+    crop_url: str
+    score: float | None
+    age: int | None
+    source_asset_id: int | None
+    versions: list[VersionDto]
+    created_at: datetime | None
+
+
 @router.get("/gallery", response_model=FacesGalleryPage)
 async def list_faces_gallery(
     session: DbSession,
@@ -127,6 +140,58 @@ async def list_faces_gallery(
     ]
 
     return FacesGalleryPage(items=items, total=total, page=page, page_size=page_size)
+
+
+def _load_face_versions(session: Session, face_id: int) -> list[VersionDto]:
+    versions = (
+        session.query(Version)
+        .filter(Version.face_id == face_id)
+        .order_by(Version.created_at.asc())
+        .all()
+    )
+    result: list[VersionDto] = []
+    for version in versions:
+        params = version.params or {}
+        width = params.get("width")
+        height = params.get("height")
+        res = ResDto(width=width, height=height) if width and height else None
+        result.append(VersionDto(
+            id=version.id,
+            type=version.type,
+            parent_id=version.parent_id,
+            path=version.path,
+            is_current=version.is_current,
+            params=version.params,
+            created_at=version.created_at,
+            res=res,
+            thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+        ))
+    return result
+
+
+@router.get("/{face_id}", response_model=FaceDetailDto)
+async def get_face(face_id: int, session: DbSession) -> FaceDetailDto:
+    """Face detail for the Gesichter-Modus of the Lightbox: own versions + source-asset link."""
+    face = session.get(Face, face_id)
+    if face is None:
+        raise HTTPException(status_code=404, detail="Face not found")
+
+    person_name: str | None = None
+    if face.person_id is not None:
+        person = session.get(Person, face.person_id)
+        person_name = person.name if person else None
+
+    return FaceDetailDto(
+        id=face.id,
+        person_id=face.person_id,
+        person_name=person_name,
+        crop_url=f"/faces/{face.id}/thumbnail",
+        score=face.score,
+        age=face.age,
+        source_asset_id=face.asset_id,
+        versions=_load_face_versions(session, face_id),
+        created_at=face.created_at,
+    )
 
 
 @router.get("/{face_id}/thumbnail")

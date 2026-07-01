@@ -134,6 +134,18 @@ export interface AssetDetailDto extends AssetDto {
   framing: Framing | null;
 }
 
+export interface FaceDetailDto {
+  id: number;
+  person_id: number | null;
+  person_name: string | null;
+  crop_url: string;
+  score: number | null;
+  age: number | null;
+  source_asset_id: number | null;
+  versions: VersionDto[];
+  created_at: string | null;
+}
+
 export interface AssetPatch {
   source?: string;
   framing?: Framing;

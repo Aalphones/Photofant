@@ -1357,8 +1357,16 @@ pf-zoom-stage {
   align-items: center;
   gap: 9px;
   padding: 6px 4px;
+  width: 100%;
+  text-align: left;
 
   & + & { border-top: 1px solid var(--line); }
+}
+
+.rel-empty {
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 6px 4px;
 }
 
 .rr-thumb {

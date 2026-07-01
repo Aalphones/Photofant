@@ -132,6 +132,9 @@ export class Lightbox {
   private readonly allJobs = this.store.selectSignal(jobsSelectors.allJobs);
 
   protected readonly asset    = this.store.selectSignal(gallerySelectors.selectLightboxAsset);
+  protected readonly lightboxKind   = this.store.selectSignal(gallerySelectors.selectLightboxKind);
+  protected readonly lightboxFaceId = this.store.selectSignal(gallerySelectors.selectLightboxFaceId);
+  protected readonly isFaceMode = computed((): boolean => this.lightboxKind() === 'face');
   protected readonly presets  = this.store.selectSignal(presetsSelectors.selectPresets);
   protected readonly comfyuiConfig    = this.store.selectSignal(comfyuiSelectors.selectConfig);
   private readonly activeWorkflows    = this.store.selectSignal(comfyuiSelectors.selectActiveWorkflows);
@@ -152,6 +155,27 @@ export class Lightbox {
         asset != null ? this.assetService.getAsset(asset.id) : of(null)
       ),
     ),
+  );
+
+  protected readonly faceDetail = toSignal(
+    combineLatest([
+      this.store.select(gallerySelectors.selectLightboxFaceId),
+      toObservable(this.reloadTrigger),
+    ]).pipe(
+      switchMap(([faceId]) =>
+        faceId != null ? this.personService.getFace(faceId) : of(null)
+      ),
+    ),
+  );
+
+  // ── Gesichter-Modus: gemeinsame Datenquellen für Stage + Versionen ────────
+
+  protected readonly panelReady = computed((): boolean =>
+    this.isFaceMode() ? this.faceDetail() != null : this.asset() != null
+  );
+
+  protected readonly activeVersions = computed((): VersionDto[] =>
+    this.isFaceMode() ? (this.faceDetail()?.versions ?? []) : (this.detail()?.versions ?? [])
   );
 
   // ── Tag autocomplete ──────────────────────────────────────────────────────
@@ -247,9 +271,18 @@ export class Lightbox {
   protected readonly caption = computed((): string | null => this.detail()?.caption ?? null);
 
   protected readonly imageUrl = computed((): string => {
+    if (this.isFaceMode()) { return this.faceStageUrl(); }
     const asset = this.asset();
     return asset != null ? this.assetService.fileUrl(asset.id) : '';
   });
+
+  // Stage-Bild im Gesichter-Modus: aktuelle Face-Version, sonst der ursprüngliche Crop
+  private faceStageUrl(): string {
+    const face = this.faceDetail();
+    if (face == null) { return ''; }
+    const current = face.versions.find((version: VersionDto) => version.is_current);
+    return current != null ? `/api/versions/${current.id}/file` : '/api' + face.crop_url;
+  }
 
   protected readonly genMeta = computed((): GenMetaEntry[] | null => {
     const asset = this.asset();
@@ -267,6 +300,7 @@ export class Lightbox {
   );
 
   protected readonly formattedDate = computed((): string => {
+    if (this.isFaceMode()) { return formatDate(this.faceDetail()?.created_at ?? null); }
     const asset = this.asset();
     return formatDate(asset?.created_at ?? asset?.imported_at ?? null);
   });
@@ -299,6 +333,7 @@ export class Lightbox {
   });
 
   protected readonly downloadUrl = computed((): string => {
+    if (this.isFaceMode()) { return this.faceStageUrl() || '#'; }
     const asset = this.asset();
     return asset != null ? this.assetService.fileUrl(asset.id) : '#';
   });
@@ -329,11 +364,19 @@ export class Lightbox {
   protected readonly firstFace = computed((): FaceDto | null => this.faces()[0] ?? null);
 
   protected readonly headerAvatarUrl = computed((): string | null => {
+    if (this.isFaceMode()) {
+      const face = this.faceDetail();
+      return face != null ? '/api' + face.crop_url : null;
+    }
     const face = this.firstFace();
     return face != null ? '/api' + face.crop_url : null;
   });
 
   protected readonly firstPersonName = computed((): string => {
+    if (this.isFaceMode()) {
+      const face = this.faceDetail();
+      return face?.person_name ?? '#' + (face?.id ?? '?');
+    }
     const face = this.firstFace();
     return face?.person_name ?? '#' + (this.asset()?.id ?? '?');
   });
@@ -463,6 +506,7 @@ export class Lightbox {
 
     effect((): void => {
       const asset: AssetDto | null = this.asset();
+      this.lightboxFaceId(); // auch bei Wechsel zwischen/innerhalb Gesichter-Modus zurücksetzen
       this.showGenMeta.set(asset?.source != null && asset.source !== 'original');
       // Reset editing state when navigating
       this.addingTag.set(false);
@@ -591,8 +635,18 @@ export class Lightbox {
   // ── Similar assets overlay ────────────────────────────────────────────────
 
   protected openEditor(): void {
-    if (this.asset() == null) { return; }
+    if (this.isFaceMode()) {
+      if (this.lightboxFaceId() == null) { return; }
+    } else if (this.asset() == null) {
+      return;
+    }
     this.showEditorModal.set(true);
+  }
+
+  // ── Gesichter-Modus: Navigation zur Quelle ────────────────────────────────
+
+  protected openSourceAsset(assetId: number): void {
+    this.store.dispatch(galleryActions.openAssetLightbox({ assetId }));
   }
 
   protected onEditorClosed(): void {

@@ -8,40 +8,46 @@
       <pf-icon name="x" [size]="20" />
     </button>
 
-    <button
-      class="lb-btn lb-nav lb-prev"
-      [disabled]="!hasPrev()"
-      (click)="prev()"
-      aria-label="Vorheriges Bild"
-    >
-      <pf-icon name="arrowLeft" [size]="22" />
-    </button>
+    @if (!isFaceMode()) {
+      <button
+        class="lb-btn lb-nav lb-prev"
+        [disabled]="!hasPrev()"
+        (click)="prev()"
+        aria-label="Vorheriges Bild"
+      >
+        <pf-icon name="arrowLeft" [size]="22" />
+      </button>
 
-    <button
-      class="lb-btn lb-nav lb-next"
-      [disabled]="!hasNext()"
-      (click)="next()"
-      aria-label="Nächstes Bild"
-    >
-      <pf-icon name="arrowRight" [size]="22" />
-    </button>
+      <button
+        class="lb-btn lb-nav lb-next"
+        [disabled]="!hasNext()"
+        (click)="next()"
+        aria-label="Nächstes Bild"
+      >
+        <pf-icon name="arrowRight" [size]="22" />
+      </button>
+    }
 
     <div class="lb-toolbar">
-      <button
-        class="lb-tool"
-        [class.lb-tool--on]="isFavourite()"
-        [attr.aria-pressed]="isFavourite()"
-        (click)="toggleFavourite()"
-        [title]="isFavourite() ? 'Favorit entfernen' : 'Als Favorit markieren'"
-      >
-        <pf-icon name="star" [size]="18" />
-      </button>
+      @if (!isFaceMode()) {
+        <button
+          class="lb-tool"
+          [class.lb-tool--on]="isFavourite()"
+          [attr.aria-pressed]="isFavourite()"
+          (click)="toggleFavourite()"
+          [title]="isFavourite() ? 'Favorit entfernen' : 'Als Favorit markieren'"
+        >
+          <pf-icon name="star" [size]="18" />
+        </button>
+      }
       <button class="lb-tool" (click)="openEditor()" title="Bearbeiten">
         <pf-icon name="crop" [size]="18" />
       </button>
-      <button class="lb-tool" (click)="openVersionCompare()" title="Vergleichen">
-        <pf-icon name="compare" [size]="18" />
-      </button>
+      @if (!isFaceMode()) {
+        <button class="lb-tool" (click)="openVersionCompare()" title="Vergleichen">
+          <pf-icon name="compare" [size]="18" />
+        </button>
+      }
       <a
         class="lb-tool"
         [href]="downloadUrl()"
@@ -61,7 +67,7 @@
 
   <!-- ── Detail-Panel (rechts) ── -->
   <div class="panel">
-    @if (asset(); as asset) {
+    @if (panelReady()) {
 
       <!-- Header: Avatar + Personenname + Datum -->
       <div class="panel-sec panel-header">
@@ -76,10 +82,12 @@
           <div class="ph-name">{{ firstPersonName() }}</div>
           <div class="ph-date">{{ formattedDate() }}</div>
         </div>
-        @if (isFavourite()) {
+        @if (!isFaceMode() && isFavourite()) {
           <pf-icon name="star" [size]="16" class="ph-fav" />
         }
       </div>
+
+      @if (!isFaceMode()) {
 
       <!-- Aktionen -->
       <div class="panel-sec">
@@ -182,7 +190,7 @@
 
           <dt>Auflösung</dt><dd>{{ dimensions() }}</dd>
           <dt>Seitenverhältnis</dt><dd>{{ aspectRatio() }}</dd>
-          <dt>Format</dt><dd>{{ asset.format?.toUpperCase() ?? '—' }}</dd>
+          <dt>Format</dt><dd>{{ asset()?.format?.toUpperCase() ?? '—' }}</dd>
           <dt>Größe</dt><dd>{{ fileSize() }}</dd>
           <dt>Qualität</dt>
           <dd>
@@ -368,14 +376,18 @@
         </div>
       }
 
-      <!-- Versionen -->
+      } <!-- @if (!isFaceMode()) — Aktionen … Gesichter -->
+
+      <!-- Versionen (gemeinsam für Asset- und Gesichter-Modus) -->
       <div class="panel-sec">
         <div class="psec-title psec-title--row">
-          Versionen · {{ detail()?.versions?.length ?? 0 }}
-          <button class="psec-act" (click)="openVersionCompare()">Vergleichen</button>
+          Versionen · {{ activeVersions().length }}
+          @if (!isFaceMode()) {
+            <button class="psec-act" (click)="openVersionCompare()">Vergleichen</button>
+          }
         </div>
         <div class="vers">
-          @for (version of detail()?.versions ?? []; track version.id) {
+          @for (version of activeVersions(); track version.id) {
             <div class="vrow" [class.vrow--cur]="version.is_current">
               <div class="vthumb"><img [src]="version.thumbnail_url" alt="" /></div>
               <div class="vinfo">
@@ -396,6 +408,25 @@
           </div>
         </button>
       </div>
+
+      @if (isFaceMode()) {
+
+      <!-- Quelle (Gesichter-Modus): Link zurück zum Asset, aus dem dieses Face extrahiert wurde -->
+      <div class="panel-sec">
+        <div class="psec-title">Quelle</div>
+        @if (faceDetail()?.source_asset_id; as sourceAssetId) {
+          <button class="rel-row" (click)="openSourceAsset(sourceAssetId)" title="Zum Quellbild">
+            <div class="rr-thumb"><img [src]="'/api/assets/' + sourceAssetId + '/thumbnail?size=256'" alt="" /></div>
+            <div class="rr-body">
+              <div class="rr-id">#{{ sourceAssetId }} <span class="rel-tag rel-tag--orig">Quellbild</span></div>
+            </div>
+          </button>
+        } @else {
+          <div class="rel-empty">Keine Quelle bekannt — manuell importiertes Gesicht</div>
+        }
+      </div>
+
+      } @else {
 
       <!-- Beziehungen -->
       <div class="panel-sec">
@@ -439,6 +470,8 @@
           <pf-icon name="plus" [size]="14" /> Edit verknüpfen
         </button>
       </div>
+
+      } <!-- @if (isFaceMode()) Quelle / @else Beziehungen -->
 
     }
   </div>
@@ -740,7 +773,14 @@
   />
 }
 
-@if (showEditorModal() && asset()) {
+@if (showEditorModal() && isFaceMode() && lightboxFaceId(); as faceIdForEditor) {
+  <pf-editor
+    [modal]="true"
+    [modalKind]="'face'"
+    [modalId]="faceIdForEditor"
+    (closed)="onEditorClosed()"
+  />
+} @else if (showEditorModal() && !isFaceMode() && asset()) {
   <pf-editor
     [modal]="true"
     [modalKind]="'instance'"

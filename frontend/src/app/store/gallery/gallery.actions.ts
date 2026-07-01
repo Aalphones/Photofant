@@ -14,8 +14,10 @@ export const galleryActions = createActionGroup({
     'Load Faces Page Success':   props<{ items: FaceGalleryItemDto[]; total: number; page: number; pageSize: number }>(),
     'Load Page Failure':         props<{ error: string }>(),
     'Open Lightbox':             props<{ id: number }>(),
-    // Opens the parent asset lightbox from face-gallery mode (fetches asset first)
-    'Open Face Lightbox':        props<{ assetId: number }>(),
+    // Opens an asset that may not be preloaded yet (fetches it first, then injects + opens)
+    'Open Asset Lightbox':       props<{ assetId: number }>(),
+    // Opens the Lightbox in Gesichter-Modus on a face's own image/versions
+    'Open Face Lightbox':        props<{ faceId: number; assetId: number | null }>(),
     'Inject Asset':              props<{ asset: AssetDto }>(),
     'Close Lightbox':            emptyProps(),
     'Lightbox Go To':            props<{ id: number }>(),
