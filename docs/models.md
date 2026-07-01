@@ -61,7 +61,8 @@ One row per unique content-hash (canonical image).
 | `imported_at` | DATETIME | import timestamp; UTC naive; indexed |
 | `processed_at` | DATETIME | last full pipeline run |
 
-Indexes: `ix_asset_content_hash` (unique), `ix_asset_created_at`.
+Indexes: `ix_asset_content_hash` (unique), `ix_asset_created_at`, `ix_asset_original_id`
+(migration 0023, P21 Phase 1 — Stapel-Query resolviert `original_id`-Ketten pro Seite).
 
 ### `asset_instance` (migration 0002)
 

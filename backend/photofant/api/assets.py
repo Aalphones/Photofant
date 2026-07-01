@@ -5,6 +5,7 @@ import logging
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
@@ -68,6 +69,11 @@ class AssetDto(BaseModel):
     version_count: int
     generation_meta: dict | None  # type: ignore[type-arg]
     has_phash: bool
+    # P21 — Stapel (Original + Editor-Dialog-Versionen + ComfyUI-original_id-Kinder):
+    kind: str = "asset"  # "asset" | "version" — pseudo-entry for a version row
+    version_id: int | None = None  # set when kind == "version"
+    stack_size: int = 1  # 1 = kein Stapel, kein Icon
+    stack_group_id: int | None = None  # gemeinsame ID über alle Mitglieder einer Gruppe
 
 
 class TagDto(BaseModel):
@@ -177,7 +183,14 @@ class PatchCaptionRequest(BaseModel):
     caption: str
 
 
-def build_asset_dto(asset: Asset, instance: AssetInstance, version_count: int = 0) -> AssetDto:
+def build_asset_dto(
+    asset: Asset,
+    instance: AssetInstance,
+    version_count: int = 0,
+    *,
+    stack_size: int = 1,
+    stack_group_id: int | None = None,
+) -> AssetDto:
     return AssetDto(
         id=asset.id,
         content_hash=asset.content_hash,
@@ -192,6 +205,46 @@ def build_asset_dto(asset: Asset, instance: AssetInstance, version_count: int = 
         version_count=version_count,
         generation_meta=asset.generation_meta,
         has_phash=asset.phash is not None,
+        stack_size=stack_size,
+        stack_group_id=stack_group_id,
+    )
+
+
+def _build_version_pseudo_dto(
+    version: Version,
+    instance: AssetInstance,
+    asset: Asset,
+    *,
+    stack_size: int,
+    stack_group_id: int | None,
+) -> AssetDto:
+    """A version row (Editor-Dialog-Edit) shown as its own gallery entry (P21).
+
+    Identity/tag/caption fields come from the *original* asset (versions have none of
+    their own) — only `created_at` and dimensions are the version's own, since editing
+    can change them (crop/rotate).
+    """
+    params = version.params or {}
+    width = params.get("width") or asset.width
+    height = params.get("height") or asset.height
+    return AssetDto(
+        id=asset.id,
+        content_hash=asset.content_hash,
+        width=width,
+        height=height,
+        file_size=None,
+        format=asset.format,
+        source=asset.source,
+        created_at=version.created_at,
+        imported_at=asset.imported_at,
+        favourite=instance.favourite,
+        version_count=0,
+        generation_meta=asset.generation_meta,
+        has_phash=asset.phash is not None,
+        kind="version",
+        version_id=version.id,
+        stack_size=stack_size,
+        stack_group_id=stack_group_id,
     )
 
 
@@ -214,6 +267,85 @@ def _base_query(session: Session) -> OrmQuery[Any]:
         .join(AssetInstance, AssetInstance.asset_id == Asset.id)
         .filter(AssetInstance.deleted_at.is_(None))
     )
+
+
+# ── Stapel (P21 / ADR-012) ─────────────────────────────────────────────────────
+#
+# Eine Gruppe = Original + alle Editor-Dialog-Versionen seiner asset_instance +
+# alle Assets mit original_id == Original.id (ComfyUI-Edits, ADR-013) + deren
+# eigene Editor-Dialog-Versionen. Single-hop: original_id-Ketten über zwei Ebenen
+# (Edit eines Edits) werden nicht rekursiv aufgelöst — seltener Fall, außerhalb
+# des P21-Scopes (flaches Stapel-Modell laut README).
+
+
+def _stack_roots(session: Session, asset_ids: set[int]) -> dict[int, int]:
+    """Resolve each asset id to its stack root (top of the original_id chain)."""
+    if not asset_ids:
+        return {}
+    known: dict[int, int | None] = {}
+    frontier = set(asset_ids)
+    for _ in range(5):  # bounded depth guard against cycles/unexpectedly deep chains
+        missing = frontier - known.keys()
+        if not missing:
+            break
+        rows = session.query(Asset.id, Asset.original_id).filter(Asset.id.in_(missing)).all()
+        for asset_id, original_id in rows:
+            known[asset_id] = original_id
+        frontier = {oid for oid in known.values() if oid is not None} - known.keys()
+
+    roots: dict[int, int] = {}
+    for asset_id in asset_ids:
+        current = asset_id
+        seen: set[int] = set()
+        while True:
+            parent = known.get(current)
+            if parent is None or current in seen:
+                break
+            seen.add(current)
+            current = parent
+        roots[asset_id] = current
+    return roots
+
+
+def _stack_sizes_for_roots(session: Session, roots: set[int]) -> dict[int, int]:
+    """Member count per stack root: root + its original_id-children + all their versions."""
+    if not roots:
+        return {}
+
+    members_by_root: dict[int, list[int]] = {root: [root] for root in roots}
+    for original_id, child_id in session.query(Asset.original_id, Asset.id).filter(Asset.original_id.in_(roots)).all():
+        members_by_root[original_id].append(child_id)
+
+    all_member_ids = {member for members in members_by_root.values() for member in members}
+    instance_ids_by_asset: dict[int, list[int]] = {}
+    for asset_id, instance_id in (
+        session.query(AssetInstance.asset_id, AssetInstance.id)
+        .filter(AssetInstance.asset_id.in_(all_member_ids), AssetInstance.deleted_at.is_(None))
+        .all()
+    ):
+        instance_ids_by_asset.setdefault(asset_id, []).append(instance_id)
+
+    all_instance_ids = [iid for ids in instance_ids_by_asset.values() for iid in ids]
+    version_counts_by_instance: dict[int, int] = {}
+    if all_instance_ids:
+        version_counts_by_instance = {
+            int(instance_id): int(count)
+            for instance_id, count in (
+                session.query(Version.instance_id, func.count(Version.id))
+                .filter(Version.instance_id.in_(all_instance_ids), Version.face_id.is_(None))
+                .group_by(Version.instance_id)
+                .all()
+            )
+        }
+
+    sizes: dict[int, int] = {}
+    for root, members in members_by_root.items():
+        size = len(members)
+        for member_id in members:
+            for instance_id in instance_ids_by_asset.get(member_id, []):
+                size += version_counts_by_instance.get(instance_id, 0)
+        sizes[root] = size
+    return sizes
 
 
 def _active_row(session: Session, asset_id: int) -> tuple[Asset, AssetInstance] | None:
@@ -275,6 +407,33 @@ def _compute_facets(session: Session, filtered: OrmQuery[Any]) -> Facets:
     ]
 
     return Facets(sources=sources, tags_top=tags_top, framings=framings)
+
+
+@dataclass
+class _GalleryEntry:
+    """One row of the merged Fotos-Galerie result — a real Asset or a Version-Pseudo-Eintrag."""
+
+    kind: str  # "asset" | "version"
+    asset: Asset
+    instance: AssetInstance
+    version: Version | None = None
+    sort_key: Any = None
+
+
+def _version_candidates_query(session: Session, filtered: OrmQuery[Any]) -> OrmQuery[Any]:
+    """Editor-Dialog-Version rows belonging to instances that already pass *filtered*.
+
+    Reuses the caller's filter predicates (person/source/tags/caption/…) via the
+    already-filtered instance set instead of re-implementing every filter for Version.
+    """
+    instance_ids_sub = filtered.with_entities(AssetInstance.id).scalar_subquery()
+    return (
+        session.query(Version, AssetInstance, Asset)
+        .join(AssetInstance, AssetInstance.id == Version.instance_id)
+        .join(Asset, Asset.id == AssetInstance.asset_id)
+        .filter(Version.face_id.is_(None))
+        .filter(Version.instance_id.in_(instance_ids_sub))
+    )
 
 
 @router.get("", response_model=AssetsPage)
@@ -359,34 +518,93 @@ async def list_assets(
             query = query.filter(Asset.id.in_(candidate_ids))
 
     facets = _compute_facets(session, query)
-    total: int
-    items: list[AssetDto]
+    version_query = _version_candidates_query(session, query)
+
+    total = query.count() + version_query.count()
 
     if semantic_score_map:
-        all_rows: list[tuple[Asset, AssetInstance]] = query.all()
-
-        def _by_score(row: tuple[Asset, AssetInstance]) -> float:
-            return semantic_score_map.get(row[0].id, 0.0)
-
-        all_rows.sort(key=_by_score, reverse=True)
-        total = len(all_rows)
+        # Version-Pseudo-Einträge übernehmen den Score des Original-Assets (kein eigener
+        # Embedding-Vektor) — siehe README: Filter/Suche greifen bei ihnen über das Original.
+        asset_rows = query.all()
+        version_rows = version_query.all()
+        entries = [
+            _GalleryEntry(
+                kind="asset", asset=asset, instance=instance,
+                sort_key=semantic_score_map.get(asset.id, 0.0),
+            )
+            for asset, instance in asset_rows
+        ] + [
+            _GalleryEntry(
+                kind="version", asset=asset, instance=instance, version=version,
+                sort_key=semantic_score_map.get(asset.id, 0.0),
+            )
+            for version, instance, asset in version_rows
+        ]
+        entries.sort(key=lambda entry: entry.sort_key, reverse=True)
         start = (page - 1) * page_size
-        page_rows = all_rows[start : start + page_size]
+        page_entries = entries[start : start + page_size]
     else:
-        total = query.count()
-        sort_col: Any
-        if sort == SortField.DATE:
-            sort_col = func.coalesce(Asset.created_at, Asset.imported_at)
-        else:
-            sort_col = Asset.file_size
+        # Merge-Strategie statt Full-Table-Fetch: die Top `fetch_limit` aus JEDEM Teilstream
+        # (Assets, Versionen) reichen aus, um die angefragte Seite korrekt zu bestimmen —
+        # kein Kandidat außerhalb der Top-`fetch_limit` seines eigenen Streams kann im
+        # kombinierten Ranking vor Seite `page` landen (Performance-Vorgabe phase-1-Checkliste).
+        fetch_limit = page * page_size
         order_fn = asc if order == SortOrder.ASC else desc
-        page_rows = query.order_by(order_fn(sort_col)).offset((page - 1) * page_size).limit(page_size).all()
 
-    version_counts = _batch_version_counts(session, [inst.id for _, inst in page_rows])
-    items = [
-        build_asset_dto(asset, instance, version_counts.get(instance.id, 0))
-        for asset, instance in page_rows
-    ]
+        if sort == SortField.DATE:
+            asset_sort_col = func.coalesce(Asset.created_at, Asset.imported_at)
+            version_sort_col = Version.created_at
+        else:
+            asset_sort_col = Asset.file_size
+            version_sort_col = Asset.file_size  # eine Version hat keine eigene Dateigröße
+
+        asset_rows = query.order_by(order_fn(asset_sort_col)).limit(fetch_limit).all()
+        version_rows = version_query.order_by(order_fn(version_sort_col)).limit(fetch_limit).all()
+
+        def _asset_sort_value(asset: Asset) -> Any:
+            return (asset.created_at or asset.imported_at) if sort == SortField.DATE else asset.file_size
+
+        entries = [
+            _GalleryEntry(kind="asset", asset=asset, instance=instance, sort_key=_asset_sort_value(asset))
+            for asset, instance in asset_rows
+        ] + [
+            _GalleryEntry(
+                kind="version", asset=asset, instance=instance, version=version,
+                sort_key=(version.created_at if sort == SortField.DATE else asset.file_size),
+            )
+            for version, instance, asset in version_rows
+        ]
+        reverse = order == SortOrder.DESC
+        entries.sort(key=lambda entry: (entry.sort_key is None, entry.sort_key), reverse=reverse)
+        start = (page - 1) * page_size
+        page_entries = entries[start : start + page_size]
+
+    # Stapel-Metadaten (P21)
+    asset_ids_on_page = {entry.asset.id for entry in page_entries}
+    roots = _stack_roots(session, asset_ids_on_page)
+    stack_sizes = _stack_sizes_for_roots(session, set(roots.values()))
+
+    version_counts = _batch_version_counts(
+        session, [entry.instance.id for entry in page_entries if entry.kind == "asset"],
+    )
+
+    items: list[AssetDto] = []
+    for entry in page_entries:
+        root = roots.get(entry.asset.id, entry.asset.id)
+        size = stack_sizes.get(root, 1)
+        group_id = root if size > 1 else None
+        if entry.kind == "asset":
+            items.append(build_asset_dto(
+                entry.asset, entry.instance, version_counts.get(entry.instance.id, 0),
+                stack_size=size, stack_group_id=group_id,
+            ))
+        else:
+            assert entry.version is not None
+            items.append(_build_version_pseudo_dto(
+                entry.version, entry.instance, entry.asset,
+                stack_size=size, stack_group_id=group_id,
+            ))
+
     return AssetsPage(items=items, total=total, page=page, page_size=page_size, facets=facets)
 
 

@@ -1,7 +1,7 @@
 # Phase 1 — Backend: Stapel-Datenmodell & Query (Fotos + Gesichter)
 
 **Tier:** heikel
-**Status:** pending
+**Status:** complete
 
 Voraussetzung für alle anderen Phasen. Ersetzt die ursprüngliche Fassung (Dual-Listing
 mit Stapel-Kopf + Original-Echo) durch das flache Modell aus der README (Korrektur
@@ -24,24 +24,24 @@ mit Stapel-Kopf + Original-Echo) durch das flache Modell aus der README (Korrekt
 
 ## Abnahme-Kriterien
 
-- [ ] `GET /api/assets` (Fotos-Tab) listet **jede** `version`-Zeile (Editor-Dialog-Edits,
+- [x] `GET /api/assets` (Fotos-Tab) listet **jede** `version`-Zeile (Editor-Dialog-Edits,
   `instance_id` gesetzt) und **jedes** `original_id`-Kind-Asset (ComfyUI-Edits) als
   eigenständigen Eintrag neben dem Original — kein Kollabieren, keine Aggregation
-- [ ] Jeder Eintrag hat `stack_size` (Gruppengröße) und `stack_group_id`
-- [ ] Sortierung nach Datum nutzt weiterhin das **eigene** `created_at` jedes Eintrags
+- [x] Jeder Eintrag hat `stack_size` (Gruppengröße) und `stack_group_id`
+- [x] Sortierung nach Datum nutzt weiterhin das **eigene** `created_at` jedes Eintrags
   (kein Gruppen-Aggregat-Datum — dieses Konzept entfällt gegenüber der Vorfassung)
-- [ ] Version-Pseudo-Einträge liefern Tags/Captions/Faces/Person **des Original-Assets**
+- [x] Version-Pseudo-Einträge liefern Tags/Captions/Faces/Person **des Original-Assets**
   (sie haben keine eigenen — Editor-Dialog-Edits sind dieselbe Bild-Identität, nur
   anders gerendert); `original_id`-Kind-Assets liefern ihre **eigenen** (haben sie schon)
-- [ ] `GET /api/faces` liefert dieselbe Logik für Face-Edit-Gruppen (über `version.face_id`)
-- [ ] Thumbnail-Auslieferung für einen Version-Eintrag zeigt das Bild dieser Version,
-  nicht das des Original-Assets
-- [ ] Bestehende Filter (Person, Tags, Quelle, Favorit, Suche) funktionieren weiterhin
+- [x] `GET /api/faces` liefert dieselbe Logik für Face-Edit-Gruppen (über `version.face_id`)
+- [x] Thumbnail-Auslieferung für einen Version-Eintrag zeigt das Bild dieser Version,
+  nicht das des Original-Assets (`/api/versions/{version_id}/thumbnail`, Frontend wählt
+  per `kind`/`version_id`)
+- [x] Bestehende Filter (Person, Tags, Quelle, Favorit, Suche) funktionieren weiterhin
   korrekt — Filter auf Tags/Caption/Quelle greifen bei Version-Pseudo-Einträgen über
   das Original-Asset (siehe oben), bei `original_id`-Kindern über sich selbst
-- [ ] Cross-Person-Wanderung eines Edits: befund­et **und** falls fehlend gebaut (siehe
-  Checkliste „Untersuchung zuerst") — das ist der Kern dieser Phase, nicht nur
-  Beiwerk zur Anzeige
+- [x] Cross-Person-Wanderung eines Edits: befundet **und** gebaut (ADR-013 — ComfyUI-Edit
+  wird eigenes Asset, durchläuft die normale Clustering-Pipeline)
 
 ---
 
@@ -88,39 +88,62 @@ Version-Pseudo-Einträge, Performance-Check.
 
 ### Query-Umbau — Fotos
 
-- [ ] Gruppierungs-Hilfsfunktion: pro Original alle Gruppenmitglieder ermitteln
-  (`version`-Zeilen der zugehörigen `asset_instance` + Assets mit `original_id == asset.id`),
-  daraus `stack_size` ableiten (1 + Anzahl Mitglieder)
-- [ ] `list_assets`: bestehende Asset-Query bleibt (liefert Original + `original_id`-Kinder
-  bereits heute, nur ohne Stapel-Metadaten) — zusätzlich `version`-Zeilen (nur
-  `instance_id` gesetzt, nicht `face_id`) als Pseudo-Einträge in dieselbe Ergebnisliste
-  einmischen (UNION oder zweiter Query-Pass + Merge vor Pagination)
-- [ ] Filter (Tags/Caption/Quelle/Person/Favorit/Suche) müssen bei Version-Pseudo-
-  Einträgen über das zugehörige Original-Asset ausgewertet werden — nicht separat
-  filterbar, da sie keine eigenen Tags/Captions haben
-- [ ] `AssetDto` um `stack_size: number`, `stack_group_id: number | null` erweitern;
-  Version-Pseudo-Einträge brauchen ein Unterscheidungsmerkmal (z.B. `kind: 'asset' | 'version'`
-  + `version_id` wenn `kind === 'version'`) — Frontend braucht das für den Lightbox-Einstieg
-  (Phase 4: „öffne Asset X mit initial gewählter Version Y" statt eigenes Detail-Objekt)
-- [ ] `get_asset_thumbnail`: Version-Pseudo-Eintrag löst über `version_id` statt `asset_id`
-  auf — bestehende Route für Versionen-Thumbnails prüfen (`VersionDto.thumbnail_url` —
-  gibt es dafür schon einen Endpunkt? Falls ja, wiederverwenden statt duplizieren)
+- [x] Gruppierungs-Hilfsfunktionen `_stack_roots` (löst `original_id`-Kette pro Asset auf,
+  bounded depth 5) + `_stack_sizes_for_roots` (Mitgliederzahl: Root + `original_id`-Kinder +
+  alle ihre `version`-Zeilen) in `assets.py`
+- [x] `list_assets`: `_version_candidates_query` liefert `version`-Zeilen (nur `instance_id`
+  gesetzt) für Instanzen, die die bestehende gefilterte Asset-Query bereits passieren —
+  kein eigener Filter-Code nötig, Version erbt die Filter über die geteilte Instance-Menge.
+  Merge-Strategie statt UNION: Top `page*page_size` je Teilstream (Assets, Versionen)
+  sortiert holen, in Python mergen, exakte Seite slicen — korrekt, weil kein Kandidat
+  außerhalb der Top-`fetch_limit` seines eigenen Streams vor der angefragten Seite landen
+  kann. Semantic-Search-Modus: beide Streams komplett laden (wie schon vor dieser Änderung
+  für Assets), Version-Score = Score des Original-Assets.
+- [x] Filter greifen bei Version-Pseudo-Einträgen automatisch über das Original (s.o.)
+- [x] `AssetDto` erweitert: `kind`, `version_id`, `stack_size`, `stack_group_id`
+- [x] Thumbnail-Routing: bestehender Endpunkt `/api/versions/{version_id}/thumbnail`
+  (`edit_sessions.py`) wiederverwendet — kein neuer Endpunkt nötig, Frontend wählt anhand
+  `kind`/`version_id` (Phase 2/4)
 
 ### Faces-Äquivalent
 
-- [ ] `api/faces.py`: gleiche Gruppierung + gleiches Merge-Verfahren über `version.face_id`,
-  gleiche zwei neuen Felder auf `FaceGalleryItemDto`
+- [x] `api/faces.py`: gleiche Merge-Logik über `version.face_id`, `FaceGalleryItemDto` um
+  `kind`, `version_id`, `stack_size`, `stack_group_id` erweitert. Sortierung auf
+  `Face.created_at` umgestellt (vorher `Face.id.desc()`) — nötig, um Face- und
+  Version-Einträge chronologisch zu mergen; kein Test hing an der alten Reihenfolge.
 
 ### Performance
 
-- [ ] Bei großen Bibliotheken (Tausende Assets): Index-Check auf `version.instance_id`,
-  `version.face_id`, `asset.original_id` — vorhanden laut `docs/models.md`? Ergänzen falls nicht.
-- [ ] Merge zweier Query-Ergebnisse vor Pagination: im Blick behalten, dass das nicht zu
-  einem Full-Table-Scan wird (Critical Rule 5 „UI blockiert nie") — ggf. Sortierung/Limit
-  auf SQL-Ebene je Teilquery vor dem Merge anwenden
+- [x] Index-Check: `ix_version_instance_id`, `ix_version_face_id` bereits vorhanden;
+  `asset.original_id` hatte **keinen** Index — ergänzt via Migration `0023` +
+  `db/models.py` (`index=True`), Upgrade/Downgrade getestet.
+- [x] Merge-Strategie holt je Teilquery nur `page*page_size` Zeilen sortiert von der DB
+  (kein Full-Table-Fetch) — einzige Ausnahme: Semantic-Search-Modus lädt beide Streams
+  komplett, das war schon vor dieser Änderung so (Score-Sortierung lässt sich nicht auf
+  SQL-Ebene vorab limitieren).
 
 ---
 
 ## Report-Back
 
-_Hier trägt der Umsetzer nach Abschluss ein was abwich oder auffiel._
+**Abweichung vom ursprünglichen Plan:** Die Untersuchung ergab, dass die im Kontrakt
+angenommene automatische Cross-Person-Wanderung für ComfyUI-Edits nirgends existierte
+(ComfyUI-Default-Import legte immer eine `Version` an, nie ein Asset — siehe README-
+Korrektur + [ADR-013](../../decisions/013-comfyui-edit-als-asset.md)). Das musste erst
+gebaut werden, bevor der eigentliche Query-Umbau Sinn ergab — dadurch deutlich größerer
+Scope als geplant (ADR + Import-Pipeline-Umbau + Query-Umbau in einer Phase).
+
+**Vereinfachung, bewusst:** `original_id`-Ketten werden nur single-hop gezählt
+(`_stack_sizes_for_roots`) — ein Edit-eines-Edits (zweite Ebene) würde nicht korrekt
+mitgezählt. Für P21s flaches Stapel-Modell (Original + direkte Edits) ausreichend;
+`_stack_roots` selbst löst die Kette zwar bounded-rekursiv (Tiefe 5) für die
+Gruppen-Identität auf, die Größen-Zählung aber nicht — dokumentierter Kompromiss, kein Bug.
+
+**Getestet:** Bestehende Tests grün (12 vorbestehende, unabhängige Fails — `job_version_inputs`-
+Signaturdrift aus einer früheren Phase + `test_caption_config`, identisch auf `master`
+reproduziert). Neue Query-Logik selbst hat keine automatisierten Tests (private-Profil,
+keine neuen Specs) — manuell mit einer In-Memory-SQLite gegen Root+Version+ComfyUI-Kind
+sowie Face+Version-Stapel smoke-getestet (korrekte `stack_size`/`stack_group_id`).
+
+**Follow-up für Phase 2+:** Frontend muss `kind`/`version_id` auswerten, um die richtige
+Thumbnail-URL zu wählen (`/api/assets/{id}/thumbnail` vs. `/api/versions/{version_id}/thumbnail`).

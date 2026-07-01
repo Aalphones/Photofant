@@ -11,14 +11,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import numpy as np
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from photofant.api.assets import ResDto, VersionDto
@@ -73,6 +75,11 @@ class FaceGalleryItemDto(BaseModel):
     is_upscaled: bool
     origin: str | None
     created_at: datetime | None
+    # P21 — Stapel (Face + eigene Editor-Dialog-Versionen, gruppiert über version.face_id):
+    kind: str = "face"  # "face" | "version"
+    version_id: int | None = None
+    stack_size: int = 1
+    stack_group_id: int | None = None
 
 
 class FacesGalleryPage(BaseModel):
@@ -94,6 +101,15 @@ class FaceDetailDto(BaseModel):
     created_at: datetime | None
 
 
+@dataclass
+class _FaceGalleryEntry:
+    """One row of the merged Gesichter-Galerie result — a Face or a Version-Pseudo-Eintrag."""
+
+    face: Face
+    version: Version | None = None
+    sort_key: Any = None
+
+
 @router.get("/gallery", response_model=FacesGalleryPage)
 async def list_faces_gallery(
     session: DbSession,
@@ -108,36 +124,91 @@ async def list_faces_gallery(
     if asset_ids:
         query = query.filter(Face.asset_id.in_(asset_ids))
 
-    total = query.count()
-    faces = (
-        query
-        .order_by(Face.id.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
+    # P21 — Version-Pseudo-Einträge (Face-Edits) für Faces, die die obigen Filter passieren.
+    face_ids_sub = query.with_entities(Face.id).scalar_subquery()
+    version_query = (
+        session.query(Version, Face)
+        .join(Face, Face.id == Version.face_id)
+        .filter(Version.face_id.in_(face_ids_sub))
     )
 
-    person_ids = {face.person_id for face in faces if face.person_id is not None}
+    total = query.count() + version_query.count()
+
+    # Merge-Strategie wie bei list_assets: Top `fetch_limit` je Teilstream reicht,
+    # kein Full-Table-Fetch nötig.
+    fetch_limit = page * page_size
+    face_rows = query.order_by(Face.created_at.desc()).limit(fetch_limit).all()
+    version_rows = version_query.order_by(Version.created_at.desc()).limit(fetch_limit).all()
+
+    entries: list[_FaceGalleryEntry] = [
+        _FaceGalleryEntry(face=face, sort_key=face.created_at) for face in face_rows
+    ] + [
+        _FaceGalleryEntry(face=face, version=version, sort_key=version.created_at)
+        for version, face in version_rows
+    ]
+    entries.sort(key=lambda entry: (entry.sort_key is None, entry.sort_key), reverse=True)
+    start = (page - 1) * page_size
+    page_entries = entries[start : start + page_size]
+
+    face_ids_on_page = {entry.face.id for entry in page_entries}
+    version_counts_by_face: dict[int, int] = {}
+    if face_ids_on_page:
+        version_counts_by_face = {
+            int(face_id): int(count)
+            for face_id, count in (
+                session.query(Version.face_id, func.count(Version.id))
+                .filter(Version.face_id.in_(face_ids_on_page))
+                .group_by(Version.face_id)
+                .all()
+            )
+        }
+
+    person_ids = {entry.face.person_id for entry in page_entries if entry.face.person_id is not None}
     person_names: dict[int, str] = {}
     if person_ids:
         persons = session.query(Person).filter(Person.id.in_(person_ids)).all()
         person_names = {p.id: p.name for p in persons if p.name is not None}
 
-    items = [
-        FaceGalleryItemDto(
-            id=face.id,
-            asset_id=face.asset_id,
-            person_id=face.person_id,
-            person_name=person_names.get(face.person_id) if face.person_id is not None else None,
-            thumbnail_url=f"/api/faces/{face.id}/thumbnail",
-            score=face.score,
-            age=face.age,
-            is_upscaled=face.is_upscaled,
-            origin=face.origin,
-            created_at=face.created_at,
-        )
-        for face in faces
-    ]
+    items: list[FaceGalleryItemDto] = []
+    for entry in page_entries:
+        face = entry.face
+        stack_size = 1 + version_counts_by_face.get(face.id, 0)
+        stack_group_id = face.id if stack_size > 1 else None
+        person_name = person_names.get(face.person_id) if face.person_id is not None else None
+
+        if entry.version is None:
+            items.append(FaceGalleryItemDto(
+                id=face.id,
+                asset_id=face.asset_id,
+                person_id=face.person_id,
+                person_name=person_name,
+                thumbnail_url=f"/api/faces/{face.id}/thumbnail",
+                score=face.score,
+                age=face.age,
+                is_upscaled=face.is_upscaled,
+                origin=face.origin,
+                created_at=face.created_at,
+                stack_size=stack_size,
+                stack_group_id=stack_group_id,
+            ))
+        else:
+            version = entry.version
+            items.append(FaceGalleryItemDto(
+                id=face.id,
+                asset_id=face.asset_id,
+                person_id=face.person_id,
+                person_name=person_name,
+                thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+                score=face.score,
+                age=face.age,
+                is_upscaled=face.is_upscaled,
+                origin=face.origin,
+                created_at=version.created_at,
+                kind="version",
+                version_id=version.id,
+                stack_size=stack_size,
+                stack_group_id=stack_group_id,
+            ))
 
     return FacesGalleryPage(items=items, total=total, page=page, page_size=page_size)
 

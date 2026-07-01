@@ -128,7 +128,7 @@ ADR-012 (Phase 5).
 
 | Phase | Thema | Tier | Status |
 |---|---|---|---|
-| 1 | Backend: Stapel-Datenmodell & Query (Fotos + Gesichter) | heikel | pending |
+| 1 | Backend: Stapel-Datenmodell & Query (Fotos + Gesichter) | heikel | complete |
 | 2 | Frontend Galerie-Grid: Stapel-Icon + Tab-Konsolidierung | standard | pending |
 | 3 | Frontend Gesichter-Grid: Stapel-Äquivalent | standard | pending |
 | 4 | Lightbox-Anbindung: Klick-Ziel + Versions-Navigation | standard | pending |

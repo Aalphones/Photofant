@@ -1,10 +1,11 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p21-galerie-stapel-tabs/`
-**Phase:** 1/5 — Backend: Stapel-Datenmodell & Query (heikel)
-**Nächster Schritt:** ADR-013 (ComfyUI-Edit wird eigenes Asset) ist gebaut + getestet.
-Noch offen in Phase 1: Query-Umbau Fotos/Faces (`stack_size`/`stack_group_id`,
-`AssetDto`-Erweiterung, Thumbnail-Routing, Performance-Check).
+**Phase:** 2/5 — Frontend Galerie-Grid: Stapel-Icon + Tab-Konsolidierung (standard)
+**Nächster Schritt:** Phase 1 (Backend) ist komplett + committet. Phase 2 starten:
+Sub-Toolbar auf zwei Segmente (Alles/Fotos/Gesichter) reduzieren, Stapel-Icon im
+Grid zeigen (`stack_size > 1`), Thumbnail-URL je `kind`/`version_id` wählen
+(FINDINGS.md → Phase 2/3 Einträge lesen).
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p15-lightbox-angleichung/`
 
 ---

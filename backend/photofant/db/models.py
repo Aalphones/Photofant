@@ -54,7 +54,9 @@ class Asset(Base):
     clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     caption_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
     phash: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    original_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("asset.id"), nullable=True)
+    original_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("asset.id"), nullable=True, index=True,
+    )  # index: migration 0023 (P21 Phase 1 — Stapel-Query)
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     imported_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
