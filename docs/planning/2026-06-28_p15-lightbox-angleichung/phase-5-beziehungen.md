@@ -1,7 +1,7 @@
 # Phase 5 — Beziehungen-Sektion + RelationBrowser-Modal
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete
 
 Setzt Phase 1 voraus (`original_id`, `linked_edits[]` im Detail-DTO).
 
@@ -18,15 +18,15 @@ Setzt Phase 1 voraus (`original_id`, `linked_edits[]` im Detail-DTO).
 
 ## Abnahme-Kriterien
 
-- [ ] Sektion „Beziehungen" nach der Versionen-Sektion sichtbar
-- [ ] Untersektion „Originalvorlage": zeigt Thumbnail-Zeile wenn `original_id` gesetzt, sonst „Original zuordnen"-Button
-- [ ] Thumbnail-Zeile: kleines Thumbnail + `#ID` + „Original"-Badge + Bearbeiten (Picker öffnen) + Entfernen
-- [ ] Untersektion „Verknüpfte Edits · N": listet alle `linked_edits` mit Thumbnail + Source-Badge + Entfernen
-- [ ] „Edit verknüpfen"-Button öffnet RelationBrowser-Modal
-- [ ] RelationBrowser: Vollbild-Modal mit Textsuche + Bild-Grid (Auswahl per Klick/Doppelklick)
-- [ ] Bestätigen im RelationBrowser setzt `original_id` per `patchAsset()` + Reload
-- [ ] Zuordnung entfernen (X-Button) ruft `patchAsset(editId, { original_id: null })`
-- [ ] RelationBrowser-Modal liegt über Lightbox (z-index korrekt)
+- [x] Sektion „Beziehungen" nach der Versionen-Sektion sichtbar
+- [x] Untersektion „Originalvorlage": zeigt Thumbnail-Zeile wenn `original_id` gesetzt, sonst „Original zuordnen"-Button
+- [x] Thumbnail-Zeile: kleines Thumbnail + `#ID` + „Original"-Badge + Bearbeiten (Picker öffnen) + Entfernen
+- [x] Untersektion „Verknüpfte Edits · N": listet alle `linked_edits` mit Thumbnail + Source-Badge + Entfernen
+- [x] „Edit verknüpfen"-Button öffnet RelationBrowser-Modal
+- [x] RelationBrowser: Vollbild-Modal mit Textsuche + Bild-Grid (Auswahl per Klick)
+- [x] Bestätigen im RelationBrowser setzt `original_id` per `patchAsset()` + Reload
+- [x] Zuordnung entfernen (X-Button) ruft `patchAsset(editId, { original_id: null })`
+- [x] RelationBrowser-Modal liegt über Lightbox (z-index korrekt)
 
 ---
 
@@ -34,7 +34,7 @@ Setzt Phase 1 voraus (`original_id`, `linked_edits[]` im Detail-DTO).
 
 ### Beziehungen-Template
 
-- [ ] Sektion nach Versionen einfügen:
+- [x] Sektion nach Versionen einfügen:
   ```html
   <div class="panel-sec">
     <div class="psec-title">Beziehungen</div>
@@ -74,16 +74,16 @@ Setzt Phase 1 voraus (`original_id`, `linked_edits[]` im Detail-DTO).
     </button>
   </div>
   ```
-- [ ] `originalThumbnailUrl()`: `/api/assets/{original_id}/thumbnail?size=64`
-- [ ] `editThumbnailUrl(edit)`: `/api/assets/{edit.id}/thumbnail?size=64`
-- [ ] `removeOriginal()`: `patchAsset(asset.id, { original_id: null })` + reload
-- [ ] `removeEditLink(editId)`: `patchAsset(editId, { original_id: null })` + reload
+- [x] `originalThumbnailUrl()`: über `assetService.thumbnailUrl(id, 256)` (`size=64` ist kein gültiger Wert im typisierten Service — 256 passt zum Rest der App, siehe Report-Back)
+- [x] `editThumbnailUrl(edit)`: dito
+- [x] `removeOriginal()`: `patchAsset(asset.id, { original_id: null })` + reload
+- [x] `removeEditLink(editId)`: `patchAsset(editId, { original_id: null })` + reload
 
 ### RelationBrowser-Modal
 
-- [ ] `showRelationBrowser = signal<'origin' | 'edits' | null>(null)`
-- [ ] `openRelationBrowser(mode)` setzt Signal
-- [ ] Modal außerhalb `.lb` (korrekte z-index-Ebene):
+- [x] `showRelationBrowser = signal<'origin' | 'edits' | null>(null)`
+- [x] `openRelationBrowser(mode)` setzt Signal
+- [x] Modal außerhalb `.lb` (korrekte z-index-Ebene):
   ```html
   @if (showRelationBrowser()) {
     <div class="rb-scrim" (click)="closeRelationBrowser()">
@@ -96,18 +96,20 @@ Setzt Phase 1 voraus (`original_id`, `linked_edits[]` im Detail-DTO).
     </div>
   }
   ```
-- [ ] Bild-Grid lädt aus `assetService.getAssets()` oder aus Gallery-Store (prüfen was am billigsten)
-  🟡 RelationBrowser braucht alle Assets zum Durchsuchen. Wenn der Gallery-Store alle bereits hat:
-  aus Store lesen. Sonst eigene Paginierung — MVP: ersten 200 laden reicht für Anfang.
-- [ ] Suche filtert clientseitig auf `id`, `source`, ggf. Caption
-- [ ] Einfach-Auswahl für „origin" (ein Original), Multi-Auswahl für „edits" (mehrere Edits)
-- [ ] Bestätigen:
+- [x] Bild-Grid lädt aus `assetService.listAssets()` (eigene Ladung statt Gallery-Store — der Store hält nur die aktuell gefilterte Galerie-Ansicht, nicht zwingend alle Assets; MVP: erste 200, sortiert nach Datum)
+- [x] Suche filtert clientseitig auf `id`, `source` (kein `caption`-Feld auf `AssetDto` vorhanden — siehe Report-Back)
+- [x] Einfach-Auswahl für „origin" (ein Original), Multi-Auswahl für „edits" (mehrere Edits)
+- [x] Bestätigen:
   - origin: `patchAsset(asset.id, { original_id: selectedId })` + reload
   - edits: diff zu `linked_edits` → neue: `patchAsset(editId, { original_id: asset.id })`; entfernte: `patchAsset(editId, { original_id: null })`
-- [ ] SCSS: `.rb-scrim`, `.rb-modal`, `.rb-grid`, `.rb-cell`, `.rb-head`, `.rb-foot`
+- [x] SCSS: `.rb-scrim`, `.rb-modal`, `.rb-grid`, `.rb-cell`, `.rb-head`, `.rb-foot`
 
 ---
 
 ## Report-Back
 
-_Hier trägt der Umsetzer nach Abschluss ein was abwich oder auffiel._
+- Thumbnail-Größe: Plan-Skizze nannte `size=64`, der typisierte `assetService.thumbnailUrl()` erlaubt nur `256|512|1024` — 256 genutzt (kleinste erlaubte Stufe, konsistent mit dem Rest der App).
+- Bild-Grid im RelationBrowser lädt selbstständig über `assetService.listAssets()` (200 neueste), nicht aus dem Gallery-Store — der Store spiegelt nur die aktuell gefilterte Galerie-Ansicht, das wäre für "alle Assets durchsuchen" falsch gewesen.
+- Suche filtert auf `#ID` + Quelle. Caption steht nicht auf `AssetDto` (nur auf `AssetDetailDto`) — Caption-Suche im MVP ausgelassen, wie im Plan als "ggf." vorgesehen.
+- Auswahl per Einzelklick (Toggle) + Bestätigen-Button statt Doppelklick-Sofortbestätigung — konsistent mit Multi-Auswahl bei Edits, ein einheitliches Interaktionsmuster für beide Modi.
+- Design-Mockup (`relation.jsx`) hat zusätzlich Personen-/Quelle-/Framing-Facetten-Filter und eine mobile Filter-Sheet-UI — laut Plan-Checkliste (🟡-Notiz) ist das MVP mit reiner Textsuche für Phase 5 ausreichend; Facetten-Filter wären ein Follow-up, falls die Liste unhandlich wird.

@@ -346,6 +346,49 @@
         </button>
       </div>
 
+      <!-- Beziehungen -->
+      <div class="panel-sec">
+        <div class="psec-title">Beziehungen</div>
+
+        <div class="rel-dir-lbl">Originalvorlage</div>
+        @if (detail()?.original_id != null) {
+          <div class="rel-row">
+            <div class="rr-thumb"><img [src]="originalThumbnailUrl()" alt="" /></div>
+            <div class="rr-body">
+              <div class="rr-id">#{{ detail()!.original_id }} <span class="rel-tag rel-tag--orig">Original</span></div>
+            </div>
+            <button class="rr-edit" (click)="openRelationBrowser('origin')" title="Anderes Original wählen" aria-label="Anderes Original wählen">
+              <pf-icon name="pencil" [size]="13" />
+            </button>
+            <button class="rr-x" (click)="removeOriginal()" title="Zuordnung entfernen" aria-label="Zuordnung entfernen">
+              <pf-icon name="x" [size]="14" />
+            </button>
+          </div>
+        } @else {
+          <button class="rel-add" (click)="openRelationBrowser('origin')">
+            <pf-icon name="link" [size]="14" /> Original zuordnen
+          </button>
+        }
+
+        <div class="rel-dir-lbl rel-dir-lbl--spaced">
+          Verknüpfte Edits · {{ detail()?.linked_edits?.length ?? 0 }}
+        </div>
+        @for (edit of detail()?.linked_edits ?? []; track edit.id) {
+          <div class="rel-row">
+            <div class="rr-thumb"><img [src]="editThumbnailUrl(edit)" alt="" /></div>
+            <div class="rr-body">
+              <div class="rr-id">#{{ edit.id }} <span class="rel-tag rel-tag--edit">{{ sourceLabelFor(edit.source) }}</span></div>
+            </div>
+            <button class="rr-x" (click)="removeEditLink(edit.id)" title="Verknüpfung entfernen" aria-label="Verknüpfung entfernen">
+              <pf-icon name="x" [size]="14" />
+            </button>
+          </div>
+        }
+        <button class="rel-add" (click)="openRelationBrowser('edits')">
+          <pf-icon name="plus" [size]="14" /> Edit verknüpfen
+        </button>
+      </div>
+
     }
   </div>
 </div>
@@ -517,6 +560,70 @@
               <span>{{ item.date }}</span>
             </div>
           }
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showRelationBrowser(); as mode) {
+  <div class="rb-scrim" (click)="closeRelationBrowser()">
+    <div class="rb-modal" (click)="$event.stopPropagation()">
+      <div class="rb-head">
+        <pf-icon name="link" [size]="16" />
+        <span class="rb-head-title">{{ mode === 'origin' ? 'Original zuordnen' : 'Edit verknüpfen' }}</span>
+        <button class="rb-head-close" (click)="closeRelationBrowser()" aria-label="Schließen">
+          <pf-icon name="x" [size]="14" />
+        </button>
+      </div>
+
+      <div class="rb-search">
+        <pf-icon name="search" [size]="14" />
+        <input
+          [value]="relationBrowserQuery()"
+          (input)="relationBrowserQuery.set($any($event.target).value)"
+          placeholder="Suche nach ID oder Quelle…"
+          aria-label="Bild suchen"
+          autofocus
+        />
+      </div>
+
+      <div class="rb-grid">
+        @if (relationBrowserLoading()) {
+          <div class="rb-empty">Lade…</div>
+        } @else if (relationBrowserList().length === 0) {
+          <div class="rb-empty">Keine Bilder gefunden.</div>
+        } @else {
+          @for (candidate of relationBrowserList(); track candidate.id) {
+            <button
+              class="rb-cell"
+              [class.rb-cell--sel]="isRelationBrowserSelected(candidate.id)"
+              (click)="toggleRelationBrowserSelect(candidate.id)"
+            >
+              <img [src]="relationBrowserThumbnailUrl(candidate)" [alt]="'Asset #' + candidate.id" />
+              <span class="rb-cell-id">#{{ candidate.id }}</span>
+              @if (isRelationBrowserSelected(candidate.id)) {
+                <span class="rb-cell-chk"><pf-icon name="check" [size]="13" /></span>
+              }
+            </button>
+          }
+        }
+      </div>
+
+      <div class="rb-foot">
+        <span class="rb-foot-info">
+          {{ relationBrowserSelected().length }}
+          {{ mode === 'edits' ? 'Edits gewählt' : (relationBrowserSelected().length === 1 ? 'Bild gewählt' : 'Kein Bild gewählt') }}
+        </span>
+        <div class="rb-foot-actions">
+          <button class="pbtn pbtn--ghost" (click)="closeRelationBrowser()">Abbrechen</button>
+          <button
+            class="pbtn pbtn--primary"
+            [disabled]="mode === 'origin' && relationBrowserSelected().length === 0"
+            (click)="confirmRelationBrowser()"
+          >
+            {{ mode === 'origin' ? 'Verknüpfen' : 'Übernehmen' }}
+          </button>
         </div>
       </div>
     </div>

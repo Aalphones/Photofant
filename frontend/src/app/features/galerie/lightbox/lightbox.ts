@@ -9,10 +9,10 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
-import { combineLatest, of, switchMap } from 'rxjs';
+import { combineLatest, forkJoin, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import type { AssetDto, AssetLinkSummary, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -177,6 +177,24 @@ export class Lightbox {
   protected readonly creatingNewPerson  = signal(false);
   protected readonly newPersonName      = signal('');
   protected readonly personSearchQuery  = signal('');
+
+  // ── Beziehungen-Sektion (RelationBrowser-Modal) ───────────────────────────
+  protected readonly showRelationBrowser  = signal<'origin' | 'edits' | null>(null);
+  protected readonly relationBrowserQuery = signal('');
+  protected readonly relationBrowserAssets  = signal<AssetDto[]>([]);
+  protected readonly relationBrowserLoading = signal(false);
+  protected readonly relationBrowserSelected = signal<number[]>([]);
+
+  protected readonly relationBrowserList = computed((): AssetDto[] => {
+    const currentId = this.asset()?.id;
+    const query = this.relationBrowserQuery().trim().toLowerCase();
+    return this.relationBrowserAssets().filter((candidate: AssetDto) => {
+      if (candidate.id === currentId) { return false; }
+      if (!query) { return true; }
+      const haystack = `#${candidate.id} ${this.sourceLabelFor(candidate.source)}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  });
 
   // ── Quick-Assign (Gesicht 1, immer sichtbar im Panel) ─────────────────────
   protected readonly quickAssignMatches = signal<FaceMatch[]>([]);
@@ -424,6 +442,10 @@ export class Lightbox {
       this.personSearchQuery.set('');
       // Reset version compare stub
       this.showVersionCompare.set(false);
+      // Reset RelationBrowser-Modal
+      this.showRelationBrowser.set(null);
+      this.relationBrowserQuery.set('');
+      this.relationBrowserSelected.set([]);
     });
 
     // Quick-Assign: Top-Matches für das erste Gesicht automatisch nachladen,
@@ -545,6 +567,115 @@ export class Lightbox {
     const model = params?.['model'];
     if (model != null) { parts.push(String(model)); }
     return parts.join(' · ');
+  }
+
+  // ── Beziehungen-Sektion ────────────────────────────────────────────────────
+
+  protected originalThumbnailUrl(): string {
+    const originalId = this.detail()?.original_id;
+    return originalId != null ? this.assetService.thumbnailUrl(originalId, 256) : '';
+  }
+
+  protected editThumbnailUrl(edit: AssetLinkSummary): string {
+    return this.assetService.thumbnailUrl(edit.id, 256);
+  }
+
+  protected relationBrowserThumbnailUrl(candidate: AssetDto): string {
+    return this.assetService.thumbnailUrl(candidate.id, 256, candidate.content_hash);
+  }
+
+  protected removeOriginal(): void {
+    const assetId = this.asset()?.id;
+    if (assetId == null) { return; }
+    this.assetService.patchAsset(assetId, { original_id: null })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => { this.reloadTrigger.update((count: number) => count + 1); } });
+  }
+
+  protected removeEditLink(editId: number): void {
+    this.assetService.patchAsset(editId, { original_id: null })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => { this.reloadTrigger.update((count: number) => count + 1); } });
+  }
+
+  protected openRelationBrowser(mode: 'origin' | 'edits'): void {
+    this.showRelationBrowser.set(mode);
+    this.relationBrowserQuery.set('');
+    this.relationBrowserSelected.set(
+      mode === 'origin'
+        ? (this.detail()?.original_id != null ? [this.detail()!.original_id!] : [])
+        : (this.detail()?.linked_edits ?? []).map((edit: AssetLinkSummary) => edit.id)
+    );
+    this.relationBrowserLoading.set(true);
+    this.assetService.listAssets({ page: 1, page_size: 200, sort: 'date', order: 'desc' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.relationBrowserAssets.set(result.items);
+          this.relationBrowserLoading.set(false);
+        },
+        error: () => { this.relationBrowserLoading.set(false); },
+      });
+  }
+
+  protected closeRelationBrowser(): void {
+    this.showRelationBrowser.set(null);
+    this.relationBrowserQuery.set('');
+    this.relationBrowserSelected.set([]);
+  }
+
+  protected isRelationBrowserSelected(id: number): boolean {
+    return this.relationBrowserSelected().includes(id);
+  }
+
+  protected toggleRelationBrowserSelect(id: number): void {
+    const mode = this.showRelationBrowser();
+    if (mode === 'origin') {
+      this.relationBrowserSelected.update((selected: number[]) =>
+        selected.includes(id) ? [] : [id]
+      );
+      return;
+    }
+    this.relationBrowserSelected.update((selected: number[]) =>
+      selected.includes(id) ? selected.filter((selectedId: number) => selectedId !== id) : [...selected, id]
+    );
+  }
+
+  protected confirmRelationBrowser(): void {
+    const mode = this.showRelationBrowser();
+    const asset = this.asset();
+    if (mode == null || asset == null) { return; }
+    const selected = this.relationBrowserSelected();
+
+    if (mode === 'origin') {
+      const originalId = selected[0] ?? null;
+      this.assetService.patchAsset(asset.id, { original_id: originalId })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.reloadTrigger.update((count: number) => count + 1);
+            this.closeRelationBrowser();
+          },
+        });
+      return;
+    }
+
+    const currentEditIds = (this.detail()?.linked_edits ?? []).map((edit: AssetLinkSummary) => edit.id);
+    const added   = selected.filter((id: number) => !currentEditIds.includes(id));
+    const removed = currentEditIds.filter((id: number) => !selected.includes(id));
+    const requests = [
+      ...added.map((editId: number) => this.assetService.patchAsset(editId, { original_id: asset.id })),
+      ...removed.map((editId: number) => this.assetService.patchAsset(editId, { original_id: null })),
+    ];
+    if (requests.length === 0) { this.closeRelationBrowser(); return; }
+    forkJoin(requests)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.reloadTrigger.update((count: number) => count + 1);
+          this.closeRelationBrowser();
+        },
+      });
   }
 
   // ── VersionCompare-Modal ──────────────────────────────────────────────────
