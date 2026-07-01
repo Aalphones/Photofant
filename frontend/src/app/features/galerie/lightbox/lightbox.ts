@@ -139,13 +139,21 @@ export class Lightbox {
   protected readonly similarAssets       = signal<SimilarAsset[]>([]);
   protected readonly selectedSimilarPair = signal<DupePair | null>(null);
 
-  // ── Face matches (person assignment) ─────────────────────────────────────
+  // ── Face matches (PersonPicker-Modal) ─────────────────────────────────────
+  protected readonly showPersonPicker   = signal(false);
   protected readonly selectedFace       = signal<FaceDto | null>(null);
   protected readonly faceMatches        = signal<FaceMatch[]>([]);
   protected readonly faceMatchesLoading = signal(false);
   protected readonly creatingNewPerson  = signal(false);
   protected readonly newPersonName      = signal('');
   protected readonly personSearchQuery  = signal('');
+
+  // ── Quick-Assign (Gesicht 1, immer sichtbar im Panel) ─────────────────────
+  protected readonly quickAssignMatches = signal<FaceMatch[]>([]);
+
+  protected readonly quickMatches = computed((): FaceMatch[] =>
+    this.quickAssignMatches().slice(0, 5)
+  );
 
   private readonly allPersons = this.store.selectSignal(personsSelectors.selectAll);
 
@@ -158,6 +166,15 @@ export class Lightbox {
       )
       .slice(0, 15);
   });
+
+  protected readonly personDirectory = computed((): PersonDto[] =>
+    this.allPersons().filter((person: PersonDto) => !person.is_unknown && person.name != null)
+  );
+
+  // Liste im PersonPicker-Modal: Suchergebnisse bei Query, sonst volles Verzeichnis.
+  protected readonly pickerList = computed((): PersonDto[] =>
+    this.personSearchQuery().trim().length > 0 ? this.personSearchResults() : this.personDirectory()
+  );
 
   // ── Computed display ─────────────────────────────────────────────────────
 
@@ -243,15 +260,24 @@ export class Lightbox {
   });
 
   protected faceLabel(face: FaceDto): string {
-    if (face.person_name) { return face.person_name; }
-    const parts: string[] = [];
-    if (face.age != null) { parts.push(`~${face.age} J.`); }
-    if (face.score != null) { parts.push(`${Math.round(face.score * 100)}% sicher`); }
-    return parts.join(' · ') || 'Gesicht';
+    return face.person_name ?? 'Unbekannt';
   }
 
   protected faceScore(face: FaceDto): string {
-    return face.score != null ? `${Math.round(face.score * 100)}%` : '';
+    if (this.isFaceManual(face)) { return 'manuell'; }
+    return face.score != null ? `${Math.round(face.score * 100)}%` : '—';
+  }
+
+  protected faceAge(face: FaceDto): string {
+    return face.age != null ? `${face.age}J` : '—';
+  }
+
+  protected isFaceManual(face: FaceDto): boolean {
+    return face.origin === 'manual';
+  }
+
+  protected firstName(name: string | null): string {
+    return name?.trim().split(' ')[0] ?? '?';
   }
 
   protected readonly sourceLabel = computed((): string => {
@@ -299,7 +325,8 @@ export class Lightbox {
       this.showSimilarOverlay.set(false);
       this.similarAssets.set([]);
       this.selectedSimilarPair.set(null);
-      // Reset face matches
+      // Reset PersonPicker-Modal state
+      this.showPersonPicker.set(false);
       this.selectedFace.set(null);
       this.faceMatches.set([]);
       this.creatingNewPerson.set(false);
@@ -307,6 +334,26 @@ export class Lightbox {
       this.personSearchQuery.set('');
       // Reset version compare stub
       this.showVersionCompare.set(false);
+    });
+
+    // Quick-Assign: Top-Matches für das erste Gesicht automatisch nachladen,
+    // sobald sich das erste Gesicht ändert (Navigation oder Zuweisung).
+    let lastQuickAssignFaceId: number | null = null;
+    effect((): void => {
+      const face = this.firstFace();
+      if (face == null) {
+        lastQuickAssignFaceId = null;
+        this.quickAssignMatches.set([]);
+        return;
+      }
+      if (face.id === lastQuickAssignFaceId) { return; }
+      lastQuickAssignFaceId = face.id;
+      this.personService.getFaceMatches(face.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (matches: FaceMatch[]) => { this.quickAssignMatches.set(matches); },
+          error: () => { this.quickAssignMatches.set([]); },
+        });
     });
 
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -471,8 +518,7 @@ export class Lightbox {
   // ── Face deletion ─────────────────────────────────────────────────────────
 
   protected deleteFaceFromAsset(face: FaceDto): void {
-    this.selectedFace.set(null);
-    this.faceMatches.set([]);
+    if (this.selectedFace()?.id === face.id) { this.closePersonPicker(); }
     this.personService.deleteFace(face.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -486,19 +532,15 @@ export class Lightbox {
       });
   }
 
-  // ── Face matches (person assignment) ──────────────────────────────────────
+  // ── PersonPicker-Modal ─────────────────────────────────────────────────────
 
-  protected toggleFaceMatches(face: FaceDto): void {
-    if (this.selectedFace()?.id === face.id) {
-      this.selectedFace.set(null);
-      this.faceMatches.set([]);
-      this.personSearchQuery.set('');
-      return;
-    }
+  protected openPersonPicker(face: FaceDto): void {
     this.selectedFace.set(face);
+    this.showPersonPicker.set(true);
+    this.personSearchQuery.set('');
+    this.creatingNewPerson.set(false);
     this.faceMatchesLoading.set(true);
     this.faceMatches.set([]);
-    this.personSearchQuery.set('');
     this.store.dispatch(personsActions.loadPersons());
     this.personService.getFaceMatches(face.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -511,13 +553,21 @@ export class Lightbox {
       });
   }
 
+  protected closePersonPicker(): void {
+    this.showPersonPicker.set(false);
+    this.selectedFace.set(null);
+    this.faceMatches.set([]);
+    this.creatingNewPerson.set(false);
+    this.newPersonName.set('');
+    this.personSearchQuery.set('');
+  }
+
   protected assignFaceToPerson(faceId: number, personId: number): void {
     this.personService.assignFace(faceId, personId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.selectedFace.set(null);
-          this.faceMatches.set([]);
+          this.closePersonPicker();
           this.reloadTrigger.update((count: number) => count + 1);
         },
         error: (err: unknown) => {

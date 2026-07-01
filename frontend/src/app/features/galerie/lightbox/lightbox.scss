@@ -616,185 +616,337 @@ pf-zoom-stage {
   word-break: break-all;
 }
 
-// ── Face strip (P7) ──────────────────────────────────────────────────────────
+// ── Gesichter (P15 Phase 3: face-item Grid + Quick-Assign) ────────────────────
 
-.face-strip {
+.face-list {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   margin-top: 8px;
 }
 
-.face-thumb {
-  position: relative;
-  border-radius: var(--radius-s);
-  overflow: hidden;
+.face-item {
+  width: 64px;
   flex-shrink: 0;
-  border: 2px solid transparent;
-  transition: border-color 0.12s;
 
-  &:hover {
-    border-color: var(--accent);
-  }
+  &:hover .face-del { opacity: 1; }
 }
 
-.face-thumb__img {
+.face-crop {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+
+.face-crop__img {
   display: block;
-  width: 72px;
-  height: 72px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.face-thumb--selected {
-  border-color: var(--accent);
-}
-
-.face-thumb--assigned {
-  border-color: oklch(0.55 0.18 145 / 0.6);
-}
-
-.face-thumb__badge {
+.face-crop__border {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  text-align: center;
-  padding: 2px 2px;
-  font-family: var(--mono);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  inset: 0;
+  box-shadow: inset 0 0 0 2px var(--accent-line, oklch(0.55 0.18 285 / 0.35));
+  pointer-events: none;
 
-// ── Face matches panel ──────────────────────────────────────────────────────
-
-.face-matches {
-  margin-top: 10px;
-  border-radius: var(--radius-s);
-  background: var(--surface-1);
-  overflow: hidden;
-}
-
-.face-matches__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.face-matches__title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-2);
-}
-
-.face-matches__delete {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-xs);
-  color: var(--text-3);
-  transition: background 0.1s, color 0.1s;
-
-  &:hover {
-    background: oklch(0.55 0.2 25 / 0.12);
-    color: var(--danger, oklch(0.55 0.2 25));
+  &--manual {
+    box-shadow: inset 0 0 0 2px oklch(0.55 0.18 145 / 0.8);
   }
 }
 
-.face-matches__search-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.face-matches__search-icon {
-  color: var(--text-3);
-  flex: none;
-}
-
-.face-matches__search {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 12px;
-  color: var(--text-1);
-
-  &::placeholder { color: var(--text-3); }
-}
-
-.face-matches__avatar--placeholder {
+.face-del {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
   display: grid;
   place-items: center;
-  background: var(--surface-2);
-  font-size: 13px;
-  font-weight: 700;
+  border-radius: 4px;
+  background: oklch(0.10 0.005 256 / 0.6);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+
+  &:hover { background: var(--danger, oklch(0.55 0.2 25)); }
+}
+
+.face-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  margin-top: 4px;
   color: var(--text-2);
-  border-radius: 50%;
+
+  &:hover { color: var(--text); }
 }
 
-.face-matches__empty {
-  padding: 12px 10px;
-  font-size: 12px;
+.face-name {
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 48px;
+}
+
+.face-meta {
+  font-size: 9.5px;
   color: var(--text-3);
+  font-family: var(--mono);
+  text-align: center;
+  margin-top: 2px;
 }
 
-.face-matches__list {
-  max-height: 240px;
-  overflow-y: auto;
+// ── Quick-Assign-Grid ────────────────────────────────────────────────────────
+
+.qa-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin: 12px 0 8px;
 }
 
-.face-matches__row {
+.quick-assign {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.quick-match {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line);
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover { background: var(--surface); border-color: var(--line-2); }
+
+  img {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.qm-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.qm-score {
+  font-size: 9px;
+  color: var(--accent);
+  font-weight: 600;
+  font-family: var(--mono);
+}
+
+.face-more-btn {
+  margin-top: 10px;
+}
+
+// ── PersonPicker-Modal (z-index > .lb, siehe lb/lb-scrim oben) ────────────────
+
+.pp-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  background: oklch(0.08 0.005 256 / 0.6);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.pp-modal {
+  width: min(440px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.pp-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
-  padding: 6px 10px;
-  cursor: pointer;
-  transition: background 0.1s;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: 14px;
+}
 
-  &:hover {
-    background: var(--surface-2);
+.pp-head-close {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-s);
+  color: var(--text-3);
+
+  &:hover { background: var(--surface-hover); color: var(--text); }
+}
+
+.pp-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-3);
+
+  input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 13px;
+
+    &::placeholder { color: var(--text-3); }
   }
 }
 
-.face-matches__avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex: none;
+.pp-quick-wrap {
+  border-bottom: 1px solid var(--line);
 }
 
-.face-matches__info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.face-matches__name {
-  font-size: 12.5px;
+.pp-sec-lbl {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
   font-weight: 600;
+  padding: 12px 18px 6px;
+}
+
+.pp-quick {
+  display: flex;
+  gap: 8px;
+  padding: 0 18px 14px;
+  overflow-x: auto;
+}
+
+.pp-chip {
+  flex: none;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border-radius: var(--radius-l);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+
+  &:hover { background: var(--surface-hover); border-color: var(--line-2); }
+
+  img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+
+.pp-chip-name {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text);
+  max-width: 100%;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
+.pp-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pp-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  text-align: left;
+
+  &:hover { background: var(--surface-2); }
+
+  img {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: none;
+  }
+}
+
+.pp-row-av {
+  &.unknown {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    flex: none;
+    display: grid;
+    place-items: center;
+    color: var(--text-3);
+    background: var(--surface-2);
+    font-size: 13px;
+    font-weight: 700;
+  }
+}
+
+.pp-row-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pp-empty {
+  padding: 22px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+// Score-Anzeige, geteilt zwischen Quick-Assign-Grid und PersonPicker-Top5
 .face-matches__score {
   font-size: 11px;
   font-family: var(--mono);

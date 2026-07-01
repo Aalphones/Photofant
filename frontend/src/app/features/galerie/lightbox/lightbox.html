@@ -259,146 +259,60 @@
       @if (faces().length > 0) {
         <div class="panel-sec">
           <div class="psec-title">Gesichter ({{ faces().length }})</div>
-          <div class="face-strip">
+
+          <div class="face-list">
             @for (face of faces(); track face.id) {
-              <button
-                class="face-thumb"
-                [class.face-thumb--selected]="selectedFace()?.id === face.id"
-                [class.face-thumb--assigned]="face.person_name != null"
-                [title]="faceLabel(face)"
-                (click)="toggleFaceMatches(face)"
-              >
-                <img
-                  class="face-thumb__img"
-                  [src]="'/api' + face.crop_url"
-                  [alt]="'Gesicht #' + face.id"
-                />
-                <span class="face-thumb__badge">
-                  {{ face.person_name ?? faceScore(face) }}
-                </span>
-              </button>
+              <div class="face-item">
+                <div class="face-crop">
+                  <img
+                    class="face-crop__img"
+                    [src]="'/api' + face.crop_url"
+                    [alt]="'Gesicht #' + face.id"
+                  />
+                  <div class="face-crop__border" [class.face-crop__border--manual]="isFaceManual(face)"></div>
+                  <button
+                    class="face-del"
+                    (click)="deleteFaceFromAsset(face)"
+                    title="Gesicht löschen"
+                    aria-label="Gesicht löschen"
+                  >
+                    <pf-icon name="x" [size]="11" />
+                  </button>
+                </div>
+                <button
+                  class="face-info"
+                  (click)="openPersonPicker(face)"
+                  [title]="'Person zuordnen für ' + faceLabel(face)"
+                >
+                  <span class="face-name">{{ faceLabel(face) }}</span>
+                  <pf-icon name="pencil" [size]="11" />
+                </button>
+                <div class="face-meta">{{ faceScore(face) }} · {{ faceAge(face) }}</div>
+              </div>
             }
           </div>
 
-          <!-- Matches panel -->
-          @if (selectedFace()) {
-            <div class="face-matches">
-              <div class="face-matches__head">
-                <span class="face-matches__title">Person zuweisen</span>
-                <button
-                  class="face-matches__delete"
-                  (click)="deleteFaceFromAsset(selectedFace()!)"
-                  title="Gesicht löschen"
-                  aria-label="Gesicht löschen"
-                >
-                  <pf-icon name="trash" [size]="13" />
-                </button>
-              </div>
-
-              <!-- Personensuche -->
-              <div class="face-matches__search-wrap">
-                <pf-icon name="search" [size]="12" class="face-matches__search-icon" />
-                <input
-                  class="face-matches__search"
-                  [value]="personSearchQuery()"
-                  (input)="personSearchQuery.set($any($event.target).value)"
-                  placeholder="Person suchen…"
-                  aria-label="Person suchen"
-                />
-              </div>
-
-              @if (faceMatchesLoading()) {
-                <div class="face-matches__empty">Lade Matches…</div>
-              } @else if (personSearchQuery().trim().length > 0) {
-                <!-- Suchergebnisse aus allen Personen -->
-                @if (personSearchResults().length === 0) {
-                  <div class="face-matches__empty">Keine Person gefunden.</div>
-                } @else {
-                  <div class="face-matches__list">
-                    @for (person of personSearchResults(); track person.id) {
-                      <button
-                        class="face-matches__row"
-                        (click)="assignFaceToPerson(selectedFace()!.id, person.id)"
-                        [title]="'Zuweisen zu ' + (person.name ?? 'Person #' + person.id)"
-                      >
-                        @if (person.portrait_face_id != null) {
-                          <img
-                            class="face-matches__avatar"
-                            [src]="'/api/faces/' + person.portrait_face_id + '/thumbnail'"
-                            alt=""
-                          />
-                        } @else {
-                          <div class="face-matches__avatar face-matches__avatar--placeholder">
-                            {{ (person.name || '?')[0]?.toUpperCase() }}
-                          </div>
-                        }
-                        <div class="face-matches__info">
-                          <span class="face-matches__name">{{ person.name ?? 'Person #' + person.id }}</span>
-                        </div>
-                      </button>
-                    }
-                  </div>
+          <!-- Quick-Assign-Grid (Gesicht 1 — Schnellzuweisung) -->
+          @if (firstFace(); as primaryFace) {
+            @if (quickMatches().length > 0) {
+              <div class="qa-label">Beste Treffer — Schnellzuweisung</div>
+              <div class="quick-assign">
+                @for (match of quickMatches(); track match.person_id) {
+                  <button
+                    class="quick-match"
+                    (click)="assignFaceToPerson(primaryFace.id, match.person_id)"
+                    [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
+                  >
+                    <img [src]="'/api/faces/' + match.best_face_id + '/thumbnail'" alt="" />
+                    <div class="qm-label">{{ firstName(match.person_name) }}</div>
+                    <div class="qm-score">{{ matchScorePercent(match.score) }}%</div>
+                  </button>
                 }
-              } @else if (faceMatches().length === 0) {
-                <!-- Top-Matches: keine gefunden -->
-                <div class="face-matches__empty">Keine Matches gefunden.</div>
-              } @else {
-                <!-- Top-Matches -->
-                <div class="face-matches__list">
-                  @for (match of faceMatches(); track match.person_id) {
-                    <button
-                      class="face-matches__row"
-                      (click)="assignFaceToPerson(selectedFace()!.id, match.person_id)"
-                      [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
-                    >
-                      <img
-                        class="face-matches__avatar"
-                        [src]="'/api/faces/' + match.best_face_id + '/thumbnail'"
-                        alt=""
-                      />
-                      <div class="face-matches__info">
-                        <span class="face-matches__name">{{ match.person_name ?? 'Person #' + match.person_id }}</span>
-                        <span class="face-matches__score">{{ matchScorePercent(match.score) }}%</span>
-                      </div>
-                    </button>
-                  }
-                </div>
-              }
-
-              <!-- Neue Person anlegen -->
-              @if (creatingNewPerson()) {
-                <div class="face-matches__create">
-                  <input
-                    class="face-matches__create-input"
-                    [value]="newPersonName()"
-                    (input)="newPersonName.set($any($event.target).value)"
-                    (keydown)="onNewPersonKeyDown($event)"
-                    placeholder="Name der neuen Person…"
-                    autofocus
-                  />
-                  <button
-                    class="face-matches__create-confirm"
-                    (click)="confirmCreatePerson()"
-                    aria-label="Bestätigen"
-                    [disabled]="!newPersonName().trim()"
-                  >
-                    <pf-icon name="check" [size]="13" />
-                  </button>
-                  <button
-                    class="face-matches__create-cancel"
-                    (click)="cancelCreatePerson()"
-                    aria-label="Abbrechen"
-                  >
-                    <pf-icon name="x" [size]="13" />
-                  </button>
-                </div>
-              } @else {
-                <button class="face-matches__new-btn" (click)="startCreatePerson()">
-                  <pf-icon name="plus" [size]="13" />
-                  Neue Person anlegen
-                </button>
-              }
-            </div>
+              </div>
+            }
+            <button class="mini-btn face-more-btn" (click)="openPersonPicker(primaryFace)">
+              Weitere Personen…
+            </button>
           }
         </div>
       }
@@ -408,6 +322,107 @@
     }
   </div>
 </div>
+
+@if (showPersonPicker()) {
+  <div class="pp-scrim" (click)="closePersonPicker()">
+    <div class="pp-modal" (click)="$event.stopPropagation()">
+      <div class="pp-head">
+        <pf-icon name="face" [size]="16" />
+        <span>Person zuordnen</span>
+        <button class="pp-head-close" (click)="closePersonPicker()" aria-label="Schließen">
+          <pf-icon name="x" [size]="14" />
+        </button>
+      </div>
+
+      <div class="pp-search">
+        <pf-icon name="search" [size]="14" />
+        <input
+          [value]="personSearchQuery()"
+          (input)="personSearchQuery.set($any($event.target).value)"
+          placeholder="Person suchen…"
+          aria-label="Person suchen"
+          autofocus
+        />
+      </div>
+
+      @if (personSearchQuery().trim().length === 0 && faceMatches().length > 0) {
+        <div class="pp-quick-wrap">
+          <div class="pp-sec-lbl">Top-Treffer</div>
+          <div class="pp-quick">
+            @for (match of faceMatches().slice(0, 5); track match.person_id) {
+              <button
+                class="pp-chip"
+                (click)="assignFaceToPerson(selectedFace()!.id, match.person_id)"
+                [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
+              >
+                <img [src]="'/api/faces/' + match.best_face_id + '/thumbnail'" alt="" />
+                <div class="pp-chip-name">{{ firstName(match.person_name) }}</div>
+                <span class="face-matches__score">{{ matchScorePercent(match.score) }}%</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="pp-list">
+        @if (faceMatchesLoading()) {
+          <div class="pp-empty">Lade…</div>
+        } @else if (pickerList().length === 0) {
+          <div class="pp-empty">Keine Person gefunden.</div>
+        } @else {
+          @for (person of pickerList(); track person.id) {
+            <button
+              class="pp-row"
+              (click)="assignFaceToPerson(selectedFace()!.id, person.id)"
+              [title]="'Zuweisen zu ' + (person.name ?? 'Person #' + person.id)"
+            >
+              @if (person.portrait_face_id != null) {
+                <img [src]="'/api/faces/' + person.portrait_face_id + '/thumbnail'" alt="" />
+              } @else {
+                <div class="pp-row-av unknown">{{ (person.name || '?')[0]?.toUpperCase() }}</div>
+              }
+              <span class="pp-row-name">{{ person.name ?? 'Person #' + person.id }}</span>
+            </button>
+          }
+        }
+      </div>
+
+      <!-- Neue Person anlegen -->
+      @if (creatingNewPerson()) {
+        <div class="face-matches__create">
+          <input
+            class="face-matches__create-input"
+            [value]="newPersonName()"
+            (input)="newPersonName.set($any($event.target).value)"
+            (keydown)="onNewPersonKeyDown($event)"
+            placeholder="Name der neuen Person…"
+            autofocus
+          />
+          <button
+            class="face-matches__create-confirm"
+            (click)="confirmCreatePerson()"
+            aria-label="Bestätigen"
+            [disabled]="!newPersonName().trim()"
+          >
+            <pf-icon name="check" [size]="13" />
+          </button>
+          <button
+            class="face-matches__create-cancel"
+            (click)="cancelCreatePerson()"
+            aria-label="Abbrechen"
+          >
+            <pf-icon name="x" [size]="13" />
+          </button>
+        </div>
+      } @else {
+        <button class="face-matches__new-btn" (click)="startCreatePerson()">
+          <pf-icon name="plus" [size]="13" />
+          Neue Person anlegen
+        </button>
+      }
+    </div>
+  </div>
+}
 
 @if (showRerunDialog()) {
   <pf-rerun-dialog
