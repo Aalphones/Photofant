@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p10-trainingssets-export/`
-**Phase:** 3/4 — Caption-Tools & Near-Dupes (Backend+Frontend fertig, Lint/Build grün — noch nicht smoke-getestet)
-**Nächster Schritt:** Smoke-Test Phase 3 durch dich (Caption-Tools + Near-Dupe-Review im laufenden Frontend prüfen), dann Phase 4 (Export-Workflows) starten — siehe phase-4-export.md
+**Phase:** 4/4 — Export-Workflows (complete, ungetestet)
+**Nächster Schritt:** Smoke-Checkliste aus der Plan-README abarbeiten (Phase 3 + 4 stehen noch aus), dann Plan nach `docs/archive/2026-07/` verschieben — P10 ist damit komplett.
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p21-galerie-stapel-tabs/`
 
 ---

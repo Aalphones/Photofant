@@ -166,6 +166,15 @@ class JobStarted(BaseModel):
     job_id: str
 
 
+SidecarMode = Literal["tags", "caption", "both"]
+
+
+class CollectionExportRequest(BaseModel):
+    sidecar: SidecarMode | None = None
+    split_ratio: float | None = None  # overrides settings.split_ratio when given
+    target_dir: str | None = None
+
+
 DupeResolution = Literal["keep_left", "keep_right", "keep_both"]
 
 _DUPE_MAX_THRESHOLD = 32
@@ -483,12 +492,26 @@ async def add_items(collection_id: int, body: AddItemsRequest, session: DbSessio
 
 
 @router.post("/{collection_id}/export", response_model=JobStarted, status_code=202)
-async def export_collection(collection_id: int, session: DbSession) -> JobStarted:
-    """Copy all items in the collection to a dated export folder (background job)."""
+async def export_collection(collection_id: int, body: CollectionExportRequest, session: DbSession) -> JobStarted:
+    """Copy all items in the collection to a dated export folder (background job).
+
+    Training sets can additionally request Kohya-style sidecar `.txt` files (tags/caption/
+    both — effective caption incl. override) and a deterministic train/val split. Plain
+    albums leave `sidecar`/`split_ratio` unset and get the original flat copy behaviour.
+    """
     from photofant.jobs.export_job import enqueue_export_collection
 
     collection = _get_collection_or_404(session, collection_id)
-    status = await enqueue_export_collection(collection_id, collection.name)
+    if body.split_ratio is not None and not 0.0 < body.split_ratio <= 1.0:
+        raise HTTPException(status_code=422, detail="split_ratio must be in (0.0, 1.0]")
+
+    split_ratio = body.split_ratio
+    if split_ratio is None and collection.settings:
+        split_ratio = collection.settings.get("split_ratio")
+
+    status = await enqueue_export_collection(
+        collection_id, collection.name, sidecar=body.sidecar, split_ratio=split_ratio, target_dir=body.target_dir
+    )
     return JobStarted(job_id=status.id)
 
 

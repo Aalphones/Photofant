@@ -12,6 +12,7 @@
 | `/galerie` (import — Browser-Upload) | `POST` | `/api/assets/upload` | `multipart/form-data; files[]` | `{ job_id }` |
 | `/galerie` (scan) | `POST` | `/api/assets/scan` | — | `{ job_id }` |
 | `/galerie` (favourite, P5) | `PATCH` | `/api/assets/{id}/favourite` | `{ value: bool }` | aktualisiertes `AssetDto` |
+| Export-Dialog / Lightbox (Einzelbild im Dateisystem anzeigen, P10 Phase 4) | `POST` | `/api/assets/{id}/reveal` | — | `204` — öffnet den Explorer mit der Datei vorausgewählt |
 | `/galerie` (trash, P5) | `DELETE` | `/api/assets/{id}` | — | Soft-Delete |
 | Trash-View (P5) | `GET` | `/api/trash` | — | `AssetDto[]` (sortiert nach `deleted_at` desc) |
 | Trash-View (P5) | `POST` | `/api/trash/{id}/restore` | — | wiederhergestelltes `AssetDto` |
@@ -113,6 +114,51 @@ gewinnen bei Konflikt. Trigger-Logik: positive Trigger nach `match_mode` (any=OD
 negierte schließen aus; ohne positiven Trigger ist die Smart-Mitgliedschaft leer. Person-Trigger
 existieren in Schema + UI, matchen aber bis P7 nichts. Hooks sitzen an Tag-Edit, Caption-Edit,
 Bulk-Tagging, Tag-Merge, Tagging-/Caption-Job (Import + Rerun) und Trigger-CRUD.
+
+## Export (P10 Phase 4)
+
+Alle Export-Endpoints laufen als Queue-Job (`JobKind.EXPORT`, Fortschritt via `/api/jobs/stream`)
+und kopieren nur — der Bestand wird nie verändert. Ziel ist standardmäßig
+`<data_root>/_export/<timestamp>_<kind>/`; jeder Endpoint akzeptiert optional `target_dir`
+für einen eigenen Zielordner (Ziel-Ordner-Wahl).
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| Export-Dialog (Ordner öffnen) | `GET` | `/api/export/reveal` | — | `204` — öffnet den Standard-Exportordner im Explorer |
+| Galerie/Favoriten Export-Dialog (aktueller Filter) | `POST` | `/api/export/favourites/filter` | `ExportFilterRequest` | `{ job_id }` (202) |
+| Export-Dialog (alle Favoriten nach Person) | `POST` | `/api/export/favourites/by-person` | `{ target_dir? }` | `{ job_id }` (202) |
+| Export-Dialog (Zufalls-Favoriten) | `POST` | `/api/export/favourites/random` | `{ count, images_per_set, target_dir? }` | `{ job_id }` (202) |
+| Export-Dialog (Album) / Trainingsset-Export-Dialog | `POST` | `/api/collections/{id}/export` | `CollectionExportRequest` | `{ job_id }` (202) |
+
+```typescript
+interface ExportFilterRequest {
+  sources?: string[];
+  quality_min?: number;       // 0.0–1.0
+  tag_ids?: number[];
+  person_id?: number;
+  include_versions?: boolean; // zieht die komplette Lineage (Original + Ableitungen) mit in ein "ableitungen"-Unterverzeichnis
+  favourite?: boolean | null; // default true (Favoriten-View); null = aktueller Filter über ALLE Bilder (Galerie)
+  target_dir?: string;
+}
+
+interface CollectionExportRequest {
+  sidecar?: 'tags' | 'caption' | 'both' | null;  // Kohya-Style .txt pro Bild, UTF-8 ohne BOM; null = keine Sidecar
+  split_ratio?: number | null;                    // Anteil Training (0.0, 1.0]; fällt sonst auf collection.settings.split_ratio zurück; null = kein Split
+  target_dir?: string;
+}
+```
+
+**Sidecar-Inhalt:** `tags` = kommagetrennte Tag-Liste (Score absteigend); `caption` = effektive
+Caption (`caption_override` > Original-Caption); `both` = Caption gefolgt von den Tags.
+Sidecar-Datei liegt neben dem kopierten Bild (`<bildname>.txt`).
+
+**Train/Val-Split:** deterministisch — die Menge wird nach Pfad sortiert, dann mit einem auf
+die Collection-ID geseedeten `random.Random` gemischt und am `split_ratio`-Punkt geteilt
+(`train/`, `val/`-Unterordner). Gleicher Set-Inhalt → gleicher Split bei jedem erneuten Export.
+
+**Follow-up (nicht Teil dieser Phase):** kein Job-Abbruch (kein Job-Typ im Projekt hat das);
+"Export-Ergebnis im Dateisystem anzeigen" öffnet immer den Standard-Exportordner, nicht einen
+eigenen `target_dir`.
 
 ## Config / Settings (Settings-JSON-Infrastruktur)
 

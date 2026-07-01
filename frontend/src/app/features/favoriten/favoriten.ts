@@ -24,9 +24,8 @@ import { GalerieGrid } from '../galerie/grid/grid';
 import { Lightbox } from '../galerie/lightbox/lightbox';
 import { FilterRail } from '../galerie/filter-rail/filter-rail';
 import { SubToolbar } from '../galerie/sub-toolbar/sub-toolbar';
-import { BulkBar, Icon } from '@photofant/ui';
-import { ExportDialog } from './export-dialog/export-dialog';
-import type { ExportDialogFilters } from './export-dialog/export-dialog';
+import { BulkBar, ExportDialog, Icon } from '@photofant/ui';
+import type { ExportDialogFilters } from '@photofant/ui';
 
 @Component({
   selector: 'pf-favoriten',
@@ -75,6 +74,7 @@ export class Favoriten {
     qualityMin: this.filterQualityMin(),
     tagIds:     this.filterTagIds(),
     personId:   this.filterPersonId(),
+    favourite:  true,
   }));
 
   constructor() {

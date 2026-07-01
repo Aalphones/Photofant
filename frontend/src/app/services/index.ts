@@ -19,5 +19,5 @@ export { ComfyUIService } from './comfyui.service';
 export type { TestConnectionResponse, RunExtras } from './comfyui.service';
 export { PromptTemplateService } from './prompt-template.service';
 export { ExportService } from './export.service';
-export type { ExportFilterParams, ExportRandomParams, ExportJobStarted } from './export.service';
+export type { ExportFilterParams, ExportRandomParams, CollectionExportParams, SidecarMode, ExportJobStarted } from './export.service';
 export { VersionService } from './version.service';

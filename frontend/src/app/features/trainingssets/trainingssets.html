@@ -24,6 +24,9 @@
           <button class="pbtn pbtn--ghost" (click)="onRerunOpen()">
             <pf-icon name="refresh" [size]="14" /> Klassifizieren
           </button>
+          <button class="pbtn pbtn--ghost" (click)="onExportOpen()">
+            <pf-icon name="download" [size]="14" /> Export
+          </button>
           <button
             class="iconbtn"
             [class.iconbtn--on]="sidePanel() === 'dupes'"
@@ -106,6 +109,18 @@
       (apply)="onCaptionsApply($event)"
       (cancel)="onCaptionsCancel()"
     />
+  }
+
+  @if (showExportDialog()) {
+    <pf-training-set-export
+      [collection]="set"
+      (apply)="onExportApply($event)"
+      (cancel)="onExportCancel()"
+    />
+  }
+
+  @if (exportToast()) {
+    <div class="ts-export-toast">{{ exportToast() }}</div>
   }
 } @else {
   <!-- ───────────────── Overview ───────────────── -->

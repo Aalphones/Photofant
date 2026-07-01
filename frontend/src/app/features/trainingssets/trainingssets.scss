@@ -4,6 +4,21 @@
   overflow: hidden;
 }
 
+.ts-export-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 10px 18px;
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+  z-index: 900;
+}
+
 /* ───────────── Overview ───────────── */
 
 .ts-overview {

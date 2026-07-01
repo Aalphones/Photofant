@@ -6,6 +6,15 @@
   (workflowToggle)="toggleWorkflowMode()"
 />
 
+@if (!workflowMode() && mediaType() !== 'faces') {
+  <div class="galerie__toolbar-extra">
+    <button class="galerie__export-btn" (click)="showExportDialog.set(true)">
+      <pf-icon name="download" [size]="15" />
+      Exportieren
+    </button>
+  </div>
+}
+
 @if (workflowMode()) {
   <pf-run-leiste
     [workflows]="activeWorkflows()"
@@ -116,5 +125,13 @@
     [scopeLabel]="selectedCount() + ' Bilder'"
     (confirm)="onBulkEditConfirm($event)"
     (cancel)="onBulkEditCancel()"
+  />
+}
+
+@if (showExportDialog()) {
+  <pf-export-dialog
+    [filters]="exportFilters()"
+    [albums]="albums()"
+    (close)="showExportDialog.set(false)"
   />
 }

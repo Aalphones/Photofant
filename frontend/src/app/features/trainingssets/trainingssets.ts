@@ -2,12 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, injec
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import type { AssetsPage, CaptionAction, CollectionDetail, TrainingSetItem, TrainingSetStats } from '@photofant/models';
-import { AssetService, ClassifyService, CollectionService } from '@photofant/services';
+import { AssetService, ClassifyService, CollectionService, ExportService } from '@photofant/services';
 import { collectionsActions, collectionsSelectors, jobsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
 import { TrainingSetCaptions } from './training-set-captions/training-set-captions';
 import { TrainingSetDupes } from './training-set-dupes/training-set-dupes';
+import { TrainingSetExport } from './training-set-export/training-set-export';
+import type { TrainingSetExportPayload } from './training-set-export/training-set-export';
 import { TrainingSetItemCell } from './training-set-item/training-set-item';
 import { TrainingSetSettingsPanel } from './training-set-settings/training-set-settings';
 import { TrainingSetStatsPanel } from './training-set-stats/training-set-stats';
@@ -17,7 +19,7 @@ type SidePanel = 'none' | 'settings' | 'stats' | 'dupes';
 @Component({
   selector: 'pf-trainingssets',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, TrainingSetItemCell, TrainingSetSettingsPanel, TrainingSetStatsPanel, TrainingSetCaptions, TrainingSetDupes, RerunDialog],
+  imports: [Icon, TrainingSetItemCell, TrainingSetSettingsPanel, TrainingSetStatsPanel, TrainingSetCaptions, TrainingSetDupes, TrainingSetExport, RerunDialog],
   templateUrl: './trainingssets.html',
   styleUrl: './trainingssets.scss',
 })
@@ -26,6 +28,7 @@ export class Trainingssets {
   private readonly assetService = inject(AssetService);
   private readonly collectionService = inject(CollectionService);
   private readonly classifyService = inject(ClassifyService);
+  private readonly exportService = inject(ExportService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly sets = this.store.selectSignal(collectionsSelectors.selectTrainingSets);
@@ -41,6 +44,9 @@ export class Trainingssets {
   protected readonly sidePanel = signal<SidePanel>('none');
   protected readonly showRerunDialog = signal(false);
   protected readonly showCaptionsDialog = signal(false);
+  protected readonly showExportDialog = signal(false);
+  protected readonly exportToast = signal<string | null>(null);
+  private exportToastTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly creating = signal(false);
   protected readonly newName = signal('');
@@ -270,5 +276,35 @@ export class Trainingssets {
     this.collectionService.applyCaptionAction(set.id, event.action, event.params)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ job_id }) => { this.pendingCaptionsJobId = job_id; });
+  }
+
+  protected onExportOpen(): void {
+    this.showExportDialog.set(true);
+  }
+
+  protected onExportCancel(): void {
+    this.showExportDialog.set(false);
+  }
+
+  protected onExportApply(payload: TrainingSetExportPayload): void {
+    this.showExportDialog.set(false);
+    const set = this.openSet();
+    if (set == null) { return; }
+    this.exportService.exportCollection(set.id, {
+      sidecar: payload.sidecar,
+      split_ratio: payload.splitRatio,
+      ...(payload.targetDir ? { target_dir: payload.targetDir } : {}),
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.showExportToast('Export gestartet — läuft im Hintergrund.'),
+        error: () => this.showExportToast('Fehler beim Starten des Exports.'),
+      });
+  }
+
+  private showExportToast(message: string): void {
+    if (this.exportToastTimer != null) { clearTimeout(this.exportToastTimer); }
+    this.exportToast.set(message);
+    this.exportToastTimer = setTimeout(() => { this.exportToast.set(null); }, 4000);
   }
 }

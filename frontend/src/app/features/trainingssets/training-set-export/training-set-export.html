@@ -1,0 +1,80 @@
+<div class="exp-scrim" (click)="onScrimClick()"></div>
+
+<div class="exp-modal" (click)="$event.stopPropagation()">
+  <div class="exp-head">
+    <div class="exp-head__icon">
+      <pf-icon name="download" [size]="18" />
+    </div>
+    <div class="exp-head__info">
+      <div class="exp-title">Trainingsset exportieren</div>
+      <div class="exp-sub">Kopiert Bilder + optionale Sidecar-.txt in einen Export-Ordner</div>
+    </div>
+    <button class="exp-close" (click)="handleCancel()" aria-label="Schließen">
+      <pf-icon name="x" [size]="17" />
+    </button>
+  </div>
+
+  <div class="exp-body">
+    <div class="exp-field-lbl">Sidecar-Datei (.txt pro Bild)</div>
+    <div class="exp-options">
+      @for (option of SIDECAR_OPTIONS; track option.key) {
+        <button
+          class="exp-option"
+          [class.exp-option--on]="sidecar() === option.key"
+          (click)="selectSidecar(option.key)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
+    <div class="exp-option-desc">
+      {{ activeSidecarDesc() }}
+    </div>
+
+    <label class="exp-checkbox-row">
+      <div class="exp-chk" [class.exp-chk--on]="splitEnabled()" (click)="toggleSplit()">
+        @if (splitEnabled()) {
+          <pf-icon name="check" [size]="11" />
+        }
+      </div>
+      <span class="exp-checkbox-row__label">Train/Val-Split (deterministisch)</span>
+    </label>
+
+    @if (splitEnabled()) {
+      <div class="exp-split-row">
+        <label class="exp-field-lbl" for="exp-split">Train-Anteil</label>
+        <input
+          id="exp-split"
+          class="exp-input exp-input--num"
+          type="number"
+          min="1"
+          max="99"
+          [(ngModel)]="splitPercent"
+        />
+        <span class="exp-split-hint">% Train — Rest Val</span>
+      </div>
+    }
+
+    <label class="exp-field-lbl" for="exp-target-dir">Zielordner</label>
+    <input
+      id="exp-target-dir"
+      class="exp-input"
+      placeholder="Leer = Standard-Exportordner"
+      [(ngModel)]="targetDir"
+    />
+  </div>
+
+  <div class="exp-foot">
+    <div class="exp-foot__info">
+      <pf-icon name="info" [size]="13" />
+      Läuft als Hintergrund-Job über die Queue — Export verändert nie den Bestand.
+    </div>
+    <div class="exp-foot__actions">
+      <button class="md-btn ghost" (click)="handleCancel()">Abbrechen</button>
+      <button class="md-btn primary" (click)="handleApply()">
+        <pf-icon name="check" [size]="15" />
+        Exportieren
+      </button>
+    </div>
+  </div>
+</div>

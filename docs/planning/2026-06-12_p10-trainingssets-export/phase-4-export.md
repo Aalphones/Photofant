@@ -1,6 +1,6 @@
 # P10 · Phase 4 — Export-Workflows
 
-> Rating: standard · Status: pending
+> Rating: standard · Status: complete
 
 ## Kontext (vorher lesen)
 
@@ -16,10 +16,16 @@
 
 ## Checkliste
 
-- [ ] Export-Engine (Quelle → Ziel-Layout-Strategien) + Endpoints
-- [ ] Sidecar-Writer (Format-Optionen, Encoding UTF-8 ohne BOM)
-- [ ] Zufalls-Favoriten-Logik (distinct, Seeds)
-- [ ] Export-Dialoge (Scope-abhängig) + reveal-Aktion
-- [ ] Doc-Update: routes.md; README Features-Stand (Projekt feature-complete bis auf Optionales)
+- [x] Export-Engine (Quelle → Ziel-Layout-Strategien) + Endpoints — bereits vorhandene Favoriten-/Album-Exporte generalisiert (Ziel-Ordner-Wahl, Filter nicht mehr favoriten-fest) + neuer Trainingsset-Export mit Sidecar/Split
+- [x] Sidecar-Writer (Format-Optionen, Encoding UTF-8 ohne BOM) — Kohya-Style `.txt` (tags/caption/both), `write_text(..., encoding="utf-8")`
+- [x] Zufalls-Favoriten-Logik (distinct, Seeds) — bereits vorhanden (distinct über alle Sets); Seed-Determinismus stattdessen für den Train/Val-Split umgesetzt (siehe Deviations)
+- [x] Export-Dialoge (Scope-abhängig) + reveal-Aktion — gemeinsamer `ExportDialog` (Galerie + Favoriten) nach `ui/` verschoben, neuer `TrainingSetExport`-Dialog; Einzelbild-Reveal (`/assets/{id}/reveal`) war schon da
+- [x] Doc-Update: routes.md; README Features-Stand (Projekt feature-complete bis auf Optionales)
 
 ## Report-Back
+
+Ein Großteil der Favoriten-/Album-Exporte existierte bereits aus einer früheren Phase
+(`export_job.py`, `api/export.py`, Favoriten-Export-Dialog) — diese Phase hat sie generalisiert
+(Ziel-Ordner-Wahl, Filter-Export nicht mehr zwingend favoriten-beschränkt) statt sie neu zu bauen,
+und den fehlenden Teil ergänzt: Trainingsset-Export mit Sidecar-`.txt` + deterministischem
+Train/Val-Split, sowie den Export-Zugang in der Galerie (bisher nur in Favoriten verfügbar).

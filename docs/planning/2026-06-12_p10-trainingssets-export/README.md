@@ -11,7 +11,7 @@ Die Organisations- und Export-Endstufe: manuelle Alben rund, Lineage-Gruppierung
 | 1 | [Lineage & Collections-Ausbau](phase-1-lineage-collections.md) | standard | complete |
 | 2 | [Trainingssets & Statistiken](phase-2-trainingssets-stats.md) | standard | complete |
 | 3 | [Caption-Tools & Near-Dupes](phase-3-caption-tools-dupes.md) | standard | complete |
-| 4 | [Export-Workflows](phase-4-export.md) | standard | pending |
+| 4 | [Export-Workflows](phase-4-export.md) | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -42,10 +42,43 @@ Die Organisations- und Export-Endstufe: manuelle Alben rund, Lineage-Gruppierung
 
 ## Summary
 
+P10 ist abgeschlossen: Lineage-Baum + Alben-Feinschliff (Phase 1), Trainingssets mit
+Statistik-Dashboard (Phase 2), Caption-Tools + Near-Dupe-Review (Phase 3) und alle
+Export-Workflows (Phase 4) — Favoriten (Filter/Person/Zufall), Alben, Trainingssets mit
+Sidecar-`.txt` und Train/Val-Split. Damit ist Photofant laut Konzept-Roadmap
+feature-complete bis auf die optionalen Erweiterungen (P11+).
+
 ## Files touched
+
+Backend: `jobs/export_job.py`, `api/collections.py`, `api/export.py`.
+Frontend: `services/export.service.ts`; `ui/export-dialog/` (verschoben aus
+`features/favoriten/export-dialog/`, um Favoriten *und* Galerie zu bedienen);
+`features/trainingssets/training-set-export/` (neu); `features/galerie/galerie.ts`
+(+html/scss), `features/favoriten/favoriten.ts`, `features/trainingssets/trainingssets.ts`
+(+html/scss) für die Verdrahtung.
+Docs: `docs/routes.md` (neue Export-Sektion + `/assets/{id}/reveal`), `docs/code-map.md`.
 
 ## Commits
 
+Siehe Git-Log ab dem P10-Phase-4-Commit auf diesem Branch.
+
 ## Deviations from plan
 
+- Ein Großteil der Favoriten-/Album-Export-Infrastruktur existierte bereits vor dieser Phase
+  (aus einer früheren Stage) — generalisiert statt neu gebaut (Ziel-Ordner-Wahl ergänzt,
+  Favoriten-Zwang im Filter-Export aufgehoben).
+- **Kein Job-Abbruch:** kein Job-Typ im ganzen Projekt unterstützt Abbruch (nur Fortschritt) —
+  Abbruch für Export-Jobs bewusst weggelassen, um nicht als einziger Job-Typ von der
+  gemeinsamen Queue-Konvention abzuweichen. Nutzer-Entscheidung 2026-07-01.
+- **Zufalls-Favoriten ohne Seed:** bleiben bewusst zufällig bei jedem Lauf (Re-Roll ist der Sinn
+  der Funktion); Determinismus stattdessen beim Train/Val-Split umgesetzt (dort verlangt: gleicher
+  Set-Inhalt → gleicher Split).
+- **„Export-Ergebnis im Dateisystem anzeigen"** öffnet immer den Standard-Exportordner
+  (`_export/`), nicht einen individuell gewählten `target_dir` — siehe Follow-up.
+
 ## Follow-ups
+
+- „Im Dateisystem anzeigen" für einen eigenen `target_dir` würde erfordern, dass ein Job seinen
+  Ergebnis-Pfad im Job-Status mitträgt (aktuell nur id/kind/label/progress/state/error) — bewusst
+  nicht gebaut, da das den geteilten `JobStatus` für alle Job-Typen erweitert hätte.
+- Job-Abbruch (falls je gewünscht) müsste für alle Job-Typen gleich gebaut werden, nicht nur Export.

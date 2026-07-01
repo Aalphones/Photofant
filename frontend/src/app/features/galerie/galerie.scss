@@ -2,6 +2,34 @@
   display: block;
 }
 
+.galerie__toolbar-extra {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 16px 6px;
+  margin-top: 4px;
+}
+
+.galerie__export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .1s, color .1s;
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+}
+
 .galerie__body {
   display: flex;
   align-items: flex-start;

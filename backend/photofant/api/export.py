@@ -27,11 +27,18 @@ class ExportFilterRequest(BaseModel):
     tag_ids: list[int] | None = None
     person_id: int | None = None
     include_versions: bool = False
+    favourite: bool | None = True  # None = kein Favoriten-Zwang (Galerie: aktueller Filter, alle Bilder)
+    target_dir: str | None = None
+
+
+class ExportByPersonRequest(BaseModel):
+    target_dir: str | None = None
 
 
 class ExportRandomRequest(BaseModel):
     count: int = Field(5, ge=1, le=100)
     images_per_set: int = Field(100, ge=1, le=10_000)
+    target_dir: str | None = None
 
 
 @router.get("/reveal", status_code=204)
@@ -42,21 +49,28 @@ async def reveal() -> None:
 
 @router.post("/favourites/filter", response_model=JobStarted, status_code=202)
 async def export_favourites_filter(body: ExportFilterRequest) -> JobStarted:
-    """Export all favourites matching the given filter to a dated export folder."""
+    """Export images matching the given filter to a dated export folder.
+
+    `favourite` defaults to `True` (Favoriten-View); the Galerie sends `null` to export
+    the current filter across all images, regardless of favourite status.
+    """
     status = await enqueue_export_filter(
         source_filter=body.sources or None,
         quality_min=body.quality_min,
         tag_ids=body.tag_ids or None,
         person_id=body.person_id,
         include_versions=body.include_versions,
+        favourite=body.favourite,
+        target_dir=body.target_dir,
     )
     return JobStarted(job_id=status.id)
 
 
 @router.post("/favourites/by-person", response_model=JobStarted, status_code=202)
-async def export_favourites_by_person() -> JobStarted:
+async def export_favourites_by_person(body: ExportByPersonRequest | None = None) -> JobStarted:
     """Export all favourites into per-person sub-folders."""
-    status = await enqueue_export_by_person()
+    target_dir = body.target_dir if body is not None else None
+    status = await enqueue_export_by_person(target_dir=target_dir)
     return JobStarted(job_id=status.id)
 
 
@@ -66,5 +80,6 @@ async def export_favourites_random(body: ExportRandomRequest) -> JobStarted:
     status = await enqueue_export_random(
         count=body.count,
         images_per_set=body.images_per_set,
+        target_dir=body.target_dir,
     )
     return JobStarted(job_id=status.id)

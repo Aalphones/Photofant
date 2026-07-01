@@ -11,13 +11,13 @@ import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
 import { RunLeiste } from './run-leiste/run-leiste';
 import type { RunFirePayload } from './run-leiste/run-leiste';
-import { BulkBar, BulkEditDialog, Icon, RerunDialog } from '@photofant/ui';
-import type { BulkEditPayload, RerunPayload } from '@photofant/ui';
+import { BulkBar, BulkEditDialog, ExportDialog, Icon, RerunDialog } from '@photofant/ui';
+import type { BulkEditPayload, ExportDialogFilters, RerunPayload } from '@photofant/ui';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, FaceGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, RouterLink],
+  imports: [SubToolbar, GalerieGrid, FaceGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, ExportDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
   host: { '(document:keydown.escape)': 'onEscape()' },
@@ -50,8 +50,19 @@ export class Galerie {
   private readonly filterTagIds       = this.store.selectSignal(filtersSelectors.tagIds);
   private readonly filterCollectionId = this.store.selectSignal(filtersSelectors.collectionId);
   private readonly filterPersonId     = this.store.selectSignal(filtersSelectors.personId);
+  private readonly filterFavourite    = this.store.selectSignal(filtersSelectors.favourite);
   private readonly filterSort         = this.store.selectSignal(filtersSelectors.sort);
   private readonly filterOrder        = this.store.selectSignal(filtersSelectors.order);
+
+  protected readonly showExportDialog = signal(false);
+
+  protected readonly exportFilters = computed((): ExportDialogFilters => ({
+    sources:    this.filterSources(),
+    qualityMin: this.filterQualityMin(),
+    tagIds:     this.filterTagIds(),
+    personId:   this.filterPersonId(),
+    favourite:  this.filterFavourite(),
+  }));
 
   protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAlbums);
   protected readonly trainingSets = this.store.selectSignal(collectionsSelectors.selectTrainingSets);

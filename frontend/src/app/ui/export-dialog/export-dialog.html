@@ -7,8 +7,8 @@
       <pf-icon name="download" [size]="18" />
     </div>
     <div class="ed-head__info">
-      <div class="ed-title">Favoriten exportieren</div>
-      <div class="ed-sub">Kopiert Dateien in den _export-Ordner neben deiner Bibliothek</div>
+      <div class="ed-title">Exportieren</div>
+      <div class="ed-sub">Kopiert Dateien in den _export-Ordner (oder einen eigenen Zielordner)</div>
     </div>
     <button class="ed-close" (click)="close.emit()" aria-label="Schließen">
       <pf-icon name="x" [size]="17" />
@@ -17,16 +17,22 @@
 
   <div class="ed-body">
 
-    <!-- Im Dateisystem anzeigen -->
+    <!-- Zielordner + Ordner öffnen -->
     <div class="ed-section">
-      <div class="ed-section__label">Ordner öffnen</div>
+      <div class="ed-section__label">Zielordner</div>
+      <input
+        class="ed-field__input"
+        type="text"
+        placeholder="Leer = Standard-Exportordner"
+        [(ngModel)]="targetDir"
+      />
       <button class="ed-action-row" (click)="onReveal()">
         <div class="ed-action-row__icon">
           <pf-icon name="folder" [size]="16" />
         </div>
         <div class="ed-action-row__info">
           <div class="ed-action-row__title">Im Dateisystem anzeigen</div>
-          <div class="ed-action-row__desc">_export-Ordner im Explorer öffnen</div>
+          <div class="ed-action-row__desc">Standard-Exportordner im Explorer öffnen</div>
         </div>
         <pf-icon name="arrowRight" [size]="14" />
       </button>
@@ -49,7 +55,13 @@
         </div>
         <div class="ed-action-row__info">
           <div class="ed-action-row__title">Filter exportieren</div>
-          <div class="ed-action-row__desc">Alle Favoriten des aktiven Filters als Job starten</div>
+          <div class="ed-action-row__desc">
+            @if (filters().favourite === true) {
+              Alle Favoriten des aktiven Filters als Job starten
+            } @else {
+              Alle Bilder des aktiven Filters als Job starten
+            }
+          </div>
         </div>
         @if (isBusy()) {
           <pf-icon name="refresh" [size]="14" />
