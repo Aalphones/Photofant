@@ -39,7 +39,7 @@ Lokale, private Bildverwaltung („vergisst nie"): Galerie, Personen-Erkennung, 
 
 ## Planung
 
-- Aktive Pläne (Backlog): `docs/planning/` — aktuell P10 Trainingssets, P11 Duale Duplikaterkennung, P13 Person-Bulk-Import, P15 Lightbox-Angleichung
+- Aktive Pläne (Backlog): `docs/planning/` — siehe STATE.md für die vollständige, aktuelle Liste
 - Entscheidungen (ADRs): `docs/decisions/` (001–003, 004–006, 008)
 - Archiv (umgesetzte Pläne): `docs/archive/`
 - [Design-Reconciliation](docs/design-reconciliation.md) — View-für-View-Abgleich Mockup vs. Impl
