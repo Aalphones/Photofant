@@ -28,6 +28,13 @@ export type {
   CreateCollectionRequest,
   UpdateCollectionRequest,
   CreateTriggerRequest,
+  TrainingSetSettings,
+  TrainingSetItem,
+  TrainingSetItemTag,
+  DistItem,
+  TagFrequency,
+  HistogramBucket,
+  TrainingSetStats,
 } from './collection.model';
 export { COLLECTION_KINDS, MATCH_MODES, TRIGGER_TYPES } from './collection.model';
 

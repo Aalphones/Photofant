@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-06-12_p10-trainingssets-export/`
-**Phase:** 1/4 — Lineage & Collections-Ausbau (abgeschlossen, ungetestet)
-**Nächster Schritt:** Smoke-Test Phase 1 (siehe unten), dann `/clear` + Phase 2 (Trainingssets & Statistiken)
+**Phase:** 2/4 — Trainingssets & Statistiken (abgeschlossen, ungetestet)
+**Nächster Schritt:** Smoke-Test Phase 2 (siehe Akzeptanzkriterien in phase-2-trainingssets-stats.md), dann `/clear` + Phase 3 (Caption-Tools & Near-Dupes)
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p21-galerie-stapel-tabs/`
 
 ---

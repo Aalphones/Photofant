@@ -23,6 +23,13 @@ export interface CoverAsset {
   content_hash: string;
 }
 
+export interface TrainingSetSettings {
+  trigger_word: string | null;
+  prefix: string | null;
+  suffix: string | null;
+  split_ratio: number | null; // Anteil Training (0.0-1.0), Rest = Val
+}
+
 export interface Collection {
   id: number;
   name: string;
@@ -32,6 +39,7 @@ export interface Collection {
   cover_assets: CoverAsset[];
   description: string | null;
   cover_asset_id: number | null;
+  settings: TrainingSetSettings | null;
 }
 
 export interface CollectionDetail extends Collection {
@@ -51,6 +59,7 @@ export interface UpdateCollectionRequest {
   match_mode?: MatchMode;
   description?: string | null;
   cover_asset_id?: number | null;
+  settings?: TrainingSetSettings | null;
 }
 
 export interface CreateTriggerRequest {
@@ -59,4 +68,48 @@ export interface CreateTriggerRequest {
   tag_id?: number | null;
   phrase?: string | null;
   negate?: boolean;
+}
+
+export interface TrainingSetItemTag {
+  id: number;
+  name: string;
+  kind: string;
+  score: number | null;
+}
+
+export interface TrainingSetItem {
+  id: number;
+  content_hash: string;
+  width: number | null;
+  height: number | null;
+  framing: string | null;
+  quality: number | null;
+  caption: string | null;
+  caption_override: string | null;
+  effective_caption: string | null;
+  tags: TrainingSetItemTag[];
+}
+
+export interface DistItem {
+  value: string;
+  count: number;
+}
+
+export interface TagFrequency {
+  name: string;
+  count: number;
+}
+
+export interface HistogramBucket {
+  label: string;
+  count: number;
+}
+
+export interface TrainingSetStats {
+  total: number;
+  framing: DistItem[];
+  tag_frequencies: TagFrequency[];
+  quality_histogram: HistogramBucket[];
+  ar_buckets: DistItem[];
+  near_dupe_rate: number;
 }

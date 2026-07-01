@@ -53,7 +53,8 @@ export class Galerie {
   private readonly filterSort         = this.store.selectSignal(filtersSelectors.sort);
   private readonly filterOrder        = this.store.selectSignal(filtersSelectors.order);
 
-  protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAll);
+  protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAlbums);
+  protected readonly trainingSets = this.store.selectSignal(collectionsSelectors.selectTrainingSets);
 
   protected readonly railOpen = signal(false);
   protected readonly showBulkRerunDialog = signal(false);
@@ -242,6 +243,13 @@ export class Galerie {
   }
 
   protected onAddToAlbum(collectionId: number): void {
+    const ids = this.selectedIds();
+    if (!ids.length) { return; }
+    this.store.dispatch(collectionsActions.addItems({ collectionId, assetIds: ids }));
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onAddToTrainingSet(collectionId: number): void {
     const ids = this.selectedIds();
     if (!ids.length) { return; }
     this.store.dispatch(collectionsActions.addItems({ collectionId, assetIds: ids }));

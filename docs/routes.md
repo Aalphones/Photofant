@@ -47,7 +47,7 @@ interface TagListItem { id: number; name: string; count: number; alias_of: numbe
 | `/alben` (Liste) | `GET` | `/api/collections` | — | `CollectionDto[]` |
 | `/alben` (Neu) | `POST` | `/api/collections` | `{ name, kind?, match_mode? }` | `CollectionDetailDto` (201) |
 | `/alben` (Detail) | `GET` | `/api/collections/{id}` | — | `CollectionDetailDto` (inkl. Triggern) |
-| `/alben` (Smart-Toggle / Modus / Umbenennen / Beschreibung / Cover) | `PATCH` | `/api/collections/{id}` | `{ name?, kind?, match_mode?, description?, cover_asset_id? }` — description/cover_asset_id: `null` löscht die Zuordnung (P10 Phase 1) | `CollectionDetailDto` — Modus-/Smart-Wechsel triggert Neubewertung |
+| `/alben` (Smart-Toggle / Modus / Umbenennen / Beschreibung / Cover / Settings) | `PATCH` | `/api/collections/{id}` | `{ name?, kind?, match_mode?, description?, cover_asset_id?, settings? }` — description/cover_asset_id/settings: `null` löscht die Zuordnung (P10 Phase 1); `settings` nur bei `training_set` sinnvoll (`{ trigger_word, prefix, suffix, split_ratio }`, P10 Phase 2) | `CollectionDetailDto` — Modus-/Smart-Wechsel triggert Neubewertung |
 | `/alben` (Löschen) | `DELETE` | `/api/collections/{id}` | — | `204` (Trigger + Items kaskadiert) |
 | `/alben` (Trigger lesen) | `GET` | `/api/collections/{id}/triggers` | — | `TriggerDto[]` |
 | `/alben` (Trigger hinzufügen) | `POST` | `/api/collections/{id}/triggers` | `CreateTriggerRequest` | `TriggerDto` (201) → Neubewertung |
@@ -57,6 +57,10 @@ interface TagListItem { id: number; name: string; count: number; alias_of: numbe
 | `/galerie` (Bulk-Bar „Zu Album") | `POST` | `/api/collections/{id}/items` | `{ asset_ids: number[] }` | `204` — als `source=manual` |
 | `/alben` (Mitglied entfernen) | `DELETE` | `/api/collections/{id}/items/{asset_id}` | — | `204` |
 | `/alben` (Einstellungen, Reihenfolge · P10 Phase 1) | `PUT` | `/api/collections/{id}/order` | `{ asset_ids: number[] }` — Index in der Liste = neue `position` | `204` |
+| `/trainingssets` (Item-Grid · P10 Phase 2) | `GET` | `/api/collections/{id}/items` | — | `TrainingSetItemDto[]` — eigenes Read-Model (Caption/Tags/Qualität), dünneres `AssetDto` der Galerie bleibt unangetastet |
+| `/trainingssets` (Caption-Override pro Bild · P10 Phase 2) | `PATCH` | `/api/collections/{id}/items/{asset_id}` | `{ caption_override: string \| null }` | `204` — wirkt nur im Set, Galerie-Caption unangetastet |
+| `/trainingssets` (Stats-Dashboard · P10 Phase 2) | `GET` | `/api/collections/{id}/stats` | — | `TrainingSetStatsDto` — Framing/Tag-Häufigkeiten/Qualitäts-Histogramm/AR-Buckets (Kohya-Style)/Near-Dupe-Quote; live berechnet, kein Cache (siehe `photofant/collections/stats.py`) |
+| `/galerie` (Bulk-Bar „Zu Trainingsset" · P10 Phase 2) | `POST` | `/api/collections/{id}/items` | `{ asset_ids: number[] }` | `204` — gleicher Endpoint wie „Zu Album", nur andere Ziel-Collection (`kind=training_set`) |
 
 ```typescript
 type CollectionKind = 'album' | 'smart_album' | 'training_set';

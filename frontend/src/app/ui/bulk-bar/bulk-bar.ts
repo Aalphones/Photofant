@@ -28,11 +28,13 @@ export interface BulkAlbumOption {
 export class BulkBar {
   readonly count = input.required<number>();
   readonly albums = input<BulkAlbumOption[]>([]);
+  readonly trainingSets = input<BulkAlbumOption[]>([]);
   readonly canUpscale = input<boolean>(false);
 
   readonly close = output<void>();
   readonly tagAction = output<{ add: string[]; remove: number[] }>();
   readonly addToAlbum = output<number>();
+  readonly addToTrainingSet = output<number>();
   readonly rerunAction = output<void>();
   readonly editAction = output<void>();
   readonly upscaleAction = output<void>();
@@ -44,6 +46,7 @@ export class BulkBar {
   protected readonly showTagInput = signal(false);
   protected readonly tagInput = signal('');
   protected readonly showAlbumMenu = signal(false);
+  protected readonly showTrainingSetMenu = signal(false);
 
   protected readonly tagSuggestions = toSignal(
     toObservable(this.tagInput).pipe(
@@ -100,6 +103,15 @@ export class BulkBar {
   protected pickAlbum(collectionId: number): void {
     this.addToAlbum.emit(collectionId);
     this.showAlbumMenu.set(false);
+  }
+
+  protected toggleTrainingSetMenu(): void {
+    this.showTrainingSetMenu.update((open: boolean) => !open);
+  }
+
+  protected pickTrainingSet(collectionId: number): void {
+    this.addToTrainingSet.emit(collectionId);
+    this.showTrainingSetMenu.set(false);
   }
 
   protected openRerunDialog(): void {

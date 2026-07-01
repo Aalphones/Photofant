@@ -229,9 +229,9 @@ is hand-curated, `kind = 'smart_album'` is trigger-filled (and may still carry m
 |---|---|---|
 | `id` | INTEGER PK | |
 | `name` | TEXT | display name |
-| `kind` | TEXT | `album \| smart_album \| training_set` (training_set is schema-only until P10) |
+| `kind` | TEXT | `album \| smart_album \| training_set` |
 | `match_mode` | TEXT | smart_album only: `any` (OR) \| `all` (AND) |
-| `settings` | JSON | training_set only (trigger_word, prefix, suffix, split …); NULL otherwise |
+| `settings` | JSON | training_set only (P10 Phase 2): `{ trigger_word, prefix, suffix, split_ratio }`, all nullable; NULL otherwise |
 
 ### `smart_trigger` (migration 0012)
 

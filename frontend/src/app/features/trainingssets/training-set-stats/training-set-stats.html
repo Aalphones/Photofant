@@ -1,0 +1,68 @@
+<div class="set-head">
+  <div class="set-head__title">
+    <pf-icon name="training" [size]="14" />
+    <span>Statistiken</span>
+  </div>
+  <button class="iconbtn" (click)="onClose()" aria-label="Schließen">
+    <pf-icon name="x" [size]="16" />
+  </button>
+</div>
+
+<div class="live-stat">
+  <span class="live-stat__num">{{ stats().total }}</span>
+  <span class="live-stat__lbl">Bilder im Set</span>
+</div>
+
+<div class="rules-block">
+  <div class="rules-block__label">Near-Dupe-Quote</div>
+  <div class="dupe-rate" [class.dupe-rate--warn]="stats().near_dupe_rate > 0.15">
+    {{ nearDupePercent() }} der Bilder haben mind. einen Beinah-Duplikat-Partner im Set
+  </div>
+</div>
+
+<div class="rules-block">
+  <div class="rules-block__label">Framing-Verteilung</div>
+  @for (item of stats().framing; track item.value) {
+    <div class="bar-row">
+      <span class="bar-row__label">{{ framingLabel(item.value) }}</span>
+      <div class="bar-row__track"><div class="bar-row__fill" [style.width]="barWidth(item.count, maxFramingCount())"></div></div>
+      <span class="bar-row__count mono">{{ item.count }}</span>
+    </div>
+  }
+  @if (stats().framing.length === 0) { <div class="trig-empty">Keine Framing-Daten.</div> }
+</div>
+
+<div class="rules-block">
+  <div class="rules-block__label">Qualitäts-Histogramm</div>
+  @for (bucket of stats().quality_histogram; track bucket.label) {
+    <div class="bar-row">
+      <span class="bar-row__label">{{ bucket.label }}</span>
+      <div class="bar-row__track"><div class="bar-row__fill" [style.width]="barWidth(bucket.count, maxQualityCount())"></div></div>
+      <span class="bar-row__count mono">{{ bucket.count }}</span>
+    </div>
+  }
+</div>
+
+<div class="rules-block">
+  <div class="rules-block__label">AR-Buckets (Kohya-Style)</div>
+  @for (item of stats().ar_buckets; track item.value) {
+    <div class="bar-row">
+      <span class="bar-row__label mono">{{ item.value }}</span>
+      <div class="bar-row__track"><div class="bar-row__fill" [style.width]="barWidth(item.count, maxBucketCount())"></div></div>
+      <span class="bar-row__count mono">{{ item.count }}</span>
+    </div>
+  }
+  @if (stats().ar_buckets.length === 0) { <div class="trig-empty">Keine Bucket-Daten.</div> }
+</div>
+
+<div class="rules-block">
+  <div class="rules-block__label">Top-Tags</div>
+  <div class="tag-freq">
+    @for (item of stats().tag_frequencies; track item.name) {
+      <span class="tag-freq__chip" [style.font-size.px]="11 + (item.count / maxTagCount()) * 6">
+        {{ item.name.replaceAll('_', ' ') }} <span class="mono">{{ item.count }}</span>
+      </span>
+    }
+    @if (stats().tag_frequencies.length === 0) { <div class="trig-empty">Keine Tags im Set.</div> }
+  </div>
+</div>

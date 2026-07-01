@@ -1,0 +1,164 @@
+@if (openSet(); as set) {
+  <!-- ───────────────── Detail ───────────────── -->
+  <div class="ts-detail" [class.ts-detail--panel]="sidePanel() !== 'none'">
+    <div class="ts-detail__main">
+      <button class="back-row" (click)="back()">
+        <pf-icon name="arrowLeft" [size]="16" /> Alle Trainingssets
+      </button>
+
+      <div class="tdh">
+        <div class="tdh__ico"><pf-icon name="training" [size]="26" /></div>
+        <div class="tdh__text">
+          <div class="tdh__name">{{ set.name }}</div>
+          <div class="tdh__sub">
+            <span class="mono">{{ items().length }} Bilder</span>
+            @if (set.settings?.trigger_word) {
+              <span class="dotsep">·</span><span class="mono">{{ set.settings?.trigger_word }}</span>
+            }
+          </div>
+        </div>
+        <div class="tdh__actions">
+          <button class="pbtn pbtn--ghost" (click)="onRerunOpen()">
+            <pf-icon name="refresh" [size]="14" /> Klassifizieren
+          </button>
+          <button
+            class="iconbtn"
+            [class.iconbtn--on]="sidePanel() === 'stats'"
+            (click)="toggleStats()"
+            title="Statistiken"
+          >
+            <pf-icon name="stack" [size]="17" />
+          </button>
+          <button
+            class="iconbtn"
+            [class.iconbtn--on]="sidePanel() === 'settings'"
+            (click)="toggleSettings()"
+            title="Set-Einstellungen"
+          >
+            <pf-icon name="settings" [size]="17" />
+          </button>
+          <button class="iconbtn iconbtn--danger" (click)="deleteOpen()" title="Set löschen">
+            <pf-icon name="trash" [size]="16" />
+          </button>
+        </div>
+      </div>
+
+      @if (items().length === 0) {
+        <div class="placeholder-view">
+          <pf-icon name="training" [size]="36" />
+          <h3>Set ist leer</h3>
+          <p>Füge Bilder über die Galerie-Auswahl hinzu ("Zu Trainingsset") oder klone ein bestehendes Album.</p>
+        </div>
+      } @else {
+        <div class="ts-item-grid">
+          @for (item of items(); track item.id) {
+            <pf-training-set-item
+              [item]="item"
+              [thumbnailUrl]="thumbnailUrl(item)"
+              (captionSaved)="onCaptionSaved(item, $event)"
+              (tagAdded)="onTagAdded(item, $event)"
+              (tagRemoved)="onTagRemoved(item, $event)"
+              (removed)="onItemRemoved(item)"
+            />
+          }
+        </div>
+      }
+    </div>
+
+    @if (sidePanel() === 'settings') {
+      <pf-training-set-settings [collection]="set" (close)="sidePanel.set('none')" />
+    }
+    @if (sidePanel() === 'stats' && stats(); as currentStats) {
+      <pf-training-set-stats [stats]="currentStats" (close)="sidePanel.set('none')" />
+    }
+  </div>
+
+  @if (showRerunDialog()) {
+    <pf-rerun-dialog
+      [scopeLabel]="'Trainingsset „' + set.name + '“ (' + items().length + ' Bilder)'"
+      [presets]="rerunPresets()"
+      (confirm)="onRerunConfirm($event)"
+      (cancel)="onRerunCancel()"
+    />
+  }
+} @else {
+  <!-- ───────────────── Overview ───────────────── -->
+  <div class="ts-overview">
+    <div class="ts-sec-head">
+      <pf-icon name="training" [size]="16" />
+      <h3>Trainingssets</h3>
+      <span class="m-count">{{ sets().length }}</span>
+      <div class="m-line"></div>
+      <span class="ts-note">Statistiken, Caption-Tools und Export für Trainingsdaten</span>
+    </div>
+
+    @if (isLoading() && sets().length === 0) {
+      <div class="placeholder-view"><p>Lade Trainingssets…</p></div>
+    }
+
+    <div class="ts-cards-grid">
+      @for (set of sets(); track set.id) {
+        <button class="ts-card" (click)="open(set.id)">
+          <div class="ts-cover" [class.ts-cover--empty]="set.cover_assets.length === 0">
+            @if (set.cover_assets.length === 0) {
+              <pf-icon name="training" [size]="28" />
+            } @else {
+              @for (asset of set.cover_assets; track asset.id) {
+                <div class="ts-cover__cell">
+                  <img [src]="thumbnailUrlForCover(asset)" alt="" loading="lazy" />
+                </div>
+              }
+            }
+          </div>
+          <div class="ts-card__info">
+            <div class="ts-card__name">{{ set.name }}</div>
+            <div class="ts-card__sub">
+              <span class="mono">{{ set.member_count }}{{ set.member_count === 1 ? ' Bild' : ' Bilder' }}</span>
+              @if (set.settings?.trigger_word) {
+                <span class="dotsep">·</span><span class="mono">{{ set.settings?.trigger_word }}</span>
+              }
+            </div>
+          </div>
+        </button>
+      }
+
+      @if (creating()) {
+        <div class="ts-card ts-card--new">
+          <div class="ts-cover ts-cover--new"><pf-icon name="plus" [size]="24" /></div>
+          <div class="ts-card__info">
+            <input
+              class="new-name-input"
+              [value]="newName()"
+              (input)="newName.set($any($event.target).value)"
+              (keydown)="onCreateKeyDown($event)"
+              placeholder="Setname…"
+              autofocus
+            />
+            <select
+              class="clone-select"
+              [value]="cloneFromAlbumId() ?? ''"
+              (change)="cloneFromAlbumId.set($any($event.target).value ? +$any($event.target).value : null)"
+            >
+              <option value="">Leer anlegen</option>
+              @for (album of albums(); track album.id) {
+                <option [value]="album.id">Aus „{{ album.name }}" klonen</option>
+              }
+            </select>
+            <div class="ts-card__new-actions">
+              <button class="pbtn pbtn--primary" (click)="confirmCreate()">Anlegen</button>
+              <button class="pbtn pbtn--ghost" (click)="cancelCreate()">Abbrechen</button>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <button class="ts-card ts-card--new" (click)="startCreate()">
+          <div class="ts-cover ts-cover--new"><pf-icon name="plus" [size]="24" /></div>
+          <div class="ts-card__info">
+            <div class="ts-card__name">Neues Set</div>
+            <div class="ts-card__sub">Leer oder aus einem Album geklont</div>
+          </div>
+        </button>
+      }
+    </div>
+  </div>
+}

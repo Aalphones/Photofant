@@ -60,6 +60,28 @@
   </div>
 
   <div class="bulkbar__divider"></div>
+
+  <div class="bulkbar__album">
+    <button class="bulkbar__action" (click)="toggleTrainingSetMenu()">
+      <pf-icon name="training" [size]="15" />
+      Zu Trainingsset
+    </button>
+    @if (showTrainingSetMenu()) {
+      <div class="bulkbar__album-menu">
+        @for (trainingSet of trainingSets(); track trainingSet.id) {
+          <button class="bulkbar__album-item" (click)="pickTrainingSet(trainingSet.id)">
+            <pf-icon name="training" [size]="13" />
+            {{ trainingSet.name }}
+          </button>
+        }
+        @if (trainingSets().length === 0) {
+          <span class="bulkbar__album-empty">Keine Trainingssets angelegt</span>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="bulkbar__divider"></div>
   <button class="bulkbar__action" (click)="openRerunDialog()">
     <pf-icon name="refresh" [size]="15" />
     Klassifizieren

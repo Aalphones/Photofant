@@ -29,7 +29,7 @@ export class Alben {
   private readonly assetService = inject(AssetService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly collections = this.store.selectSignal(collectionsSelectors.selectAll);
+  protected readonly collections = this.store.selectSignal(collectionsSelectors.selectAlbumsAndSmart);
   protected readonly detail = this.store.selectSignal(collectionsSelectors.selectDetail);
   protected readonly isLoading = this.store.selectSignal(collectionsSelectors.selectIsLoading);
 

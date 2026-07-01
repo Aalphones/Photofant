@@ -1,14 +1,229 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Store } from '@ngrx/store';
+import type { AssetsPage, CollectionDetail, TrainingSetItem, TrainingSetStats } from '@photofant/models';
+import { AssetService, ClassifyService, CollectionService } from '@photofant/services';
+import { collectionsActions, collectionsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { Icon, RerunDialog } from '@photofant/ui';
+import type { RerunPayload } from '@photofant/ui';
+import { TrainingSetItemCell } from './training-set-item/training-set-item';
+import { TrainingSetSettingsPanel } from './training-set-settings/training-set-settings';
+import { TrainingSetStatsPanel } from './training-set-stats/training-set-stats';
+
+type SidePanel = 'none' | 'settings' | 'stats';
 
 @Component({
   selector: 'pf-trainingssets',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="placeholder-view">
-      <h3>Trainingssets</h3>
-      <p>Noch nicht implementiert — kommt in P10</p>
-    </div>
-  `,
-  styles: [':host { display: block; height: 100%; }'],
+  imports: [Icon, TrainingSetItemCell, TrainingSetSettingsPanel, TrainingSetStatsPanel, RerunDialog],
+  templateUrl: './trainingssets.html',
+  styleUrl: './trainingssets.scss',
 })
-export class Trainingssets {}
+export class Trainingssets {
+  private readonly store = inject(Store);
+  private readonly assetService = inject(AssetService);
+  private readonly collectionService = inject(CollectionService);
+  private readonly classifyService = inject(ClassifyService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly sets = this.store.selectSignal(collectionsSelectors.selectTrainingSets);
+  protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAlbums);
+  protected readonly detail = this.store.selectSignal(collectionsSelectors.selectDetail);
+  protected readonly isLoading = this.store.selectSignal(collectionsSelectors.selectIsLoading);
+  protected readonly rerunPresets = this.store.selectSignal(presetsSelectors.selectPresets);
+
+  protected readonly selectedId = signal<number | null>(null);
+  protected readonly items = signal<TrainingSetItem[]>([]);
+  protected readonly stats = signal<TrainingSetStats | null>(null);
+  protected readonly sidePanel = signal<SidePanel>('none');
+  protected readonly showRerunDialog = signal(false);
+
+  protected readonly creating = signal(false);
+  protected readonly newName = signal('');
+  protected readonly cloneFromAlbumId = signal<number | null>(null);
+
+  protected readonly openSet = computed((): CollectionDetail | null => {
+    const detail = this.detail();
+    return detail && detail.id === this.selectedId() ? detail : null;
+  });
+
+  private lastFetchedId = -1;
+  private lastFetchedCount = -1;
+
+  constructor() {
+    this.store.dispatch(collectionsActions.load());
+
+    // Item-Liste neu laden, wenn ein anderes Set geöffnet wird oder sich die Mitgliederzahl
+    // ändert (z.B. nach Bulk-Bar "Zu Trainingsset" oder Entfernen).
+    effect((): void => {
+      const id = this.selectedId();
+      if (id == null) {
+        this.items.set([]);
+        return;
+      }
+      const detail = this.detail();
+      const count = detail && detail.id === id ? detail.member_count : -1;
+      if (this.lastFetchedId !== id || this.lastFetchedCount !== count) {
+        this.lastFetchedId = id;
+        this.lastFetchedCount = count;
+        this.fetchItems(id);
+      }
+    });
+  }
+
+  private fetchItems(collectionId: number): void {
+    this.collectionService.getItems(collectionId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((items: TrainingSetItem[]) => this.items.set(items));
+  }
+
+  private fetchStats(collectionId: number): void {
+    this.collectionService.getStats(collectionId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((stats: TrainingSetStats) => this.stats.set(stats));
+  }
+
+  protected open(id: number): void {
+    this.selectedId.set(id);
+    this.sidePanel.set('none');
+    this.store.dispatch(collectionsActions.loadDetail({ id }));
+  }
+
+  protected back(): void {
+    this.selectedId.set(null);
+    this.sidePanel.set('none');
+    this.store.dispatch(collectionsActions.clearDetail());
+  }
+
+  protected toggleSettings(): void {
+    this.sidePanel.update((panel: SidePanel) => (panel === 'settings' ? 'none' : 'settings'));
+  }
+
+  protected toggleStats(): void {
+    const opening = this.sidePanel() !== 'stats';
+    this.sidePanel.update((panel: SidePanel) => (panel === 'stats' ? 'none' : 'stats'));
+    const id = this.selectedId();
+    if (opening && id != null) { this.fetchStats(id); }
+  }
+
+  protected deleteOpen(): void {
+    const id = this.selectedId();
+    if (id == null) { return; }
+    this.store.dispatch(collectionsActions.delete({ id }));
+    this.back();
+  }
+
+  protected startCreate(): void {
+    this.creating.set(true);
+    this.newName.set('');
+    this.cloneFromAlbumId.set(null);
+  }
+
+  protected cancelCreate(): void {
+    this.creating.set(false);
+  }
+
+  protected confirmCreate(): void {
+    const name = this.newName().trim();
+    if (!name) { this.creating.set(false); return; }
+    const sourceAlbumId = this.cloneFromAlbumId();
+
+    this.collectionService.createCollection({ name, kind: 'training_set' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((created: CollectionDetail) => {
+        if (sourceAlbumId == null) {
+          this.store.dispatch(collectionsActions.load());
+          return;
+        }
+        this.assetService
+          .listAssets({ page: 1, page_size: 1000, sort: 'date', order: 'desc', collectionId: sourceAlbumId })
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe((page: AssetsPage) => {
+            const assetIds = page.items.map((asset) => asset.id);
+            if (assetIds.length === 0) {
+              this.store.dispatch(collectionsActions.load());
+              return;
+            }
+            this.collectionService.addItems(created.id, assetIds)
+              .pipe(takeUntilDestroyed(this.destroyRef))
+              .subscribe(() => this.store.dispatch(collectionsActions.load()));
+          });
+      });
+
+    this.creating.set(false);
+    this.newName.set('');
+    this.cloneFromAlbumId.set(null);
+  }
+
+  protected onCreateKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') { this.confirmCreate(); }
+    else if (event.key === 'Escape') { this.creating.set(false); }
+  }
+
+  protected thumbnailUrl(item: TrainingSetItem): string {
+    return this.assetService.thumbnailUrl(item.id, 256, item.content_hash);
+  }
+
+  protected thumbnailUrlForCover(cover: { id: number; content_hash: string }): string {
+    return this.assetService.thumbnailUrl(cover.id, 256, cover.content_hash);
+  }
+
+  protected onCaptionSaved(item: TrainingSetItem, captionOverride: string | null): void {
+    const set = this.openSet();
+    if (set == null) { return; }
+    this.items.update((list: TrainingSetItem[]) =>
+      list.map((current) => (current.id === item.id
+        ? { ...current, caption_override: captionOverride, effective_caption: captionOverride ?? current.caption }
+        : current)));
+    this.collectionService.updateItemCaption(set.id, item.id, captionOverride)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+  }
+
+  protected onTagAdded(item: TrainingSetItem, name: string): void {
+    const set = this.openSet();
+    if (set == null) { return; }
+    this.assetService.patchTags(item.id, [name], [])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.fetchItems(set.id));
+  }
+
+  protected onTagRemoved(item: TrainingSetItem, tagId: number): void {
+    const set = this.openSet();
+    if (set == null) { return; }
+    this.assetService.patchTags(item.id, [], [tagId])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.fetchItems(set.id));
+  }
+
+  protected onItemRemoved(item: TrainingSetItem): void {
+    const set = this.openSet();
+    if (set == null) { return; }
+    this.collectionService.removeItem(set.id, item.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.items.update((list: TrainingSetItem[]) => list.filter((current) => current.id !== item.id));
+        this.store.dispatch(collectionsActions.loadDetail({ id: set.id }));
+      });
+  }
+
+  protected onRerunOpen(): void {
+    this.store.dispatch(presetsActions.loadPresets());
+    this.showRerunDialog.set(true);
+  }
+
+  protected onRerunCancel(): void {
+    this.showRerunDialog.set(false);
+  }
+
+  protected onRerunConfirm(payload: RerunPayload): void {
+    this.showRerunDialog.set(false);
+    const assetIds = this.items().map((item: TrainingSetItem) => item.id);
+    if (assetIds.length === 0) { return; }
+    this.classifyService.rerun({
+      asset_ids: assetIds,
+      steps: payload.steps,
+      ...(payload.captionPresetId != null ? { caption_preset_id: payload.captionPresetId } : {}),
+    }).subscribe();
+  }
+}

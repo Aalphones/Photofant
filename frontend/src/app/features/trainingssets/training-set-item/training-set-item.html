@@ -1,0 +1,49 @@
+<div class="ts-item">
+  <div class="ts-item__thumb">
+    <img [src]="thumbnailUrl()" alt="" loading="lazy" />
+    <button class="ts-item__remove" (click)="removed.emit()" aria-label="Aus Set entfernen">
+      <pf-icon name="trash" [size]="13" />
+    </button>
+  </div>
+
+  <div class="ts-item__body">
+    @if (editingCaption()) {
+      <textarea
+        class="ts-item__caption-input"
+        rows="3"
+        [value]="captionDraft()"
+        (input)="captionDraft.set($any($event.target).value)"
+        (blur)="saveCaption()"
+        autofocus
+      ></textarea>
+    } @else {
+      <button class="ts-item__caption" (click)="startEditCaption()">
+        {{ item().effective_caption || 'Keine Caption — klicken zum Hinzufügen' }}
+      </button>
+    }
+
+    <div class="ts-item__tags">
+      @for (tag of item().tags; track tag.id) {
+        <span class="ts-item__tag">
+          {{ tagLabel(tag) }}
+          <button (click)="tagRemoved.emit(tag.id)" aria-label="Tag entfernen">
+            <pf-icon name="x" [size]="10" />
+          </button>
+        </span>
+      }
+      <input
+        class="ts-item__tag-input"
+        [value]="newTagInput()"
+        (input)="newTagInput.set($any($event.target).value)"
+        (keydown)="onTagKeyDown($event)"
+        placeholder="+ Tag"
+      />
+    </div>
+
+    <div class="ts-item__meta">
+      <span class="mono">#{{ item().id }}</span>
+      @if (dims()) { <span class="dotsep">·</span><span class="mono">{{ dims() }}</span> }
+      @if (item().framing) { <span class="dotsep">·</span><span>{{ item().framing }}</span> }
+    </div>
+  </div>
+</div>

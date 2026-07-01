@@ -15,9 +15,12 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from photofant.api.assets import TagDto
+from photofant.collections.stats import compute_training_set_stats
 from photofant.db.models import (
     Asset,
     AssetInstance,
+    AssetTag,
     Collection,
     CollectionItem,
     Person,
@@ -56,6 +59,13 @@ class CoverAssetDto(BaseModel):
     content_hash: str
 
 
+class TrainingSetSettings(BaseModel):
+    trigger_word: str | None = None
+    prefix: str | None = None
+    suffix: str | None = None
+    split_ratio: float | None = None  # Anteil Training (0.0-1.0), Rest = Val
+
+
 class CollectionDto(BaseModel):
     id: int
     name: str
@@ -65,6 +75,7 @@ class CollectionDto(BaseModel):
     cover_assets: list[CoverAssetDto]
     description: str | None = None
     cover_asset_id: int | None = None
+    settings: TrainingSetSettings | None = None
 
 
 class CollectionDetailDto(CollectionDto):
@@ -84,10 +95,52 @@ class UpdateCollectionRequest(BaseModel):
     match_mode: str | None = None
     description: str | None = None
     cover_asset_id: int | None = None
+    settings: TrainingSetSettings | None = None
 
 
 class ReorderItemsRequest(BaseModel):
     asset_ids: list[int]  # gewünschte Reihenfolge, vollständige Mitgliederliste
+
+
+class TrainingSetItemDto(BaseModel):
+    id: int
+    content_hash: str
+    width: int | None
+    height: int | None
+    framing: str | None
+    quality: float | None
+    caption: str | None  # Original-Caption der Galerie (unangetastet)
+    caption_override: str | None
+    effective_caption: str | None  # override > original
+    tags: list[TagDto]
+
+
+class DistItemDto(BaseModel):
+    value: str
+    count: int
+
+
+class TagFrequencyDto(BaseModel):
+    name: str
+    count: int
+
+
+class HistogramBucketDto(BaseModel):
+    label: str
+    count: int
+
+
+class TrainingSetStatsDto(BaseModel):
+    total: int
+    framing: list[DistItemDto]
+    tag_frequencies: list[TagFrequencyDto]
+    quality_histogram: list[HistogramBucketDto]
+    ar_buckets: list[DistItemDto]
+    near_dupe_rate: float
+
+
+class UpdateItemCaptionRequest(BaseModel):
+    caption_override: str | None = None
 
 
 class CreateTriggerRequest(BaseModel):
@@ -195,6 +248,7 @@ def _build_collection_dto(session: Session, collection: Collection) -> Collectio
         cover_assets=_cover_assets(session, collection),
         description=collection.description,
         cover_asset_id=collection.cover_asset_id,
+        settings=TrainingSetSettings(**collection.settings) if collection.settings else None,
     )
 
 
@@ -283,6 +337,12 @@ async def update_collection(
         if body.cover_asset_id is not None and session.get(Asset, body.cover_asset_id) is None:
             raise HTTPException(status_code=422, detail="cover_asset_id: asset not found")
         collection.cover_asset_id = body.cover_asset_id
+
+    if "settings" in fields_set:
+        split_ratio = body.settings.split_ratio if body.settings is not None else None
+        if split_ratio is not None and not 0.0 < split_ratio <= 1.0:
+            raise HTTPException(status_code=422, detail="split_ratio must be in (0.0, 1.0]")
+        collection.settings = body.settings.model_dump() if body.settings is not None else None
 
     session.commit()
 
@@ -415,6 +475,79 @@ async def remove_item(collection_id: int, asset_id: int, session: DbSession) -> 
         session.delete(item)
         session.commit()
     return Response(status_code=204)
+
+
+@router.get("/{collection_id}/items", response_model=list[TrainingSetItemDto])
+async def list_training_set_items(collection_id: int, session: DbSession) -> list[TrainingSetItemDto]:
+    """Full item detail for the training-set editor (caption/tags/quality — the gallery
+    grid's `AssetDto` deliberately stays thin, so this is its own read model)."""
+    _get_collection_or_404(session, collection_id)
+    rows = (
+        session.query(Asset, CollectionItem.caption_override)
+        .join(CollectionItem, CollectionItem.asset_id == Asset.id)
+        .join(AssetInstance, AssetInstance.asset_id == Asset.id)
+        .filter(CollectionItem.collection_id == collection_id, AssetInstance.deleted_at.is_(None))
+        .distinct()
+        .all()
+    )
+    items: list[TrainingSetItemDto] = []
+    for asset, caption_override in rows:
+        tag_rows = (
+            session.query(Tag.id, Tag.name, AssetTag.kind, AssetTag.score)
+            .join(AssetTag, AssetTag.tag_id == Tag.id)
+            .filter(AssetTag.asset_id == asset.id, AssetTag.manually_removed.is_(False))
+            .all()
+        )
+        items.append(
+            TrainingSetItemDto(
+                id=asset.id,
+                content_hash=asset.content_hash,
+                width=asset.width,
+                height=asset.height,
+                framing=asset.framing,
+                quality=asset.quality_score,
+                caption=asset.caption,
+                caption_override=caption_override,
+                effective_caption=caption_override or asset.caption,
+                tags=[TagDto(id=row.id, name=row.name, kind=row.kind, score=row.score) for row in tag_rows],
+            )
+        )
+    return items
+
+
+@router.patch("/{collection_id}/items/{asset_id}", status_code=204)
+async def update_item_caption(
+    collection_id: int, asset_id: int, body: UpdateItemCaptionRequest, session: DbSession
+) -> Response:
+    """Set the training-set-only caption override (Original-Caption der Galerie bleibt unangetastet)."""
+    item = (
+        session.query(CollectionItem)
+        .filter_by(collection_id=collection_id, asset_id=asset_id)
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found in collection")
+    item.caption_override = (body.caption_override or "").strip() or None
+    session.commit()
+    return Response(status_code=204)
+
+
+@router.get("/{collection_id}/stats", response_model=TrainingSetStatsDto)
+async def get_training_set_stats(collection_id: int, session: DbSession) -> TrainingSetStatsDto:
+    _get_collection_or_404(session, collection_id)
+    stats = compute_training_set_stats(session, collection_id)
+    return TrainingSetStatsDto(
+        total=stats.total,
+        framing=[DistItemDto(value=item.value, count=item.count) for item in stats.framing],
+        tag_frequencies=[
+            TagFrequencyDto(name=item.name, count=item.count) for item in stats.tag_frequencies
+        ],
+        quality_histogram=[
+            HistogramBucketDto(label=item.label, count=item.count) for item in stats.quality_histogram
+        ],
+        ar_buckets=[DistItemDto(value=item.value, count=item.count) for item in stats.ar_buckets],
+        near_dupe_rate=stats.near_dupe_rate,
+    )
 
 
 @router.put("/{collection_id}/order", status_code=204)

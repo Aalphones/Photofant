@@ -6,6 +6,8 @@ import type {
   CollectionDetail,
   CreateCollectionRequest,
   CreateTriggerRequest,
+  TrainingSetItem,
+  TrainingSetStats,
   Trigger,
   UpdateCollectionRequest,
 } from '@photofant/models';
@@ -56,5 +58,19 @@ export class CollectionService {
 
   setOrder(collectionId: number, assetIds: number[]): Observable<void> {
     return this.http.put<void>(`/api/collections/${collectionId}/order`, { asset_ids: assetIds });
+  }
+
+  getItems(collectionId: number): Observable<TrainingSetItem[]> {
+    return this.http.get<TrainingSetItem[]>(`/api/collections/${collectionId}/items`);
+  }
+
+  updateItemCaption(collectionId: number, assetId: number, captionOverride: string | null): Observable<void> {
+    return this.http.patch<void>(`/api/collections/${collectionId}/items/${assetId}`, {
+      caption_override: captionOverride,
+    });
+  }
+
+  getStats(collectionId: number): Observable<TrainingSetStats> {
+    return this.http.get<TrainingSetStats>(`/api/collections/${collectionId}/stats`);
   }
 }

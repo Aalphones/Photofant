@@ -77,10 +77,12 @@
   <pf-bulk-bar
     [count]="selectedCount()"
     [albums]="albums()"
+    [trainingSets]="trainingSets()"
     [canUpscale]="canBulkUpscale()"
     (close)="onBulkClose()"
     (tagAction)="onBulkTag($event)"
     (addToAlbum)="onAddToAlbum($event)"
+    (addToTrainingSet)="onAddToTrainingSet($event)"
     (rerunAction)="onBulkRerunOpen()"
     (editAction)="onBulkEditOpen()"
     (upscaleAction)="onBulkUpscale()"

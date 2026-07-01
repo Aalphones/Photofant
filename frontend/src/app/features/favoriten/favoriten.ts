@@ -59,7 +59,7 @@ export class Favoriten {
   private readonly filterSort       = this.store.selectSignal(filtersSelectors.sort);
   private readonly filterOrder      = this.store.selectSignal(filtersSelectors.order);
 
-  protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAll);
+  protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAlbums);
 
   protected readonly railOpen       = signal(false);
   protected readonly showExportDialog = signal(false);
