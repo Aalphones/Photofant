@@ -265,12 +265,29 @@ export class Lightbox {
   protected readonly sourceDraft  = signal<string | null>(null);
   protected readonly framingDraft = signal<Framing | null>(null);
 
-  // ── Quick-Assign (Gesicht 1, immer sichtbar im Panel) ─────────────────────
+  // ── Quick-Assign (per Klick wählbares Gesicht, Default = erstes Gesicht) ───
   protected readonly quickAssignMatches = signal<FaceMatch[]>([]);
+  private readonly selectedQuickAssignFaceId = signal<number | null>(null);
+
+  // Welches Gesicht die Schnellzuweisung gerade zeigt — explizit angeklicktes Gesicht,
+  // sonst Fallback auf das erste. Fällt auch zurück, wenn das gewählte Gesicht
+  // (z.B. durch Löschen) nicht mehr existiert.
+  protected readonly quickAssignFace = computed((): FaceDto | null => {
+    const selectedId = this.selectedQuickAssignFaceId();
+    if (selectedId != null) {
+      const selected = this.faces().find((face: FaceDto) => face.id === selectedId);
+      if (selected != null) { return selected; }
+    }
+    return this.firstFace();
+  });
 
   protected readonly quickMatches = computed((): FaceMatch[] =>
     this.quickAssignMatches().slice(0, 5)
   );
+
+  protected selectQuickAssignFace(face: FaceDto): void {
+    this.selectedQuickAssignFaceId.set(face.id);
+  }
 
   private readonly allPersons = this.store.selectSignal(personsSelectors.selectAll);
 
@@ -545,6 +562,7 @@ export class Lightbox {
       const asset: AssetDto | null = this.asset();
       this.lightboxFaceId(); // auch bei Wechsel zwischen/innerhalb Gesichter-Modus zurücksetzen
       this.showGenMeta.set(asset?.source != null && asset.source !== 'original');
+      this.selectedQuickAssignFaceId.set(null);
       // Reset editing state when navigating
       this.addingTag.set(false);
       this.tagInputValue.set('');
@@ -578,11 +596,11 @@ export class Lightbox {
       this.framingDraft.set(detail.framing);
     });
 
-    // Quick-Assign: Top-Matches für das erste Gesicht automatisch nachladen,
-    // sobald sich das erste Gesicht ändert (Navigation oder Zuweisung).
+    // Quick-Assign: Top-Matches für das gewählte Gesicht automatisch nachladen,
+    // sobald sich die Auswahl ändert (Klick auf ein Gesicht, Navigation oder Zuweisung).
     let lastQuickAssignFaceId: number | null = null;
     effect((): void => {
-      const face = this.firstFace();
+      const face = this.quickAssignFace();
       if (face == null) {
         lastQuickAssignFaceId = null;
         this.quickAssignMatches.set([]);
@@ -702,7 +720,10 @@ export class Lightbox {
     this.showEditorModal.set(true);
   }
 
-  // ── Gesichter-Modus: Navigation zur Quelle ────────────────────────────────
+  // ── Navigation zu einem verknüpften Asset (Quelle im Gesichter-Modus,
+  // Original/Edit in der Beziehungen-Sektion) ──────────────────────────────
+  // Lädt das Ziel-Asset bei Bedarf nach (es kann außerhalb der aktuell geladenen
+  // Galerie-Seite liegen) und öffnet es in derselben Lightbox.
 
   protected openSourceAsset(assetId: number): void {
     this.store.dispatch(galleryActions.openAssetLightbox({ assetId }));

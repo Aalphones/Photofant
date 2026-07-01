@@ -327,23 +327,27 @@
 
           <div class="face-list">
             @for (face of faces(); track face.id) {
-              <div class="face-item">
-                <div class="face-crop">
+              <div class="face-item" [class.face-item--active]="quickAssignFace()?.id === face.id">
+                <button
+                  class="face-crop"
+                  (click)="selectQuickAssignFace(face)"
+                  [title]="'Schnellzuweisung für ' + faceLabel(face)"
+                >
                   <img
                     class="face-crop__img"
                     [src]="'/api' + face.crop_url"
                     [alt]="'Gesicht #' + face.id"
                   />
                   <div class="face-crop__border" [class.face-crop__border--manual]="isFaceManual(face)"></div>
-                  <button
-                    class="face-del"
-                    (click)="deleteFaceFromAsset(face)"
-                    title="Gesicht löschen"
-                    aria-label="Gesicht löschen"
-                  >
-                    <pf-icon name="x" [size]="11" />
-                  </button>
-                </div>
+                </button>
+                <button
+                  class="face-del"
+                  (click)="deleteFaceFromAsset(face)"
+                  title="Gesicht löschen"
+                  aria-label="Gesicht löschen"
+                >
+                  <pf-icon name="x" [size]="11" />
+                </button>
                 <button
                   class="face-info"
                   (click)="openPersonPicker(face)"
@@ -357,10 +361,12 @@
             }
           </div>
 
-          <!-- Quick-Assign-Grid (Gesicht 1 — Schnellzuweisung) -->
-          @if (firstFace(); as primaryFace) {
+          <!-- Quick-Assign-Grid (Schnellzuweisung für das angeklickte Gesicht, Default: erstes) -->
+          @if (quickAssignFace(); as primaryFace) {
             @if (quickMatches().length > 0) {
-              <div class="qa-label">Beste Treffer — Schnellzuweisung</div>
+              <div class="qa-label">
+                Beste Treffer für {{ faceLabel(primaryFace) }} — Schnellzuweisung
+              </div>
               <div class="quick-assign">
                 @for (match of quickMatches(); track match.person_id) {
                   <button
@@ -465,15 +471,22 @@
 
         <div class="rel-dir-lbl">Originalvorlage</div>
         @if (detail()?.original_id != null) {
-          <div class="rel-row">
+          <div
+            class="rel-row rel-row--clickable"
+            role="button"
+            tabindex="0"
+            title="Zum Original öffnen"
+            (click)="openSourceAsset(detail()!.original_id!)"
+            (keydown.enter)="openSourceAsset(detail()!.original_id!)"
+          >
             <div class="rr-thumb"><img [src]="originalThumbnailUrl()" alt="" /></div>
             <div class="rr-body">
               <div class="rr-id">#{{ detail()!.original_id }} <span class="rel-tag rel-tag--orig">Original</span></div>
             </div>
-            <button class="rr-edit" (click)="openRelationBrowser('origin')" title="Anderes Original wählen" aria-label="Anderes Original wählen">
+            <button class="rr-edit" (click)="$event.stopPropagation(); openRelationBrowser('origin')" title="Anderes Original wählen" aria-label="Anderes Original wählen">
               <pf-icon name="pencil" [size]="13" />
             </button>
-            <button class="rr-x" (click)="removeOriginal()" title="Zuordnung entfernen" aria-label="Zuordnung entfernen">
+            <button class="rr-x" (click)="$event.stopPropagation(); removeOriginal()" title="Zuordnung entfernen" aria-label="Zuordnung entfernen">
               <pf-icon name="x" [size]="14" />
             </button>
           </div>
@@ -487,12 +500,19 @@
           Verknüpfte Edits · {{ detail()?.linked_edits?.length ?? 0 }}
         </div>
         @for (edit of detail()?.linked_edits ?? []; track edit.id) {
-          <div class="rel-row">
+          <div
+            class="rel-row rel-row--clickable"
+            role="button"
+            tabindex="0"
+            title="Zum Edit öffnen"
+            (click)="openSourceAsset(edit.id)"
+            (keydown.enter)="openSourceAsset(edit.id)"
+          >
             <div class="rr-thumb"><img [src]="editThumbnailUrl(edit)" alt="" /></div>
             <div class="rr-body">
               <div class="rr-id">#{{ edit.id }} <span class="rel-tag rel-tag--edit">{{ sourceLabelFor(edit.source) }}</span></div>
             </div>
-            <button class="rr-x" (click)="removeEditLink(edit.id)" title="Verknüpfung entfernen" aria-label="Verknüpfung entfernen">
+            <button class="rr-x" (click)="$event.stopPropagation(); removeEditLink(edit.id)" title="Verknüpfung entfernen" aria-label="Verknüpfung entfernen">
               <pf-icon name="x" [size]="14" />
             </button>
           </div>

@@ -694,6 +694,7 @@ pf-zoom-stage {
 }
 
 .face-item {
+  position: relative;
   width: 64px;
   flex-shrink: 0;
 
@@ -702,10 +703,20 @@ pf-zoom-stage {
 
 .face-crop {
   position: relative;
+  display: block;
   width: 64px;
   height: 64px;
+  border: 0;
+  padding: 0;
+  background: none;
   border-radius: var(--radius-s);
   overflow: hidden;
+  cursor: pointer;
+}
+
+.face-item--active .face-crop {
+  outline: 2px solid var(--accent, oklch(0.55 0.18 285));
+  outline-offset: 1px;
 }
 
 .face-crop__img {
@@ -1367,6 +1378,14 @@ pf-zoom-stage {
   & + & { border-top: 1px solid var(--line); }
 
   &--nested { padding-left: 24px; }
+
+  &--clickable {
+    cursor: pointer;
+    border-radius: var(--radius-s);
+    transition: background 0.12s;
+
+    &:hover, &:focus-visible { background: var(--surface); }
+  }
 }
 
 .rel-empty {
