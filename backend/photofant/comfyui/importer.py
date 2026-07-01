@@ -8,21 +8,27 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from photofant.comfyui.client import ComfyUIClient, ComfyUIError
 from photofant.comfyui.introspect import SAVE_IMAGE_CLASSES
 from photofant.config import get_data_root
 from photofant.db.cache import get_cache_db_path, init_cache_db, store_thumbnail
-from photofant.db.models import AssetInstance, Person, Version
+from photofant.db.models import Asset, AssetInstance, Person, ProcessingLedger, ReviewItem
+from photofant.media.meta import read_meta
 from photofant.media.person_folders import ensure_person_folder
+from photofant.media.phash import compute_phash, find_similar
 from photofant.media.thumbnails import generate_thumbnail
 
 log = logging.getLogger(__name__)
 
 _PHOTOFANT_OUTPUT_TITLE = "Photofant Output"
-_VERSION_TYPE = "comfyui"
+
+
+def _now_utc() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass(frozen=True)
@@ -34,12 +40,16 @@ class ComfyUIOutputRef:
 
 
 @dataclass(frozen=True)
-class ImportedComfyUIVersion:
-    version_id: int
-    version_type: str
+class ImportedComfyUIAsset:
+    """Result of importing a ComfyUI output as its own Asset (ADR-013).
+
+    Replaces the former Version-based import — the edit is now a full pipeline
+    asset linked back to its source via `original_id`.
+    """
+
+    asset_id: int
+    source_asset_id: int
     path: str
-    is_current: bool
-    params: dict[str, Any] | None
     thumbnail_url: str
     local_source_path: Path | None
 
@@ -122,62 +132,104 @@ def import_comfyui_output(
     output: ComfyUIOutputRef,
     output_dir: str,
     params: dict[str, Any],
-) -> ImportedComfyUIVersion:
-    instance = (
+) -> ImportedComfyUIAsset:
+    """Import a ComfyUI result as a full new Asset, linked via `original_id` (ADR-013).
+
+    Runs the same pipeline steps as a normal photo import (hash, `ProcessingLedger`,
+    pHash + dupe review) but stays synchronous — the caller (async context) must
+    additionally await `enqueue_post_import_pipeline([(asset_id, path)])` since job
+    enqueueing is async and this function is also invoked from worker threads.
+    """
+    source_instance = (
         session.query(AssetInstance)
         .filter(AssetInstance.asset_id == asset_id, AssetInstance.deleted_at.is_(None))
         .first()
     )
-    if instance is None:
+    if source_instance is None:
         raise ValueError(f"Asset {asset_id} nicht gefunden oder geloescht")
 
-    person = session.get(Person, instance.person_id)
+    person = session.get(Person, source_instance.person_id)
     if person is None:
-        raise ValueError(f"Person {instance.person_id} nicht gefunden")
+        raise ValueError(f"Person {source_instance.person_id} nicht gefunden")
 
     image_bytes, local_source_path = read_comfyui_output(client, output, output_dir)
     destination = _write_edit_file(person, output.filename, image_bytes)
-    width, height = _read_image_size(destination, output)
+    meta = read_meta(destination)
 
-    siblings = (
-        session.query(Version)
-        .filter(Version.instance_id == instance.id, Version.is_current.is_(True))
-        .all()
+    existing_asset = session.query(Asset).filter(Asset.content_hash == meta.content_hash).first()
+    if existing_asset is not None:
+        destination.unlink(missing_ok=True)
+        raise ValueError(
+            f"ComfyUI-Ergebnis ist identisch mit vorhandenem Asset {existing_asset.id} — kein Import noetig"
+        )
+
+    new_asset = Asset(
+        content_hash=meta.content_hash,
+        source=meta.source,
+        width=meta.width,
+        height=meta.height,
+        file_size=meta.file_size,
+        format=meta.format,
+        generation_meta={**(meta.generation_meta or {}), **params, "source_filename": output.filename,
+                          "source_subfolder": output.subfolder},
+        original_id=asset_id,
+        created_at=_now_utc(),
+        imported_at=_now_utc(),
     )
-    for sibling in siblings:
-        sibling.is_current = False
+    session.add(new_asset)
+    session.flush()
 
-    version_params = {
-        **params,
-        "source_filename": output.filename,
-        "source_subfolder": output.subfolder,
-        "width": width,
-        "height": height,
-    }
-    version = Version(
-        instance_id=instance.id,
-        face_id=None,
-        type=_VERSION_TYPE,
-        parent_id=None,
+    new_instance = AssetInstance(
+        asset_id=new_asset.id,
+        person_id=person.id,
         path=str(destination.resolve()),
-        is_current=True,
-        params=version_params,
-        created_at=datetime.now(UTC).replace(tzinfo=None),
     )
-    session.add(version)
-    session.commit()
-    session.refresh(version)
+    session.add(new_instance)
+    session.add(ProcessingLedger(content_hash=meta.content_hash))
 
-    generate_version_thumbnails(version.id, destination)
-    log.info("comfyui import: asset %d -> version %d (%s)", asset_id, version.id, output.filename)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        destination.unlink(missing_ok=True)
+        raise ValueError("ComfyUI-Ergebnis wurde bereits parallel importiert") from None
 
-    return ImportedComfyUIVersion(
-        version_id=version.id,
-        version_type=version.type or _VERSION_TYPE,
-        path=version.path,
-        is_current=version.is_current,
-        params=version.params,
-        thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+    try:
+        phash_val = compute_phash(destination)
+        new_asset.phash = phash_val
+        session.commit()
+
+        from photofant.settings import load_settings
+
+        dupe_threshold = load_settings()["dupe_threshold"]
+        similar = find_similar(session, phash_val, new_asset.id, dupe_threshold)
+        for other_id, distance in similar:
+            asset_a_id, asset_b_id = min(new_asset.id, other_id), max(new_asset.id, other_id)
+            stmt = sqlite_insert(ReviewItem).values(
+                type="dupe_candidate",
+                asset_a_id=asset_a_id,
+                asset_b_id=asset_b_id,
+                phash_distance=distance,
+                created_at=_now_utc(),
+            ).on_conflict_do_nothing()
+            session.execute(stmt)
+        if similar:
+            session.commit()
+    except Exception:
+        log.exception("pHash/dupe-detection failed for ComfyUI import %s", destination)
+        session.rollback()
+
+    generate_asset_thumbnails(new_asset.id, destination)
+    log.info(
+        "comfyui import (ADR-013): source asset %d -> new asset %d, original_id set (%s)",
+        asset_id, new_asset.id, output.filename,
+    )
+
+    return ImportedComfyUIAsset(
+        asset_id=new_asset.id,
+        source_asset_id=asset_id,
+        path=str(destination.resolve()),
+        thumbnail_url=f"/api/assets/{new_asset.id}/thumbnail",
         local_source_path=local_source_path,
     )
 
@@ -228,13 +280,13 @@ def delete_imported_local_output(output_dir: str, output: ComfyUIOutputRef) -> b
         return False
 
 
-def generate_version_thumbnails(version_id: int, file_path: Path) -> None:
+def generate_asset_thumbnails(asset_id: int, file_path: Path) -> None:
     cache_path = get_cache_db_path()
     init_cache_db(cache_path)
     for thumb_size in (256, 512):
         try:
             thumb = generate_thumbnail(file_path, thumb_size)
-            store_thumbnail(cache_path, version_id, thumb_size, thumb, "edit")
+            store_thumbnail(cache_path, asset_id, thumb_size, thumb)
         except Exception:
             log.warning("Thumbnail-Generierung fehlgeschlagen fuer %s (size %d)", file_path, thumb_size)
 
@@ -249,16 +301,6 @@ def _write_edit_file(person: Person, filename: str, image_bytes: bytes) -> Path:
     destination = edits_dir / f"comfyui_{uuid.uuid4().hex[:12]}{extension}"
     destination.write_bytes(image_bytes)
     return destination
-
-
-def _read_image_size(destination: Path, output: ComfyUIOutputRef) -> tuple[int | None, int | None]:
-    if output.width is not None and output.height is not None:
-        return output.width, output.height
-    try:
-        with Image.open(destination) as image:
-            return image.size
-    except Exception:
-        return None, None
 
 
 def _safe_int(value: Any) -> int | None:

@@ -15,6 +15,7 @@ from typing import Any
 from photofant.comfyui.client import ComfyUIClient
 from photofant.comfyui.importer import (
     ComfyUIOutputRef,
+    ImportedComfyUIAsset,
     delete_imported_local_output,
     import_comfyui_output,
     select_output_from_history,
@@ -382,7 +383,7 @@ async def _wait_and_import_output(
         raise TimeoutError(f"Timeout beim Warten auf ComfyUI-Output fuer Prompt {prompt_id}")
 
     job_queue.update(status, progress=0.9, state=JobState.RUNNING)
-    await asyncio.to_thread(
+    imported = await asyncio.to_thread(
         _import_and_cleanup,
         client,
         target_asset_id,
@@ -393,6 +394,9 @@ async def _wait_and_import_output(
         prompt_id,
     )
 
+    from photofant.jobs.import_job import enqueue_post_import_pipeline
+    await enqueue_post_import_pipeline([(imported.asset_id, imported.path)])
+
 
 def _import_and_cleanup(
     client: ComfyUIClient,
@@ -402,9 +406,9 @@ def _import_and_cleanup(
     task: str,
     workflow_key: str,
     prompt_id: str,
-) -> None:
+) -> ImportedComfyUIAsset:
     with SessionLocal() as session:
-        import_comfyui_output(
+        imported = import_comfyui_output(
             session,
             client,
             asset_id=target_asset_id,
@@ -418,6 +422,7 @@ def _import_and_cleanup(
             },
         )
     delete_imported_local_output(output_dir, output)
+    return imported
 
 
 # ── Enqueueing ────────────────────────────────────────────────────────────────

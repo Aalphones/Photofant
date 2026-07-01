@@ -424,6 +424,11 @@ async def enqueue_scan(scan_root: Path) -> JobStatus:
     )
 
 
+async def enqueue_post_import_pipeline(items: list[tuple[int, str]]) -> None:
+    """Public entrypoint for other import paths (e.g. ComfyUI edit-as-asset, ADR-013)."""
+    await _enqueue_pipeline(items)
+
+
 async def _enqueue_pipeline(items: list[tuple[int, str]]) -> None:
     """Enqueue the post-import processing pipeline for freshly imported assets.
 

@@ -1,7 +1,10 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Vorgemerkt:** [P21](docs/planning/2026-07-01_p21-galerie-stapel-tabs/README.md) Galerie-Stapel & Tab-Konsolidierung — verlinkt beim Öffnen eines Face-Stapels auf den in P15 gebauten Gesichter-Modus
+**Aktiver Plan:** `docs/planning/2026-07-01_p21-galerie-stapel-tabs/`
+**Phase:** 1/5 — Backend: Stapel-Datenmodell & Query (heikel)
+**Nächster Schritt:** ADR-013 (ComfyUI-Edit wird eigenes Asset) ist gebaut + getestet.
+Noch offen in Phase 1: Query-Umbau Fotos/Faces (`stack_size`/`stack_group_id`,
+`AssetDto`-Erweiterung, Thumbnail-Routing, Performance-Check).
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p15-lightbox-angleichung/`
 
 ---
@@ -16,4 +19,9 @@
 | [P18](docs/planning/2026-06-30_p18-bildklassifizierung/README.md) | Bildklassifizierung (WD14 + CLIP Regel-Engine) | 6 (alle pending) | pending |
 | [P19](docs/planning/2026-06-30_p19-inference-session-pool.md) | Inference Session Pool | — | Backlog |
 | [P20](docs/planning/2026-06-30_p20-virtual-scroll-galerie/README.md) | Virtual Scroll Galerie | 3 (alle pending) | pending |
-| [P21](docs/planning/2026-07-01_p21-galerie-stapel-tabs/README.md) | Galerie: Stapel & Tab-Konsolidierung | 5 (alle pending) | pending |
+| [P22](docs/planning/2026-07-01_p22-knowledge-engine/README.md) | Knowledge Engine | — | pending |
+| [P23](docs/planning/2026-07-01_p23-knowledge-wizard/README.md) | Knowledge Wizard | — | pending |
+| [P24](docs/planning/2026-07-01_p24-photofant-integration/README.md) | Photofant Integration | — | pending |
+| [P25](docs/planning/2026-07-01_p25-lore-panel/README.md) | Lore Panel | — | pending |
+| [P26](docs/planning/2026-07-01_p26-recommendation-engine/README.md) | Recommendation Engine | — | pending |
+| [P27](docs/planning/2026-07-01_p27-gemma-integration/README.md) | Gemma Integration | — | pending |

@@ -2,19 +2,20 @@
 
 Covers:
 - GET /api/comfyui/results: history path, output_dir path, dedup
-- POST /api/comfyui/results/import: creates version with type=comfyui + correct params
+- POST /api/comfyui/results/import: imports as its own Asset, linked via
+  `original_id` (ADR-013 — replaces the former Version-based import)
 """
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from photofant.db.models import Asset, AssetInstance, Base, Person, Version
+from photofant.db.models import Asset, AssetInstance, Base, Person, ProcessingLedger
 
 # ── Shared fixtures ────────────────────────────────────────────────────────────
 
@@ -186,10 +187,18 @@ class TestListResults:
 
 # ── POST /api/comfyui/results/import ─────────────────────────────────────────
 
+_FAKE_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+    b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
+    b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
+    b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
 class TestComfyUIImport:
     @pytest.mark.asyncio
-    async def test_import_creates_comfyui_version(self, db: Session, tmp_path: Path) -> None:
-        """Import via ComfyUI /view → version with type=comfyui created."""
+    async def test_import_creates_new_asset_linked_via_original_id(self, db: Session, tmp_path: Path) -> None:
+        """Import via ComfyUI /view → own Asset created, original_id points at the source (ADR-013)."""
         from photofant.media.person_folders import ensure_person_folder
 
         person = db.get(Person, 1)
@@ -199,13 +208,6 @@ class TestComfyUIImport:
 
         app = _make_app(db)
         client = TestClient(app)
-
-        fake_png = (
-            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
-            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
-            b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
-            b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
-        )
 
         with (
             patch("photofant.api.comfyui.load_settings", return_value={
@@ -221,9 +223,10 @@ class TestComfyUIImport:
             patch("photofant.comfyui.importer.init_cache_db"),
             patch("photofant.comfyui.importer.store_thumbnail"),
             patch("photofant.comfyui.importer.generate_thumbnail", return_value=b"\xff\xd8"),
+            patch("photofant.jobs.import_job.enqueue_post_import_pipeline", new_callable=AsyncMock) as enqueue_pipeline,
         ):
             mock_client = MagicMock()
-            mock_client.view_image.return_value = fake_png
+            mock_client.view_image.return_value = _FAKE_PNG
             mock_cls.return_value = mock_client
 
             response = client.post("/api/comfyui/results/import", json={
@@ -234,16 +237,29 @@ class TestComfyUIImport:
 
         assert response.status_code == 201, response.text
         data = response.json()
-        assert data["type"] == "comfyui"
-        assert data["is_current"] is True
-        assert data["params"]["source"] == "comfyui"
-        assert data["params"]["source_filename"] == "output_001.png"
+        assert data["source_asset_id"] == 1
+        new_asset_id = data["asset_id"]
+        assert new_asset_id != 1
 
-        # Verify version in DB
-        version = db.get(Version, data["version_id"])
-        assert version is not None
-        assert version.type == "comfyui"
-        assert version.instance_id == 1
+        new_asset = db.get(Asset, new_asset_id)
+        assert new_asset is not None
+        assert new_asset.original_id == 1
+        assert new_asset.generation_meta["source"] == "comfyui"
+        assert new_asset.generation_meta["source_filename"] == "output_001.png"
+
+        new_instance = (
+            db.query(AssetInstance)
+            .filter(AssetInstance.asset_id == new_asset_id)
+            .one()
+        )
+        assert new_instance.person_id == 1
+        assert "edits" in new_instance.path
+
+        ledger = db.get(ProcessingLedger, new_asset.content_hash)
+        assert ledger is not None
+
+        # A full Asset must run the normal post-import pipeline (Tags/Caption/Face/Embedding).
+        enqueue_pipeline.assert_called_once_with([(new_asset_id, new_instance.path)])
 
     def test_import_unknown_asset_returns_404(self, db: Session) -> None:
         app = _make_app(db)
@@ -270,13 +286,7 @@ class TestComfyUIImport:
         person_dir = ensure_person_folder(tmp_path, person)
         (person_dir / "edits").mkdir(parents=True, exist_ok=True)
 
-        fake_png = (
-            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
-            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
-            b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
-            b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
-        )
-        (tmp_path / "fallback.png").write_bytes(fake_png)
+        (tmp_path / "fallback.png").write_bytes(_FAKE_PNG)
 
         app = _make_app(db)
         client = TestClient(app)
@@ -295,6 +305,7 @@ class TestComfyUIImport:
             patch("photofant.comfyui.importer.init_cache_db"),
             patch("photofant.comfyui.importer.store_thumbnail"),
             patch("photofant.comfyui.importer.generate_thumbnail", return_value=b"\xff\xd8"),
+            patch("photofant.jobs.import_job.enqueue_post_import_pipeline", new_callable=AsyncMock),
         ):
             mock_client = MagicMock()
             mock_client.view_image.side_effect = ComfyUIError("x", "y", "z")
@@ -307,4 +318,4 @@ class TestComfyUIImport:
             })
 
         assert response.status_code == 201
-        assert response.json()["type"] == "comfyui"
+        assert response.json()["source_asset_id"] == 1

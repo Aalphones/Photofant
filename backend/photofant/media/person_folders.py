@@ -19,7 +19,7 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from photofant.db.models import AssetInstance, Face, Person
+from photofant.db.models import Asset, AssetInstance, Face, Person
 
 log = logging.getLogger(__name__)
 
@@ -255,6 +255,11 @@ def materialize_assignment(
         log.error("Person %d not found", target_person_id)
         return None
 
+    # ADR-013: assets linked via original_id are edits, not photos — keep them
+    # physically distinguishable even when clustering moves them to a new person.
+    asset = session.get(Asset, asset_id)
+    is_edit_child = asset is not None and asset.original_id is not None
+
     existing = session.scalar(
         select(AssetInstance).where(
             AssetInstance.asset_id == asset_id,
@@ -310,7 +315,12 @@ def materialize_assignment(
 
     if can_move_unknown:
         source_path = Path(unknown_instance.path)
-        subfolder = "favourites" if unknown_instance.favourite else "photos"
+        if unknown_instance.favourite:
+            subfolder = "favourites"
+        elif is_edit_child:
+            subfolder = "edits"
+        else:
+            subfolder = "photos"
         dest = person_dir / subfolder / source_path.name
 
         try:
@@ -338,7 +348,7 @@ def materialize_assignment(
             return None
 
         source_path = Path(source_instance.path)
-        dest = person_dir / "photos" / source_path.name
+        dest = person_dir / ("edits" if is_edit_child else "photos") / source_path.name
 
         try:
             final = _safe_copy(source_path, dest)

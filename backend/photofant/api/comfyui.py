@@ -8,7 +8,7 @@ POST /api/comfyui/workflows/introspect  -- introspect uploaded template JSON
 POST /api/comfyui/workflows/{key}/run   -- fire-and-forget trigger (key-based)
 GET  /api/comfyui/results               -- list output images (history + output_dir)
 GET  /api/comfyui/results/view          -- proxy ComfyUI /view (CORS-free preview)
-POST /api/comfyui/results/import        -- import a ComfyUI output as Edit-Version
+POST /api/comfyui/results/import        -- import a ComfyUI output as its own Asset (original_id, ADR-013)
 """
 from __future__ import annotations
 
@@ -762,7 +762,7 @@ def view_result(filename: str, subfolder: str = "") -> _FastAPIResponse:
     )
 
 
-# ── Import (ComfyUI output → Edit-Version) ────────────────────────────────────
+# ── Import (ComfyUI output → eigenes Asset, ADR-013) ──────────────────────────
 
 class ComfyUIImportRequest(BaseModel):
     asset_id: int
@@ -771,17 +771,15 @@ class ComfyUIImportRequest(BaseModel):
 
 
 class ComfyUIImportResponse(BaseModel):
-    version_id: int
-    type: str
+    asset_id: int
+    source_asset_id: int
     path: str
-    is_current: bool
-    params: dict[str, Any] | None  # type: ignore[type-arg]
     thumbnail_url: str
 
 
 @comfyui_router.post("/results/import", response_model=ComfyUIImportResponse, status_code=201)
 async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> ComfyUIImportResponse:
-    """Fetch a ComfyUI output image and import it as an Edit-Version (type=comfyui)."""
+    """Fetch a ComfyUI output image and import it as its own Asset, linked via `original_id` (ADR-013)."""
     cfg = load_settings()
     comfyui_cfg = cfg.get("comfyui", {})  # type: ignore[attr-defined]
     base_url = str(comfyui_cfg.get("base_url", "http://127.0.0.1:8188"))
@@ -803,11 +801,12 @@ async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> Co
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    from photofant.jobs.import_job import enqueue_post_import_pipeline
+    await enqueue_post_import_pipeline([(imported.asset_id, imported.path)])
+
     return ComfyUIImportResponse(
-        version_id=imported.version_id,
-        type=imported.version_type,
+        asset_id=imported.asset_id,
+        source_asset_id=imported.source_asset_id,
         path=imported.path,
-        is_current=imported.is_current,
-        params=imported.params,
         thumbnail_url=imported.thumbnail_url,
     )

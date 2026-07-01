@@ -1,9 +1,12 @@
 # ADR-009 - ComfyUI Default-Workflows mit Auto-Import
 
-**Status:** Akzeptiert - 2026-06-30
+**Status:** Akzeptiert - 2026-06-30 · **teilweise abgelöst durch [ADR-013](013-comfyui-edit-als-asset.md)** (2026-07-01)
 **Querverweise:**
 - [ADR-003](003-comfyui-trigger-integration.md) - bleibt fuer generische Workflows Fire-and-forget
 - [ADR-008](008-generativ-via-comfyui.md) - ComfyUI bleibt einziger Generativ-Pfad
+- [ADR-013](013-comfyui-edit-als-asset.md) - der Import-**Ablauf** hier (Warten/Timeout/Cleanup)
+  bleibt gültig; das Import-**Ergebnis** ist seit P21 ein eigenes Asset statt einer Version
+  (Abschnitt „Vertrag" unten ist insofern veraltet)
 
 ---
 

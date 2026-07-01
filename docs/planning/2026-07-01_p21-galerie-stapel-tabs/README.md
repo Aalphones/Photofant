@@ -21,16 +21,23 @@ verteilt sein; Personen-Filter/-Suche zeigt jeweils nur die Mitglieder, die aktu
 zur gefilterten Person gehören (mit Stapel-Icon als Hinweis auf Geschwister anderswo).
 
 Ein Original kann Edits aus **beiden** Mechanismen gleichzeitig haben — leichte
-Editor-Versionen (`version`-Tabelle) und separat angestoßene ComfyUI-Workflow-Imports
-(eigene Assets über `original_id`) — beide zählen zur selben Gruppe, beide bekommen
-eine eigene Galerie-Kachel. **Unterschiedliche Pipeline-Tiefe bleibt aber bestehen**
-(Entscheidung 2026-07-01): ComfyUI-Workflow-Edits sind echte neue Bild-Dateien und
-laufen komplett durch die normale Pipeline (eigene Faces/Captions/Tags — das gibt es
-schon, keine neue Arbeit). Leichte Editor-Dialog-Edits (Crop/Rotate/Freistellen,
-auch In-Place-ComfyUI über den Editor) bleiben bewusst **ohne** eigene Faces/Captions/
-Tags — es ist dasselbe Foto, nur zugeschnitten/rotiert. Die Pipeline (Face-/Tag-/
-Caption-Jobs, `processing_ledger`) wird in P21 **nicht** erweitert, um auch auf
-`version`-Zeilen zu laufen.
+Editor-Versionen (`version`-Tabelle) und ComfyUI-Workflow-Imports (eigene Assets über
+`original_id`) — beide zählen zur selben Gruppe, beide bekommen eine eigene Galerie-
+Kachel. **Unterschiedliche Pipeline-Tiefe bleibt bestehen** (Entscheidung 2026-07-01):
+ComfyUI-Workflow-Edits sind echte neue Bild-Dateien und laufen komplett durch die
+normale Pipeline (eigene Faces/Captions/Tags). Leichte Editor-Dialog-Edits (Crop/Rotate/
+Freistellen) bleiben bewusst **ohne** eigene Faces/Captions/Tags — es ist dasselbe Foto,
+nur zugeschnitten/rotiert. Die Pipeline (Face-/Tag-/Caption-Jobs, `processing_ledger`)
+wird in P21 **nicht** erweitert, um auch auf `version`-Zeilen zu laufen.
+
+**Korrektur 2026-07-01 (Phase-1-Untersuchung):** Der ComfyUI-Default-Import
+(Upscale/Edit/Inpaint, ADR-009) legte bislang immer eine `Version`-Zeile an, nie ein
+eigenes Asset — die „das gibt es schon"-Annahme oben war falsch. Ohne eigenes Asset
+läuft nie eine Gesichtserkennung auf dem Edit, also gab es die hier beschriebene
+automatische Cross-Person-Wanderung nirgends. **ADR-013 löst das**: Phase 1 baut den
+ComfyUI-Default-Import auf „legt eigenes Asset mit `original_id` an, volle Pipeline"
+um (Ablösung des relevanten Teils von ADR-009) — erst danach ist die Umhänge-Logik
+für ComfyUI-Edits real, nicht nur eine Annahme.
 
 Koordiniert sich mit P15 (Lightbox-Angleichung, insbesondere Phase 4 Versionen-Sektion
 und Phase 7 Gesichter-Modus) und mit dem noch nicht gestarteten P20 (Virtual-Scroll-

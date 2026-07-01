@@ -49,19 +49,42 @@ mit Stapel-Kopf + Original-Echo) durch das flache Modell aus der README (Korrekt
 
 ### Untersuchung zuerst (Chesterton's Fence — nicht annehmen)
 
-- [ ] Nachvollziehen, wie `Version.path` heute beim Anlegen gesetzt wird. Bestätigt vom
-  User: ein Editor-Edit eines Fotos von Person X, dessen Gesichtserkennung Person Y
-  ergibt, muss physisch unter `personY/edits/` landen, während das Original bei
-  `personX/photos/` bleibt. Prüfen: existiert diese Umhänge-Logik für `version`-Zeilen
-  bereits (analog zur Multi-Instanz-Semantik für Original-Fotos, P7 Phase 3), oder
-  läuft ein Edit heute immer im Personen-Ordner seiner Quelle? Falls letzteres: das ist
-  der zentrale Fix dieser Phase, nicht nur ein Anzeige-Detail
-- [ ] Gleiche Frage für `original_id`-Kind-Assets: laufen die schon durch die normale
-  Clustering-Pipeline (P7) und landen dadurch automatisch beim erkannten Gesicht —
-  vermutlich ja, weil sie vollwertige neue Assets sind, aber verifizieren
-- [ ] Bestätigt vom User: eine Gruppe kann Mitglieder aus **beiden** Quellen gleichzeitig
-  haben (mehrere `version`-Zeilen UND `original_id`-Kinder) — Gruppierungs-Logik muss
-  beide mergen
+**Ergebnis (2026-07-01, siehe README-Korrektur + ADR-013):**
+
+- `version`-Zeilen (Editor-Dialog-Edits) haben **keine** eigene Gesichtserkennung
+  (`face_job.py` läuft nur über `asset_id`) — für sie gibt es und braucht es **keine**
+  Umhänge-Logik. Sie bleiben immer im Personen-Ordner ihrer Quelle.
+- `original_id`-Kind-Assets liefen bisher **nicht automatisch** durch die Pipeline —
+  `import_comfyui_output` legte immer eine `Version` an, nie ein Asset. ADR-013 dreht
+  das um: ab jetzt legt der ComfyUI-Default-Import (Upscale/Edit/Inpaint) ein echtes
+  Asset mit `original_id` an und durchläuft dieselbe Pipeline wie ein normaler
+  Foto-Import (Tags/Caption/Face/Embedding/pHash) — danach greift die bestehende
+  Clustering-Materialisierung (P7) normal.
+- Eine Gruppe kann Mitglieder aus **beiden** Quellen gleichzeitig haben (mehrere
+  `version`-Zeilen UND `original_id`-Kinder) — Gruppierungs-Logik muss beide mergen.
+
+**Neu in dieser Phase (ADR-013-Umsetzung):**
+
+- [x] `comfyui/importer.py::import_comfyui_output` umgebaut: legt jetzt ein vollwertiges
+  `Asset` an (`read_meta`, `content_hash`, `ProcessingLedger`, pHash + Dupe-Review),
+  `original_id` = Quell-Asset, `AssetInstance` in der Person des Quell-Assets, Datei
+  bleibt in `personX/edits/`
+- [x] Neue Rückgabe (`ImportedComfyUIAsset`) löst normale Pipeline aus — Aufrufer rufen
+  `jobs/import_job.py::enqueue_post_import_pipeline` (neuer public Wrapper um
+  `_enqueue_pipeline`)
+- [x] Beide Call-Sites umgestellt: `jobs/comfyui_run_job.py::_import_and_cleanup` (Default-
+  Endpunkt) + `api/comfyui.py::import_comfyui_result` (manueller Ergebnis-Import)
+- [x] `media/person_folders.py::materialize_assignment`: Ziel-Subordner `edits/` statt
+  `photos/`, wenn `asset.original_id is not None` (Move- und Copy-Zweig)
+- [x] Bestehende `Version`-Zeilen vom Typ `comfyui` bleiben unangetastet — keine Migration
+- [x] Bestehende Tests (`test_comfyui_import.py`, `test_comfyui_auto_import.py`) auf neues
+  Verhalten umgeschrieben, `pytest`/`ruff` grün (12 vorbestehende Fails aus
+  `job_version_inputs`-Drift/`test_caption_config` — unabhängig von dieser Änderung,
+  auf `master` identisch reproduziert)
+
+**Noch offen in dieser Phase** (Query-Umbau selbst, s.u.): Gruppierung/`stack_size`/
+`stack_group_id` für Fotos + Faces, `AssetDto`-Erweiterung, Thumbnail-Routing für
+Version-Pseudo-Einträge, Performance-Check.
 
 ### Query-Umbau — Fotos
 
