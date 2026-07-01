@@ -24,6 +24,9 @@ export type SortOrder = (typeof SORT_ORDERS)[number];
 export const GROUP_KEYS = ['month', 'person', 'source'] as const;
 export type GroupKey = (typeof GROUP_KEYS)[number];
 
+export const FRAMINGS = ['close_up', 'medium', 'full_body'] as const;
+export type Framing = (typeof FRAMINGS)[number];
+
 export const BASE_HEIGHTS: Record<Density, number> = { sm: 150, md: 196, lg: 250 };
 
 export const DENSITY_THUMB_SIZE: Record<Density, 256 | 512 | 1024> = { sm: 256, md: 512, lg: 1024 };
@@ -73,6 +76,16 @@ export interface AssetDto {
   has_phash: boolean;
 }
 
+// Note: distinct from `AssetSummary` in review.model.ts (different shape, different feature)
+export interface AssetLinkSummary {
+  id: number;
+  thumbnail_url: string;
+  source: string | null;
+  width: number | null;
+  height: number | null;
+  created_at: string | null;
+}
+
 export interface SimilarAsset {
   id: number;
   content_hash: string;
@@ -115,6 +128,16 @@ export interface AssetDetailDto extends AssetDto {
   caption_preset_id: number | null;
   faces: FaceDto[];
   versions?: VersionDto[];
+  original_id: number | null;
+  linked_edits: AssetLinkSummary[];
+  quality: number | null;
+  framing: Framing | null;
+}
+
+export interface AssetPatch {
+  source?: string;
+  framing?: Framing;
+  original_id?: number | null;
 }
 
 export interface AssetsPage {

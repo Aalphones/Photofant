@@ -35,6 +35,7 @@ router = APIRouter(prefix="/assets")
 DbSession = Annotated[Session, Depends(get_session)]
 
 _VALID_THUMB_SIZES = frozenset({256, 512, 1024})
+_VALID_FRAMINGS = frozenset({"close_up", "medium", "full_body"})
 
 
 class SortField(StrEnum):
@@ -106,6 +107,15 @@ class VersionDto(BaseModel):
     thumbnail_url: str
 
 
+class AssetSummaryDto(BaseModel):
+    id: int
+    thumbnail_url: str
+    source: str | None
+    width: int | None
+    height: int | None
+    created_at: datetime | None
+
+
 class AssetDetailDto(AssetDto):
     path: str | None
     tags: list[TagDto]
@@ -115,6 +125,10 @@ class AssetDetailDto(AssetDto):
     caption_preset_id: int | None
     faces: list[FaceDto] = []
     versions: list[VersionDto] = []
+    original_id: int | None = None
+    linked_edits: list[AssetSummaryDto] = []
+    quality: float | None = None
+    framing: str | None = None
 
 
 class FacetItem(BaseModel):
@@ -510,13 +524,23 @@ def _load_asset_faces(session: Session, asset_id: int) -> list[FaceDto]:
     ]
 
 
-@router.get("/{asset_id}", response_model=AssetDetailDto)
-async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
-    row = _active_row(session, asset_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="Asset not found")
+def _load_linked_edits(session: Session, asset_id: int) -> list[AssetSummaryDto]:
+    """Assets whose original_id points back at *asset_id* (excludes soft-deleted)."""
+    rows = _base_query(session).filter(Asset.original_id == asset_id).all()
+    return [
+        AssetSummaryDto(
+            id=edit.id,
+            thumbnail_url=f"/api/assets/{edit.id}/thumbnail",
+            source=edit.source,
+            width=edit.width,
+            height=edit.height,
+            created_at=edit.created_at,
+        )
+        for edit, _instance in rows
+    ]
 
-    asset, instance = row
+
+def _build_asset_detail_dto(session: Session, asset: Asset, instance: AssetInstance) -> AssetDetailDto:
     version_count = (
         session.query(func.count(Version.id))
         .filter(Version.instance_id == instance.id)
@@ -526,6 +550,7 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
     tags = _load_asset_tags(session, asset.id)
     faces = _load_asset_faces(session, asset.id)
     versions = _load_asset_versions(session, instance.id, asset.id)
+    linked_edits = _load_linked_edits(session, asset.id)
     return AssetDetailDto(
         **base.model_dump(),
         path=instance.path,
@@ -536,7 +561,59 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
         caption_preset_id=asset.caption_preset_id,
         faces=faces,
         versions=versions,
+        original_id=asset.original_id,
+        linked_edits=linked_edits,
+        quality=asset.quality_score,
+        framing=asset.framing,
     )
+
+
+@router.get("/{asset_id}", response_model=AssetDetailDto)
+async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    asset, instance = row
+    return _build_asset_detail_dto(session, asset, instance)
+
+
+class AssetPatchBody(BaseModel):
+    source: str | None = None
+    framing: str | None = None
+    original_id: int | None = None
+
+
+@router.patch("/{asset_id}", response_model=AssetDetailDto)
+async def patch_asset(asset_id: int, body: AssetPatchBody, session: DbSession) -> AssetDetailDto:
+    """Partially update source/framing/original_id — only fields present in the body are touched.
+
+    `original_id: null` clears the assignment; omitting the field leaves it unchanged
+    (distinguished via `model_fields_set`, not the value itself).
+    """
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset, instance = row
+
+    fields_set = body.model_fields_set
+    if "framing" in fields_set and body.framing is not None and body.framing not in _VALID_FRAMINGS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"framing must be one of: {', '.join(sorted(_VALID_FRAMINGS))}",
+        )
+
+    if "source" in fields_set:
+        asset.source = body.source
+    if "framing" in fields_set:
+        asset.framing = body.framing
+    if "original_id" in fields_set:
+        asset.original_id = body.original_id
+
+    session.commit()
+    session.refresh(asset)
+    log.info("patch_asset: asset %d fields=%s", asset_id, sorted(fields_set))
+    return _build_asset_detail_dto(session, asset, instance)
 
 
 @router.post("/upload", response_model=JobStarted)
