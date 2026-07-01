@@ -1,6 +1,6 @@
 # P15 — Lightbox: Angleichung ans Design-Mockup
 
-**Status:** in progress (Phase 1/7)
+**Status:** in progress (Phase 2/7)
 
 Ziel: Die Angular-Lightbox an `docs/design/js/detail.jsx` + `compare.jsx` +
 `relation.jsx` angleichen. Alle sechs unten aufgelisteten Abweichungsbereiche
@@ -93,7 +93,7 @@ Backend: `AssetDetailDto` braucht `quality: float | None`, `framing: str | None`
 | Phase | Thema | Tier | Status |
 |---|---|---|---|
 | 1 | Backend-Erweiterungen (Detail-DTO + Patch) | heikel | complete |
-| 2 | Stage-Toolbar + Panel-Header | standard | pending |
+| 2 | Stage-Toolbar + Panel-Header | standard | complete |
 | 3 | Gesichter-Redesign + PersonPicker-Modal | standard | pending |
 | 4 | Versionen-Sektion + VersionCompare-Modal | standard | pending |
 | 5 | Beziehungen-Sektion + RelationBrowser-Modal | standard | pending |

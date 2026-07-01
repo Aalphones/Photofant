@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** [P15](docs/planning/2026-06-28_p15-lightbox-angleichung/README.md) — Lightbox-Angleichung
-**Phase:** 1/7 — Backend-Erweiterungen (complete)
-**Nächster Schritt:** Phase 2 — Stage-Toolbar + Panel-Header (`phase-2-toolbar-header.md`)
+**Phase:** 2/7 — Stage-Toolbar + Panel-Header (complete)
+**Nächster Schritt:** Phase 3 — Gesichter-Redesign + PersonPicker-Modal (`phase-3-gesichter.md`)
 **Danach vorgemerkt:** [P21](docs/planning/2026-07-01_p21-galerie-stapel-tabs/README.md) Galerie-Stapel & Tab-Konsolidierung
 **Letzter abgeschlossener Plan:** `docs/archive/2026-06/p17-comfyui-default-auto-import/`
 

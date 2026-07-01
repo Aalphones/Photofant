@@ -81,6 +81,8 @@ export class Lightbox {
   protected readonly showRerunDialog = signal(false);
   protected readonly showComfyuiImportDialog = signal(false);
   protected readonly showEditorModal = signal(false);
+  // Stub für Phase 4 (VersionCompare-Modal existiert dort noch nicht)
+  protected readonly showVersionCompare = signal(false);
 
   protected readonly isUpscaling  = signal(false);
   protected readonly upscaleError = signal<string | null>(null);
@@ -221,6 +223,25 @@ export class Lightbox {
 
   protected readonly faces = computed((): FaceDto[] => this.detail()?.faces ?? []);
 
+  // ── Panel-Header (Avatar des ersten Gesichts) ─────────────────────────────
+
+  protected readonly firstFace = computed((): FaceDto | null => this.faces()[0] ?? null);
+
+  protected readonly headerAvatarUrl = computed((): string | null => {
+    const face = this.firstFace();
+    return face != null ? '/api' + face.crop_url : null;
+  });
+
+  protected readonly firstPersonName = computed((): string => {
+    const face = this.firstFace();
+    return face?.person_name ?? '#' + (this.asset()?.id ?? '?');
+  });
+
+  protected readonly headerInitial = computed((): string => {
+    const name = this.firstPersonName();
+    return name.startsWith('#') ? '?' : (name.trim()[0]?.toUpperCase() ?? '?');
+  });
+
   protected faceLabel(face: FaceDto): string {
     if (face.person_name) { return face.person_name; }
     const parts: string[] = [];
@@ -284,6 +305,8 @@ export class Lightbox {
       this.creatingNewPerson.set(false);
       this.newPersonName.set('');
       this.personSearchQuery.set('');
+      // Reset version compare stub
+      this.showVersionCompare.set(false);
     });
 
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -366,6 +389,11 @@ export class Lightbox {
 
   protected onEditorClosed(): void {
     this.showEditorModal.set(false);
+  }
+
+  // Modal-Inhalt folgt in Phase 4 (Versionen-Sektion + VersionCompare-Modal).
+  protected openVersionCompare(): void {
+    this.showVersionCompare.set(true);
   }
 
   protected similarityPercent(distance: number): number {
