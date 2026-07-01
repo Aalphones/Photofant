@@ -46,6 +46,11 @@ function buildGroups(
     } else if (group === 'person') {
       const personId = (asset as AssetDto & { person_id?: number }).person_id;
       key = personId != null ? (personNames.get(personId) ?? 'Unbekannt') : 'Unbekannt';
+    } else if (group === 'lineage') {
+      // Original als Anker: stack_group_id fasst Original + Editor-Versionen +
+      // ComfyUI-original_id-Kinder zusammen (ADR-012); ohne Gruppe ist das Asset sein
+      // eigenes Original (Einzelbild ohne Ableitungen).
+      key = `Original #${asset.stack_group_id ?? asset.id}`;
     } else {
       key = formatMonthLabel(asset.created_at ?? asset.imported_at);
     }

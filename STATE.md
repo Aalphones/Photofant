@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Nächster Schritt:** Nächsten Plan aus dem Backlog auswählen (Tabelle unten) und `/plan`
-oder `/implement` starten.
+**Aktiver Plan:** `docs/planning/2026-06-12_p10-trainingssets-export/`
+**Phase:** 1/4 — Lineage & Collections-Ausbau (abgeschlossen, ungetestet)
+**Nächster Schritt:** Smoke-Test Phase 1 (siehe unten), dann `/clear` + Phase 2 (Trainingssets & Statistiken)
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p21-galerie-stapel-tabs/`
 
 ---
@@ -11,7 +11,6 @@ oder `/implement` starten.
 
 | Plan | Titel | Phasen | Status |
 |---|---|---|---|
-| [P10](docs/planning/2026-06-12_p10-trainingssets-export/README.md) | Trainingssets & Export | 4 (alle pending) | geparkt |
 | [P11](docs/planning/2026-06-22_p11-duale-duplikaterkennung/README.md) | Duale Duplikaterkennung (DHash + CLIP) | 5 (alle pending) | pending |
 | [P13](docs/planning/2026-06-22_p13-person-bulk-import/README.md) | Person-Bulk-Import | 3 (alle pending) | pending |
 | [P18](docs/planning/2026-06-30_p18-bildklassifizierung/README.md) | Bildklassifizierung (WD14 + CLIP Regel-Engine) | 6 (alle pending) | pending |

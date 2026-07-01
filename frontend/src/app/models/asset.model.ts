@@ -21,7 +21,7 @@ export type SortKey = (typeof SORT_KEYS)[number];
 export const SORT_ORDERS = ['asc', 'desc'] as const;
 export type SortOrder = (typeof SORT_ORDERS)[number];
 
-export const GROUP_KEYS = ['month', 'person', 'source'] as const;
+export const GROUP_KEYS = ['month', 'person', 'source', 'lineage'] as const;
 export type GroupKey = (typeof GROUP_KEYS)[number];
 
 export const FRAMINGS = ['close_up', 'medium', 'full_body'] as const;
@@ -168,6 +168,24 @@ export interface AssetsPage {
 export interface AssetGroup {
   label: string;
   assets: AssetDto[];
+}
+
+// P10 Phase 1 — Ableitungs-Baum (Original → Editor-Versionen → Gesichter → deren Versionen)
+export interface LineageFaceDto {
+  id: number;
+  person_id: number | null;
+  person_name: string | null;
+  crop_url: string;
+  origin: string | null;
+  source_version_id: number | null;
+  versions: VersionDto[];
+}
+
+export interface LineageDto {
+  asset_id: number;
+  thumbnail_url: string;
+  versions: VersionDto[];
+  faces: LineageFaceDto[];
 }
 
 export interface FaceGalleryItemDto {

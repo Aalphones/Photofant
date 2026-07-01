@@ -53,4 +53,8 @@ export class CollectionService {
   removeItem(collectionId: number, assetId: number): Observable<void> {
     return this.http.delete<void>(`/api/collections/${collectionId}/items/${assetId}`);
   }
+
+  setOrder(collectionId: number, assetIds: number[]): Observable<void> {
+    return this.http.put<void>(`/api/collections/${collectionId}/order`, { asset_ids: assetIds });
+  }
 }

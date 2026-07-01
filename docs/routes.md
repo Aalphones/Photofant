@@ -7,6 +7,7 @@
 | `/galerie` (lightbox) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
 | `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`, `tags`, `faces`, `versions`, `original_id`, `linked_edits`, `quality`, `framing`) |
 | Lightbox (Metadaten-Edit, P15 Phase 1) | `PATCH` | `/api/assets/{id}` | `{ source?, framing?, original_id? }` — nur gesetzte Felder werden geändert, `original_id: null` löscht die Zuordnung | `AssetDetailDto` |
+| Lightbox (Verwandte Assets, P10 Phase 1) | `GET` | `/api/assets/{id}/lineage` | — | `LineageDto { asset_id, thumbnail_url, versions: VersionDto[], faces: LineageFaceDto[] }` — Ableitungs-Baum aus `version.instance_id`/`version.parent_id` (Editor-Edits) und `face.asset_id`/`face.source_version_id` (extrahierte Gesichter + deren eigene Edits); `LineageFaceDto` = `FaceDto`-Felder + `versions: VersionDto[]` |
 | `/galerie` (import — Serverpfade) | `POST` | `/api/assets/import` | `{ paths: string[] }` | `{ job_id }` |
 | `/galerie` (import — Browser-Upload) | `POST` | `/api/assets/upload` | `multipart/form-data; files[]` | `{ job_id }` |
 | `/galerie` (scan) | `POST` | `/api/assets/scan` | — | `{ job_id }` |
@@ -46,7 +47,7 @@ interface TagListItem { id: number; name: string; count: number; alias_of: numbe
 | `/alben` (Liste) | `GET` | `/api/collections` | — | `CollectionDto[]` |
 | `/alben` (Neu) | `POST` | `/api/collections` | `{ name, kind?, match_mode? }` | `CollectionDetailDto` (201) |
 | `/alben` (Detail) | `GET` | `/api/collections/{id}` | — | `CollectionDetailDto` (inkl. Triggern) |
-| `/alben` (Smart-Toggle / Modus / Umbenennen) | `PATCH` | `/api/collections/{id}` | `{ name?, kind?, match_mode? }` | `CollectionDetailDto` — Modus-/Smart-Wechsel triggert Neubewertung |
+| `/alben` (Smart-Toggle / Modus / Umbenennen / Beschreibung / Cover) | `PATCH` | `/api/collections/{id}` | `{ name?, kind?, match_mode?, description?, cover_asset_id? }` — description/cover_asset_id: `null` löscht die Zuordnung (P10 Phase 1) | `CollectionDetailDto` — Modus-/Smart-Wechsel triggert Neubewertung |
 | `/alben` (Löschen) | `DELETE` | `/api/collections/{id}` | — | `204` (Trigger + Items kaskadiert) |
 | `/alben` (Trigger lesen) | `GET` | `/api/collections/{id}/triggers` | — | `TriggerDto[]` |
 | `/alben` (Trigger hinzufügen) | `POST` | `/api/collections/{id}/triggers` | `CreateTriggerRequest` | `TriggerDto` (201) → Neubewertung |
@@ -55,6 +56,7 @@ interface TagListItem { id: number; name: string; count: number; alias_of: numbe
 | `/alben` (manuell neu bewerten) | `POST` | `/api/collections/{id}/reevaluate` | — | `{ job_id }` (202) |
 | `/galerie` (Bulk-Bar „Zu Album") | `POST` | `/api/collections/{id}/items` | `{ asset_ids: number[] }` | `204` — als `source=manual` |
 | `/alben` (Mitglied entfernen) | `DELETE` | `/api/collections/{id}/items/{asset_id}` | — | `204` |
+| `/alben` (Einstellungen, Reihenfolge · P10 Phase 1) | `PUT` | `/api/collections/{id}/order` | `{ asset_ids: number[] }` — Index in der Liste = neue `position` | `204` |
 
 ```typescript
 type CollectionKind = 'album' | 'smart_album' | 'training_set';
@@ -67,7 +69,9 @@ interface CollectionDto {
   kind: CollectionKind;
   match_mode: MatchMode;
   member_count: number;          // aktive (nicht gelöschte) Mitglieder
-  cover_asset_ids: number[];     // bis zu 4 für die Collage
+  cover_assets: { id: number; content_hash: string }[];  // bis zu 4 für die Collage — cover_asset_id kommt zuerst
+  description: string | null;    // P10 Phase 1
+  cover_asset_id: number | null; // P10 Phase 1 — explizit gewähltes Cover
 }
 
 interface TriggerDto {
@@ -80,7 +84,10 @@ interface TriggerDto {
   negate: boolean;
 }
 
-interface CollectionDetailDto extends CollectionDto { triggers: TriggerDto[]; }
+interface CollectionDetailDto extends CollectionDto {
+  triggers: TriggerDto[];
+  item_order: number[];  // P10 Phase 1 — asset ids, manuelle Reihenfolge (position ASC, dann id)
+}
 
 interface CreateTriggerRequest {
   type: TriggerType;

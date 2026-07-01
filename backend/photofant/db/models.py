@@ -150,6 +150,10 @@ class Collection(Base):
     kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="album")
     match_mode: Mapped[str] = mapped_column(Text, nullable=False, server_default="any")  # smart_album: any | all
     settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)  # P10 Phase 1
+    cover_asset_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("asset.id"), nullable=True, index=True,
+    )  # P10 Phase 1 — explizit gewähltes Cover statt nur automatischer Top-4-Vorschau
 
 
 class SmartTrigger(Base):
@@ -171,6 +175,7 @@ class CollectionItem(Base):
     asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), primary_key=True, index=True)
     source: Mapped[str] = mapped_column(Text, nullable=False, server_default="manual")  # manual | smart
     caption_override: Mapped[str | None] = mapped_column(Text, nullable=True)
+    position: Mapped[int | None] = mapped_column(Integer, nullable=True)  # P10 Phase 1 — manuelle Reihenfolge
 
 
 class Face(Base):

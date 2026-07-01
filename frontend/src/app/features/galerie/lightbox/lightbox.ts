@@ -9,10 +9,10 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
-import { combineLatest, forkJoin, of, switchMap } from 'rxjs';
+import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, type Observable } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDto, AssetLinkSummary, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, Framing, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import type { AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, Framing, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -179,6 +179,19 @@ export class Lightbox {
     ),
   );
 
+  // Verwandte Assets (P10 Phase 1) — Ableitungs-Baum aus version.parent_id/face.source_version_id.
+  // Nur im Asset-Modus (Gesichter-Modus hat bereits „Quelle" für den Rückbezug).
+  protected readonly lineage = toSignal(
+    combineLatest([
+      this.store.select(gallerySelectors.selectLightboxAsset),
+      toObservable(this.reloadTrigger),
+    ]).pipe(
+      switchMap(([asset]) =>
+        asset != null ? this.assetService.getLineage(asset.id) : of(null)
+      ),
+    ),
+  );
+
   // ── Gesichter-Modus: gemeinsame Datenquellen für Stage + Versionen ────────
 
   protected readonly panelReady = computed((): boolean =>
@@ -240,15 +253,12 @@ export class Lightbox {
   protected readonly relationBrowserLoading = signal(false);
   protected readonly relationBrowserSelected = signal<number[]>([]);
 
+  // Suche läuft jetzt serverseitig (searchRelationCandidates) — die gesamte Bibliothek ist
+  // durchsuchbar, nicht nur die zuletzt geladenen 200 Assets. Hier nur noch das aktuelle
+  // Bild selbst aus den Treffern rausfiltern.
   protected readonly relationBrowserList = computed((): AssetDto[] => {
     const currentId = this.asset()?.id;
-    const query = this.relationBrowserQuery().trim().toLowerCase();
-    return this.relationBrowserAssets().filter((candidate: AssetDto) => {
-      if (candidate.id === currentId) { return false; }
-      if (!query) { return true; }
-      const haystack = `#${candidate.id} ${this.sourceLabelFor(candidate.source)}`.toLowerCase();
-      return haystack.includes(query);
-    });
+    return this.relationBrowserAssets().filter((candidate: AssetDto) => candidate.id !== currentId);
   });
 
   // ── Metadaten (editierbar) ─────────────────────────────────────────────────
@@ -588,6 +598,28 @@ export class Lightbox {
         });
     });
 
+    // RelationBrowser-Suche: läuft serverseitig statt nur über die zuletzt geladenen
+    // 200 Assets zu filtern — sonst sind Bilder außerhalb dieses Fensters (z.B. ältere
+    // Originale) nie auffindbar. ID-Suche geht per Direct-Lookup, Text-Suche über
+    // Quelle (original/flux/sdxl) oder Caption.
+    combineLatest([toObservable(this.showRelationBrowser), toObservable(this.relationBrowserQuery)])
+      .pipe(
+        debounceTime(200),
+        switchMap(([mode, query]: [('origin' | 'edits' | null), string]) => {
+          if (mode == null) { return of(null); }
+          this.relationBrowserLoading.set(true);
+          return this.searchRelationCandidates(query).pipe(
+            catchError(() => of([] as AssetDto[])),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((items: AssetDto[] | null) => {
+        if (items == null) { return; }
+        this.relationBrowserAssets.set(items);
+        this.relationBrowserLoading.set(false);
+      });
+
     const onKeyDown = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
@@ -750,23 +782,61 @@ export class Lightbox {
   }
 
   protected openRelationBrowser(mode: 'origin' | 'edits'): void {
-    this.showRelationBrowser.set(mode);
+    this.relationBrowserAssets.set([]);
+    this.relationBrowserLoading.set(true);
     this.relationBrowserQuery.set('');
     this.relationBrowserSelected.set(
       mode === 'origin'
         ? (this.detail()?.original_id != null ? [this.detail()!.original_id!] : [])
         : (this.detail()?.linked_edits ?? []).map((edit: AssetLinkSummary) => edit.id)
     );
-    this.relationBrowserLoading.set(true);
-    this.assetService.listAssets({ page: 1, page_size: 200, sort: 'date', order: 'desc' })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (result) => {
-          this.relationBrowserAssets.set(result.items);
-          this.relationBrowserLoading.set(false);
-        },
-        error: () => { this.relationBrowserLoading.set(false); },
-      });
+    // Fetch läuft über die relationBrowserSearch$-Pipeline im Konstruktor, sobald
+    // showRelationBrowser gesetzt ist — deswegen erst danach setzen.
+    this.showRelationBrowser.set(mode);
+  }
+
+  private searchRelationCandidates(query: string): Observable<AssetDto[]> {
+    const trimmed = query.trim();
+
+    if (!trimmed) {
+      return this.assetService
+        .listAssets({ page: 1, page_size: 200, sort: 'date', order: 'desc' })
+        .pipe(map((result: AssetsPage): AssetDto[] => result.items));
+    }
+
+    const idMatch = trimmed.match(/^#?(\d+)$/);
+    if (idMatch) {
+      const id = Number(idMatch[1]);
+      return this.assetService.getAsset(id).pipe(
+        map((detail: AssetDetailDto): AssetDto[] => [detail]),
+        catchError(() => of([] as AssetDto[])),
+      );
+    }
+
+    const sourceMatch = this.matchSourceKeyword(trimmed);
+    if (sourceMatch) {
+      return this.assetService
+        .listAssets({ page: 1, page_size: 200, sort: 'date', order: 'desc', sources: [sourceMatch] })
+        .pipe(map((result: AssetsPage): AssetDto[] => result.items));
+    }
+
+    return this.assetService
+      .listAssets({ page: 1, page_size: 200, sort: 'date', order: 'desc', q: trimmed, qMode: 'caption' })
+      .pipe(map((result: AssetsPage): AssetDto[] => result.items));
+  }
+
+  private matchSourceKeyword(query: string): string | null {
+    const normalized = query.toLowerCase();
+    if (normalized.length < 2) { return null; }
+    const sources: Record<string, string[]> = {
+      original: ['original', 'orig'],
+      flux: ['flux'],
+      sdxl: ['sdxl'],
+    };
+    for (const [source, aliases] of Object.entries(sources)) {
+      if (aliases.some((alias: string) => alias.startsWith(normalized))) { return source; }
+    }
+    return null;
   }
 
   protected closeRelationBrowser(): void {

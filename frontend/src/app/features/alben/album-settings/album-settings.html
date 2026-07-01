@@ -8,6 +8,19 @@
   </button>
 </div>
 
+<!-- Beschreibung (P10 Phase 1) — gilt für manuelle wie automatische Alben -->
+<div class="rules-block">
+  <div class="rules-block__label">Beschreibung</div>
+  <textarea
+    class="desc-input"
+    rows="2"
+    [value]="descriptionDraft()"
+    (input)="descriptionDraft.set($any($event.target).value)"
+    (blur)="saveDescription()"
+    placeholder="Kurze Beschreibung dieses Albums…"
+  ></textarea>
+</div>
+
 <!-- Smart toggle — the heart of the unification -->
 <div class="smart-card" [class.smart-card--on]="smartOn()">
   <div class="smart-card__ico">
@@ -177,5 +190,45 @@
     <pf-icon name="album" [size]="22" />
     <div class="set-manual__title">Manuell kuratiert</div>
     <p>Dieses Album enthält nur Bilder, die du selbst hinzugefügt hast. Schalte die automatische Befüllung ein, um es per Tag- oder Caption-Regeln zu füllen.</p>
+  </div>
+
+  <!-- Cover & Reihenfolge (P10 Phase 1) -->
+  <div class="rules-block">
+    <div class="rules-block__label">Cover &amp; Reihenfolge · {{ members().length }}</div>
+    @if (members().length === 0) {
+      <div class="trig-empty">Noch keine Bilder im Album.</div>
+    }
+    <div class="order-list">
+      @for (asset of members(); track asset.id; let i = $index) {
+        <div class="order-row">
+          <div class="order-row__thumb"><img [src]="thumbnailUrl(asset)" alt="" loading="lazy" /></div>
+          <div class="order-row__id">#{{ asset.id }}</div>
+          <button
+            class="order-row__cover"
+            [class.order-row__cover--on]="isCover(asset)"
+            (click)="setCover(asset)"
+            [title]="isCover(asset) ? 'Als Cover entfernen' : 'Als Cover setzen'"
+          >
+            <pf-icon name="star" [size]="14" />
+          </button>
+          <button
+            class="order-row__move"
+            [disabled]="i === 0"
+            (click)="moveMember(i, -1)"
+            aria-label="Nach oben"
+          >
+            <pf-icon name="chevronUp" [size]="14" />
+          </button>
+          <button
+            class="order-row__move"
+            [disabled]="i === members().length - 1"
+            (click)="moveMember(i, 1)"
+            aria-label="Nach unten"
+          >
+            <pf-icon name="chevronDown" [size]="14" />
+          </button>
+        </div>
+      }
+    </div>
   </div>
 }

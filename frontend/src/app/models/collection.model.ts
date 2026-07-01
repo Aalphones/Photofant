@@ -30,10 +30,13 @@ export interface Collection {
   match_mode: MatchMode;
   member_count: number;
   cover_assets: CoverAsset[];
+  description: string | null;
+  cover_asset_id: number | null;
 }
 
 export interface CollectionDetail extends Collection {
   triggers: Trigger[];
+  item_order: number[];  // asset ids, manuelle Reihenfolge (P10 Phase 1)
 }
 
 export interface CreateCollectionRequest {
@@ -46,6 +49,8 @@ export interface UpdateCollectionRequest {
   name?: string;
   kind?: CollectionKind;
   match_mode?: MatchMode;
+  description?: string | null;
+  cover_asset_id?: number | null;
 }
 
 export interface CreateTriggerRequest {

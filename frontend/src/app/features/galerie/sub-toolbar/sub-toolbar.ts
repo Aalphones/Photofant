@@ -98,9 +98,10 @@ export class SubToolbar {
   protected readonly hasActiveFilters = computed((): boolean => this.chips().length > 0);
 
   protected readonly GROUPS: { key: GroupKey; label: string }[] = [
-    { key: 'month',  label: 'Monat' },
-    { key: 'person', label: 'Person' },
-    { key: 'source', label: 'Quelle' },
+    { key: 'month',   label: 'Monat' },
+    { key: 'person',  label: 'Person' },
+    { key: 'source',  label: 'Quelle' },
+    { key: 'lineage', label: 'Original/Edit' },
   ];
 
   protected readonly DENSITIES: { key: Density; size: number }[] = [
@@ -151,6 +152,16 @@ export class SubToolbar {
 
   protected setGroup(group: GroupKey): void {
     this.store.dispatch(filtersActions.setGroup({ group }));
+  }
+
+  protected cycleGroup(): void {
+    const currentIndex = this.GROUPS.findIndex((entry) => entry.key === this.group());
+    const next = this.GROUPS[(currentIndex + 1) % this.GROUPS.length];
+    if (next != null) { this.setGroup(next.key); }
+  }
+
+  protected groupLabel(): string {
+    return this.GROUPS.find((entry) => entry.key === this.group())?.label ?? '';
   }
 
   protected setDensity(density: Density): void {

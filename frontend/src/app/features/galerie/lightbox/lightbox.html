@@ -142,6 +142,14 @@
       <div class="panel-sec">
         <div class="psec-title">Metadaten</div>
         <dl class="kv">
+          <dt>ID</dt>
+          <dd>
+            #{{ asset()!.id }}
+            @if (stageVersion(); as version) {
+              <span class="kv-version-id">· Version #{{ version.id }}</span>
+            }
+          </dd>
+
           <dt>Quelle</dt>
           <dd>
             <select
@@ -493,6 +501,51 @@
           <pf-icon name="plus" [size]="14" /> Edit verknüpfen
         </button>
       </div>
+
+      <!-- Verwandte Assets (Lineage, P10 Phase 1) — read-only: Original → Editor-Versionen →
+           daraus extrahierte Gesichter → deren eigene Editor-Versionen -->
+      @if (lineage(); as lin) {
+        @if (lin.versions.length > 0 || lin.faces.length > 0) {
+          <div class="panel-sec">
+            <div class="psec-title">Verwandte Assets</div>
+
+            @if (lin.versions.length > 0) {
+              <div class="rel-dir-lbl">Editor-Versionen · {{ lin.versions.length }}</div>
+              @for (version of lin.versions; track version.id) {
+                <div class="rel-row">
+                  <div class="rr-thumb"><img [src]="version.thumbnail_url" alt="" /></div>
+                  <div class="rr-body">
+                    <div class="rr-id">
+                      {{ versionLabel(version) }}
+                      @if (version.is_current) { <span class="rel-tag rel-tag--orig">Aktiv</span> }
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+
+            @if (lin.faces.length > 0) {
+              <div class="rel-dir-lbl rel-dir-lbl--spaced">Gesichter · {{ lin.faces.length }}</div>
+              @for (face of lin.faces; track face.id) {
+                <div class="rel-row">
+                  <div class="rr-thumb rr-thumb--face"><img [src]="'/api' + face.crop_url" alt="" /></div>
+                  <div class="rr-body">
+                    <div class="rr-id">{{ face.person_name ?? 'Unbekannt' }}</div>
+                  </div>
+                </div>
+                @for (faceVersion of face.versions; track faceVersion.id) {
+                  <div class="rel-row rel-row--nested">
+                    <div class="rr-thumb"><img [src]="faceVersion.thumbnail_url" alt="" /></div>
+                    <div class="rr-body">
+                      <div class="rr-id">{{ versionLabel(faceVersion) }}</div>
+                    </div>
+                  </div>
+                }
+              }
+            }
+          </div>
+        }
+      }
 
       } <!-- @if (isFaceMode()) Quelle / @else Beziehungen -->
 

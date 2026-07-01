@@ -678,6 +678,24 @@ def _batch_version_counts(session: Session, instance_ids: list[int]) -> dict[int
     return {int(instance_id): int(count) for instance_id, count in rows}
 
 
+def _version_to_dto(version: Version) -> VersionDto:
+    params = version.params or {}
+    width = params.get("width")
+    height = params.get("height")
+    res = ResDto(width=width, height=height) if width and height else None
+    return VersionDto(
+        id=version.id,
+        type=version.type,
+        parent_id=version.parent_id,
+        path=version.path,
+        is_current=version.is_current,
+        params=version.params,
+        created_at=version.created_at,
+        res=res,
+        thumbnail_url=f"/api/versions/{version.id}/thumbnail",
+    )
+
+
 def _load_asset_versions(session: Session, instance_id: int, asset_id: int) -> list[VersionDto]:
     instance_versions = (
         session.query(Version)
@@ -697,25 +715,70 @@ def _load_asset_versions(session: Session, instance_id: int, asset_id: int) -> l
             .order_by(Version.created_at.asc())
             .all()
         )
-    all_versions = instance_versions + face_versions
-    result: list[VersionDto] = []
-    for version in all_versions:
-        params = version.params or {}
-        width = params.get("width")
-        height = params.get("height")
-        res = ResDto(width=width, height=height) if width and height else None
-        result.append(VersionDto(
-            id=version.id,
-            type=version.type,
-            parent_id=version.parent_id,
-            path=version.path,
-            is_current=version.is_current,
-            params=version.params,
-            created_at=version.created_at,
-            res=res,
-            thumbnail_url=f"/api/versions/{version.id}/thumbnail",
-        ))
-    return result
+    return [_version_to_dto(version) for version in instance_versions + face_versions]
+
+
+def _load_face_versions(session: Session, face_id: int) -> list[VersionDto]:
+    versions = (
+        session.query(Version)
+        .filter(Version.face_id == face_id)
+        .order_by(Version.created_at.asc())
+        .all()
+    )
+    return [_version_to_dto(version) for version in versions]
+
+
+class LineageFaceDto(BaseModel):
+    id: int
+    person_id: int | None
+    person_name: str | None
+    crop_url: str
+    origin: str | None
+    source_version_id: int | None
+    versions: list[VersionDto]
+
+
+class LineageDto(BaseModel):
+    asset_id: int
+    thumbnail_url: str
+    versions: list[VersionDto]  # Editor-Bearbeitungen der Instanz (version.instance_id)
+    faces: list[LineageFaceDto]  # aus diesem Asset extrahierte Gesichter + deren eigene Edits
+
+
+def _load_lineage_faces(session: Session, asset_id: int) -> list[LineageFaceDto]:
+    faces = session.query(Face).filter(Face.asset_id == asset_id).order_by(Face.created_at.asc()).all()
+    person_ids = {face.person_id for face in faces if face.person_id is not None}
+    person_names: dict[int, str] = {}
+    if person_ids:
+        persons = session.query(Person).filter(Person.id.in_(person_ids)).all()
+        person_names = {p.id: p.name for p in persons if p.name is not None}
+    return [
+        LineageFaceDto(
+            id=face.id,
+            person_id=face.person_id,
+            person_name=person_names.get(face.person_id) if face.person_id is not None else None,
+            crop_url=f"/faces/{face.id}/thumbnail",
+            origin=face.origin,
+            source_version_id=face.source_version_id,
+            versions=_load_face_versions(session, face.id),
+        )
+        for face in faces
+    ]
+
+
+def _build_lineage_dto(session: Session, asset: Asset, instance: AssetInstance) -> LineageDto:
+    instance_versions = (
+        session.query(Version)
+        .filter(Version.instance_id == instance.id)
+        .order_by(Version.created_at.asc())
+        .all()
+    )
+    return LineageDto(
+        asset_id=asset.id,
+        thumbnail_url=f"/api/assets/{asset.id}/thumbnail",
+        versions=[_version_to_dto(version) for version in instance_versions],
+        faces=_load_lineage_faces(session, asset.id),
+    )
 
 
 def _load_asset_faces(session: Session, asset_id: int) -> list[FaceDto]:
@@ -794,6 +857,17 @@ async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
 
     asset, instance = row
     return _build_asset_detail_dto(session, asset, instance)
+
+
+@router.get("/{asset_id}/lineage", response_model=LineageDto)
+async def get_asset_lineage(asset_id: int, session: DbSession) -> LineageDto:
+    """Ableitungs-Baum: Original → Editor-Versionen → daraus extrahierte Gesichter → deren
+    eigene Editor-Versionen (Konzept §10 Gruppierung „Original/Face/Edit", P10 Phase 1)."""
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset, instance = row
+    return _build_lineage_dto(session, asset, instance)
 
 
 class AssetPatchBody(BaseModel):

@@ -154,6 +154,28 @@ export class CollectionsEffects {
     )
   );
 
+  readonly reorder$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(collectionsActions.reorder),
+      mergeMap(({ collectionId, assetIds }) =>
+        this.collectionService.setOrder(collectionId, assetIds).pipe(
+          map(() => collectionsActions.reorderSuccess({ collectionId })),
+          catchError((error: HttpErrorResponse) =>
+            of(collectionsActions.reorderFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  // Reorder changes item_order → refresh the open detail right away.
+  readonly reloadDetailAfterReorder$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(collectionsActions.reorderSuccess),
+      map(({ collectionId }) => collectionsActions.loadDetail({ id: collectionId })),
+    )
+  );
+
   // Member counts change asynchronously (re-evaluation runs in the queue). When such a
   // job finishes, refresh the list and the open detail so counts and membership are current.
   readonly reloadAfterReevaluate$ = createEffect(() =>

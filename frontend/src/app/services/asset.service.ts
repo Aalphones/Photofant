@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { AssetDetailDto, AssetDto, AssetPatch, AssetsPage, SearchMode, SimilarAsset, SortKey, SortOrder } from '@photofant/models';
+import type { AssetDetailDto, AssetDto, AssetPatch, AssetsPage, LineageDto, SearchMode, SimilarAsset, SortKey, SortOrder } from '@photofant/models';
 
 export interface ListAssetsParams {
   page: number;
@@ -67,6 +67,10 @@ export class AssetService {
 
   getAsset(id: number): Observable<AssetDetailDto> {
     return this.http.get<AssetDetailDto>(`/api/assets/${id}`);
+  }
+
+  getLineage(id: number): Observable<LineageDto> {
+    return this.http.get<LineageDto>(`/api/assets/${id}/lineage`);
   }
 
   setFavourite(id: number, value: boolean): Observable<AssetDto> {

@@ -47,6 +47,33 @@ export class Alben {
     return detail && detail.id === this.selectedId() ? detail : null;
   });
 
+  // Manuelle Reihenfolge + gewähltes Cover (P10 Phase 1) — Original-`members()` ist
+  // datumssortiert; hier einmal zentral nach `item_order`/`cover_asset_id` umsortiert,
+  // damit Grid, Header-Cover und die Reihenfolge-Sektion in den Einstellungen dieselbe
+  // Sicht teilen statt jeweils eigene Sortierlogik zu pflegen.
+  protected readonly orderedMembers = computed((): AssetDto[] => {
+    const collection = this.openCollection();
+    const list = this.members();
+    if (collection == null) { return list; }
+
+    const byId = new Map(list.map((asset: AssetDto) => [asset.id, asset]));
+    const ordered = collection.item_order
+      .map((id: number) => byId.get(id))
+      .filter((asset): asset is AssetDto => asset != null);
+    const seen = new Set(ordered.map((asset: AssetDto) => asset.id));
+    const rest = list.filter((asset: AssetDto) => !seen.has(asset.id));
+    const result = [...ordered, ...rest];
+
+    const coverId = collection.cover_asset_id;
+    if (coverId == null) { return result; }
+    const coverIndex = result.findIndex((asset: AssetDto) => asset.id === coverId);
+    if (coverIndex <= 0) { return result; }
+    const cover = result[coverIndex];
+    if (cover == null) { return result; }
+    result.splice(coverIndex, 1);
+    return [cover, ...result];
+  });
+
   private lastFetchedId = -1;
   private lastFetchedCount = -1;
 
@@ -114,7 +141,7 @@ export class Alben {
   }
 
   protected openMember(assetId: number): void {
-    this.store.dispatch(galleryActions.setLightboxContext({ assets: this.members() }));
+    this.store.dispatch(galleryActions.setLightboxContext({ assets: this.orderedMembers() }));
     this.store.dispatch(galleryActions.openLightbox({ id: assetId }));
   }
 

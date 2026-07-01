@@ -8,7 +8,7 @@ Die Organisations- und Export-Endstufe: manuelle Alben rund, Lineage-Gruppierung
 
 | Phase | Topic | Rating | Status |
 |---|---|---|---|
-| 1 | [Lineage & Collections-Ausbau](phase-1-lineage-collections.md) | standard | pending |
+| 1 | [Lineage & Collections-Ausbau](phase-1-lineage-collections.md) | standard | complete |
 | 2 | [Trainingssets & Statistiken](phase-2-trainingssets-stats.md) | standard | pending |
 | 3 | [Caption-Tools & Near-Dupes](phase-3-caption-tools-dupes.md) | standard | pending |
 | 4 | [Export-Workflows](phase-4-export.md) | standard | pending |

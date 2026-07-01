@@ -46,5 +46,9 @@ export const collectionsActions = createActionGroup({
     'Add Items':             props<{ collectionId: number; assetIds: number[] }>(),
     'Add Items Success':     emptyProps(),
     'Add Items Failure':     props<{ error: string }>(),
+
+    'Reorder':               props<{ collectionId: number; assetIds: number[] }>(),
+    'Reorder Success':       props<{ collectionId: number }>(),
+    'Reorder Failure':       props<{ error: string }>(),
   },
 });

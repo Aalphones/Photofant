@@ -227,6 +227,10 @@ pf-zoom-stage {
   color: var(--text-3);
 }
 
+.kv-version-id {
+  color: var(--text-3);
+}
+
 .kv-select {
   width: 100%;
   padding: 3px 4px;
@@ -1361,6 +1365,8 @@ pf-zoom-stage {
   text-align: left;
 
   & + & { border-top: 1px solid var(--line); }
+
+  &--nested { padding-left: 24px; }
 }
 
 .rel-empty {
@@ -1378,6 +1384,8 @@ pf-zoom-stage {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 
   img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  &--face { border-radius: 50%; }
 }
 
 .rr-body {

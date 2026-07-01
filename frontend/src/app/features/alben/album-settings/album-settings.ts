@@ -2,13 +2,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   input,
   output,
   signal,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { CollectionDetail, MatchMode, PersonDto, TagListItem, Trigger, TriggerType } from '@photofant/models';
+import type { AssetDto, CollectionDetail, MatchMode, PersonDto, TagListItem, Trigger, TriggerType } from '@photofant/models';
+import { AssetService } from '@photofant/services';
 import { collectionsActions, personsActions, personsSelectors, tagsActions, tagsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
@@ -23,11 +25,16 @@ type AddTab = TriggerType;
 })
 export class AlbumSettings {
   private readonly store = inject(Store);
+  private readonly assetService = inject(AssetService);
 
   readonly collection = input.required<CollectionDetail>();
   readonly memberCount = input<number>(0);
+  readonly members = input<AssetDto[]>([]);
 
   readonly close = output<void>();
+
+  // Beschreibung — lokaler Entwurf, gespeichert bei Blur (P10 Phase 1)
+  protected readonly descriptionDraft = signal('');
 
   private readonly allTags = this.store.selectSignal(tagsSelectors.selectAll);
   private readonly allPersons = this.store.selectSignal(personsSelectors.selectAll);
@@ -67,6 +74,11 @@ export class AlbumSettings {
   constructor() {
     this.store.dispatch(tagsActions.load());
     this.store.dispatch(personsActions.loadPersons());
+
+    // Entwurf mit dem Server-Stand synchron halten, wenn ein anderes Album geöffnet wird.
+    effect((): void => {
+      this.descriptionDraft.set(this.collection().description ?? '');
+    });
   }
 
   protected toggleSmart(): void {
@@ -157,5 +169,45 @@ export class AlbumSettings {
 
   protected onClose(): void {
     this.close.emit();
+  }
+
+  // ── Beschreibung, Cover, Reihenfolge (P10 Phase 1 — manuelle Alben) ────────
+
+  protected saveDescription(): void {
+    const value = this.descriptionDraft().trim();
+    if (value === (this.collection().description ?? '')) { return; }
+    this.store.dispatch(collectionsActions.update({
+      id: this.collection().id,
+      request: { description: value.length > 0 ? value : null },
+    }));
+  }
+
+  protected thumbnailUrl(asset: AssetDto): string {
+    return this.assetService.thumbnailUrl(asset.id, 256, asset.content_hash);
+  }
+
+  protected isCover(asset: AssetDto): boolean {
+    return this.collection().cover_asset_id === asset.id;
+  }
+
+  protected setCover(asset: AssetDto): void {
+    const nextCoverId = this.isCover(asset) ? null : asset.id;
+    this.store.dispatch(collectionsActions.update({
+      id: this.collection().id,
+      request: { cover_asset_id: nextCoverId },
+    }));
+  }
+
+  protected moveMember(index: number, direction: -1 | 1): void {
+    const list = [...this.members()];
+    const current = list[index];
+    const target = list[index + direction];
+    if (current == null || target == null) { return; }
+    list[index] = target;
+    list[index + direction] = current;
+    this.store.dispatch(collectionsActions.reorder({
+      collectionId: this.collection().id,
+      assetIds: list.map((asset: AssetDto) => asset.id),
+    }));
   }
 }

@@ -63,10 +63,13 @@ class CollectionDto(BaseModel):
     match_mode: str
     member_count: int
     cover_assets: list[CoverAssetDto]
+    description: str | None = None
+    cover_asset_id: int | None = None
 
 
 class CollectionDetailDto(CollectionDto):
     triggers: list[TriggerDto]
+    item_order: list[int] = []  # asset ids, manuelle Reihenfolge (position ASC, dann id)
 
 
 class CreateCollectionRequest(BaseModel):
@@ -79,6 +82,12 @@ class UpdateCollectionRequest(BaseModel):
     name: str | None = None
     kind: str | None = None
     match_mode: str | None = None
+    description: str | None = None
+    cover_asset_id: int | None = None
+
+
+class ReorderItemsRequest(BaseModel):
+    asset_ids: list[int]  # gewünschte Reihenfolge, vollständige Mitgliederliste
 
 
 class CreateTriggerRequest(BaseModel):
@@ -114,18 +123,44 @@ def _member_asset_ids(session: Session, collection_id: int, limit: int | None = 
     return [row[0] for row in query.all()]
 
 
-def _cover_assets(session: Session, collection_id: int) -> list[CoverAssetDto]:
-    """Up to 4 cover assets (id + content_hash) for album thumbnail display."""
+def _item_order(session: Session, collection_id: int) -> list[int]:
+    """Active member asset ids ordered by manual `position` (NULL last), then id."""
+    rows = (
+        session.query(CollectionItem.asset_id)
+        .join(AssetInstance, AssetInstance.asset_id == CollectionItem.asset_id)
+        .filter(CollectionItem.collection_id == collection_id, AssetInstance.deleted_at.is_(None))
+        .distinct()
+        .order_by(CollectionItem.position.is_(None), CollectionItem.position.asc(), CollectionItem.asset_id.asc())
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
+def _cover_assets(session: Session, collection: Collection) -> list[CoverAssetDto]:
+    """Up to 4 cover assets (id + content_hash) for album thumbnail display.
+
+    The explicitly chosen `cover_asset_id` (P10 Phase 1) comes first when set and still
+    an active member; the remaining slots fill up with other members as before.
+    """
     rows = (
         session.query(CollectionItem.asset_id, Asset.content_hash)
         .join(Asset, Asset.id == CollectionItem.asset_id)
         .join(AssetInstance, AssetInstance.asset_id == CollectionItem.asset_id)
-        .filter(CollectionItem.collection_id == collection_id, AssetInstance.deleted_at.is_(None))
+        .filter(CollectionItem.collection_id == collection.id, AssetInstance.deleted_at.is_(None))
         .distinct()
-        .limit(4)
+        .limit(8)  # etwas Puffer, falls das Cover unter den ersten 4 nicht dabei ist
         .all()
     )
-    return [CoverAssetDto(id=row[0], content_hash=row[1]) for row in rows]
+    covers = [CoverAssetDto(id=row[0], content_hash=row[1]) for row in rows]
+    cover_id = collection.cover_asset_id
+    if cover_id is not None:
+        chosen = next((cover for cover in covers if cover.id == cover_id), None)
+        if chosen is None:
+            asset = session.get(Asset, cover_id)
+            chosen = CoverAssetDto(id=asset.id, content_hash=asset.content_hash) if asset is not None else None
+        if chosen is not None:
+            covers = [chosen] + [cover for cover in covers if cover.id != cover_id]
+    return covers[:4]
 
 
 def _build_trigger_dto(session: Session, trigger: SmartTrigger) -> TriggerDto:
@@ -157,7 +192,9 @@ def _build_collection_dto(session: Session, collection: Collection) -> Collectio
         kind=collection.kind,
         match_mode=collection.match_mode,
         member_count=len(member_ids),
-        cover_assets=_cover_assets(session, collection.id),
+        cover_assets=_cover_assets(session, collection),
+        description=collection.description,
+        cover_asset_id=collection.cover_asset_id,
     )
 
 
@@ -167,6 +204,7 @@ def _build_detail_dto(session: Session, collection: Collection) -> CollectionDet
     return CollectionDetailDto(
         **base.model_dump(),
         triggers=[_build_trigger_dto(session, trigger) for trigger in triggers],
+        item_order=_item_order(session, collection.id),
     )
 
 
@@ -236,6 +274,15 @@ async def update_collection(
                 collection_id=collection_id, source="smart"
             ).delete()
         became_smart = body.kind == "smart_album" and not was_smart
+
+    fields_set = body.model_fields_set
+    if "description" in fields_set:
+        description = (body.description or "").strip()
+        collection.description = description or None
+    if "cover_asset_id" in fields_set:
+        if body.cover_asset_id is not None and session.get(Asset, body.cover_asset_id) is None:
+            raise HTTPException(status_code=422, detail="cover_asset_id: asset not found")
+        collection.cover_asset_id = body.cover_asset_id
 
     session.commit()
 
@@ -367,4 +414,20 @@ async def remove_item(collection_id: int, asset_id: int, session: DbSession) -> 
     if item is not None:
         session.delete(item)
         session.commit()
+    return Response(status_code=204)
+
+
+@router.put("/{collection_id}/order", status_code=204)
+async def reorder_items(collection_id: int, body: ReorderItemsRequest, session: DbSession) -> Response:
+    """Set manual `position` per given order (index in the list = position)."""
+    _get_collection_or_404(session, collection_id)
+    items = {
+        item.asset_id: item
+        for item in session.query(CollectionItem).filter_by(collection_id=collection_id).all()
+    }
+    for position, asset_id in enumerate(body.asset_ids):
+        item = items.get(asset_id)
+        if item is not None:
+            item.position = position
+    session.commit()
     return Response(status_code=204)

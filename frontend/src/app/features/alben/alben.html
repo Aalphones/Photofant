@@ -11,11 +11,11 @@
       </button>
 
       <div class="adh">
-        <div class="album-cover" [class.album-cover--empty]="members().length === 0">
-          @if (members().length === 0) {
+        <div class="album-cover" [class.album-cover--empty]="orderedMembers().length === 0">
+          @if (orderedMembers().length === 0) {
             <pf-icon name="album" [size]="28" />
           } @else {
-            @for (asset of members().slice(0, 4); track asset.id) {
+            @for (asset of orderedMembers().slice(0, 4); track asset.id) {
               <div class="album-cover__cell">
                 <img [src]="thumbnailUrl(asset)" alt="" loading="lazy" />
               </div>
@@ -52,7 +52,7 @@
         </div>
       </div>
 
-      @if (members().length === 0) {
+      @if (orderedMembers().length === 0) {
         <div class="placeholder-view">
           <pf-icon [name]="isSmart(col) ? 'sparkle' : 'album'" [size]="40" />
           <h3>{{ isSmart(col) ? 'Keine Treffer' : 'Album ist leer' }}</h3>
@@ -63,7 +63,7 @@
           </p>
         </div>
       } @else {
-        <pf-album-grid [assets]="members()" (openAsset)="openMember($event)" />
+        <pf-album-grid [assets]="orderedMembers()" (openAsset)="openMember($event)" />
       }
     </div>
 
@@ -71,6 +71,7 @@
       <pf-album-settings
         [collection]="col"
         [memberCount]="col.member_count"
+        [members]="orderedMembers()"
         (close)="settingsOpen.set(false)"
       />
     }
