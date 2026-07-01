@@ -57,6 +57,10 @@ export class ReviewReconcile {
   protected readonly ACK_MISSING_ACTIONS: RrAction[] = [
     { label: 'Endgültig entfernen', variant: 'danger', action: 'purge', icon: 'trash' },
   ];
+  protected readonly ORPHANED_EDIT_ACTIONS: RrAction[] = [
+    { label: 'Indizieren', variant: 'primary', action: 'index', icon: 'plus' },
+    { label: 'Papierkorb', variant: 'danger', action: 'trash', icon: 'trash' },
+  ];
 
   // ── Buckets projected to display rows ───────────────────────────────────────
 
@@ -108,13 +112,22 @@ export class ReviewReconcile {
     }))
   );
 
+  protected readonly orphanedEditRows = computed((): RrRow[] =>
+    (this.report()?.orphaned_edits ?? []).map((file: OrphanFile) => ({
+      key: file.path,
+      name: this.fileName(file.path),
+      meta: this.folderLabel(file.path),
+    }))
+  );
+
   protected readonly totalIssues = computed((): number =>
     this.orphanRows().length +
     this.missingRows().length +
     this.driftRows().length +
     this.misassignedRows().length +
     this.orphanedFaceRows().length +
-    this.ackMissingRows().length
+    this.ackMissingRows().length +
+    this.orphanedEditRows().length
   );
 
   // ── Actions ─────────────────────────────────────────────────────────────────
@@ -135,6 +148,7 @@ export class ReviewReconcile {
   private buildAction(kind: IssueKind, key: RrKey, action: RepairActionKind): RepairAction {
     switch (kind) {
       case 'orphan':
+      case 'orphaned_edit':
         return { item: { kind, path: key as string }, action };
       case 'drift': {
         // fix_path needs the rediscovered location, looked up by the row's instance id.

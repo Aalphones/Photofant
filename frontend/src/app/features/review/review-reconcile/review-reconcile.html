@@ -103,5 +103,17 @@
         (repair)="onRepair('acknowledged_missing', $event)"
       />
     }
+
+    @if (orphanedEditRows().length > 0) {
+      <pf-rr-section
+        title="Verwaiste Edit-Dateien"
+        subtitle="Bearbeitete Version auf der Festplatte, aber ohne Verknüpfung in der Datenbank."
+        variant="warn"
+        [rows]="orphanedEditRows()"
+        [actions]="ORPHANED_EDIT_ACTIONS"
+        [busy]="isRepairing()"
+        (repair)="onRepair('orphaned_edit', $event)"
+      />
+    }
   </div>
 }

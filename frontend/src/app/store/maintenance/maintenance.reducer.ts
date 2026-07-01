@@ -53,6 +53,7 @@ function pruneReport(report: ReconcileReport, removed: RepairItem[]): ReconcileR
   const orphanedFaceIds = new Set(removed.filter((item: RepairItem) => item.kind === 'orphaned_face').map((item: RepairItem) => item.face_id));
   const misassignedIds = new Set(removed.filter((item: RepairItem) => item.kind === 'misassigned').map((item: RepairItem) => item.instance_id));
   const ackMissingIds = new Set(removed.filter((item: RepairItem) => item.kind === 'acknowledged_missing').map((item: RepairItem) => item.instance_id));
+  const orphanedEditPaths = new Set(removed.filter((item: RepairItem) => item.kind === 'orphaned_edit').map((item: RepairItem) => item.path));
   return {
     ...report,
     orphaned_files: report.orphaned_files.filter((file) => !orphanPaths.has(file.path)),
@@ -61,6 +62,7 @@ function pruneReport(report: ReconcileReport, removed: RepairItem[]): ReconcileR
     orphaned_faces: report.orphaned_faces.filter((face) => !orphanedFaceIds.has(face.face_id)),
     misassigned_instances: report.misassigned_instances.filter((instance) => !misassignedIds.has(instance.instance_id)),
     acknowledged_missing: report.acknowledged_missing.filter((instance) => !ackMissingIds.has(instance.instance_id)),
+    orphaned_edits: report.orphaned_edits.filter((file) => !orphanedEditPaths.has(file.path)),
   };
 }
 

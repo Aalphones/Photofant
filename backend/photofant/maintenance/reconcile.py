@@ -120,6 +120,7 @@ class ReconcileReport:
     orphaned_faces: list[OrphanedFaceItem] = field(default_factory=list)
     misassigned_instances: list[MisassignedInstanceItem] = field(default_factory=list)
     acknowledged_missing: list[AcknowledgedMissingItem] = field(default_factory=list)
+    orphaned_edits: list[OrphanItem] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -130,6 +131,7 @@ class ReconcileReport:
             + len(self.orphaned_faces)
             + len(self.misassigned_instances)
             + len(self.acknowledged_missing)
+            + len(self.orphaned_edits)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -141,16 +143,20 @@ class ReconcileReport:
             "orphaned_faces": [asdict(item) for item in self.orphaned_faces],
             "misassigned_instances": [asdict(item) for item in self.misassigned_instances],
             "acknowledged_missing": [asdict(item) for item in self.acknowledged_missing],
+            "orphaned_edits": [asdict(item) for item in self.orphaned_edits],
         }
 
 
-def _norm(path: str | Path) -> str:
+def norm_path(path: str | Path) -> str:
     """Case- and separator-normalised absolute key for path comparison.
 
     `resolve()` runs with strict=False, so it also normalises paths whose target
     no longer exists (the missing-file case).
     """
     return os.path.normcase(str(Path(path).resolve()))
+
+
+_norm = norm_path  # short alias used throughout this module
 
 
 def _person_label(person_name: str | None) -> str:
@@ -249,3 +255,34 @@ def classify_reconcile(
         )
 
     return report
+
+
+def classify_orphaned_edits(
+    edit_paths: list[Path],
+    active_version_paths: set[str],
+) -> list[OrphanItem]:
+    """Edit files on disk with no matching `version.path` row.
+
+    Counterpart to the orphaned-files bucket in `classify_reconcile`, but scoped
+    to `edits/` folders — those are excluded from the main FS walk (see
+    `reconcile_job._walk_data_root`) because `version` rows carry no content_hash
+    to rehash against, so drift detection doesn't apply here. `active_version_paths`
+    must already be normalised via `norm_path`.
+    """
+    items: list[OrphanItem] = []
+    for candidate in edit_paths:
+        if norm_path(candidate) in active_version_paths:
+            continue
+        try:
+            size = candidate.stat().st_size
+        except OSError:
+            size = 0
+        items.append(
+            OrphanItem(
+                path=str(candidate.resolve()),
+                size=size,
+                person_name=None,
+                detail="Keine Version-Eintragszeile",
+            )
+        )
+    return items

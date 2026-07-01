@@ -137,6 +137,7 @@ class ReconcileReportDto(BaseModel):
     orphaned_faces: list[OrphanedFaceDto] = []
     misassigned_instances: list[MisassignedInstanceDto] = []
     acknowledged_missing: list[AcknowledgedMissingDto] = []
+    orphaned_edits: list[OrphanDto] = []
 
 
 _EMPTY_REPORT = ReconcileReportDto(
@@ -147,12 +148,14 @@ _EMPTY_REPORT = ReconcileReportDto(
     orphaned_faces=[],
     misassigned_instances=[],
     acknowledged_missing=[],
+    orphaned_edits=[],
 )
 
 
 class RepairItem(BaseModel):
     kind: Literal[
-        "orphan", "missing", "drift", "orphaned_face", "misassigned", "acknowledged_missing"
+        "orphan", "missing", "drift", "orphaned_face", "misassigned", "acknowledged_missing",
+        "orphaned_edit",
     ]
     instance_id: int | None = None
     face_id: int | None = None
@@ -212,6 +215,15 @@ async def _apply_one(
     elif item.kind == "orphan" and action == "trash":
         if not item.path:
             raise repair.RepairError("orphan trash requires a path")
+        await repair.trash_orphan(session, item.path, data_root)
+    elif item.kind == "orphaned_edit" and action == "index":
+        if not item.path:
+            raise repair.RepairError("orphaned_edit index requires a path")
+        repair.ensure_under_root(Path(item.path), data_root)
+        import_paths.append(item.path)
+    elif item.kind == "orphaned_edit" and action == "trash":
+        if not item.path:
+            raise repair.RepairError("orphaned_edit trash requires a path")
         await repair.trash_orphan(session, item.path, data_root)
     elif item.kind == "missing" and action == "mark_missing":
         if item.instance_id is None:

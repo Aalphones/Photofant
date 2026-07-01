@@ -18,7 +18,7 @@ import type {
 /**
  * One reconcile issue bucket: a titled, badged list with row selection and
  * repair buttons. Selection lives here; the shell only feeds rows + actions and
- * receives a repair event with the affected keys. Drives all six buckets so the
+ * receives a repair event with the affected keys. Drives every bucket so the
  * shell stays a thin configuration layer.
  */
 @Component({

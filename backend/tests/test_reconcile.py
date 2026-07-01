@@ -6,7 +6,9 @@ import pytest
 
 from photofant.maintenance.reconcile import (
     InstanceRecord,
+    classify_orphaned_edits,
     classify_reconcile,
+    norm_path,
 )
 from photofant.maintenance.repair import RepairError, ensure_under_root
 from photofant.media.meta import compute_hash
@@ -107,6 +109,27 @@ def test_size_prefilter_excludes_mismatched_candidate(tmp_path: Path) -> None:
     assert len(report.missing_files) == 1
     assert len(report.orphaned_files) == 1
     assert not report.path_drift
+
+
+# ── orphaned edits: edits/ files with no matching version.path row ───────────
+
+
+def test_edit_file_with_version_row_is_not_orphaned(tmp_path: Path) -> None:
+    linked = _write(tmp_path / "_unknown" / "edits" / "edit_a.png", b"edited-bytes")
+
+    items = classify_orphaned_edits([linked], {norm_path(linked)})
+
+    assert items == []
+
+
+def test_edit_file_without_version_row_is_orphaned(tmp_path: Path) -> None:
+    unlinked = _write(tmp_path / "_unknown" / "edits" / "edit_b.png", b"edited-bytes")
+
+    items = classify_orphaned_edits([unlinked], set())
+
+    assert len(items) == 1
+    assert items[0].path == str(unlinked.resolve())
+    assert items[0].detail == "Keine Version-Eintragszeile"
 
 
 # ── repair path-safety guard (data-critical) ─────────────────────────────────

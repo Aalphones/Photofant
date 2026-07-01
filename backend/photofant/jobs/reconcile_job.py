@@ -8,7 +8,7 @@ from pathlib import Path
 from sqlalchemy import select
 
 from photofant.config import get_data_root
-from photofant.db.models import Asset, AssetInstance, Face, Person
+from photofant.db.models import Asset, AssetInstance, Face, Person, Version
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.maintenance.reconcile import (
@@ -16,7 +16,9 @@ from photofant.maintenance.reconcile import (
     InstanceRecord,
     MisassignedInstanceItem,
     OrphanedFaceItem,
+    classify_orphaned_edits,
     classify_reconcile,
+    norm_path,
 )
 from photofant.maintenance.store import persist_report
 from photofant.media.meta import SUPPORTED_EXTENSIONS
@@ -26,10 +28,13 @@ log = logging.getLogger(__name__)
 _PHOTOFANT_DIRNAME = ".photofant"
 
 # Subdirectory names that are NOT tracked by asset_instance and must be
-# excluded from the reconcile walk to avoid false orphan reports.
+# excluded from the main reconcile walk to avoid false orphan reports.
 # - faces/  → tracked via Face.crop_path (managed by face_job + face_folder_scan_job)
-# - edits/  → tracked via Version.path (managed by edit pipeline)
+# - edits/  → tracked via Version.path (managed by edit pipeline); reconciled
+#             separately below (_walk_edits_dirs + classify_orphaned_edits) since
+#             Version rows carry no content_hash for drift rehashing.
 _EXCLUDED_SUBDIRS = {"faces", "edits"}
+_EDITS_DIRNAME = "edits"
 
 
 def _gather_active_instances() -> list[InstanceRecord]:
@@ -82,6 +87,32 @@ def _walk_data_root(data_root: Path) -> list[Path]:
             if Path(filename).suffix.lower() in SUPPORTED_EXTENSIONS:
                 found.append(Path(dirpath) / filename)
     return found
+
+
+def _walk_edits_dirs(data_root: Path) -> list[Path]:
+    """All supported image files sitting directly in an `edits/` folder.
+
+    Mirrors `_walk_data_root`'s pruning (skips `.photofant/`) but only collects
+    files whose immediate parent directory is named `edits` — that's where the
+    edit pipeline writes rendered versions (`personX/edits/`, `_unknown/edits/`).
+    """
+    found: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(data_root):
+        if _PHOTOFANT_DIRNAME in dirnames:
+            dirnames.remove(_PHOTOFANT_DIRNAME)
+        if Path(dirpath).name != _EDITS_DIRNAME:
+            continue
+        for filename in filenames:
+            if Path(filename).suffix.lower() in SUPPORTED_EXTENSIONS:
+                found.append(Path(dirpath) / filename)
+    return found
+
+
+def _gather_active_version_paths() -> set[str]:
+    """Normalised paths of every `version` row — the "already linked" set for edits."""
+    with SessionLocal() as session:
+        paths = session.execute(select(Version.path)).scalars().all()
+    return {norm_path(path) for path in paths}
 
 
 def _gather_orphaned_faces() -> list[OrphanedFaceItem]:
@@ -197,19 +228,23 @@ def _run_reconcile() -> int:
     report.orphaned_faces = _gather_orphaned_faces()
     report.misassigned_instances = _gather_misassigned_instances()
     report.acknowledged_missing = _gather_acknowledged_missing()
+    report.orphaned_edits = classify_orphaned_edits(
+        _walk_edits_dirs(data_root), _gather_active_version_paths()
+    )
 
     with SessionLocal() as session:
         persist_report(session, report)
 
     log.info(
         "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces, "
-        "%d misassigned, %d acknowledged-missing",
+        "%d misassigned, %d acknowledged-missing, %d orphaned edits",
         len(report.orphaned_files),
         len(report.missing_files),
         len(report.path_drift),
         len(report.orphaned_faces),
         len(report.misassigned_instances),
         len(report.acknowledged_missing),
+        len(report.orphaned_edits),
     )
     return report.total
 

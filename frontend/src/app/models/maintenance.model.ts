@@ -12,6 +12,7 @@ export const ISSUE_KINDS = [
   'orphaned_face',
   'misassigned',
   'acknowledged_missing',
+  'orphaned_edit',
 ] as const;
 export type IssueKind = typeof ISSUE_KINDS[number];
 
@@ -82,6 +83,7 @@ export interface ReconcileReport {
   orphaned_faces: OrphanedFace[];
   misassigned_instances: MisassignedInstance[];
   acknowledged_missing: AcknowledgedMissing[];
+  orphaned_edits: OrphanFile[];
 }
 
 export interface RepairItem {
