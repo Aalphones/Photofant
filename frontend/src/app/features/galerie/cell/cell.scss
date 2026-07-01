@@ -119,16 +119,32 @@
   &--sdxl { background: oklch(0.52 0.13 200 / .85); }
 }
 
-.cell__stack-badge {
+.cell__corner {
   position: absolute;
   bottom: 6px;
   right: 6px;
   display: flex;
   align-items: center;
   gap: 3px;
+}
+
+.cell__stack-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   font-family: var(--mono);
   font-size: 9.5px;
   color: rgba(255,255,255,.85);
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.cell__id-badge {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: rgba(255,255,255,.7);
   background: rgba(0,0,0,.55);
   backdrop-filter: blur(4px);
   padding: 2px 5px;

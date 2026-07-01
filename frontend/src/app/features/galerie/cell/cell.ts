@@ -85,6 +85,14 @@ export class GalerieCell {
     this.asset().kind === 'version'
   );
 
+  // Version-Pseudo-Einträge teilen asset.id mit dem Original (siehe isVersionEntry) —
+  // hier zeigt die ID-Badge darum die eigene version_id, sonst wäre jede Kachel eines
+  // Stapels von außen nicht unterscheidbar.
+  protected readonly displayId = computed((): number => {
+    const asset = this.asset();
+    return asset.kind === 'version' && asset.version_id != null ? asset.version_id : asset.id;
+  });
+
   private emitOpenAsset(): void {
     const asset: AssetDto = this.asset();
     this.openAsset.emit({ id: asset.id, versionId: asset.kind === 'version' ? asset.version_id : null });

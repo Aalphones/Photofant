@@ -35,9 +35,12 @@
   </div>
 }
 
-@if (isStacked()) {
-  <div class="cell__stack-badge" [title]="stackTooltip()">
-    <pf-icon name="layers" [size]="11" />
-    <span>{{ asset().stack_size }}</span>
-  </div>
-}
+<div class="cell__corner">
+  @if (isStacked()) {
+    <div class="cell__stack-badge" [title]="stackTooltip()">
+      <pf-icon name="layers" [size]="11" />
+      <span>{{ asset().stack_size }}</span>
+    </div>
+  }
+  <div class="cell__id-badge" title="Bild-ID">#{{ displayId() }}</div>
+</div>
