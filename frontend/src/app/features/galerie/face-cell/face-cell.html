@@ -22,3 +22,10 @@
     <pf-icon name="sparkle" [size]="10" />
   </div>
 }
+
+@if (isStacked()) {
+  <div class="face-cell__stack-badge" [title]="stackTooltip()">
+    <pf-icon name="layers" [size]="11" />
+    <span>{{ face().stack_size }}</span>
+  </div>
+}

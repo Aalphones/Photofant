@@ -39,6 +39,24 @@ Format: `- [ ] → Phase N: <Erkenntnis / Abweichung / Folgefund>`
   nachziehen, oder das „jeder Eintrag ist ein eigenständiges Auswahl-Ziel"-AK aus
   dem README für `kind==='version'` explizit einschränken.
 
+- [x] → Phase 2/3: `face-grid.html`s `@for`-Track lief auf `face.id` — Backend vergibt
+  Version-Pseudo-Einträgen (Face-Edits) dieselbe `id` wie ihrem zugehörigen Face
+  (`faces.py`: `id=face.id` in beiden Zweigen). Mehrere Stapel-Mitglieder hätten denselben
+  Track-Key gehabt → Angular hätte DOM-Knoten falsch wiederverwendet (analog zum
+  Entity-Key-Fund aus Phase 2 für `AssetDto`). Behoben in Phase 3: Track-Funktion nutzt
+  `versionId != null ? 'v'+versionId : 'f'+id`.
+
+- [ ] → Phase 4 (Lightbox-Anbindung, kritisch): `galerie.ts`s `onOpenFace`/
+  `onFaceLightboxPrev`/`onFaceLightboxNext` matchen weiterhin nur über `item.id` per
+  `.find()`/`.findIndex()` — bei einem Stapel teilen alle Mitglieder dieselbe `id`
+  (s.o.), `.find()` liefert also immer den **ersten** Treffer in der Liste, nie
+  notwendigerweise die tatsächlich angeklickte Version. Der Klick-Event trägt seit
+  Phase 3 bereits `versionId` mit (`face-cell`/`face-grid` → `{faceId, assetId,
+  versionId}`), wird aber von `galerie.ts` noch nicht ausgewertet. Phase 4 muss das
+  Matching auf `(faceId, versionId)` umstellen, sonst öffnet ein Klick auf eine
+  Stapel-Version im Zweifel die falsche Kachel und Prev/Next navigiert nicht
+  zuverlässig durch den eigenen Stapel.
+
 - [ ] → Phase 4 (Lightbox-Anbindung): Die Workflow-Run-Leiste hatte bisher einen
   Weg, eine Editor-Version direkt als ComfyUI-Input zu binden (`onBindVersion` im
   jetzt entfernten Edits-Tab, `pf-version-cell` → Bind-Klick). Mit dem Wegfall des

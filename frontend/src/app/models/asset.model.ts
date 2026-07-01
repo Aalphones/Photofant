@@ -181,6 +181,11 @@ export interface FaceGalleryItemDto {
   is_upscaled: boolean;
   origin: string | null;
   created_at: string | null;
+  // P21 — Stapel (Face + eigene Editor-Dialog-Versionen, gruppiert über version.face_id)
+  kind: 'face' | 'version';
+  version_id: number | null;
+  stack_size: number;
+  stack_group_id: number | null;
 }
 
 export interface FacesPage {

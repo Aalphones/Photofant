@@ -1,10 +1,12 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p21-galerie-stapel-tabs/`
-**Phase:** 3/5 — Frontend Gesichter-Grid: Stapel-Äquivalent (standard)
-**Nächster Schritt:** Phase 2 (Fotos-Grid) ist fertig, noch nicht committet (siehe
-`mode-committing`). Phase 3 startet analog zu Phase 2 für den Gesichter-Tab:
-`face-cell` bekommt Stapel-Icon + Thumbnail-Auflösung nach `kind`/`version_id`.
+**Phase:** 4/5 — Lightbox-Anbindung: Klick-Ziel + Versions-Navigation (standard)
+**Nächster Schritt:** Phase 3 (Gesichter-Grid) ist fertig, noch nicht committet (siehe
+`mode-committing`). Phase 4 muss laut FINDINGS.md zuerst das Matching in `galerie.ts`
+(`onOpenFace`/`onFaceLightboxPrev`/`onFaceLightboxNext`) von reinem `item.id`-Vergleich
+auf `(faceId, versionId)` umstellen — sonst öffnet ein Klick auf eine Stapel-Version
+im Zweifel die falsche Kachel.
 **Letzter abgeschlossener Plan:** `docs/archive/2026-07/p15-lightbox-angleichung/`
 
 ---

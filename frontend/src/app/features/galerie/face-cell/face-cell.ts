@@ -16,7 +16,7 @@ export class FaceCell {
   readonly face     = input.required<FaceGalleryItemDto>();
   readonly cellSize = input<number>(160);
 
-  readonly openFace = output<{ faceId: number; assetId: number | null }>();
+  readonly openFace = output<{ faceId: number; assetId: number | null; versionId: number | null }>();
 
   protected readonly label = computed((): string => {
     const face = this.face();
@@ -30,8 +30,16 @@ export class FaceCell {
     return score != null ? `${Math.round(score * 100)}%` : '';
   });
 
+  protected readonly isStacked = computed((): boolean =>
+    this.face().stack_size > 1
+  );
+
+  protected readonly stackTooltip = computed((): string =>
+    `Stapel · ${this.face().stack_size} Versionen`
+  );
+
   protected onCellClick(): void {
     const face = this.face();
-    this.openFace.emit({ faceId: face.id, assetId: face.asset_id });
+    this.openFace.emit({ faceId: face.id, assetId: face.asset_id, versionId: face.version_id });
   }
 }

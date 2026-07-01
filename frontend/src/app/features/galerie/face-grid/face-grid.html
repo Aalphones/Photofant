@@ -5,7 +5,7 @@
 }
 
 <div class="face-grid__tiles">
-  @for (face of faceItems(); track face.id) {
+  @for (face of faceItems(); track trackFace(face)) {
     <pf-face-cell
       [face]="face"
       [cellSize]="CELL_SIZE"
