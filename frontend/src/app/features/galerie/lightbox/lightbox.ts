@@ -157,13 +157,26 @@ export class Lightbox {
   // Reload trigger: bump to force a fresh detail fetch
   private readonly reloadTrigger = signal(0);
 
+  // catchError ist hier Pflicht: toSignal() wirft bei jedem Lesen des Signals erneut,
+  // sobald die Quell-Observable einmal fehlerhaft terminiert hat — ohne Fangnetz bleibt
+  // das Panel nach einem einzigen fehlgeschlagenen Request für den Rest der Session tot
+  // (Angular bricht das Rendern an der ersten defekten Signal-Lesung ab, alles danach im
+  // Template friert ein). Siehe Lightbox-Bug: „nach Personen-Zuweisung + Pfeiltaste
+  // rendert nichts mehr unterhalb der Gesichter-Sektion".
   protected readonly detail = toSignal(
     combineLatest([
       this.store.select(gallerySelectors.selectLightboxAsset),
       toObservable(this.reloadTrigger),
     ]).pipe(
       switchMap(([asset]) =>
-        asset != null ? this.assetService.getAsset(asset.id) : of(null)
+        asset != null
+          ? this.assetService.getAsset(asset.id).pipe(
+              catchError((err: unknown) => {
+                console.error('[Lightbox] Asset-Detail konnte nicht geladen werden:', err);
+                return of(null);
+              }),
+            )
+          : of(null)
       ),
     ),
   );
@@ -174,7 +187,14 @@ export class Lightbox {
       toObservable(this.reloadTrigger),
     ]).pipe(
       switchMap(([faceId]) =>
-        faceId != null ? this.personService.getFace(faceId) : of(null)
+        faceId != null
+          ? this.personService.getFace(faceId).pipe(
+              catchError((err: unknown) => {
+                console.error('[Lightbox] Face-Detail konnte nicht geladen werden:', err);
+                return of(null);
+              }),
+            )
+          : of(null)
       ),
     ),
   );
@@ -187,7 +207,14 @@ export class Lightbox {
       toObservable(this.reloadTrigger),
     ]).pipe(
       switchMap(([asset]) =>
-        asset != null ? this.assetService.getLineage(asset.id) : of(null)
+        asset != null
+          ? this.assetService.getLineage(asset.id).pipe(
+              catchError((err: unknown) => {
+                console.error('[Lightbox] Lineage konnte nicht geladen werden:', err);
+                return of(null);
+              }),
+            )
+          : of(null)
       ),
     ),
   );
