@@ -61,16 +61,33 @@ Frontend ruft das über eine neue Methode `assignPersonToAsset(assetId, personId
 - [x] Deckt den Use-Case „Person wurde falsch zugewiesen, zurück auf Unbekannt setzen" ab, ohne dass das Gesicht gelöscht werden muss
 
 ## Summary
-*(nach Abschluss)*
+
+Assets ohne extrahiertes Gesicht sind in der Lightbox keine Sackgasse mehr: Re-Extraktion
+oder manuelle Personen-Zuordnung direkt anstoßbar. Zusätzlich lässt sich eine
+Fehlzuordnung im Picker jetzt per Klick auf „Unbekannt" zurücksetzen, ohne das Gesicht
+zu löschen.
 
 ## Files touched
-*(nach Abschluss)*
+
+- `backend/photofant/api/assets.py` — `PATCH /api/assets/{asset_id}/assign-person`
+- `backend/photofant/media/person_folders.py` — wiederverwendet (`materialize_assignment`), unverändert
+- `frontend/src/app/services/person.service.ts` — `assignPersonToAsset()`
+- `frontend/src/app/features/galerie/lightbox/lightbox.ts` — Empty-State, vereinheitlichter Assign-Handler, Retry-Extraktion, Unbekannt-Korrektur
+- `frontend/src/app/features/galerie/lightbox/lightbox.html` — Empty-State-Buttons, Picker-Markup
+- `frontend/src/app/features/galerie/lightbox/lightbox.scss` — Styles für Empty-State + Unbekannt-Button
+- `docs/decisions/016-manuelle-personen-zuordnung-ohne-gesicht.md`, `docs/routes.md`
 
 ## Commits
-*(nach Abschluss)*
+
+- `9786c89` feat(personen): Endpoint fuer manuelle Personen-Zuordnung ohne Gesicht (Phase 1)
+- `800c9ee` feat(lightbox): Personenzuordnung ohne Gesicht + Unbekannt-Korrektur im Picker (Phase 2)
 
 ## Deviations from plan
-*(nach Abschluss)*
+
+Keine.
 
 ## Follow-ups
-*(nach Abschluss)*
+
+- 🟡 Bestehende Doppelung zwischen dem Inline-„Neue Person"-Flow der Lightbox und der
+  separaten `create-person-dialog`-Komponente der Personen-Seite — bewusst nicht
+  vereinheitlicht (kein Scope dieses Plans).
