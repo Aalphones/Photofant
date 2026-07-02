@@ -67,6 +67,11 @@
     background: var(--surface-hover);
     color: var(--accent);
   }
+
+  &--danger:hover {
+    background: var(--danger-weak);
+    color: var(--danger);
+  }
 }
 
 /* Avatar ring on hover */

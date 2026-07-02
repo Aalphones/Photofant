@@ -99,6 +99,7 @@
                     (splitClick)="onSplitClick(person)"
                     (dupeCheck)="onDupeCheck(person)"
                     (revealInFileBrowser)="onRevealInFileBrowser(person)"
+                    (deleteClick)="onDeleteClick(person)"
                   />
                 </div>
               }
@@ -158,5 +159,13 @@
   <pf-create-person-dialog
     (close)="showCreateDialog.set(false)"
     (confirm)="onCreatePerson($event)"
+  />
+}
+
+@if (deletePersonTarget(); as target) {
+  <pf-delete-person-dialog
+    [person]="target"
+    (close)="deletePersonTarget.set(null)"
+    (confirmDelete)="onConfirmDelete($event)"
   />
 }

@@ -1,7 +1,7 @@
 # Phase 6 — Person löschen
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete
 **Voraussetzung:** keine (unabhängig von Phase 2-5, kann vorgezogen werden)
 
 Fasst zwei Dinge an: den neuen Löschen-Flow **und** einen Bugfix in der bereits
@@ -45,16 +45,16 @@ gemeinsamen Helper gefixt statt den Merge-Fall separat nachzuziehen.
 
 ## Abnahme-Kriterien
 
-- [ ] Löschen einer Person entfernt den Datenbank-Eintrag vollständig
-- [ ] Der physische Ordner der Person (inkl. `photos/ favourites/ faces/ edits/`) ist danach weg
-- [ ] Alle Fotos, Edits und Gesichter der Person landen unversehrt im `_unknown`-Ordner (Dateien gehen nie verloren)
-- [ ] Ein Foto, das in `_unknown` bereits eine Instanz für dasselbe Asset hat (Duplikat), wird sauber dedupliziert statt einen Datei-Konflikt zu erzeugen
-- [ ] Die Person „Unbekannt" selbst kann nicht gelöscht werden (400)
-- [ ] Verschobene Fotos sind wieder für Clustering/Incremental-Match verfügbar (`fixed_person` wird beim Verschieben nach `_unknown` zurückgesetzt — sonst blockieren sie sich selbst dauerhaft)
-- [ ] Ein Smart-Album-Trigger, der auf die gelöschte Person zeigt, wird beim Löschen mit entfernt statt ins Leere zu zeigen; betroffene Smart-Alben werden danach automatisch neu bewertet (keine toten `collection_item`-Reste)
-- [ ] **Bugfix `merge_persons`:** Ein Smart-Album-Trigger, der auf die aufgelöste (`from_id`) Person zeigt, wird beim Merge auf die Zielperson (`into_id`) umgebogen statt tot liegen zu bleiben — die Fotos, für die der Trigger stand, existieren ja unter der Zielperson weiter
-- [ ] Löschen ist nur über einen expliziten Bestätigungsdialog erreichbar, der in Klartext sagt: Fotos werden **nicht** gelöscht, sondern wandern nach „Unbekannt"; die Person selbst ist danach weg
-- [ ] Dialog zeigt Personenname/Avatar + Bilderzahl, damit klar ist, wer gelöscht wird
+- [x] Löschen einer Person entfernt den Datenbank-Eintrag vollständig
+- [x] Der physische Ordner der Person (inkl. `photos/ favourites/ faces/ edits/`) ist danach weg
+- [x] Alle Fotos, Edits und Gesichter der Person landen unversehrt im `_unknown`-Ordner (Dateien gehen nie verloren)
+- [x] Ein Foto, das in `_unknown` bereits eine Instanz für dasselbe Asset hat (Duplikat), wird sauber dedupliziert statt einen Datei-Konflikt zu erzeugen
+- [x] Die Person „Unbekannt" selbst kann nicht gelöscht werden (400)
+- [x] Verschobene Fotos sind wieder für Clustering/Incremental-Match verfügbar (`fixed_person` wird beim Verschieben nach `_unknown` zurückgesetzt — sonst blockieren sie sich selbst dauerhaft)
+- [x] Ein Smart-Album-Trigger, der auf die gelöschte Person zeigt, wird beim Löschen mit entfernt statt ins Leere zu zeigen; betroffene Smart-Alben werden danach automatisch neu bewertet (keine toten `collection_item`-Reste)
+- [x] **Bugfix `merge_persons`:** Ein Smart-Album-Trigger, der auf die aufgelöste (`from_id`) Person zeigt, wird beim Merge auf die Zielperson (`into_id`) umgebogen statt tot liegen zu bleiben — die Fotos, für die der Trigger stand, existieren ja unter der Zielperson weiter
+- [x] Löschen ist nur über einen expliziten Bestätigungsdialog erreichbar, der in Klartext sagt: Fotos werden **nicht** gelöscht, sondern wandern nach „Unbekannt"; die Person selbst ist danach weg
+- [x] Dialog zeigt Personenname/Avatar + Bilderzahl, damit klar ist, wer gelöscht wird
 
 ---
 
@@ -62,7 +62,7 @@ gemeinsamen Helper gefixt statt den Merge-Fall separat nachzuziehen.
 
 ### media/person_folders.py — gemeinsamer Helper `_resolve_person_smart_triggers()`
 
-- [ ] Neue private Funktion, **oberhalb** von `merge_persons` und `delete_person` platziert
+- [x] Neue private Funktion, **oberhalb** von `merge_persons` und `delete_person` platziert
       (beide rufen sie auf):
   ```python
   def _resolve_person_smart_triggers(
@@ -107,7 +107,7 @@ gemeinsamen Helper gefixt statt den Merge-Fall separat nachzuziehen.
 
 ### media/person_folders.py — `delete_person()`
 
-- [ ] Neue Funktion, analog `merge_persons`, aber Ziel ist immer `_unknown`, keine Namensübernahme,
+- [x] Neue Funktion, analog `merge_persons`, aber Ziel ist immer `_unknown`, keine Namensübernahme,
       plus Aufräumen verwaister Smart-Album-Trigger über den neuen Helper:
   ```python
   def delete_person(
@@ -216,8 +216,8 @@ gemeinsamen Helper gefixt statt den Merge-Fall separat nachzuziehen.
           "asset_ids": list(affected_asset_ids),
       }
   ```
-- [ ] `shutil` ist bereits am Dateikopf importiert — kein neuer Import nötig
-- [ ] Import-Zeile am Dateikopf um `SmartTrigger` erweitern:
+- [x] `shutil` ist bereits am Dateikopf importiert — kein neuer Import nötig
+- [x] Import-Zeile am Dateikopf um `SmartTrigger` erweitern:
   ```python
   from photofant.db.models import Asset, AssetInstance, Face, Person, SmartTrigger
   ```
@@ -228,7 +228,7 @@ Nachbarstellen-Fehler derselben Ursache — Zeilen 731-745 (der `if remaining ==
 from_person.is_unknown:`-Block, direkt vor dem `session.delete(from_person)`) bekommen den
 Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wird:
 
-- [ ] Einfügen, bevor `from_person` gelöscht wird:
+- [x] Einfügen, bevor `from_person` gelöscht wird:
   ```python
   if remaining == 0 and not from_person.is_unknown:
       _resolve_person_smart_triggers(session, from_person_id, into_person_id)
@@ -241,22 +241,22 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
           _shutil.rmtree(str(from_dir), ignore_errors=True)
           log.info("Removed empty person folder %s", from_dir)
   ```
-- [ ] Bewusst **nur** innerhalb dieses `if`-Blocks: läuft der Merge nur teilweise durch
+- [x] Bewusst **nur** innerhalb dieses `if`-Blocks: läuft der Merge nur teilweise durch
       (`remaining != 0`, z.B. weil eine Instance-Datei fehlte), existiert `from_person`
       danach weiter — der Trigger darf dann nicht umgebogen werden, die Person lebt ja noch
-- [ ] Kein neuer Reevaluate-Call nötig — `merge_persons_endpoint` (`api/persons.py`
+- [x] Kein neuer Reevaluate-Call nötig — `merge_persons_endpoint` (`api/persons.py`
       Zeilen 230-238) reevaluiert bereits alle Assets von `into_id`, das deckt auch das
       Ergebnis des umgebogenen Triggers ab
 
 ### api/persons.py — `DELETE /{person_id}`
 
-- [ ] `DeleteResultDto` (identisch zu `MergeResultDto` — kann alternativ direkt wiederverwendet werden):
+- [x] `DeleteResultDto` (identisch zu `MergeResultDto` — kann alternativ direkt wiederverwendet werden):
   ```python
   class DeleteResultDto(BaseModel):
       faces_moved: int
       instances_moved: int
   ```
-- [ ] Route — nach dem Commit die betroffenen Assets neu bewerten lassen (analog
+- [x] Route — nach dem Commit die betroffenen Assets neu bewerten lassen (analog
       `merge_persons_endpoint`, Zeilen 230-238), damit verwaiste `collection_item`-Reste aus
       Smart-Alben verschwinden, deren Trigger gerade mit gelöscht wurde:
   ```python
@@ -286,13 +286,13 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
 
 ### Frontend — Store (persons.actions.ts / persons.effects.ts)
 
-- [ ] Neue Actions (Ergebnis-Typ: bestehendes `MergeResult` wiederverwenden, gleiche Form):
+- [x] Neue Actions (Ergebnis-Typ: bestehendes `MergeResult` wiederverwenden, gleiche Form):
   ```typescript
   'Delete Person':         props<{ id: number }>(),
   'Delete Person Success': props<{ result: MergeResult }>(),
   'Delete Person Failure': props<{ error: string }>(),
   ```
-- [ ] Effect analog `mergePersons$`/`reloadAfterMerge$`:
+- [x] Effect analog `mergePersons$`/`reloadAfterMerge$`:
   ```typescript
   readonly deletePerson$ = createEffect(() =>
     this.actions$.pipe(
@@ -318,7 +318,7 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
 
 ### Frontend — person.service.ts
 
-- [ ] Neue Methode:
+- [x] Neue Methode:
   ```typescript
   deletePerson(id: number): Observable<MergeResult> {
     return this.http.delete<MergeResult>(`/api/persons/${id}`);
@@ -327,8 +327,8 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
 
 ### Frontend — delete-person-dialog (neu, `features/personen/delete-person-dialog/`)
 
-- [ ] `ng generate component features/personen/delete-person-dialog --skip-tests`
-- [ ] Struktur analog `merge-dialog`, aber nur der `confirm`-Step (kein Auswahl-Flow):
+- [x] `ng generate component features/personen/delete-person-dialog --skip-tests`
+- [x] Struktur analog `merge-dialog`, aber nur der `confirm`-Step (kein Auswahl-Flow):
   ```typescript
   export class DeletePersonDialog {
     readonly person = input.required<PersonDto>();
@@ -346,7 +346,7 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
     }
   }
   ```
-- [ ] Template — Klartext-Warnung, keine Fachbegriffe:
+- [x] Template — Klartext-Warnung, keine Fachbegriffe:
   ```html
   <div class="delete-person-dialog__backdrop" (click)="onBackdrop($event)">
     <div class="delete-person-dialog__card">
@@ -371,12 +371,12 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
     </div>
   </div>
   ```
-- [ ] `.scss` analog `merge-dialog.scss` (Backdrop/Card/Header/Footer), Löschen-Button in Warnfarbe
+- [x] `.scss` analog `merge-dialog.scss` (Backdrop/Card/Header/Footer), Löschen-Button in Warnfarbe
 
 ### person-card.ts / .html — Löschen-Aktion
 
-- [ ] Neuer Output: `deleteClick = output<void>()`
-- [ ] Neuer Handler analog `onSplitClick`:
+- [x] Neuer Output: `deleteClick = output<void>()`
+- [x] Neuer Handler analog `onSplitClick`:
   ```typescript
   protected onDeleteClick(event: MouseEvent): void {
     event.stopPropagation();
@@ -384,7 +384,7 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
     this.deleteClick.emit();
   }
   ```
-- [ ] Neuer Hover-Button in der Actions-Leiste (`!person().is_unknown`-Block, letzter Button):
+- [x] Neuer Hover-Button in der Actions-Leiste (`!person().is_unknown`-Block, letzter Button):
   ```html
   <button
     class="person-card__hover-btn person-card__hover-btn--danger"
@@ -395,11 +395,11 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
     <pf-icon name="trash" [size]="14" />
   </button>
   ```
-- [ ] `.scss`: `--danger`-Modifier (rötlicher Hover, unterscheidet sich sichtbar von den übrigen Buttons)
+- [x] `.scss`: `--danger`-Modifier (rötlicher Hover, unterscheidet sich sichtbar von den übrigen Buttons)
 
 ### personen.ts / personen.html — Verdrahtung
 
-- [ ] Signal + Handler:
+- [x] Signal + Handler:
   ```typescript
   protected readonly deletePersonTarget = signal<PersonDto | null>(null);
 
@@ -412,8 +412,8 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
     this.deletePersonTarget.set(null);
   }
   ```
-- [ ] `<pf-person-card>`: `(deleteClick)="onDeleteClick(person)"` ergänzen
-- [ ] Dialog einbinden:
+- [x] `<pf-person-card>`: `(deleteClick)="onDeleteClick(person)"` ergänzen
+- [x] Dialog einbinden:
   ```html
   @if (deletePersonTarget(); as target) {
     <pf-delete-person-dialog
@@ -423,12 +423,12 @@ Helper-Aufruf **davor**, damit der Trigger noch existiert, wenn er umgebogen wir
     />
   }
   ```
-- [ ] `DeletePersonDialog` in `imports: [...]` der Komponente ergänzen
+- [x] `DeletePersonDialog` in `imports: [...]` der Komponente ergänzen
 
 ---
 
 ## Doc-Updates
 
-- [ ] `docs/routes.md` — `DELETE /api/persons/{id}` ergänzen, inkl. Nebeneffekt (löscht
+- [x] `docs/routes.md` — `DELETE /api/persons/{id}` ergänzen, inkl. Nebeneffekt (löscht
       zugehörige `person`-Smart-Trigger, stößt Reevaluate für betroffene Assets an)
-- [ ] `docs/code-map.md` — `delete-person-dialog` unter `features/personen/` ergänzen
+- [x] `docs/code-map.md` — `delete-person-dialog` unter `features/personen/` ergänzen

@@ -62,6 +62,14 @@
       >
         <pf-icon name="folder" [size]="14" />
       </button>
+      <button
+        class="person-card__hover-btn person-card__hover-btn--danger"
+        (click)="onDeleteClick($event)"
+        aria-label="Person löschen"
+        title="Person löschen"
+      >
+        <pf-icon name="trash" [size]="14" />
+      </button>
     </div>
   }
 

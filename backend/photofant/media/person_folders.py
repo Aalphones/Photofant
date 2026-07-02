@@ -19,7 +19,7 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from photofant.db.models import Asset, AssetInstance, Face, Person
+from photofant.db.models import Asset, AssetInstance, Face, Person, SmartTrigger
 
 log = logging.getLogger(__name__)
 
@@ -641,6 +641,156 @@ def reassign_face(
     }
 
 
+def _resolve_person_smart_triggers(
+    session: Session,
+    person_id: int,
+    successor_id: int | None,
+) -> int:
+    """Keep SmartTrigger.person_id from silently going stale.
+
+    SQLite doesn't enforce the FK on SmartTrigger.person_id, so a trigger
+    pointing at a person that was merged away or deleted would otherwise just
+    stop matching forever — no error, just a dead trigger.
+
+    successor_id=None → the person is gone with no replacement (delete):
+      remove the trigger, there's nothing left to point at.
+    successor_id set  → the identity lives on under another person (merge):
+      repoint the trigger instead of losing it.
+
+    Returns the number of triggers touched.
+    """
+    triggers = session.scalars(
+        select(SmartTrigger).where(
+            SmartTrigger.type == "person",
+            SmartTrigger.person_id == person_id,
+        )
+    ).all()
+    for trigger in triggers:
+        if successor_id is None:
+            session.delete(trigger)
+        else:
+            trigger.person_id = successor_id
+    if triggers:
+        log.info(
+            "Smart-album trigger(s) referencing person %d %s (%d)",
+            person_id,
+            "removed" if successor_id is None else f"repointed to person {successor_id}",
+            len(triggers),
+        )
+    session.flush()
+    return len(triggers)
+
+
+# ── delete a person ───────────────────────────────────────────────────
+
+
+def delete_person(
+    session: Session,
+    person_id: int,
+    data_root: Path,
+) -> dict[str, object]:
+    """Delete a person completely — faces and photos move to _unknown, folder + row are gone.
+
+    Unlike merge_persons (name carry-over, fixed_person untouched), a deleted
+    person's assignments are dissolved: nothing survives except the raw files,
+    which land back in the catch-all, free to be re-matched by clustering.
+    Any smart-album trigger pointing at this person is removed too — otherwise
+    it would silently stop matching forever (SQLite enforces no FK here).
+
+    Returns {faces_moved, instances_moved, asset_ids} — asset_ids is every asset
+    touched, for the caller to trigger a smart-album re-evaluation.
+    """
+    person = session.get(Person, person_id)
+    if person is None:
+        raise ValueError(f"Person {person_id} not found")
+    if person.is_unknown:
+        raise ValueError("Cannot delete the unknown person")
+
+    unknown_person = session.scalar(select(Person).where(Person.is_unknown.is_(True)))
+    if unknown_person is None:
+        raise ValueError("No _unknown person found — database inconsistent")
+
+    unknown_dir = ensure_person_folder(data_root, unknown_person)
+    affected_asset_ids: set[int] = set()
+
+    faces = session.scalars(select(Face).where(Face.person_id == person_id)).all()
+    faces_moved = 0
+    for face in faces:
+        face.person_id = unknown_person.id
+        if face.asset_id is not None:
+            affected_asset_ids.add(face.asset_id)
+        old_crop = Path(face.crop_path)
+        new_crop = unknown_dir / "faces" / old_crop.name
+        try:
+            final = _safe_move(old_crop, new_crop)
+            face.crop_path = str(final.resolve())
+        except FileNotFoundError:
+            log.warning("Face crop %s missing while deleting person %d — skipping", old_crop, person_id)
+        faces_moved += 1
+    session.flush()
+
+    instances = session.scalars(
+        select(AssetInstance).where(
+            AssetInstance.person_id == person_id,
+            AssetInstance.deleted_at.is_(None),
+        )
+    ).all()
+
+    instances_moved = 0
+    for instance in instances:
+        affected_asset_ids.add(instance.asset_id)
+        existing_target = session.scalar(
+            select(AssetInstance).where(
+                AssetInstance.asset_id == instance.asset_id,
+                AssetInstance.person_id == unknown_person.id,
+                AssetInstance.deleted_at.is_(None),
+            )
+        )
+        if existing_target is not None:
+            # _unknown already has this asset — drop the duplicate instance/file.
+            old_path = Path(instance.path)
+            if old_path.exists():
+                old_path.unlink()
+            session.delete(instance)
+            instances_moved += 1
+            continue
+
+        subfolder = "favourites" if instance.favourite else "photos"
+        old_path = Path(instance.path)
+        new_path = unknown_dir / subfolder / old_path.name
+        try:
+            final = _safe_move(old_path, new_path)
+            instance.person_id = unknown_person.id
+            instance.path = str(final.resolve())
+            instance.fixed_person = False  # release for future clustering/matching
+            instances_moved += 1
+        except FileNotFoundError:
+            log.warning("Instance file %s missing while deleting person %d — skipping", old_path, person_id)
+
+    session.flush()
+
+    # No successor — the identity is gone, any person-trigger pointing here dies with it.
+    _resolve_person_smart_triggers(session, person_id, None)
+
+    person_dir = data_root / person_folder_name(person)
+    session.delete(person)
+    session.flush()
+
+    if person_dir.exists():
+        shutil.rmtree(str(person_dir), ignore_errors=True)
+        log.info("Removed person folder %s", person_dir)
+
+    log.info(
+        "Deleted person %d: %d faces + %d instances moved to _unknown",
+        person_id, faces_moved, instances_moved,
+    )
+    return {
+        "faces_moved": faces_moved,
+        "instances_moved": instances_moved,
+        "asset_ids": list(affected_asset_ids),
+    }
+
+
 # ── merge two persons ─────────────────────────────────────────────────
 
 
@@ -736,6 +886,8 @@ def merge_persons(
     ) or 0
 
     if remaining == 0 and not from_person.is_unknown:
+        _resolve_person_smart_triggers(session, from_person_id, into_person_id)
+
         from_dir = data_root / person_folder_name(from_person)
         session.delete(from_person)
         session.flush()

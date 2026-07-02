@@ -256,6 +256,34 @@ async def merge_persons_endpoint(body: MergeRequest, session: DbSession) -> Merg
     )
 
 
+@router.delete("/{person_id}", response_model=MergeResultDto)
+async def delete_person_endpoint(person_id: int, session: DbSession) -> MergeResultDto:
+    """Delete a person — faces and photos move to _unknown, folder + row are gone."""
+    from photofant.config import get_data_root
+    from photofant.media.person_folders import delete_person
+
+    person = session.get(Person, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    if person.is_unknown:
+        raise HTTPException(status_code=400, detail="Cannot delete the unknown person")
+
+    data_root = get_data_root()
+    result = await asyncio.to_thread(delete_person, session, person_id, data_root)
+    session.commit()
+    log.info("Deleted person %d", person_id)
+
+    asset_ids = result.pop("asset_ids", [])
+    if asset_ids:
+        from photofant.jobs.collections_job import enqueue_reevaluate_assets
+        asyncio.ensure_future(enqueue_reevaluate_assets(asset_ids))
+
+    return MergeResultDto(
+        faces_moved=result["faces_moved"],
+        instances_moved=result["instances_moved"],
+    )
+
+
 @router.post("/{person_id}/import", response_model=PersonImportResponse)
 async def import_to_person_folder(
     person_id: int,

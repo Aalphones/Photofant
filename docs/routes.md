@@ -686,6 +686,7 @@ Aktions-Semantik (`POST /api/review-queue/{face_id}`):
 |---|---|---|---|---|
 | `/personen` (Merge) | `POST` | `/api/persons/merge` | `{ from_id, into_id }` | `MergeResultDto` |
 | `/personen` (Split) | `POST` | `/api/persons/{id}/split` | `{ face_ids: number[] }` | `SplitResultDto` |
+| `/personen` (Löschen) | `DELETE` | `/api/persons/{id}` | — | `MergeResultDto` (404 unbekannte ID, 400 bei `is_unknown`; Fotos/Faces wandern nach „Unbekannt", Ordner + DB-Eintrag weg; löscht zugehörige `person`-Smart-Trigger und stößt Reevaluate für betroffene Assets an) |
 | `/personen` (Faces einer Person) | `GET` | `/api/persons/{id}/faces` | — | `PersonFaceDto[]` |
 
 ```typescript

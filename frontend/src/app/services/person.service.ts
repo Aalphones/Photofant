@@ -43,6 +43,10 @@ export class PersonService {
     return this.http.post<SplitResult>(`/api/persons/${personId}/split`, { face_ids: faceIds });
   }
 
+  deletePerson(id: number): Observable<MergeResult> {
+    return this.http.delete<MergeResult>(`/api/persons/${id}`);
+  }
+
   getPersonFaces(personId: number): Observable<PersonFace[]> {
     return this.http.get<PersonFace[]>(`/api/persons/${personId}/faces`);
   }

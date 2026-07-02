@@ -1,12 +1,13 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-02_p29-personen-suche-gruppen/`
-**Phase:** 6/6 — Person löschen: Ordner + DB-Eintrag entfernen, Fotos wandern nach „Unbekannt" (pending)
-**Nächster Schritt:** `phase-6-*.md` lesen und abarbeiten.
+**Phase:** 6/6 fertig — alle Phasen complete.
+**Nächster Schritt:** Smoke-Checkliste (finale Abnahme-Kriterien in der Plan-README)
+durch den User prüfen, danach Plan archivieren.
 
-Phase 5 fertig: Sortier-Zyklus um „Unbenannt zuerst"/„Anzahl Fotos" erweitert,
-Empty-State „Keine Personen gefunden" bei leerem Suche/Filter-Ergebnis,
-computed()-Kette auf Perf geprüft (kein struktureller Fix nötig). Offen:
-Perf-Messung mit echten Daten (>300 Personen) — agentenlos nicht simulierbar,
-Notiz in FINDINGS.md + Smoke-Checkliste am Plan-Ende. `npm run lint` +
-`ng build` sauber. Committet (`e58a9e2`).
+Phase 6 fertig: Person-Löschen-Flow (Backend `delete_person()` + `DELETE
+/api/persons/{id}`, Frontend Dialog + Store-Wiring), plus Bugfix in
+`merge_persons()` — verwaiste `SmartTrigger.person_id`-Referenzen werden beim
+Löschen entfernt, beim Merge auf die Zielperson umgebogen (gemeinsamer Helper
+`_resolve_person_smart_triggers`). `npm run lint` + `ng build` + `ruff check`
+sauber.

@@ -27,7 +27,7 @@ nach dem Import), erst der Rest wird wie bisher neu geclustert.
 | 3 | Frontend Store — Persistenz für Gruppen-Zuweisung | standard | complete |
 | 4 | Frontend UI — Toolbar, Grid, Karte, Clustering-Button | standard | complete |
 | 5 | Politur — Zusatz-Sortierungen, Empty-States, Perf-Check | standard | complete (Perf-Messung steht beim User aus) |
-| 6 | Person löschen — Ordner + DB-Eintrag entfernen, Fotos wandern nach „Unbekannt" | standard | pending |
+| 6 | Person löschen — Ordner + DB-Eintrag entfernen, Fotos wandern nach „Unbekannt" | standard | complete |
 
 ---
 

@@ -40,6 +40,7 @@ export class PersonCard {
   readonly splitClick = output<void>();
   readonly dupeCheck = output<void>();
   readonly revealInFileBrowser = output<void>();
+  readonly deleteClick = output<void>();
 
   protected readonly isEditing = signal(false);
   protected readonly editName = signal('');
@@ -188,6 +189,12 @@ export class PersonCard {
     event.stopPropagation();
     this.actionsVisible.set(false);
     this.revealInFileBrowser.emit();
+  }
+
+  protected onDeleteClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.actionsVisible.set(false);
+    this.deleteClick.emit();
   }
 
   protected onImportClick(event: MouseEvent): void {

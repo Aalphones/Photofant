@@ -17,6 +17,7 @@ import { MergeDialog } from './merge-dialog/merge-dialog';
 import { SplitDialog } from './split-dialog/split-dialog';
 import { DupeCheckDialog } from './dupe-check-dialog/dupe-check-dialog';
 import { CreatePersonDialog } from './create-person-dialog/create-person-dialog';
+import { DeletePersonDialog } from './delete-person-dialog/delete-person-dialog';
 import { AlphabetRail } from './alphabet-rail/alphabet-rail';
 import { groupColor } from './group-color.util';
 
@@ -26,7 +27,7 @@ type PersonViewMode = 'single' | 'grid4' | 'face';
 @Component({
   selector: 'pf-personen',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PersonCard, MergeDialog, SplitDialog, DupeCheckDialog, CreatePersonDialog, AlphabetRail, Icon],
+  imports: [PersonCard, MergeDialog, SplitDialog, DupeCheckDialog, CreatePersonDialog, DeletePersonDialog, AlphabetRail, Icon],
   templateUrl: './personen.html',
   styleUrl: './personen.scss',
 })
@@ -50,6 +51,7 @@ export class Personen implements OnInit {
   protected readonly showCreateDialog = signal(false);
   protected readonly splitPerson = signal<PersonDto | null>(null);
   protected readonly dupeCheckPerson = signal<PersonDto | null>(null);
+  protected readonly deletePersonTarget = signal<PersonDto | null>(null);
 
   protected readonly searchQuery = signal('');
   protected readonly sortKey = signal<PersonSortKey>('group');
@@ -163,6 +165,15 @@ export class Personen implements OnInit {
   protected onSplit(event: { personId: number; faceIds: number[] }): void {
     this.store.dispatch(personsActions.splitPerson(event));
     this.splitPerson.set(null);
+  }
+
+  protected onDeleteClick(person: PersonDto): void {
+    this.deletePersonTarget.set(person);
+  }
+
+  protected onConfirmDelete(personId: number): void {
+    this.store.dispatch(personsActions.deletePerson({ id: personId }));
+    this.deletePersonTarget.set(null);
   }
 
   protected onCreatePerson(name: string): void {

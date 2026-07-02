@@ -100,6 +100,27 @@ export class PersonsEffects {
     )
   );
 
+  readonly deletePerson$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(personsActions.deletePerson),
+      mergeMap(({ id }) =>
+        this.personService.deletePerson(id).pipe(
+          map((result: MergeResult) => personsActions.deletePersonSuccess({ result })),
+          catchError((error: HttpErrorResponse) =>
+            of(personsActions.deletePersonFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly reloadAfterDelete$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(personsActions.deletePersonSuccess),
+      map(() => personsActions.loadPersons()),
+    )
+  );
+
   readonly triggerClustering$ = createEffect(() =>
     this.actions$.pipe(
       ofType(personsActions.triggerClustering),
