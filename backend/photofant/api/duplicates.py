@@ -1,12 +1,14 @@
-"""Duplicates API — pHash-based duplicate search within a person's assets.
+"""Duplicates API — pHash + CLIP duplicate search within a person's assets (OR-logic, ADR-007).
 
-POST /duplicates/search  → { person_id, threshold } → DupePairDto[]
+POST /duplicates/search  → { person_id, threshold, clip_threshold } → DupePairDto[]
 """
 from __future__ import annotations
 
 import logging
-from typing import Annotated
+from dataclasses import dataclass
+from typing import Annotated, Literal
 
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -24,11 +26,15 @@ DbSession = Annotated[Session, Depends(get_session)]
 
 _MAX_THRESHOLD = 32
 _DEFAULT_THRESHOLD = 10
+_DEFAULT_CLIP_THRESHOLD = 0.15
+_MIN_CLIP_THRESHOLD = 0.05
+_MAX_CLIP_THRESHOLD = 0.30
 
 
 class DupeSearchRequest(BaseModel):
     person_id: int
     threshold: int = _DEFAULT_THRESHOLD
+    clip_threshold: float = _DEFAULT_CLIP_THRESHOLD
 
 
 class DupePairDto(BaseModel):
@@ -36,8 +42,20 @@ class DupePairDto(BaseModel):
     asset_b_id: int
     asset_a_content_hash: str
     asset_b_content_hash: str
-    phash_distance: int
-    similarity_pct: int
+    # Nullable: pairs found by only one method have no distance from the other.
+    phash_distance: int | None
+    phash_similarity_pct: int | None
+    clip_distance: float | None
+    clip_similarity_pct: int | None
+    similarity_pct: int  # max(phash_similarity_pct, clip_similarity_pct)
+    triggered_by: Literal["phash", "clip", "both"]
+
+
+@dataclass
+class _PairMatch:
+    """Per-pair distances found by each method — UNION merge, like the scan job."""
+    phash_distance: int | None = None
+    clip_distance: float | None = None
 
 
 @router.post("/search", response_model=list[DupePairDto])
@@ -45,55 +63,87 @@ async def search_person_duplicates(
     body: DupeSearchRequest,
     session: DbSession,
 ) -> list[DupePairDto]:
-    """Find duplicate pairs among a person's assets using pHash Hamming distance."""
+    """Find duplicate pairs among a person's assets via pHash + CLIP (UNION, OR-logic, ADR-007)."""
+    from photofant.settings import load_settings
+
     person = session.get(Person, body.person_id)
     if person is None:
         raise HTTPException(status_code=404, detail="Person not found")
 
     threshold = max(0, min(body.threshold, _MAX_THRESHOLD))
+    clip_threshold = max(_MIN_CLIP_THRESHOLD, min(body.clip_threshold, _MAX_CLIP_THRESHOLD))
+    clip_enabled: bool = load_settings()["dupe_clip_enabled"]
 
     rows = session.execute(
-        select(AssetInstance.asset_id, Asset.phash, Asset.content_hash)
+        select(AssetInstance.asset_id, Asset.phash, Asset.content_hash, Asset.clip_embedding)
         .join(Asset, Asset.id == AssetInstance.asset_id)
         .where(
             AssetInstance.person_id == body.person_id,
             AssetInstance.deleted_at.is_(None),
-            Asset.phash.is_not(None),
         )
     ).all()
 
     if len(rows) < 2:
         return []
 
-    asset_data = [(int(row[0]), int(row[1]), str(row[2])) for row in rows]
-    hash_by_id: dict[int, str] = {row[0]: row[2] for row in asset_data}
+    hash_by_id: dict[int, str] = {int(row[0]): str(row[2]) for row in rows}
 
-    pairs: list[DupePairDto] = []
-    seen: set[tuple[int, int]] = set()
+    # (asset_a_id, asset_b_id) -> distances found by each method; UNION merge, OR-logic.
+    found: dict[tuple[int, int], _PairMatch] = {}
 
-    for i in range(len(asset_data)):
-        for j in range(i + 1, len(asset_data)):
-            id_a, phash_a, _ = asset_data[i]
-            id_b, phash_b, _ = asset_data[j]
-
+    phash_assets = [(int(row[0]), int(row[1])) for row in rows if row[1] is not None]
+    for i in range(len(phash_assets)):
+        for j in range(i + 1, len(phash_assets)):
+            id_a, phash_a = phash_assets[i]
+            id_b, phash_b = phash_assets[j]
             distance = hamming_distance(phash_a, phash_b)
             if distance > threshold:
                 continue
-
             key = (min(id_a, id_b), max(id_a, id_b))
-            if key in seen:
-                continue
-            seen.add(key)
+            found.setdefault(key, _PairMatch()).phash_distance = distance
 
-            similarity_pct = round((1.0 - distance / 64.0) * 100)
-            pairs.append(DupePairDto(
-                asset_a_id=key[0],
-                asset_b_id=key[1],
-                asset_a_content_hash=hash_by_id[key[0]],
-                asset_b_content_hash=hash_by_id[key[1]],
-                phash_distance=distance,
-                similarity_pct=similarity_pct,
-            ))
+    if clip_enabled:
+        clip_assets = [(int(row[0]), bytes(row[3])) for row in rows if row[3] is not None]
+        if len(clip_assets) >= 2:
+            asset_ids = [asset_id for asset_id, _ in clip_assets]
+            vectors = np.stack([np.frombuffer(blob, dtype=np.float32) for _, blob in clip_assets])
+            similarities = vectors @ vectors.T
+            for i in range(len(asset_ids)):
+                for j in range(i + 1, len(asset_ids)):
+                    clip_distance = float(1.0 - similarities[i, j])
+                    if clip_distance > clip_threshold:
+                        continue
+                    key = (min(asset_ids[i], asset_ids[j]), max(asset_ids[i], asset_ids[j]))
+                    found.setdefault(key, _PairMatch()).clip_distance = clip_distance
 
-    pairs.sort(key=lambda pair: pair.phash_distance)
+    pairs: list[DupePairDto] = []
+    for (asset_a_id, asset_b_id), match in found.items():
+        phash_similarity_pct = (
+            round((1.0 - match.phash_distance / 64.0) * 100) if match.phash_distance is not None else None
+        )
+        clip_similarity_pct = (
+            round((1.0 - match.clip_distance) * 100) if match.clip_distance is not None else None
+        )
+        triggered_by: Literal["phash", "clip", "both"] = (
+            "both"  if match.phash_distance is not None and match.clip_distance is not None else
+            "phash" if match.phash_distance is not None else
+            "clip"
+        )
+        similarity_pct = max(
+            value for value in (phash_similarity_pct, clip_similarity_pct) if value is not None
+        )
+        pairs.append(DupePairDto(
+            asset_a_id=asset_a_id,
+            asset_b_id=asset_b_id,
+            asset_a_content_hash=hash_by_id[asset_a_id],
+            asset_b_content_hash=hash_by_id[asset_b_id],
+            phash_distance=match.phash_distance,
+            phash_similarity_pct=phash_similarity_pct,
+            clip_distance=match.clip_distance,
+            clip_similarity_pct=clip_similarity_pct,
+            similarity_pct=similarity_pct,
+            triggered_by=triggered_by,
+        ))
+
+    pairs.sort(key=lambda pair: -pair.similarity_pct)
     return pairs

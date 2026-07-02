@@ -47,15 +47,19 @@ class DupePairDto(BaseModel):
     id: int
     asset_a: AssetSummaryDto
     asset_b: AssetSummaryDto
-    # Nullable since Phase 2: CLIP-only pairs have no pHash match.
-    # Full similarity_pct/triggered_by shape lands in Phase 3 (API-Kontrakt).
+    # Nullable: pairs found by only one method have no distance from the other.
     phash_distance: int | None
+    phash_similarity_pct: int | None
+    clip_distance: float | None
+    clip_similarity_pct: int | None
+    triggered_by: Literal["phash", "clip", "both"]
     created_at: datetime
 
 
 class SimilarAssetDto(AssetSummaryDto):
     phash_distance: int | None = None
     clip_distance: float | None = None
+    clip_similarity_pct: int | None = None
 
 
 class ResolveRequest(BaseModel):
@@ -77,11 +81,26 @@ def _to_summary(asset: Asset) -> AssetSummaryDto:
 
 
 def _to_pair_dto(item: ReviewItem, asset_a: Asset, asset_b: Asset) -> DupePairDto:
+    phash_similarity_pct = (
+        round((1.0 - item.phash_distance / 64.0) * 100) if item.phash_distance is not None else None
+    )
+    clip_similarity_pct = (
+        round((1.0 - item.clip_distance) * 100) if item.clip_distance is not None else None
+    )
+    triggered_by: Literal["phash", "clip", "both"] = (
+        "both"  if item.phash_distance is not None and item.clip_distance is not None else
+        "phash" if item.phash_distance is not None else
+        "clip"
+    )
     return DupePairDto(
         id=item.id,
         asset_a=_to_summary(asset_a),
         asset_b=_to_summary(asset_b),
         phash_distance=item.phash_distance,
+        phash_similarity_pct=phash_similarity_pct,
+        clip_distance=item.clip_distance,
+        clip_similarity_pct=clip_similarity_pct,
+        triggered_by=triggered_by,
         created_at=item.created_at,
     )
 
@@ -224,10 +243,14 @@ async def get_similar_assets(asset_id: int, session: DbSession) -> list[SimilarA
         similar_asset = session.get(Asset, similar_id)
         if similar_asset is None:
             continue
+        clip_similarity_pct = (
+            round((1.0 - match.clip_distance) * 100) if match.clip_distance is not None else None
+        )
         result.append(SimilarAssetDto(
             **_to_summary(similar_asset).model_dump(),
             phash_distance=match.phash_distance,
             clip_distance=match.clip_distance,
+            clip_similarity_pct=clip_similarity_pct,
         ))
 
     def _best_score(dto: SimilarAssetDto) -> float:
