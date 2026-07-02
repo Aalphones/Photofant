@@ -1,6 +1,6 @@
 # P19 — Inference Session Pool (Option B: mehrere Worker pro Modelltyp)
 
-**Status:** Freigegeben, alle Phasen umgesetzt — finale Smoke-Checkliste offen (freigegeben 2026-07-02)
+**Status:** Abgeschlossen (archiviert 2026-07-02) — finale Smoke-Checkliste vom User bewusst übersprungen
 **Voraussetzung erfüllt:** Option A (dedizierte Worker pro Modelltyp, `queue.py`) ist bereits
 im Code — `_tagging_worker`/`_captioning_worker` laufen je einzeln.
 
@@ -69,10 +69,10 @@ Skizze, siehe Deviations unten): `GET /api/models/vram` liefert zusätzlich
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | [SessionManager: Pool statt Singleton](phase-1-session-pool.md) | heikel | complete (UI-Smoke offen) |
-| 2 | [Settings + N-Worker-Loop in queue.py](phase-2-settings-queue-workers.md) | standard | complete (Manuelle Smokes offen) |
-| 3 | [VRAM-Budget-Rechner + API-Erweiterung](phase-3-vram-budget-api.md) | mechanisch | complete (Live-Endpoint-Check nach Neustart offen) |
-| 4 | [Frontend: Worker-Slider in Verarbeitung](phase-4-frontend-slider.md) | standard | complete (UI-Smoke offen) |
+| 1 | [SessionManager: Pool statt Singleton](phase-1-session-pool.md) | heikel | complete (Smoke übersprungen, User-Entscheidung) |
+| 2 | [Settings + N-Worker-Loop in queue.py](phase-2-settings-queue-workers.md) | standard | complete (Smoke übersprungen, User-Entscheidung) |
+| 3 | [VRAM-Budget-Rechner + API-Erweiterung](phase-3-vram-budget-api.md) | mechanisch | complete (Smoke übersprungen, User-Entscheidung) |
+| 4 | [Frontend: Worker-Slider in Verarbeitung](phase-4-frontend-slider.md) | standard | complete (Smoke übersprungen, User-Entscheidung) |
 
 ## Finale Akzeptanzkriterien (Smoke-Checkliste, User prüft am Plan-Ende)
 
@@ -109,7 +109,36 @@ aber falls es beim Lesen auffällt: kein Bug, nur totes Gewebe aus einer früher
 
 ## Bottom-Sektionen (beim Archivieren füllen)
 
-**Summary:** —
-**Files touched:** —
-**Commits:** —
-**Follow-ups:** —
+**Summary:** SessionManager hat jetzt einen echten Pool (`acquire_exclusive_session`/
+`release_exclusive_session`) statt Singleton-Sessions pro Modelltyp. Tagging/Captioning laufen
+mit konfigurierbarer Worker-Anzahl (1-4, Settings `tagging_workers`/`captioning_workers`),
+Vorschlagswerte kommen aus der erkannten VRAM-Größe (`models/vram.py`), Endpoint
+`GET /api/models/vram` liefert sie mit. Frontend hat zwei neue Slider in
+Einstellungen → Verarbeitung mit „Empfohlen: N"-Anzeige.
+
+**Files touched:**
+- `backend/photofant/inference/session_manager.py` — Pool statt Singleton (Phase 1)
+- `backend/photofant/jobs/queue.py` — N-Worker-Loop pro Modelltyp (Phase 2)
+- `backend/photofant/settings.py` — `tagging_workers`/`captioning_workers` (Phase 2)
+- `backend/photofant/models/vram.py` — `suggest_tagging_workers`/`suggest_captioning_workers` (Phase 3)
+- `backend/photofant/api/models.py` — VRAM-Endpoint um Vorschlagswerte erweitert (Phase 3)
+- `frontend/src/app/models/config.model.ts`, `.../model.model.ts` — neue Felder (Phase 3+4)
+- `frontend/src/app/features/einstellungen/verarbeitung/*` — zwei Slider (Phase 4)
+- `frontend/src/app/store/models/models.effects.ts` — Vorschlagswerte ins Model gemappt (Phase 4)
+- `docs/routes.md`, `docs/code-map.md` — Doc-Sync (VramResponse/GpuInfoDto, Worker-Queue-Beschreibung)
+
+**Commits:**
+- `5835119` feat(inference): add exclusive session pool to SessionManager (P19 Phase 1)
+- `e68f2d5` feat(inference): wire N-worker settings into tagging/captioning queue (P19 Phase 2)
+- `e1d45f0` feat(inference): suggest worker counts from detected VRAM (P19 Phase 3)
+- `7f53186` feat(inference): add worker-count sliders to Verarbeitung settings (P19 Phase 4)
+- `ec72c7d` docs(routes): sync VramResponse/GpuInfoDto with P19 worker-suggestion fields
+
+**Deviations:** siehe Sektion „Deviations vom ursprünglichen Backlog-Konzept" oben (kein neuer
+Endpoint, zwei Methodennamen statt Overload).
+
+**Follow-ups:**
+- Finale Smoke-Checkliste (UI-Slider, Parallelität im Job-Dock, OOM-Fehlermeldung) wurde vom
+  User bewusst nicht manuell durchgeklickt — bei ersten Symptomen (Hänger, stiller Crash bei
+  hoher Worker-Zahl) hier zuerst nachschauen.
+- Echter GPU-Parallelbetrieb (CUDA Streams) bleibt offen, s.o.
