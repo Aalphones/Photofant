@@ -273,25 +273,34 @@ Hooks sit on: `PATCH /assets/{id}/tags`, `PATCH /assets/{id}/caption`, `POST /ta
 
 ---
 
-### `review_item` (migration 0014, erweitert in 0025 — ADR-007)
+### `review_item` (migration 0014, erweitert in 0017/0025/0027 — ADR-007)
 
-Offene Duplikat-Paare, die der User manuell entscheiden soll. Erweiterbar für andere Review-Typen (z.B. Gesichts-Zuordnung in P7).
+Zwei Review-Typen teilen sich die Tabelle: offene Duplikat-Paare (`dupe_candidate`) und Gesichts-Zuordnungsvorschläge aus dem Clustering (`face_suggestion`).
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | INTEGER PK | |
-| `type` | TEXT | `dupe_candidate` (erweiterbar) |
-| `asset_a_id` | INTEGER FK → `asset.id` | immer der mit der kleineren ID |
-| `asset_b_id` | INTEGER FK → `asset.id` | immer der mit der größeren ID |
-| `phash_distance` | INTEGER | nullable; Hamming-Distanz (0–64) — NULL wenn das Paar nur per CLIP gefunden wurde |
+| `type` | TEXT | `dupe_candidate` · `face_suggestion` |
+| `asset_a_id` | INTEGER FK → `asset.id` | dupe_candidate: kleinere ID. face_suggestion: gleiche Asset-ID wie `asset_b_id` (Hack, siehe unten) |
+| `asset_b_id` | INTEGER FK → `asset.id` | dupe_candidate: größere ID. face_suggestion: = `asset_a_id` |
+| `phash_distance` | INTEGER | nullable; Hamming-Distanz (0–64) — NULL wenn das Paar nur per CLIP gefunden wurde, oder bei `face_suggestion` immer 0 |
 | `clip_distance` | REAL | nullable; CLIP Cosine-Distance (0.0–1.0) — NULL wenn das Paar nur per pHash gefunden wurde |
 | `created_at` | DATETIME | UTC naive; nicht null |
 | `resolved_at` | DATETIME | nullable; gesetzt bei Entscheidung |
-| `resolution` | TEXT | nullable: `a_is_original` · `b_is_original` · `delete_a` · `delete_b` · `dismiss` |
+| `resolution` | TEXT | nullable: `a_is_original` · `b_is_original` · `delete_a` · `delete_b` · `dismiss` (dupe_candidate); `confirmed` · `rejected` · `reassigned:<id>` (face_suggestion) |
+| `face_id` | INTEGER | nullable; nur bei `face_suggestion` gesetzt, `NULL` bei `dupe_candidate` |
+| `suggested_person_id` | INTEGER | nullable; nur bei `face_suggestion` |
+| `score` | REAL | nullable; Match-Score (0.0–1.0), nur bei `face_suggestion` |
 
-Unique-Constraint: `uq_review_item_pair` auf `(type, asset_a_id, asset_b_id)` — kein Doppeleintrag pro Paar.
+Zwei partielle Unique-Indizes (migration 0027 — ersetzt den ursprünglichen, zu breiten `uq_review_item_pair`-Constraint):
+- `uq_review_item_pair` auf `(type, asset_a_id, asset_b_id)` **WHERE `face_id IS NULL`** — kein Doppeleintrag pro Duplikat-Paar.
+- `uq_review_item_face_pending` auf `(face_id)` **WHERE `type = 'face_suggestion' AND resolved_at IS NULL`** — höchstens ein offener Vorschlag pro Gesicht gleichzeitig, aber nach Bestätigen/Ablehnen darf ein neuer entstehen (z.B. nach erneutem Clustering-Lauf).
 
-Flow (ADR-007, OR-Logik): Import berechnet pHash + CLIP-Embedding → pHash-Scan (nur `distance == 0`) und CLIP-Scan (Cosine-Distance ≤ Schwelle) laufen unabhängig → ein `review_item` pro Paar wird angelegt, sobald **eine** Methode anschlägt (UNION-Merge) → User entscheidet im Review-Tab, sieht beide Scores getrennt.
+Grund für die Aufteilung: `face_suggestion`-Zeilen setzen `asset_a_id == asset_b_id` (kein "Paar", nur ein Gesicht) — ein Foto mit mehreren Gesichtern, die alle zur Review anstehen, konnte sonst nur die erste Zeile einfügen (UNIQUE-Verletzung auf `(type, asset_a_id, asset_b_id)` ab dem zweiten Gesicht desselben Fotos).
+
+Flow Duplikate (ADR-007, OR-Logik): Import berechnet pHash + CLIP-Embedding → pHash-Scan (nur `distance == 0`) und CLIP-Scan (Cosine-Distance ≤ Schwelle) laufen unabhängig → ein `review_item` pro Paar wird angelegt, sobald **eine** Methode anschlägt (UNION-Merge) → User entscheidet im Review-Tab, sieht beide Scores getrennt.
+
+Flow Gesichts-Vorschläge: Clustering/inkrementelles Matching (`photofant/clustering/engine.py`, `photofant/jobs/clustering_job.py`) legt für ein Gesicht mit `band == "review"` eine Zeile an → User entscheidet in der Review-Queue (`photofant/api/review_queue.py`: confirm/reject/reassign).
 
 ---
 

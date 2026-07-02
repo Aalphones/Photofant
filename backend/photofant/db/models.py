@@ -15,6 +15,7 @@ from sqlalchemy import (
     LargeBinary,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -233,9 +234,26 @@ class PromptTemplate(Base):
 
 
 class ReviewItem(Base):
+    """Review queue for both duplicate candidates and face suggestions.
+
+    The two types share this table but have different uniqueness rules:
+    - dupe_candidate rows (face_id IS NULL) are keyed on the asset pair.
+    - face_suggestion rows are keyed on face_id and only while pending —
+      asset_a_id/asset_b_id are both set to the same asset for these rows,
+      so they can't be part of the asset-pair uniqueness (a photo with
+      multiple faces would need several rows for the same asset pair).
+    """
+
     __tablename__ = "review_item"
     __table_args__ = (
-        UniqueConstraint("type", "asset_a_id", "asset_b_id", name="uq_review_item_pair"),
+        Index(
+            "uq_review_item_pair", "type", "asset_a_id", "asset_b_id",
+            unique=True, sqlite_where=text("face_id IS NULL"),
+        ),
+        Index(
+            "uq_review_item_face_pending", "face_id",
+            unique=True, sqlite_where=text("type = 'face_suggestion' AND resolved_at IS NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
