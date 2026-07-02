@@ -1,6 +1,6 @@
 # P13 — Person-Bulk-Import
 
-**Status:** pending
+**Status:** complete
 
 Neuen Personen Bilder per Bulk zuordnen, ohne den Galerie-Import-Dialog manuell
 zu bedienen. Drei Wege: (1) Neue Person anlegen + Galerie-Filter vorbelegen,
@@ -83,12 +83,12 @@ bulkAssignPerson(personId: number, assetIds: number[]): Observable<{ job_id: str
 
 ## Finale Abnahme-Kriterien
 
-- [ ] „Neue Person" in Personen-Toolbar anlegen → Galerie öffnet sich mit Personen-Filter vorbelegt
-- [ ] Galerie-Upload bei aktivem Personen-Filter → Bilder landen in der Person's `photos/`-Ordner mit `fixed_person=True`
-- [ ] Einzelgesicht erkannt → direkt der Person zugewiesen (kein Review-Schritt)
-- [ ] Mehrere Gesichter erkannt → bestes der Person, Rest in `_unknown` (incremental match läuft normal)
-- [ ] BulkBar zeigt „Person zuweisen" wenn Bilder ausgewählt und Personen vorhanden
-- [ ] Bulk-Zuweisung verschiebt Dateien + Gesichter korrekt, Job läuft in der Job-Queue
+- [x] „Neue Person" in Personen-Toolbar anlegen → Galerie öffnet sich mit Personen-Filter vorbelegt
+- [x] Galerie-Upload bei aktivem Personen-Filter → Bilder landen in der Person's `photos/`-Ordner mit `fixed_person=True`
+- [x] Einzelgesicht erkannt → direkt der Person zugewiesen (kein Review-Schritt)
+- [x] Mehrere Gesichter erkannt → bestes der Person, Rest in `_unknown` (incremental match läuft normal)
+- [x] BulkBar zeigt „Person zuweisen" wenn Bilder ausgewählt und Personen vorhanden
+- [x] Bulk-Zuweisung verschiebt Dateien + Gesichter korrekt, Job läuft in der Job-Queue
 
 ---
 
@@ -110,8 +110,31 @@ Person-Upload-Pfad aktiv sein — andernfalls immer normaler Import.
 
 ## Archiv-Footer
 
-**Summary:** —
-**Files touched:** —
-**Commits:** —
-**Deviations:** —
-**Follow-ups:** —
+**Summary:** Drei Wege für Person-Bulk-Import umgesetzt: Person anlegen mit
+vorbelegtem Galerie-Filter (Phase 1), personen-bewusster Upload inkl.
+Face-Job-Fixierung (Phase 2), manuelle Bulk-Zuweisung ausgewählter Bilder aus
+der BulkBar heraus als Hintergrund-Job (Phase 3).
+
+**Files touched:**
+- `backend/photofant/api/persons.py` — `create_person`, `import_to_person_folder`, `bulk_assign_to_person`
+- `backend/photofant/jobs/{import_job,face_job,bulk_assign_person_job}.py`
+- `backend/photofant/jobs/queue.py` — `JobKind.BULK_ASSIGN`
+- `frontend/src/app/features/personen/` (Neue-Person-UI), `features/galerie/`
+- `frontend/src/app/ui/{import-dialog,bulk-bar,assign-person-dialog}/`
+- `frontend/src/app/store/persons/`
+
+**Commits:**
+- `dedb72c` docs(plan): add P13 Person-Bulk-Import plan
+- `c046bc8` feat(personen): "Neue Person" anlegen und direkt in Galerie filtern
+- `34b5885` feat(import): Person-bewusster Upload — face_job weist bestes Gesicht direkt zu
+- `71f945b` feat(personen): Bulk-Personenzuweisung ueber die BulkBar
+
+**Deviations:**
+- Phase 2: bestehender Ad-hoc-Fix in `face_job.py` (vor Plan-Start) durch die
+  spezifizierte `face_index == 0`-Logik ersetzt (siehe FINDINGS.md).
+- Phase 3: `bulk_assign_person_job.py` nutzt `materialize_assignment` /
+  `move_face_crops_to_person` / `prune_orphaned_instances` statt einer eigenen
+  Move-Funktion — Kollisionsschutz für den `(asset_id, person_id)`-Unique-Constraint
+  (siehe FINDINGS.md).
+
+**Follow-ups:** Keine offenen.
