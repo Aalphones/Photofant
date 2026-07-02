@@ -27,6 +27,7 @@ nach dem Import), erst der Rest wird wie bisher neu geclustert.
 | 3 | Frontend Store — Persistenz für Gruppen-Zuweisung | standard | pending |
 | 4 | Frontend UI — Toolbar, Grid, Karte, Clustering-Button | standard | pending |
 | 5 | Politur — Zusatz-Sortierungen, Empty-States, Perf-Check | standard | pending |
+| 6 | Person löschen — Ordner + DB-Eintrag entfernen, Fotos wandern nach „Unbekannt" | standard | pending |
 
 ---
 
@@ -115,6 +116,28 @@ this.store.dispatch(personsActions.triggerClustering());
 this.store.selectSignal(personsSelectors.selectIsClustering);
 ```
 
+### Backend + Frontend — Person löschen (Phase 6)
+
+```python
+# api/persons.py
+DELETE /persons/{person_id} → DeleteResultDto { faces_moved: int, instances_moved: int }
+# 404 unbekannte Person-ID, 400 wenn is_unknown (Unbekannt-Person selbst nicht löschbar)
+```
+`media/person_folders.py` bekommt `delete_person()` — analog `merge_persons()`, aber Ziel ist
+immer `_unknown`, ohne Namensübernahme, mit zurückgesetztem `fixed_person` (die Fotos müssen
+nach dem Löschen wieder für Clustering/Incremental-Match verfügbar sein). Danach: Person-Row
+weg, Ordner weg, Fotos/Edits/Faces liegen unversehrt in `_unknown`.
+
+```typescript
+// persons.actions.ts — neu (Ergebnis-Typ: bestehendes MergeResult wiederverwendet)
+'Delete Person':         props<{ id: number }>()
+'Delete Person Success': props<{ result: MergeResult }>()
+'Delete Person Failure': props<{ error: string }>()
+```
+Nur über einen dedizierten Bestätigungsdialog (`delete-person-dialog`, neu) erreichbar, der
+in Klartext sagt: Fotos werden **nicht** gelöscht, sondern wandern nach „Unbekannt" — nur die
+Person und ihr Ordner sind danach weg.
+
 ---
 
 ## Finale Abnahme-Kriterien
@@ -129,6 +152,8 @@ this.store.selectSignal(personsSelectors.selectIsClustering);
 - [ ] Bereits benannten/zugewiesenen Gesichtern passiert beim Clustering nichts (verifiziert — siehe Risiken)
 - [ ] Clustering-Lauf matcht unbekannte Gesichter zuerst gegen bestehende Personen: über `face_auto_threshold` → direkt zugewiesen (Ordner materialisiert), zwischen `face_review_threshold` und `face_auto_threshold` → Vorschlag in der Review-Queue, darunter → wie bisher Kandidat für HDBSCAN
 - [ ] Ein Gesicht, das seit dem letzten Clustering-Lauf durch eine neu angelegte Person passend würde, wird beim nächsten Lauf erkannt (auto- oder review-Fall, nicht mehr stumm neu geclustert)
+- [ ] Person löschen entfernt Ordner + DB-Eintrag vollständig, Fotos/Edits/Faces landen unversehrt in „Unbekannt", „Unbekannt" selbst ist nicht löschbar
+- [ ] Smart-Album-Trigger überleben Löschen (entfernt) und Zusammenführen (auf Zielperson umgebogen) einer Person, statt tot ins Leere zu zeigen
 
 ---
 
@@ -170,6 +195,25 @@ erzeugt `ReviewItem`s vom Typ `face_suggestion` — dieselbe Queue, die auch der
 Incremental-Match nach Import befüllt. Kein zusätzlicher UI-Teil in P29 nötig,
 aber Abnahme sollte einmal die bestehende Review-Ansicht nach einem
 Clustering-Lauf gegenprüfen.
+
+🟡 **Person löschen weicht bewusst von `merge_persons` ab: `fixed_person` wird
+zurückgesetzt.** Bei einem normalen Merge bleibt `fixed_person` auf dem
+verschobenen Instance-Eintrag unangetastet (Ziel ist ja weiterhin eine echte
+Person). Beim Löschen landen die Fotos aber wieder im freien „Unbekannt"-Pool
+— bliebe `fixed_person=True` stehen, würden genau diese Fotos vom nächsten
+Clustering/Incremental-Match für immer übersprungen (`can_move_unknown`-Gate
+in `person_folders.py`). Phase 6 setzt es deshalb explizit auf `False`.
+
+🟡 **`SmartTrigger.person_id` würde ohne Gegenmaßnahme nach Löschen oder Merge
+ins Leere zeigen — Phase 6 fixt beide Fälle.** Ein Smart-Album-Trigger vom Typ
+„person" referenziert die Person per Fremdschlüssel ohne `ON DELETE`-Regel;
+SQLite erzwingt Fremdschlüssel in diesem Projekt nicht. Ein gemeinsamer Helper
+(`_resolve_person_smart_triggers`) räumt das für beide betroffenen Funktionen
+auf: `delete_person()` löscht den Trigger (keine Nachfolge-Person vorhanden),
+`merge_persons()` biegt ihn stattdessen auf die Zielperson um (die Fotos leben
+dort ja weiter). Für Löschen reevaluiert die Route danach explizit die
+betroffenen Assets; für Merge übernimmt das der bereits bestehende
+Reevaluate-Call in `merge_persons_endpoint`.
 
 ---
 
