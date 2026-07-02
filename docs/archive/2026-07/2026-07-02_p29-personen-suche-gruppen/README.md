@@ -1,6 +1,6 @@
 # P29 — Personen durchsuchen, filtern, gruppieren
 
-**Status:** pending
+**Status:** archived
 
 Personen-Tab wird bei vielen Personen unübersichtlich. Freitext-Gruppen (z.B.
 „Familie", „Freunde"), Schnellsuche, Sortierung und ein View-Toggle
@@ -219,8 +219,30 @@ Reevaluate-Call in `merge_persons_endpoint`.
 
 ## Archiv-Footer
 
-**Summary:** —
-**Files touched:** —
-**Commits:** —
-**Deviations:** —
-**Follow-ups:** —
+**Summary:** Personen-Tab neu strukturiert: Freitext-Gruppen, Schnellsuche, Sortierung
+(Gruppe/Erstellungsdatum/Name/Unbenannt/Anzahl), View-Toggle (Einzelfoto/4er-Grid/
+Gesicht), Clustering-Button auch auf der Personen-Seite. Clustering matcht unbekannte
+Gesichter jetzt erst gegen bestehende Personen (auto/review-Band), bevor der Rest per
+HDBSCAN neu geclustert wird. Neu: Person löschen (Fotos wandern nach „Unbekannt",
+Ordner + DB-Eintrag weg) inkl. Bugfix für verwaiste Smart-Album-Trigger bei Löschen
+*und* Merge.
+
+**Files touched:** `clustering/engine.py`, `clustering_job.py`, `db/models.py` +
+Alembic-Migration, `api/persons.py`, `media/person_folders.py`,
+`frontend/store/persons/`, `frontend/services/person.service.ts`,
+`frontend/features/personen/` (personen, person-card, alphabet-rail,
+group-color.util, create-person-dialog, delete-person-dialog).
+
+**Commits:** `c6d7bfb` (Phase 1 — Clustering-Matching), `25f9fca` (Phase 2 —
+group_name/created_at), `9063f6c` (Phase 3 — setPersonGroup-Action), `a314d47`
+(Phase 4 — Toolbar/Grid/Views), `e58a9e2` (Phase 5 — Politur), `800b846`
+(Phase 6 — Person löschen + SmartTrigger-Bugfix).
+
+**Deviations:** Phase 6 hat auf eine eigene `DeleteResultDto`-Klasse verzichtet und
+stattdessen `MergeResultDto` wiederverwendet (identische Form, im Plan als Option
+vorgesehen).
+
+**Follow-ups:** Perf-Messung mit realistischer Personenzahl (>300, echte Daten) steht
+noch aus — agentenlos nicht simulierbar, Teil der Smoke-Checkliste. Review-Queue nach
+einem Clustering-Lauf einmal gegen die neuen `face_suggestion`-Einträge aus der
+Matching-Vorstufe prüfen (Risiko-Notiz Phase 1).
