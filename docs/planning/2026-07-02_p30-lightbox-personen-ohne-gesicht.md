@@ -11,7 +11,7 @@
 | Phase | Inhalt | Tier | Status |
 |---|---|---|---|
 | 1 | Backend: Endpoint „Person direkt einem Asset zuordnen" | standard | complete |
-| 2 | Frontend: Lightbox-Empty-State + Picker-Wiederverwendung + Unbekannt-Korrektur | standard | pending |
+| 2 | Frontend: Lightbox-Empty-State + Picker-Wiederverwendung + Unbekannt-Korrektur | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -45,20 +45,20 @@ Frontend ruft das über eine neue Methode `assignPersonToAsset(assetId, personId
 - [x] `docs/routes.md`: neuer Endpoint-Eintrag bei den Asset-Routen
 - [x] `docs/code-map.md`: Zeile „Personen & Faces" bzw. „Galerie & Lightbox" ergänzen falls die neue Route dort noch fehlt
 
-## Phase 2 — Frontend: Lightbox-Empty-State + Picker
+## Phase 2 — Frontend: Lightbox-Empty-State + Picker ✅
 
 **Kontext:** `frontend/src/app/features/galerie/lightbox/lightbox.ts` (Gesichter-Sektion, aktuell nur gerendert wenn `faces().length > 0`; `openPersonPicker(face)`, `selectedFaceId()!`, `assignFaceToPerson()`, `openRerunDialog()`/`onRerunConfirm()` als Vorbild für den Rerun-Call) · `lightbox.html` (`panel-sec` „Aktionen"-Block, Picker-Modal ab Zeile ~576) · `services/classify.service.ts`, `services/person.service.ts`.
 
 **AK:**
-- [ ] `@else`-Zweig in der Gesichter-Sektion wenn `faces().length === 0`: zwei Buttons, Label exakt „Extrahieren nochmal probieren" und „Manuell Person zuordnen" (Idiotensicherheits-Gate: beide Labels sind bereits selbsterklärend, kein Tooltip nötig)
-- [ ] „Extrahieren nochmal probieren" → neue Methode, ruft `classifyService.rerun({ asset_ids: [assetId], steps: ['faces'] })` **direkt** auf (kein Rerun-Dialog mit Preset-Auswahl dazwischen — nur dieser eine Step, kein Nutzer-Entscheid nötig); sichtbares Feedback (Pending-State/Toast), Job läuft asynchron im Hintergrund weiter
-- [ ] „Manuell Person zuordnen" → öffnet den bestehenden Picker im „Asset-Modus": `selectedFace` bleibt `null`, `faceMatches` bleibt leer (→ Top-Treffer-Spalte blendet sich von selbst aus), Suche/Liste/„Neue Person anlegen" bleiben nutzbar
-- [ ] Zuweisungs-Pfad im Picker vereinheitlichen: ein Handler statt der drei Template-Stellen mit `assignFaceToPerson(selectedFaceId()!, ...)` — verzweigt intern auf Face-Reassign (bestehend) vs. `personService.assignPersonToAsset(assetId, personId)` (neu), je nachdem ob ein Face im Kontext ist. Nimmt dabei das bestehende `!` (Non-Null-Assertion) aus dem Template raus.
-- [ ] Nach erfolgreichem `assignPersonToAsset`: Picker schließen, Asset-Detail neu laden (Person-Zuordnung muss sichtbar werden, auch ohne Face)
-- [ ] „Neue Person anlegen" im Asset-Modus nutzt denselben bestehenden Inline-Flow der Lightbox (`startCreatePerson`/`confirmCreatePerson`) — **keine** Vereinheitlichung mit der separaten `create-person-dialog`-Komponente aus der Personen-Seite in diesem Plan (🟡 bestehende Doppelung, kein neuer Scope hier)
-- [ ] Neuer Computed `unknownPerson = computed(() => this.allPersons().find(p => p.is_unknown) ?? null)` (Vorbild: `review-unknown.ts:30`)
-- [ ] Picker zeigt **nur im Face-Kontext** (also beim Öffnen über ein bestehendes Gesicht, nicht im Asset-Modus aus Phase 2 oben) einen eigenständigen Button „Als unbekannt markieren" — getrennt von der Such-/Trefferliste, ruft den vereinheitlichten Assign-Handler mit `unknownPerson()!.id` auf; kein Vorschau-/Bestätigungsschritt nötig (eine Aktion, ein Klick, jederzeit über den Picker erneut korrigierbar)
-- [ ] Deckt den Use-Case „Person wurde falsch zugewiesen, zurück auf Unbekannt setzen" ab, ohne dass das Gesicht gelöscht werden muss
+- [x] `@else`-Zweig in der Gesichter-Sektion wenn `faces().length === 0`: zwei Buttons, Label exakt „Extrahieren nochmal probieren" und „Manuell Person zuordnen" (Idiotensicherheits-Gate: beide Labels sind bereits selbsterklärend, kein Tooltip nötig)
+- [x] „Extrahieren nochmal probieren" → neue Methode, ruft `classifyService.rerun({ asset_ids: [assetId], steps: ['faces'] })` **direkt** auf (kein Rerun-Dialog mit Preset-Auswahl dazwischen — nur dieser eine Step, kein Nutzer-Entscheid nötig); sichtbares Feedback (Pending-State/Toast), Job läuft asynchron im Hintergrund weiter
+- [x] „Manuell Person zuordnen" → öffnet den bestehenden Picker im „Asset-Modus": `selectedFace` bleibt `null`, `faceMatches` bleibt leer (→ Top-Treffer-Spalte blendet sich von selbst aus), Suche/Liste/„Neue Person anlegen" bleiben nutzbar
+- [x] Zuweisungs-Pfad im Picker vereinheitlichen: ein Handler statt der drei Template-Stellen mit `assignFaceToPerson(selectedFaceId()!, ...)` — verzweigt intern auf Face-Reassign (bestehend) vs. `personService.assignPersonToAsset(assetId, personId)` (neu), je nachdem ob ein Face im Kontext ist. Nimmt dabei das bestehende `!` (Non-Null-Assertion) aus dem Template raus.
+- [x] Nach erfolgreichem `assignPersonToAsset`: Picker schließen, Asset-Detail neu laden (Person-Zuordnung muss sichtbar werden, auch ohne Face)
+- [x] „Neue Person anlegen" im Asset-Modus nutzt denselben bestehenden Inline-Flow der Lightbox (`startCreatePerson`/`confirmCreatePerson`) — **keine** Vereinheitlichung mit der separaten `create-person-dialog`-Komponente aus der Personen-Seite in diesem Plan (🟡 bestehende Doppelung, kein neuer Scope hier)
+- [x] Neuer Computed `unknownPerson = computed(() => this.allPersons().find(p => p.is_unknown) ?? null)` (Vorbild: `review-unknown.ts:30`)
+- [x] Picker zeigt **nur im Face-Kontext** (also beim Öffnen über ein bestehendes Gesicht, nicht im Asset-Modus aus Phase 2 oben) einen eigenständigen Button „Als unbekannt markieren" — getrennt von der Such-/Trefferliste, ruft den vereinheitlichten Assign-Handler mit `unknownPerson()!.id` auf; kein Vorschau-/Bestätigungsschritt nötig (eine Aktion, ein Klick, jederzeit über den Picker erneut korrigierbar)
+- [x] Deckt den Use-Case „Person wurde falsch zugewiesen, zurück auf Unbekannt setzen" ab, ohne dass das Gesicht gelöscht werden muss
 
 ## Summary
 *(nach Abschluss)*

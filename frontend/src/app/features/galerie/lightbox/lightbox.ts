@@ -318,6 +318,13 @@ export class Lightbox {
 
   private readonly allPersons = this.store.selectSignal(personsSelectors.selectAll);
 
+  protected readonly unknownPerson = computed((): PersonDto | null =>
+    this.allPersons().find((person: PersonDto) => person.is_unknown) ?? null
+  );
+
+  // ── Empty-State: kein Gesicht extrahiert ──────────────────────────────────
+  protected readonly retryingFaceExtraction = signal(false);
+
   protected readonly personSearchResults = computed((): PersonDto[] => {
     const query = this.personSearchQuery().trim().toLowerCase();
     if (query.length === 0) { return []; }
@@ -606,6 +613,7 @@ export class Lightbox {
       this.creatingNewPerson.set(false);
       this.newPersonName.set('');
       this.personSearchQuery.set('');
+      this.retryingFaceExtraction.set(false);
       // Reset version compare stub
       this.showVersionCompare.set(false);
       // Reset RelationBrowser-Modal
@@ -1132,6 +1140,37 @@ export class Lightbox {
       });
   }
 
+  // Asset-Modus: kein Gesicht im Kontext (leerer Gesichter-Zustand) — Picker ohne
+  // Top-Treffer-Spalte, `selectedFaceId` bleibt null und steuert damit in
+  // `assignPersonFromPicker()` den Zuweisungs-Pfad.
+  protected openPersonPickerAssetMode(): void {
+    this.selectedFaceId.set(null);
+    this.showPersonPicker.set(true);
+    this.personSearchQuery.set('');
+    this.creatingNewPerson.set(false);
+    this.faceMatchesLoading.set(false);
+    this.faceMatches.set([]);
+    this.store.dispatch(personsActions.loadPersons());
+  }
+
+  // „Extrahieren nochmal probieren" — stößt Face-Klassifizierung nur für dieses eine
+  // Bild neu an, kein Preset-Auswahl-Dialog dazwischen. Job läuft asynchron weiter;
+  // das neu extrahierte Gesicht taucht nach Abschluss beim nächsten Laden auf.
+  protected retryFaceExtraction(): void {
+    const assetId = this.asset()?.id;
+    if (assetId == null || this.retryingFaceExtraction()) { return; }
+    this.retryingFaceExtraction.set(true);
+    this.classifyService.rerun({ asset_ids: [assetId], steps: ['faces'] })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => { this.retryingFaceExtraction.set(false); },
+        error: (err: unknown) => {
+          console.error('[Lightbox] Face-Extraktion (Rerun) fehlgeschlagen:', err);
+          this.retryingFaceExtraction.set(false);
+        },
+      });
+  }
+
   protected closePersonPicker(): void {
     this.showPersonPicker.set(false);
     this.selectedFaceId.set(null);
@@ -1156,6 +1195,30 @@ export class Lightbox {
       });
   }
 
+  // Vereinheitlichter Zuweisungs-Pfad für den Picker: Face-Reassign, wenn ein Gesicht
+  // im Kontext ist (Face-Modus / Gesichter-Sektion), sonst Asset-Modus-Zuweisung ohne
+  // Gesicht (P30). Ersetzt die drei Template-Stellen mit `assignFaceToPerson(selectedFaceId()!, …)`.
+  protected assignPersonFromPicker(personId: number): void {
+    const faceId = this.selectedFaceId();
+    if (faceId != null) {
+      this.assignFaceToPerson(faceId, personId);
+      return;
+    }
+    const assetId = this.asset()?.id;
+    if (assetId == null) { return; }
+    this.personService.assignPersonToAsset(assetId, personId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.closePersonPicker();
+          this.reloadTrigger.update((count: number) => count + 1);
+        },
+        error: (err: unknown) => {
+          console.error('[Lightbox] Personen-Zuweisung fehlgeschlagen:', err);
+        },
+      });
+  }
+
   protected matchScorePercent(score: number): number {
     return Math.round(score * 100);
   }
@@ -1172,8 +1235,7 @@ export class Lightbox {
 
   protected confirmCreatePerson(): void {
     const name = this.newPersonName().trim();
-    const faceId = this.selectedFaceId();
-    if (!name || faceId == null) {
+    if (!name) {
       this.cancelCreatePerson();
       return;
     }
@@ -1183,7 +1245,7 @@ export class Lightbox {
         next: (person: PersonDto) => {
           this.creatingNewPerson.set(false);
           this.newPersonName.set('');
-          this.assignFaceToPerson(faceId, person.id);
+          this.assignPersonFromPicker(person.id);
         },
         error: () => {
           this.creatingNewPerson.set(false);

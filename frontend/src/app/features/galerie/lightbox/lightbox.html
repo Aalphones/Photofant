@@ -386,6 +386,25 @@
             </button>
           }
         </div>
+      } @else {
+        <div class="panel-sec">
+          <div class="psec-title">Gesichter</div>
+          <div class="pbtn-row">
+            <button
+              class="pbtn pbtn--ghost"
+              [class.pbtn--loading]="retryingFaceExtraction()"
+              [disabled]="retryingFaceExtraction()"
+              (click)="retryFaceExtraction()"
+            >
+              <pf-icon name="refresh" [size]="15" />
+              {{ retryingFaceExtraction() ? 'Extraktion läuft…' : 'Extrahieren nochmal probieren' }}
+            </button>
+            <button class="pbtn pbtn--ghost" (click)="openPersonPickerAssetMode()">
+              <pf-icon name="user" [size]="15" />
+              Manuell Person zuordnen
+            </button>
+          </div>
+        </div>
       }
 
       } <!-- @if (!isFaceMode()) — Aktionen … Gesichter -->
@@ -595,6 +614,12 @@
         />
       </div>
 
+      @if (selectedFaceId() != null && unknownPerson(); as unknownPersonEntry) {
+        <button class="pp-unknown-btn" (click)="assignPersonFromPicker(unknownPersonEntry.id)">
+          Als unbekannt markieren
+        </button>
+      }
+
       @if (personSearchQuery().trim().length === 0 && faceMatches().length > 0) {
         <div class="pp-quick-wrap">
           <div class="pp-sec-lbl">Top-Treffer</div>
@@ -602,7 +627,7 @@
             @for (match of faceMatches().slice(0, 5); track match.person_id) {
               <button
                 class="pp-chip"
-                (click)="assignFaceToPerson(selectedFaceId()!,match.person_id)"
+                (click)="assignPersonFromPicker(match.person_id)"
                 [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
               >
                 <img [src]="'/api/faces/' + match.best_face_id + '/thumbnail'" alt="" />
@@ -623,7 +648,7 @@
           @for (person of pickerList(); track person.id) {
             <button
               class="pp-row"
-              (click)="assignFaceToPerson(selectedFaceId()!,person.id)"
+              (click)="assignPersonFromPicker(person.id)"
               [title]="'Zuweisen zu ' + (person.name ?? 'Person #' + person.id)"
             >
               @if (person.portrait_face_id != null) {

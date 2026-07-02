@@ -911,6 +911,23 @@ pf-zoom-stage {
   }
 }
 
+// Eigenständige Korrektur-Aktion, bewusst von Such-/Trefferliste abgesetzt (P30) —
+// setzt ein bereits zugewiesenes Gesicht zurück auf "Unbekannt".
+.pp-unknown-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 9px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--line);
+  transition: background 0.1s, color 0.1s;
+
+  &:hover { background: var(--surface-2); color: var(--text-1); }
+}
+
 .pp-quick-wrap {
   border-bottom: 1px solid var(--line);
 }
