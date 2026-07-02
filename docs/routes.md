@@ -318,13 +318,16 @@ interface RegisterLocalResponse {
 }
 
 interface VramResponse {
-  gpu: GpuInfoDto | null;
+  gpu: GpuInfoDto;
   recommendations: VramRecommendation[];
+  suggested_tagging_workers: number | null;
+  suggested_captioning_workers: number | null;
 }
 
 interface GpuInfoDto {
-  name: string;
-  vram_gb: number;
+  name: string | null;
+  vram_gb: number | null;
+  vram_bytes: number | null;
 }
 
 interface VramRecommendation {
