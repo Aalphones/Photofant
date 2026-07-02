@@ -79,12 +79,15 @@ def match_face_incremental(session: Session, face_id: int) -> MatchResult:
 
 
 def run_initial_clustering(session: Session) -> dict[str, int]:
-    """Run HDBSCAN over all face embeddings and create person candidates.
+    """Match unassigned faces against existing persons first, then HDBSCAN the rest.
 
-    Returns stats: {persons_created, faces_assigned, noise_count}.
-    Faces with ``fixed_person`` instances are excluded from redistribution.
+    Returns stats: {persons_created, faces_assigned, noise_count, matched_auto,
+    matched_review}. Faces with ``fixed_person`` instances are excluded from
+    both the matching pre-stage and HDBSCAN redistribution.
     """
-    from photofant.db.models import AssetInstance
+    from datetime import UTC, datetime
+
+    from photofant.db.models import AssetInstance, ReviewItem
 
     auto_threshold, review_threshold, min_cluster_size = _load_thresholds()
 
@@ -94,13 +97,78 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
 
     if not rows:
         log.info("No face embeddings found — nothing to cluster")
-        return {"persons_created": 0, "faces_assigned": 0, "noise_count": 0}
+        return {
+            "persons_created": 0, "faces_assigned": 0, "noise_count": 0,
+            "matched_auto": 0, "matched_review": 0,
+        }
 
     face_ids = [int(row[0]) for row in rows]
     embeddings = np.array(
         [np.frombuffer(row[1], dtype=np.float32) for row in rows],
         dtype=np.float32,
     )
+
+    unknown_person = session.scalar(select(Person).where(Person.is_unknown.is_(True)))
+    unknown_person_id = unknown_person.id if unknown_person else 1
+
+    fixed_face_ids: set[int] = set()
+    fixed_rows = session.execute(
+        select(AssetInstance.asset_id)
+        .where(AssetInstance.fixed_person.is_(True))
+    ).fetchall()
+    fixed_asset_ids = {int(row[0]) for row in fixed_rows}
+
+    if fixed_asset_ids:
+        fixed_faces = session.execute(
+            select(Face.id).where(Face.asset_id.in_(fixed_asset_ids))
+        ).fetchall()
+        fixed_face_ids = {int(row[0]) for row in fixed_faces}
+
+    # Matching pre-stage: before HDBSCAN forms new person buckets, check whether an
+    # existing person now covers each still-unknown face (e.g. the person was
+    # created after the previous clustering run). Reuses the same score bands as
+    # the incremental match that runs right after import.
+    matched_auto = 0
+    matched_review = 0
+
+    for face_id in face_ids:
+        if face_id in fixed_face_ids:
+            continue
+        face = session.get(Face, face_id)
+        if face is None or face.person_id != unknown_person_id:
+            continue
+
+        result = match_face_incremental(session, face_id)
+
+        if result.band == "auto" and result.person_id is not None:
+            face.person_id = result.person_id
+            matched_auto += 1
+            log.info(
+                "Face %d pre-matched (auto) to person %d (score=%.3f)",
+                face_id, result.person_id, result.score,
+            )
+
+        elif result.band == "review" and result.person_id is not None:
+            existing = session.query(ReviewItem).filter(
+                ReviewItem.type == "face_suggestion",
+                ReviewItem.face_id == face_id,
+                ReviewItem.resolved_at.is_(None),
+            ).first()
+            if existing is None:
+                asset_id = face.asset_id or 0
+                session.add(ReviewItem(
+                    type="face_suggestion",
+                    asset_a_id=asset_id,
+                    asset_b_id=asset_id,
+                    phash_distance=0,
+                    face_id=face_id,
+                    suggested_person_id=result.person_id,
+                    score=result.score,
+                    created_at=datetime.now(UTC).replace(tzinfo=None),
+                ))
+            matched_review += 1
+
+    session.flush()
 
     log.info(
         "Clustering %d face embeddings (min_cluster_size=%d, epsilon=%.2f)",
@@ -127,22 +195,6 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
 
     unique_labels = set(labels)
     unique_labels.discard(-1)
-
-    unknown_person = session.scalar(select(Person).where(Person.is_unknown.is_(True)))
-    unknown_person_id = unknown_person.id if unknown_person else 1
-
-    fixed_face_ids: set[int] = set()
-    fixed_rows = session.execute(
-        select(AssetInstance.asset_id)
-        .where(AssetInstance.fixed_person.is_(True))
-    ).fetchall()
-    fixed_asset_ids = {int(row[0]) for row in fixed_rows}
-
-    if fixed_asset_ids:
-        fixed_faces = session.execute(
-            select(Face.id).where(Face.asset_id.in_(fixed_asset_ids))
-        ).fetchall()
-        fixed_face_ids = {int(row[0]) for row in fixed_faces}
 
     persons_created = 0
     faces_assigned = 0
@@ -183,13 +235,16 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
 
     session.commit()
     log.info(
-        "Clustering done: %d persons created, %d faces assigned, %d noise",
-        persons_created, faces_assigned, noise_count,
+        "Clustering done: %d persons created, %d faces assigned, %d noise, "
+        "%d matched (auto), %d matched (review)",
+        persons_created, faces_assigned, noise_count, matched_auto, matched_review,
     )
     return {
         "persons_created": persons_created,
         "faces_assigned": faces_assigned,
         "noise_count": noise_count,
+        "matched_auto": matched_auto,
+        "matched_review": matched_review,
     }
 
 
