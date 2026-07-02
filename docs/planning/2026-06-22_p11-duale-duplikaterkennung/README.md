@@ -1,6 +1,6 @@
 # P11 — Duale Duplikaterkennung: DHash + CLIP parallel
 
-**Status:** pending  
+**Status:** in-progress  
 **ADR:** 007 (erweitert ADR-006)
 
 **pHash = Exact-Copy-Detector (distance == 0):** pHash findet nur pixelidentische
@@ -18,7 +18,7 @@ gezeigt.
 
 | Phase | Thema | Tier | Status |
 |---|---|---|---|
-| 1 | Schema & Settings | standard | pending |
+| 1 | Schema & Settings | standard | complete |
 | 2 | Backend-Engine (Scan + Similar) | heikel | pending |
 | 3 | API-Kontrakt (DTOs) | standard | pending |
 | 4 | Frontend-Einstellungen | standard | pending |

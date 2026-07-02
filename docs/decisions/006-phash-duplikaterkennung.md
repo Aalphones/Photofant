@@ -62,3 +62,5 @@ Die Spalte heißt `phash` (historischer Name im Konzept), der Algorithmus ist DH
 - `review_item`-Tabelle: hält unentschiedene Paare mit `phash_distance`
 - Schwelle `dupe_threshold` in `settings.json` (Default 10, Range 0–20): steuert ab welcher Distanz ein Paar als Duplikat-Kandidat gilt
 - Zukünftig: CLIP-Ähnlichkeit könnte als optionale zweite Stufe (nur wenn Threshold knapp) ergänzt werden — heute noch kein Bedarf
+
+> Ergänzt durch ADR-007
