@@ -1,6 +1,6 @@
 # Phase 1 — Bugfixes: hängender Modus, fehlender Redirect, fehlendes Reset
 
-**Komplexität:** standard · **Status:** pending
+**Komplexität:** standard · **Status:** complete
 
 ## Kontext (vor dem Bauen lesen)
 
@@ -21,10 +21,15 @@
 
 ## Umsetzung
 
-- [ ] `search.reducer.ts`: `setQuery` und `clear` setzen `mode` explizit auf `'tags'` zurück (nicht nur `q`). Das ist der Root-Cause-Fix — ohne den bleibt jede spätere Änderung in Phase 2 auf demselben Fundament instabil.
-- [ ] `gallery.effects.ts` `onFiltersChange$`: `searchActions.setSemanticQuery` in die `ofType(...)`-Liste aufnehmen.
-- [ ] `search-box.ts` `selectSuggestion()`, Zweig `type === 'semantic'`: `localQuery` und `queryInput$` wie in den anderen beiden Zweigen zurücksetzen.
-- [ ] `search-box.ts`: `Router` injizieren; in `selectSuggestion()` (alle drei Zweige) und im bestehenden Tipp-Dispatch (Konstruktor, nach `searchActions.setQuery`) `router.navigate(['/galerie'])` aufrufen, **nur wenn** `router.url` nicht bereits mit `/galerie` beginnt (Guard gegen unnötige Navigation) — exaktes Pattern aus `personen.ts:43`.
-- [ ] Doc: `docs/routes.md` — Abschnitt „Semantische Suche" um den tatsächlich genutzten `GET /api/assets?q_mode=semantic`-Pfad ergänzen (bestehende `POST /api/search/semantic`-Zeile bleibt stehen, aber als „kein Frontend-Aufrufer" markieren).
+- [x] `search.reducer.ts`: `setQuery` und `clear` setzen `mode` explizit auf `'tags'` zurück (nicht nur `q`). Das ist der Root-Cause-Fix — ohne den bleibt jede spätere Änderung in Phase 2 auf demselben Fundament instabil.
+- [x] `gallery.effects.ts` `onFiltersChange$`: `searchActions.setSemanticQuery` in die `ofType(...)`-Liste aufnehmen.
+- [x] `search-box.ts` `selectSuggestion()`, Zweig `type === 'semantic'`: `localQuery` und `queryInput$` wie in den anderen beiden Zweigen zurücksetzen.
+- [x] `search-box.ts`: `Router` injizieren; in `selectSuggestion()` (alle drei Zweige) und im bestehenden Tipp-Dispatch (Konstruktor, nach `searchActions.setQuery`) `router.navigate(['/galerie'])` aufrufen, **nur wenn** `router.url` nicht bereits mit `/galerie` beginnt (Guard gegen unnötige Navigation) — exaktes Pattern aus `personen.ts:43`.
+- [x] Doc: `docs/routes.md` — Abschnitt „Semantische Suche" um den tatsächlich genutzten `GET /api/assets?q_mode=semantic`-Pfad ergänzt (bestehende `POST /api/search/semantic`-Zeile bleibt stehen, jetzt als „kein Frontend-Aufrufer" markiert).
 
 ## Report-Back
+
+- Geänderte Dateien: `search.reducer.ts`, `gallery.effects.ts`, `search-box.ts`, `docs/routes.md`.
+- Guard-Implementierung: `navigateToGalleryIfNeeded()` prüft `router.url.startsWith('/galerie')`; wird in `selectSuggestion()` (alle drei Zweige) und im Tipp-Debounce-Subscribe (nur bei nicht-leerer Query, damit `clearSearch()` nicht navigiert) aufgerufen.
+- Verifikation: `npm run lint` (tsc --noEmit) und `npm run build` liefen sauber, keine neuen Fehler/Warnungen. Kein manueller Browser-Smoke — das macht der User laut Plan.
+- Kein Finding für spätere Phasen — Kontrakt aus der README bleibt unverändert.

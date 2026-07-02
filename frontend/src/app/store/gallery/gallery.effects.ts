@@ -68,6 +68,7 @@ export class GalleryEffects {
         filtersActions.clearAllFilters,
         searchActions.setQuery,
         searchActions.setMode,
+        searchActions.setSemanticQuery,
         searchActions.clear,
         galleryActions.setPageSize,
       ),

@@ -481,9 +481,18 @@ Verhalten:
 
 ## Semantische Suche (P5 Phase 4)
 
+**Tatsächlich genutzter Pfad (Suchleiste, ab P28):** `GET /api/assets?q=<text>&q_mode=semantic` — siehe
+„Assets" weiter oben, Query-Param `q_mode`. Embedded `q` per CLIP-Text-Encoder, filtert über
+`vector_index.search` (sqlite-vec, Cosine), sortiert die Galerie nach Ähnlichkeits-Score.
+
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| Such-UI (ab P6; bis dahin API) | `POST` | `/api/search/semantic` | `SemanticSearchRequest` | `SemanticSearchResponse` |
+| — (kein Frontend-Aufrufer, siehe unten) | `POST` | `/api/search/semantic` | `SemanticSearchRequest` | `SemanticSearchResponse` |
+
+`POST /api/search/semantic` ist ein eigenständiger Endpoint aus P5, bevor die Suchleiste existierte
+(„bis dahin API"). Er wird **von keiner Frontend-Stelle aufgerufen** (verifiziert per Grep,
+2026-07-02) — die Lightbox-„ähnliche Bilder"-Funktion nutzt stattdessen `GET /api/assets/{id}/similar`.
+Bleibt vorerst stehen (kein Auftrag zum Entfernen), gilt aber als toter Code.
 
 ```typescript
 // Genau eines von query / like_asset_id setzen (sonst 422).

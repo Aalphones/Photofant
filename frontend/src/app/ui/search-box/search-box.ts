@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
 import type { PersonDto, TagListItem } from '@photofant/models';
@@ -41,6 +42,7 @@ const MAX_RECENT = 5;
 export class SearchBox {
   private readonly store      = inject(Store);
   private readonly tagService = inject(TagService);
+  private readonly router     = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly queryInput$ = new Subject<string>();
@@ -109,6 +111,7 @@ export class SearchBox {
       takeUntilDestroyed(this.destroyRef),
     ).subscribe((query: string) => {
       this.store.dispatch(searchActions.setQuery({ q: query }));
+      if (query) { this.navigateToGalleryIfNeeded(); }
     });
 
     // Reset keyboard selection whenever the list changes
@@ -176,6 +179,8 @@ export class SearchBox {
     } else if (item.type === 'semantic') {
       this.store.dispatch(searchActions.setSemanticQuery({ q: item.text }));
       this.saveRecentSearch(item.text, 'semantic');
+      this.localQuery.set('');
+      this.queryInput$.next('');
     } else {
       this.localQuery.set(item.text);
       this.queryInput$.next(item.text);
@@ -183,6 +188,13 @@ export class SearchBox {
       this.saveRecentSearch(item.text, 'tag');
     }
     this.isOpen.set(false);
+    this.navigateToGalleryIfNeeded();
+  }
+
+  private navigateToGalleryIfNeeded(): void {
+    if (!this.router.url.startsWith('/galerie')) {
+      void this.router.navigate(['/galerie']);
+    }
   }
 
   private loadRecentSearches(): RecentSearch[] {
