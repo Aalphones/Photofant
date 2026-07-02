@@ -29,6 +29,9 @@ export interface ProcessingConfig {
   maxTags: number;
   blurThreshold: number;
   dupeThreshold: number;
+  dupePhashEnabled: boolean;
+  dupeClipEnabled: boolean;
+  dupeClipThreshold: number;
   faceDetConfThreshold: number;
   faceDetIouThreshold: number;
   faceCropPadding: number;
@@ -46,6 +49,9 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   maxTags: 30,
   blurThreshold: 200.0,
   dupeThreshold: 10,
+  dupePhashEnabled: true,
+  dupeClipEnabled: true,
+  dupeClipThreshold: 0.15,
   faceDetConfThreshold: 0.5,
   faceDetIouThreshold: 0.45,
   faceCropPadding: 40,

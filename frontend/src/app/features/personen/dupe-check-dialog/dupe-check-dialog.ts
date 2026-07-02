@@ -52,7 +52,11 @@ export class DupeCheckDialog implements OnInit {
     this.phase.set('loading');
     this.error.set(null);
     this.personService
-      .searchDuplicates(this.person().id, this.processingConfig().dupeThreshold)
+      .searchDuplicates(
+        this.person().id,
+        this.processingConfig().dupeThreshold,
+        this.processingConfig().dupeClipThreshold,
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (pairs: PersonDupePair[]) => {

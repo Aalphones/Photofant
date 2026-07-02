@@ -21,20 +21,17 @@ export class Verarbeitung {
   );
 
   // linkedSignals: zeigen Store-Werte an, akzeptieren temporäre Eingaben während des Ziehens
-  protected readonly dupeThresholdDisplay       = linkedSignal(() => this.processingConfig().dupeThreshold);
+  protected readonly dupeClipThresholdDisplay   = linkedSignal(() => this.processingConfig().dupeClipThreshold);
   protected readonly faceDetConfDisplay         = linkedSignal(() => this.processingConfig().faceDetConfThreshold);
   protected readonly faceDetIouDisplay          = linkedSignal(() => this.processingConfig().faceDetIouThreshold);
   protected readonly faceAutoThresholdDisplay   = linkedSignal(() => this.processingConfig().faceAutoThreshold);
   protected readonly faceReviewThresholdDisplay = linkedSignal(() => this.processingConfig().faceReviewThreshold);
 
-  protected readonly dupeThresholdLabel = computed((): string => {
-    const value = this.dupeThresholdDisplay();
-    if (value <= 4) { return `${value} — nur fast identische Bilder`; }
-    if (value <= 9) { return `${value} — geringe Toleranz`; }
-    if (value <= 14) { return `${value} — mittlere Empfindlichkeit`; }
-    if (value <= 20) { return `${value} — hohe Toleranz`; }
-    return `${value} — sehr hohe Toleranz (mehr Fehlalarme möglich)`;
-  });
+  protected readonly dupeClipThresholdPct = computed((): number =>
+    Math.round((1 - this.dupeClipThresholdDisplay()) * 100)
+  );
+
+  protected readonly dupeClipThresholdLabel = computed((): string => `${this.dupeClipThresholdPct()} %`);
 
   protected readonly faceDetConfLabel = computed((): string => {
     const value = this.faceDetConfDisplay();
@@ -101,14 +98,23 @@ export class Verarbeitung {
     this.patchProcessingConfig({ blurThreshold: clamped });
   }
 
-  onDupeThresholdInput(target: HTMLInputElement): void {
-    this.dupeThresholdDisplay.set(parseInt(target.value, 10));
+  onDupePhashEnabledToggle(): void {
+    this.patchProcessingConfig({ dupePhashEnabled: !this.processingConfig().dupePhashEnabled });
   }
 
-  onDupeThresholdChange(target: HTMLInputElement): void {
+  onDupeClipEnabledToggle(): void {
+    this.patchProcessingConfig({ dupeClipEnabled: !this.processingConfig().dupeClipEnabled });
+  }
+
+  onDupeClipThresholdInput(target: HTMLInputElement): void {
+    const pct = parseInt(target.value, 10);
+    this.dupeClipThresholdDisplay.set((100 - pct) / 100);
+  }
+
+  onDupeClipThresholdChange(target: HTMLInputElement): void {
     const raw = parseInt(target.value, 10);
-    const clamped = Math.min(32, Math.max(0, isNaN(raw) ? 10 : raw));
-    this.patchProcessingConfig({ dupeThreshold: clamped });
+    const pct = Math.min(99, Math.max(70, isNaN(raw) ? 85 : raw));
+    this.patchProcessingConfig({ dupeClipThreshold: (100 - pct) / 100 });
   }
 
   onFaceDetConfInput(target: HTMLInputElement): void {

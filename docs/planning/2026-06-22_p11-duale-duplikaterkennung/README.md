@@ -21,7 +21,7 @@ gezeigt.
 | 1 | Schema & Settings | standard | complete |
 | 2 | Backend-Engine (Scan + Similar) | heikel | complete |
 | 3 | API-Kontrakt (DTOs) | standard | complete |
-| 4 | Frontend-Einstellungen | standard | pending |
+| 4 | Frontend-Einstellungen | standard | complete |
 | 5 | Frontend-Review-UI | standard | pending |
 
 ---

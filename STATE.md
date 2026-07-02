@@ -1,9 +1,9 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-06-22_p11-duale-duplikaterkennung/`
-**Phase:** 4/5 — Frontend-Einstellungen, Tier: standard (pending)
-**Nächster Schritt:** Commit für Phase 3, dann `/clear` + `phase-4-frontend-settings.md` lesen (Kontext-Diät).
-**Letzter abgeschlossener Plan:** `docs/archive/2026-07/p10-trainingssets-export/` — Smoke-Test für Phase 3 (Caption-Tools/Near-Dupes) + Phase 4 (Export) steht noch aus, siehe Plan-README.
+**Aktiver Plan:** `docs/planning/2026-07-02_p28-suche-redesign/`
+**Phase:** 2/3 — Interaktionsmodell: Dropdown/Freitext-Fuzzy/exakte Auswahl, Tier: heikel (pending)
+**Nächster Schritt:** Kontext lesen (`search-box.ts`, `asset.model.ts`, `assets.py`, `models.py`, `filters.actions.ts`), dann Umsetzung laut Checkliste in `phase-2-interaktionsmodell-fuzzy.md`.
+**Pausiert:** `docs/planning/2026-06-22_p11-duale-duplikaterkennung/` — Phase 4 (Frontend-Einstellungen) fertig, Phase 5 (Frontend-Review-UI) offen, siehe Plan-README.
 
 ---
 
@@ -11,7 +11,7 @@
 
 | Plan | Titel | Phasen | Status |
 |---|---|---|---|
-| [P11](docs/planning/2026-06-22_p11-duale-duplikaterkennung/README.md) | Duale Duplikaterkennung (DHash + CLIP) | 5 (P1-P3 done, P4 next) | in-progress |
+| [P11](docs/planning/2026-06-22_p11-duale-duplikaterkennung/README.md) | Duale Duplikaterkennung (DHash + CLIP) | 5 (P1-P4 done, P5 next) | in-progress |
 | [P13](docs/planning/2026-06-22_p13-person-bulk-import/README.md) | Person-Bulk-Import | 3 (alle pending) | pending |
 | [P18](docs/planning/2026-06-30_p18-bildklassifizierung/README.md) | Bildklassifizierung (WD14 + CLIP Regel-Engine) | 6 (alle pending) | pending |
 | [P19](docs/planning/2026-06-30_p19-inference-session-pool.md) | Inference Session Pool | — | Backlog |
@@ -22,4 +22,4 @@
 | [P25](docs/planning/2026-07-01_p25-lore-panel/README.md) | Lore Panel | — | pending |
 | [P26](docs/planning/2026-07-01_p26-recommendation-engine/README.md) | Recommendation Engine | — | pending |
 | [P27](docs/planning/2026-07-01_p27-gemma-integration/README.md) | Gemma Integration | — | pending |
-| [P28](docs/planning/2026-07-02_p28-suche-redesign/README.md) | Suche — Redesign & Bugfixes | 3 (alle pending) | pending |
+| [P28](docs/planning/2026-07-02_p28-suche-redesign/README.md) | Suche — Redesign & Bugfixes | 3 (P1 done, P2 next) | in-progress |

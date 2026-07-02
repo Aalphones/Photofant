@@ -80,8 +80,12 @@ export class PersonService {
     return this.http.post<ClusterResult>('/api/faces/cluster', null);
   }
 
-  searchDuplicates(personId: number, threshold = 10): Observable<PersonDupePair[]> {
-    return this.http.post<PersonDupePair[]>('/api/duplicates/search', { person_id: personId, threshold });
+  searchDuplicates(personId: number, phashThreshold = 10, clipThreshold = 0.15): Observable<PersonDupePair[]> {
+    return this.http.post<PersonDupePair[]>('/api/duplicates/search', {
+      person_id: personId,
+      threshold: phashThreshold,
+      clip_threshold: clipThreshold,
+    });
   }
 
   deleteFace(faceId: number): Observable<void> {

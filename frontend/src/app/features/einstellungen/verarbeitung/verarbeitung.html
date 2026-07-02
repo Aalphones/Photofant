@@ -70,23 +70,48 @@
 <div class="verarbeitung__gruppe">
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">
     <div class="verarbeitung__zeile-inhalt">
-      <div class="verarbeitung__zeile-titel">Ähnlichkeitsschwelle</div>
-      <div class="verarbeitung__zeile-sub">0 = nur identische Bilder · 32 = auch deutlich ähnliche Bilder einschließen</div>
+      <div class="verarbeitung__zeile-titel">Genaue Duplikate erkennen</div>
+      <div class="verarbeitung__zeile-sub">Findet pixelidentische Dateien — dieselbe Datei in zwei verschiedenen Ordnern oder unter unterschiedlichem Namen. Kein Fehlalarm möglich.</div>
     </div>
     <div class="verarbeitung__zeile-steuerung">
-      <div class="verarbeitung__slider-gruppe">
-        <span class="verarbeitung__slider-wert">{{ dupeThresholdLabel() }}</span>
-        <input
-          class="verarbeitung__slider"
-          type="range"
-          min="0"
-          max="32"
-          step="1"
-          [value]="processingConfig().dupeThreshold"
-          (input)="onDupeThresholdInput($any($event.target))"
-          (change)="onDupeThresholdChange($any($event.target))"
-        >
-      </div>
+      <button
+        class="verarbeitung__schalter"
+        [class.verarbeitung__schalter--an]="processingConfig().dupePhashEnabled"
+        role="switch"
+        [attr.aria-checked]="processingConfig().dupePhashEnabled"
+        (click)="onDupePhashEnabledToggle()"
+      ><i></i></button>
+    </div>
+  </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Ähnliche Bilder erkennen</div>
+      <div class="verarbeitung__zeile-sub">Findet inhaltlich ähnliche Bilder: gleiche Szene aus einem anderen Blickwinkel, andere Belichtung oder Bearbeitung.</div>
+      @if (processingConfig().dupeClipEnabled) {
+        <div class="verarbeitung__slider-gruppe">
+          <span class="verarbeitung__slider-wert">{{ dupeClipThresholdLabel() }}</span>
+          <input
+            class="verarbeitung__slider"
+            type="range"
+            min="70"
+            max="99"
+            step="1"
+            [value]="dupeClipThresholdPct()"
+            (input)="onDupeClipThresholdInput($any($event.target))"
+            (change)="onDupeClipThresholdChange($any($event.target))"
+          >
+        </div>
+        <div class="verarbeitung__zeile-sub">99 % = nur fast identische Motive · 70 % = auch entfernt ähnliche einschließen</div>
+      }
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <button
+        class="verarbeitung__schalter"
+        [class.verarbeitung__schalter--an]="processingConfig().dupeClipEnabled"
+        role="switch"
+        [attr.aria-checked]="processingConfig().dupeClipEnabled"
+        (click)="onDupeClipEnabledToggle()"
+      ><i></i></button>
     </div>
   </div>
 </div>
