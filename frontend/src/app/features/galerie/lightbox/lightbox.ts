@@ -980,6 +980,14 @@ export class Lightbox {
     return Math.max(0, Math.round((1 - distance / 64) * 100));
   }
 
+  protected similarBadgePercent(similar: SimilarAsset): number {
+    const phashPct = similar.phash_distance !== null ? this.similarityPercent(similar.phash_distance) : null;
+    const scores = [phashPct, similar.clip_similarity_pct].filter(
+      (pct: number | null): pct is number => pct !== null,
+    );
+    return scores.length > 0 ? Math.max(...scores) : 0;
+  }
+
   protected openSimilarOverlay(): void {
     const asset: AssetDto | null = this.asset();
     if (asset == null || !asset.has_phash) { return; }
@@ -1015,11 +1023,20 @@ export class Lightbox {
       created_at: asset.created_at,
       imported_at: asset.imported_at,
     };
+    const phashSimilarityPct = similar.phash_distance !== null ? this.similarityPercent(similar.phash_distance) : null;
+    const clipSimilarityPct = similar.clip_similarity_pct;
+    const triggeredBy: 'phash' | 'clip' | 'both' =
+      phashSimilarityPct !== null && clipSimilarityPct !== null ? 'both' :
+      phashSimilarityPct !== null ? 'phash' : 'clip';
     const pair: DupePair = {
       id: 0,
       asset_a: assetAsSummary,
       asset_b: similar,
       phash_distance: similar.phash_distance,
+      phash_similarity_pct: phashSimilarityPct,
+      clip_distance: similar.clip_distance,
+      clip_similarity_pct: clipSimilarityPct,
+      triggered_by: triggeredBy,
       created_at: new Date().toISOString(),
     };
     this.selectedSimilarPair.set(pair);

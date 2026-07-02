@@ -524,7 +524,7 @@ Fehler-Codes (strukturiert im `detail`-Feld):
 - `409 { code: "SEMANTIC_SEARCH_UNAVAILABLE" }` — CLIP-Modell nicht aktiv (Textsuche nicht möglich)
 - `409 { code: "NO_EMBEDDING" }` — `like_asset_id` hat noch kein Embedding
 
-## Duplikaterkennung — Review-API (Phase 3, Plan `2026-06-19_duplikaterkennung`)
+## Duplikaterkennung — Review-API (erweitert um duale Erkennung, ADR-007, Plan `2026-06-22_p11-duale-duplikaterkennung`)
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
@@ -536,6 +536,7 @@ Fehler-Codes (strukturiert im `detail`-Feld):
 ```typescript
 interface AssetSummaryDto {
   id: number;
+  content_hash: string;
   width: number | null;
   height: number | null;
   format: string | null;
@@ -545,16 +546,24 @@ interface AssetSummaryDto {
   imported_at: string | null;
 }
 
+// Duale Duplikaterkennung (ADR-007, P11): pHash + CLIP laufen als OR-Logik parallel,
+// Nullable-Felder markieren, welche Methode das Paar gefunden hat.
 interface DupePairDto {
   id: number;
   asset_a: AssetSummaryDto;
   asset_b: AssetSummaryDto;
-  phash_distance: number;
+  phash_distance: number | null;       // Hamming-Distanz (0–64); NULL wenn nur CLIP ausgelöst hat
+  phash_similarity_pct: number | null;
+  clip_distance: number | null;        // Cosine-Distance (0.0–1.0); NULL wenn nur pHash ausgelöst hat
+  clip_similarity_pct: number | null;
+  triggered_by: 'phash' | 'clip' | 'both';
   created_at: string;
 }
 
 interface SimilarAssetDto extends AssetSummaryDto {
-  phash_distance: number;
+  phash_distance: number | null;
+  clip_distance: number | null;
+  clip_similarity_pct: number | null;
 }
 
 type DupeResolution = 'a_is_original' | 'b_is_original' | 'delete_a' | 'delete_b' | 'dismiss';
@@ -707,7 +716,7 @@ interface PersonFaceDto {
 |---|---|---|---|---|
 | `/personen` (Bilder importieren) | `POST` | `/api/persons/{id}/import` | `multipart/form-data; files[]` | `{ job_id: string }` — IMPORT-Job mit `fixed_person=True` |
 | `/personen` (Face-Import) | `POST` | `/api/faces/import` | `multipart/form-data; files[], person_id? (Form-Feld)` | `FaceImportResult[]` |
-| `/personen` (Duplikate suchen) | `POST` | `/api/duplicates/search` | `{ person_id, threshold? }` | `PersonDupePair[]` |
+| `/personen` (Duplikate suchen) | `POST` | `/api/duplicates/search` | `{ person_id, threshold?, clip_threshold? }` | `PersonDupePair[]` |
 
 ```typescript
 interface FaceImportResult {
@@ -716,11 +725,18 @@ interface FaceImportResult {
   has_embedding: boolean;
 }
 
+// Duale Duplikaterkennung (ADR-007, P11): pHash + CLIP als OR-Logik, wie DupePairDto oben.
 interface PersonDupePair {
   asset_a_id: number;
   asset_b_id: number;
-  phash_distance: number;
-  similarity_pct: number;  // 0–100, berechnet aus Hamming-Distanz (64 Bit)
+  asset_a_content_hash: string;
+  asset_b_content_hash: string;
+  phash_distance: number | null;
+  phash_similarity_pct: number | null;
+  clip_distance: number | null;
+  clip_similarity_pct: number | null;
+  similarity_pct: number;  // vom Backend vorberechnet: max(phash_similarity_pct, clip_similarity_pct)
+  triggered_by: 'phash' | 'clip' | 'both';
 }
 ```
 
@@ -728,7 +744,7 @@ interface PersonDupePair {
 
 **`POST /api/faces/import`:** Das Bild IST der Face-Crop (`origin = manual_original`, `asset_id = NULL`). ArcFace berechnet das Embedding direkt (kein Detection-Schritt). Vollständig matchbar und nie durch Face-Rebuild überschreibbar.
 
-**`POST /api/duplicates/search`:** pHash-Hamming-Vergleich aller Instanzen einer Person. `threshold` (default 10, max 20) = maximale Hamming-Distanz (64 Bit). `similarity_pct = round((1 - distance/64) * 100)`.
+**`POST /api/duplicates/search`:** pHash- + CLIP-Vergleich aller Instanzen einer Person, OR-Logik (ADR-007). `threshold` (default 10, max 32) = maximale Hamming-Distanz (64 Bit); `clip_threshold` (default 0.15, Range 0.05–0.30) = maximale CLIP-Cosine-Distance. `similarity_pct = max(phash_similarity_pct, clip_similarity_pct)`.
 
 **Rebuild-Target `faces`:** `POST /api/maintenance/rebuild` mit `{ target: "faces" }` re-extrahiert alle abgeleiteten Face-Crops aus den Quell-Bildern (BBox + Padding). Faces mit `origin = manual_original` bleiben unberührt.
 

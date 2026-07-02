@@ -34,9 +34,22 @@
   gap: 12px;
 }
 
+.dupe-compare__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .dupe-compare__title {
   font-weight: 600;
   font-size: 13px;
+}
+
+.dupe-compare__subtitle {
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--mono);
 }
 
 .dupe-compare__head-actions {

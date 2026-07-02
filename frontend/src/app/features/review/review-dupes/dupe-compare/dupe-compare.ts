@@ -15,8 +15,19 @@ export class DupeCompare {
   readonly resolve = output<{ pair: DupePair; resolution: DupeResolution }>();
 
   protected readonly similarity = computed<number>(() => {
-    const distance = this.pair().phash_distance;
-    return Math.max(0, Math.round((1 - distance / 64) * 100));
+    const pair = this.pair();
+    const scores = [pair.phash_similarity_pct, pair.clip_similarity_pct].filter(
+      (pct: number | null): pct is number => pct !== null,
+    );
+    return scores.length > 0 ? Math.max(...scores) : 0;
+  });
+
+  protected readonly scoreSubtitle = computed<string>(() => {
+    const pair = this.pair();
+    const parts: string[] = [];
+    if (pair.phash_similarity_pct !== null) parts.push(`Pixel: ${pair.phash_similarity_pct}%`);
+    if (pair.clip_similarity_pct !== null) parts.push(`Inhalt: ${pair.clip_similarity_pct}%`);
+    return parts.join(' · ');
   });
 
   protected fileUrl(assetId: number): string {

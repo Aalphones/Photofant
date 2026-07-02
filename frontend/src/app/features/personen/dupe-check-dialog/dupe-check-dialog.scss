@@ -168,6 +168,17 @@
     color: var(--text-1);
   }
 
+  &__scores {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__score-line {
+    font-size: 0.7rem;
+    color: var(--text-3);
+  }
+
   &__ids {
     font-size: 0.75rem;
     color: var(--text-3);

@@ -27,8 +27,12 @@ export interface PersonDupePair {
   asset_b_id: number;
   asset_a_content_hash: string;
   asset_b_content_hash: string;
-  phash_distance: number;
+  phash_distance: number | null;
+  phash_similarity_pct: number | null;
+  clip_distance: number | null;
+  clip_similarity_pct: number | null;
   similarity_pct: number;
+  triggered_by: 'phash' | 'clip' | 'both';
 }
 
 export interface FaceImportResult {

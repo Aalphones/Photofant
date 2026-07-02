@@ -101,7 +101,9 @@ export interface SimilarAsset {
   file_size: number | null;
   created_at: string | null;
   imported_at: string | null;
-  phash_distance: number;
+  phash_distance: number | null;
+  clip_distance: number | null;
+  clip_similarity_pct: number | null;
 }
 
 export interface TagDto {

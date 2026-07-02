@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { Icon } from '@photofant/ui';
 import type { DupePair } from '@photofant/models';
 
@@ -14,17 +14,11 @@ export class DupePairRow {
   readonly compare = output<DupePair>();
   readonly resolve = output<{ pair: DupePair; resolution: 'a_is_original' | 'b_is_original' | 'delete_a' | 'delete_b' | 'dismiss' }>();
 
-  protected readonly similarity = computed<number>(() => {
-    const distance = this.pair().phash_distance;
-    return Math.max(0, Math.round((1 - distance / 64) * 100));
-  });
-
-  protected readonly similarityClass = computed<string>(() => {
-    const pct = this.similarity();
+  protected scoreClass(pct: number): 'high' | 'mid' | 'low' {
     if (pct >= 90) return 'high';
     if (pct >= 75) return 'mid';
     return 'low';
-  });
+  }
 
   protected thumbnailUrl(asset: { id: number; content_hash: string }): string {
     return `/api/assets/${asset.id}/thumbnail?size=256&v=${asset.content_hash.slice(0, 8)}`;

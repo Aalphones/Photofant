@@ -2,7 +2,10 @@
   <div class="dupe-compare__modal" (click)="onModalClick($event)">
 
     <div class="dupe-compare__head">
-      <span class="dupe-compare__title">Vergleich · {{ similarity() }}% ähnlich</span>
+      <div class="dupe-compare__title-block">
+        <span class="dupe-compare__title">Vergleich · {{ similarity() }}% ähnlich</span>
+        <span class="dupe-compare__subtitle">{{ scoreSubtitle() }}</span>
+      </div>
       <div class="dupe-compare__head-actions">
         <button class="iconbtn" title="A ist Original" (click)="onResolve('a_is_original')">
           <pf-icon name="link" [size]="14" />

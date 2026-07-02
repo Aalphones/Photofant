@@ -271,7 +271,7 @@ Hooks sit on: `PATCH /assets/{id}/tags`, `PATCH /assets/{id}/caption`, `POST /ta
 
 ---
 
-### `review_item` (migration 0014)
+### `review_item` (migration 0014, erweitert in 0025 — ADR-007)
 
 Offene Duplikat-Paare, die der User manuell entscheiden soll. Erweiterbar für andere Review-Typen (z.B. Gesichts-Zuordnung in P7).
 
@@ -281,14 +281,15 @@ Offene Duplikat-Paare, die der User manuell entscheiden soll. Erweiterbar für a
 | `type` | TEXT | `dupe_candidate` (erweiterbar) |
 | `asset_a_id` | INTEGER FK → `asset.id` | immer der mit der kleineren ID |
 | `asset_b_id` | INTEGER FK → `asset.id` | immer der mit der größeren ID |
-| `phash_distance` | INTEGER | Hamming-Distanz (0–63) |
+| `phash_distance` | INTEGER | nullable; Hamming-Distanz (0–64) — NULL wenn das Paar nur per CLIP gefunden wurde |
+| `clip_distance` | REAL | nullable; CLIP Cosine-Distance (0.0–1.0) — NULL wenn das Paar nur per pHash gefunden wurde |
 | `created_at` | DATETIME | UTC naive; nicht null |
 | `resolved_at` | DATETIME | nullable; gesetzt bei Entscheidung |
 | `resolution` | TEXT | nullable: `a_is_original` · `b_is_original` · `delete_a` · `delete_b` · `dismiss` |
 
 Unique-Constraint: `uq_review_item_pair` auf `(type, asset_a_id, asset_b_id)` — kein Doppeleintrag pro Paar.
 
-Flow: Import berechnet pHash → `find_similar` findet Treffer ≤ `dupe_threshold` → ein `review_item` pro Paar wird angelegt → User entscheidet im Review-Tab (Phase 5).
+Flow (ADR-007, OR-Logik): Import berechnet pHash + CLIP-Embedding → pHash-Scan (nur `distance == 0`) und CLIP-Scan (Cosine-Distance ≤ Schwelle) laufen unabhängig → ein `review_item` pro Paar wird angelegt, sobald **eine** Methode anschlägt (UNION-Merge) → User entscheidet im Review-Tab, sieht beide Scores getrennt.
 
 ---
 

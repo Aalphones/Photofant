@@ -1,6 +1,6 @@
 # P11 — Duale Duplikaterkennung: DHash + CLIP parallel
 
-**Status:** in-progress  
+**Status:** complete  
 **ADR:** 007 (erweitert ADR-006)
 
 **pHash = Exact-Copy-Detector (distance == 0):** pHash findet nur pixelidentische
@@ -22,7 +22,7 @@ gezeigt.
 | 2 | Backend-Engine (Scan + Similar) | heikel | complete |
 | 3 | API-Kontrakt (DTOs) | standard | complete |
 | 4 | Frontend-Einstellungen | standard | complete |
-| 5 | Frontend-Review-UI | standard | pending |
+| 5 | Frontend-Review-UI | standard | complete |
 
 ---
 
