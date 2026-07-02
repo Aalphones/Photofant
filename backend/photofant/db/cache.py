@@ -12,6 +12,11 @@ log = logging.getLogger(__name__)
 
 THUMBNAIL_SIZES: tuple[int, ...] = (256, 512, 1024)
 
+# Paths already schema-initialized this process — init_cache_db is called on every
+# thumbnail request (3x CREATE TABLE IF NOT EXISTS + commit = a write transaction per
+# image), so memoize per path instead of re-running it every time.
+_initialized_paths: set[Path] = set()
+
 
 def get_cache_db_path() -> Path:
     raw = load_settings()["cache_db_path"]
@@ -21,6 +26,8 @@ def get_cache_db_path() -> Path:
 
 
 def init_cache_db(db_path: Path) -> None:
+    if db_path in _initialized_paths:
+        return
     con = sqlite3.connect(db_path)
     try:
         con.execute("""
@@ -52,6 +59,7 @@ def init_cache_db(db_path: Path) -> None:
             )
         """)
         con.commit()
+        _initialized_paths.add(db_path)
     finally:
         con.close()
 

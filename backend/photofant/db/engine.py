@@ -6,7 +6,6 @@ from typing import Any
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
-from sqlalchemy.pool import NullPool
 
 from photofant.config import get_data_root_base
 from photofant.settings import load_settings
@@ -29,7 +28,12 @@ def create_db_engine() -> Engine:
     new_engine = create_engine(
         url,
         connect_args={"check_same_thread": False, "timeout": 30},
-        poolclass=NullPool,
+        # QueuePool (SQLAlchemy default when poolclass is omitted) instead of NullPool:
+        # physical connections are reused across requests, so the WAL pragma + sqlite-vec
+        # extension load in the connect-event below fire once per pooled connection
+        # instead of once per request.
+        pool_size=5,
+        max_overflow=10,
     )
 
     @event.listens_for(new_engine, "connect")

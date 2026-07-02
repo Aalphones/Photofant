@@ -30,3 +30,24 @@ Skalierung überhaupt relevant würde. Score-Schwelle `fuzz.WRatio >= 60`
   umgesetzt, kein Auftrag dazu.
 - `q_mode=semantic` bleibt für explizite CLIP-Suche unverändert; `q_mode=text` ersetzt
   `tags`/`caption` nicht, ergänzt sie als neuer Default-Modus der Suchleiste.
+
+## Nachtrag — 2026-07-02: Fuzzy entfernt, Umstieg auf Option B (FTS5)
+
+Die 50k-Schwelle war zu optimistisch angesetzt: bereits ab 8000+ Bildern wurde das
+O(Bibliothek)-Python-Scoring pro Request in `q_mode=text` spürbar (jede Anfrage lud
+Tag-/Personen-/Caption-Text für alle Kandidaten der gefilterten Menge und scorte sie
+einzeln mit `rapidfuzz`). Auf Entscheidung von Sascha wurde die Tippfehler-Toleranz
+bewusst aufgegeben zugunsten einer echten DB-seitigen Lösung:
+
+- **Tag-Name + Personen-Name:** weiterhin `ILIKE '%q%'` (unverändert, kein Performance-
+  Problem — läuft über indizierte Joins).
+- **Caption:** ersetzt durch SQLite FTS5 (`asset_caption_fts`, Migration 0028,
+  `backend/photofant/db/text_index.py`) — Prefix-Matching statt Fuzzy (`"token"*` pro
+  Whitespace-Token), mit ILIKE-Fallback, falls der Index auf einer Verbindung fehlt
+  (z.B. Test-DBs ohne Migration).
+- Entfernt: `rapidfuzz`-Dependency, `_TEXT_FUZZY_THRESHOLD`, `_text_score`, der komplette
+  Kandidaten-Fetch-und-Score-Block in `list_assets`. `q_mode=text` läuft jetzt als reiner
+  SQL-`OR`-Filter durch den normalen datums-sortierten Merge-Zweig statt durch eigenes
+  Python-Ranking.
+- Getippte Suchbegriffe mit echten Tippfehlern liefern jetzt keine Treffer mehr (bewusster
+  Trade-off, kein Bug).

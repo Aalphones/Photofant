@@ -187,7 +187,32 @@ Many-to-many join between assets and tags.
 | `score` | REAL | confidence from WD14 (nullable for manual tags) |
 | `manually_removed` | BOOLEAN | `1` = User hat diesen Tag entfernt; Tagging-Job fügt ihn nicht wieder hinzu (P6 Phase 3) |
 
-Unique constraint: `(asset_id, tag_id)`. Index: `ix_asset_tag_asset_id`.
+Unique constraint: `(asset_id, tag_id)`. Indexes: `ix_asset_tag_asset_id`,
+`ix_asset_tag_tag_id` (migration 0028 — tag-filter/facet join by `tag_id`).
+
+### `asset_caption_fts` (migration 0028)
+
+FTS5 external-content virtual table — the searchable full-text index over `asset.caption`
+for `q_mode=text` (ADR-015-Nachtrag). Rowid = `asset.id`. The canonical caption text lives
+on `asset.caption`; this table only stores the token index (`content='asset',
+content_rowid='id'`), kept in sync by three triggers (`asset_caption_fts_ai/_ad/_au`) that
+fire on `asset` insert/delete/caption-update — no application code needs to maintain it.
+Persists in `db.sqlite`. Not part of `Base.metadata` — created only by the migration, so
+code that touches it degrades gracefully when the table is absent (e.g. throw-away test
+DBs); see `photofant/db/text_index.py`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `rowid` | INTEGER | = `asset.id` |
+| `caption` | TEXT | indexed only, `tokenize='unicode61 remove_diacritics 2'` |
+
+> Query via `text_index.search_caption_asset_ids` — sanitizes free-text input into a safe
+> `MATCH` query (tokens quoted + prefix-`*`'d) and returns `None` if the table is missing,
+> so the caller can fall back to `Asset.caption.ilike(...)`.
+
+Also added in migration 0028: `ix_asset_effective_date`, an expression index on
+`asset (coalesce(created_at, imported_at))` mirroring the exact sort expression
+`list_assets` uses for date ordering.
 
 ### `vec_asset_embedding` (migration 0007)
 

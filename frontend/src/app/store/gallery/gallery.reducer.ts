@@ -85,7 +85,9 @@ export const galleryFeature = createFeature({
       error: null,
     })),
     on(galleryActions.loadPageSuccess, (state: GalleryState, { items, total, page, pageSize, facets }) => {
-      const next = adapter.addMany(items, { ...state, total, page, pageSize, isLoading: false, error: null, lightboxPendingNext: false, facets });
+      // Backend computes facets only for page 1 (perf) — later pages keep the existing facets.
+      const nextFacets = page === 1 ? facets : state.facets;
+      const next = adapter.addMany(items, { ...state, total, page, pageSize, isLoading: false, error: null, lightboxPendingNext: false, facets: nextFacets });
       if (state.lightboxPendingNext && items.length > 0) {
         return { ...next, lightboxId: items[0]!.id }; // items.length > 0 guarantees slot exists
       }

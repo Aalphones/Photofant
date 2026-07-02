@@ -15,13 +15,12 @@ import numpy as np
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
-from rapidfuzz import fuzz
 from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.orm import Query as OrmQuery
 from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root
-from photofant.db import vector_index
+from photofant.db import text_index, vector_index
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
 from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Face, Person, Tag, Version
 from photofant.db.session import get_session
@@ -38,9 +37,6 @@ DbSession = Annotated[Session, Depends(get_session)]
 
 _VALID_THUMB_SIZES = frozenset({256, 512, 1024})
 _VALID_FRAMINGS = frozenset({"close_up", "medium", "full_body"})
-# Fuzzy-Score-Schwelle (rapidfuzz, 0-100) fuer q_mode=text — ADR-015.
-# fuzz.ratio fuer Tag-/Personen-Namen, fuzz.partial_ratio fuer Captions (siehe _text_score).
-_TEXT_FUZZY_THRESHOLD = 60
 
 
 class SortField(StrEnum):
@@ -361,6 +357,28 @@ def _empty_facets() -> Facets:
     return Facets(sources=[], tags_top=[])
 
 
+def _tag_name_match_subquery(session: Session, name_fragment: str) -> Any:
+    """Subquery of `asset.id` for assets carrying a tag whose name contains *name_fragment*.
+
+    Resolves aliases both ways: a tag matching by name, or a tag that is an
+    alias of a matching canonical tag, both count. Shared by `SearchMode.TAGS`
+    and the tag-name leg of `SearchMode.TEXT`.
+    """
+    matching_tag_ids = session.query(Tag.id).filter(Tag.name.ilike(f"%{name_fragment}%")).subquery()
+    alias_of_matching = session.query(Tag.id).filter(Tag.alias_of.in_(matching_tag_ids)).subquery()
+    return (
+        session.query(AssetTag.asset_id)
+        .filter(
+            AssetTag.manually_removed.is_(False),
+            or_(
+                AssetTag.tag_id.in_(matching_tag_ids),
+                AssetTag.tag_id.in_(alias_of_matching),
+            ),
+        )
+        .subquery()
+    )
+
+
 async def _embed_semantic(query: str) -> np.ndarray:
     """Embed *query* via CLIP text encoder. Raises 409 if model unavailable."""
     from photofant.inference.adapters.clip import resolve_clip_embedder
@@ -506,22 +524,7 @@ async def list_assets(
     q_clean = (q or "").strip()
     if q_clean:
         if q_mode == SearchMode.TAGS:
-            # Matching tag IDs (by name)
-            matching_tag_ids = session.query(Tag.id).filter(Tag.name.ilike(f"%{q_clean}%")).subquery()
-            # Also include tags that are aliases of any matching tag
-            alias_of_matching = session.query(Tag.id).filter(Tag.alias_of.in_(matching_tag_ids)).subquery()
-            name_sub = (
-                session.query(AssetTag.asset_id)
-                .filter(
-                    AssetTag.manually_removed.is_(False),
-                    or_(
-                        AssetTag.tag_id.in_(matching_tag_ids),
-                        AssetTag.tag_id.in_(alias_of_matching),
-                    ),
-                )
-                .subquery()
-            )
-            query = query.filter(Asset.id.in_(name_sub))
+            query = query.filter(Asset.id.in_(_tag_name_match_subquery(session, q_clean)))
         elif q_mode == SearchMode.CAPTION:
             query = query.filter(Asset.caption.ilike(f"%{q_clean}%"))
         elif q_mode == SearchMode.SEMANTIC:
@@ -533,84 +536,39 @@ async def list_assets(
             score_map = dict(candidates)
             query = query.filter(Asset.id.in_(candidate_ids))
         elif q_mode == SearchMode.TEXT:
-            # Fuzzy-Freitextsuche über Tag-Name + Caption + Personen-Name (ADR-015, Option A).
-            # Kandidaten kommen bewusst aus `query` (bereits durch alle vorigen Filter
-            # eingeschränkt) statt aus der Gesamtbibliothek — das ist der im ADR dokumentierte
-            # 🟡-Fallback, hier von Anfang an so gebaut statt erst ab einer Schwelle zuzuschalten.
-            candidate_pairs = query.with_entities(Asset.id, AssetInstance.person_id).all()
-            candidate_ids = sorted({asset_id for asset_id, _ in candidate_pairs})
-            if not candidate_ids:
-                return AssetsPage(items=[], total=0, page=page, page_size=page_size, facets=_empty_facets())
+            # Exakte/Prefix-Freitextsuche über Tag-Name + Personen-Name (ILIKE) + Caption
+            # (FTS5, mit ILIKE-Fallback falls der Index fehlt) — siehe ADR-015-Nachtrag.
+            # Fuzzy-/Tippfehler-Toleranz wurde bewusst aufgegeben: das O(Bibliothek)
+            # Python-Scoring pro Request skalierte nicht mehr ab 8000+ Bildern.
+            tag_match_sub = _tag_name_match_subquery(session, q_clean)
+            person_match_sub = (
+                session.query(Person.id)
+                .filter(Person.is_unknown.is_(False), Person.name.ilike(f"%{q_clean}%"))
+                .subquery()
+            )
 
-            # (kind, text) statt nur text: Captions brauchen einen anderen Scorer als kurze
-            # Tag-/Personen-Namen (siehe _text_score unten).
-            candidate_texts: dict[int, list[tuple[str, str]]] = {asset_id: [] for asset_id in candidate_ids}
+            match_conditions = [
+                Asset.id.in_(tag_match_sub),
+                AssetInstance.person_id.in_(session.query(person_match_sub)),
+            ]
+            caption_asset_ids = text_index.search_caption_asset_ids(session, q_clean)
+            if caption_asset_ids is None:
+                match_conditions.append(Asset.caption.ilike(f"%{q_clean}%"))
+            elif caption_asset_ids:
+                match_conditions.append(Asset.id.in_(caption_asset_ids))
 
-            for asset_id, caption in (
-                session.query(Asset.id, Asset.caption)
-                .filter(Asset.id.in_(candidate_ids), Asset.caption.isnot(None))
-                .all()
-            ):
-                if caption:
-                    candidate_texts[asset_id].append(("caption", caption))
+            query = query.filter(or_(*match_conditions))
 
-            for asset_id, tag_name in (
-                session.query(AssetTag.asset_id, Tag.name)
-                .join(Tag, Tag.id == AssetTag.tag_id)
-                .filter(AssetTag.asset_id.in_(candidate_ids), AssetTag.manually_removed.is_(False))
-                .all()
-            ):
-                candidate_texts[asset_id].append(("tag", tag_name))
-
-            person_ids = {person_id for _, person_id in candidate_pairs if person_id is not None}
-            person_names: dict[int, str] = {}
-            if person_ids:
-                person_names = {
-                    person_id: name
-                    for person_id, name in (
-                        session.query(Person.id, Person.name)
-                        .filter(Person.id.in_(person_ids), Person.is_unknown.is_(False))
-                        .all()
-                    )
-                    if name is not None
-                }
-            for asset_id, person_id in candidate_pairs:
-                name = person_names.get(person_id) if person_id is not None else None
-                if name:
-                    candidate_texts[asset_id].append(("person", name))
-
-            def _text_score(kind: str, text: str) -> float:
-                # Kurze Tag-/Personen-Namen: volle String-Ähnlichkeit (fuzz.ratio). WRatio
-                # matcht bei kurzen Kandidaten gegen lange/unpassende Suchbegriffe zu oft per
-                # Teil-Alignment (getestet: "zzzzznonexistentqueryxyz" traf "nose" mit 67.5) —
-                # ein reiner Ratio-Vergleich vermeidet diese False Positives, toleriert aber
-                # weiterhin einzelne Tippfehler (z.B. "black_hiar" ./. "black_hair" -> 90).
-                # Captions: partial_ratio, weil die Eingabe nur ein Wort/Fragment eines langen
-                # Freitexts sein darf (Substring-artiges Matching, ebenfalls tippfehlertolerant).
-                if kind == "caption":
-                    return fuzz.partial_ratio(q_clean, text)
-                return fuzz.ratio(q_clean, text)
-
-            for asset_id, texts in candidate_texts.items():
-                if not texts:
-                    continue
-                best = max(_text_score(kind, text) for kind, text in texts)
-                if best >= _TEXT_FUZZY_THRESHOLD:
-                    score_map[asset_id] = best
-
-            if not score_map:
-                return AssetsPage(items=[], total=0, page=page, page_size=page_size, facets=_empty_facets())
-            query = query.filter(Asset.id.in_(score_map.keys()))
-
-    facets = _compute_facets(session, query)
+    facets = _compute_facets(session, query) if page == 1 else _empty_facets()
     version_query = _version_candidates_query(session, query)
 
     total = query.count() + version_query.count()
 
     if score_map:
         # Version-Pseudo-Einträge übernehmen den Score des Original-Assets (kein eigener
-        # Embedding-Vektor/Fuzzy-Match) — siehe README: Filter/Suche greifen bei ihnen über
-        # das Original. Gilt für beide score-basierten Modi (semantic + text).
+        # Embedding-Vektor) — siehe README: Filter/Suche greifen bei ihnen über das Original.
+        # Nur noch SEMANTIC füllt score_map — TEXT läuft seit dem FTS5-Umbau über den
+        # datums-sortierten Merge-Zweig unten (else-Branch, kein Python-Scoring mehr).
         asset_rows = query.all()
         version_rows = version_query.all()
         entries = [
