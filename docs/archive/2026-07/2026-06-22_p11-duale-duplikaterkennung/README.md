@@ -80,6 +80,10 @@ triggered_by:         'phash' | 'clip' | 'both'
 
 ## Finale Abnahme-Kriterien (Gesamt)
 
+> 🟡 **Nicht per Smoke-Test verifiziert** — auf User-Wunsch archiviert, ohne die AK am
+> laufenden System durchzuklicken. Verifikation folgt im laufenden Betrieb, nicht hier
+> nachträglich abgehakt, damit der Status ehrlich bleibt.
+
 - [ ] Zwei Bilder, die nur per CLIP als ähnlich erkennbar sind (DHash-Distanz > 32), landen nach Scan in der Review-Queue mit CLIP-Score
 - [ ] Zwei pixelidentische Bilder (pHash distance == 0) landen mit `phash_distance=0`, CLIP-Score optional
 - [ ] Einstellungsseite zeigt Toggles + Schwellen für beide Methoden, Beschriftungen erklären die Wirkung ohne Fachbegriffe
@@ -102,8 +106,10 @@ triggered_by:         'phash' | 'clip' | 'both'
 
 ## Archiv-Footer
 
-**Summary:** —  
-**Files touched:** —  
-**Commits:** —  
-**Deviations:** —  
-**Follow-ups:** —
+**Summary:** pHash und CLIP laufen jetzt parallel (OR-Logik) statt nur pHash allein — Schema, Backend-Scan, API-Kontrakt, Einstellungen und alle drei Review-UIs (Review-Tab, Personen-Duplikate, Lightbox) zeigen beide Scores getrennt und laienverständlich.
+**Files touched:** Schema/Migration (Phase 1), Scan-Engine + Similar-Endpoint (Phase 2), DTOs in `review.py`/`duplicates.py` (Phase 3), Settings-UI (Phase 4), `dupe-pair-row`/`dupe-compare`/`dupe-check-dialog` + Lightbox-Similar + Frontend-Modelle + Review-Store-Sortierung (Phase 5).
+**Commits:** Phase 5 zuletzt unter `1ee02ca` (`feat(review): zeigt pHash- und CLIP-Score getrennt in allen Duplikat-UIs`); frühere Phasen siehe `git log` auf den o.g. Dateien.
+**Deviations:** Phase 5 — BEM-Block bleibt `dupe-pair__…` (Datei-Konvention) statt des im Plan skizzierten `dupe-pair-row__…`; kein Fortschritts-Balken mehr in `dupe-pair-row`, nur Label+Wert je Zeile.
+**Follow-ups:**
+- Finale AK nicht smoke-getestet (s.o.) — im laufenden Betrieb verifizieren.
+- `lightbox.ts::openSimilarOverlay()` blockt den „Ähnliche Bilder"-Button weiterhin über `asset.has_phash`; ein Asset ganz ohne pHash, aber mit CLIP-Embedding, kann den Button nicht öffnen, obwohl CLIP-Treffer möglich wären. Braucht ein `has_clip_embedding`-Feld auf `AssetDto` (Backend-Kontrakt-Erweiterung, außerhalb dieser Phase).

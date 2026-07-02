@@ -1,8 +1,6 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-06-22_p11-duale-duplikaterkennung/`
-**Phase:** 5/5 — Frontend-Review-UI, siehe Plan-README für Details (pending)
-**Nächster Schritt:** Plan-README lesen, dann Phase-5-Datei für Kontext/Checkliste.
+Kein aktiver Plan — P11 archiviert. Nächsten Plan aus dem Backlog wählen.
 
 ---
 
@@ -10,7 +8,6 @@
 
 | Plan | Titel | Phasen | Status |
 |---|---|---|---|
-| [P11](docs/planning/2026-06-22_p11-duale-duplikaterkennung/README.md) | Duale Duplikaterkennung (DHash + CLIP) | 5 (P1-P4 done, P5 next) | in-progress |
 | [P13](docs/planning/2026-06-22_p13-person-bulk-import/README.md) | Person-Bulk-Import | 3 (alle pending) | pending |
 | [P18](docs/planning/2026-06-30_p18-bildklassifizierung/README.md) | Bildklassifizierung (WD14 + CLIP Regel-Engine) | 6 (alle pending) | pending |
 | [P19](docs/planning/2026-06-30_p19-inference-session-pool.md) | Inference Session Pool | — | Backlog |
@@ -21,4 +18,5 @@
 | [P25](docs/planning/2026-07-01_p25-lore-panel/README.md) | Lore Panel | — | pending |
 | [P26](docs/planning/2026-07-01_p26-recommendation-engine/README.md) | Recommendation Engine | — | pending |
 | [P27](docs/planning/2026-07-01_p27-gemma-integration/README.md) | Gemma Integration | — | pending |
+| [P11](docs/archive/2026-07/2026-06-22_p11-duale-duplikaterkennung/README.md) | Duale Duplikaterkennung (DHash + CLIP) | 5/5 done | archiviert (Smoke-Test im Live-Betrieb noch offen — s. Follow-ups im Archiv-README) |
 | [P28](docs/archive/2026-07/2026-07-02_p28-suche-redesign/README.md) | Suche — Redesign & Bugfixes | 3/3 done | archiviert |
