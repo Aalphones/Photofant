@@ -42,9 +42,21 @@ Beispiel RTX 3060 (12 GB): Tagging → 4 (gedeckelt), Captioning → 4 (gedeckel
 
 ## Checkliste
 
-- [ ] `suggest_tagging_workers`/`suggest_captioning_workers` in `vram.py`
-- [ ] `GpuInfoDto`/`VramResponse` in `api/models.py` erweitert, `get_vram()` befüllt die Felder
-- [ ] `VramResponse`-TS-Typ in `model.model.ts` synchron erweitert
-- [ ] Manueller Endpoint-Check (curl/Swagger) mit echten Werten
+- [x] `suggest_tagging_workers`/`suggest_captioning_workers` in `vram.py`
+- [x] `GpuInfoDto`/`VramResponse` in `api/models.py` erweitert, `get_vram()` befüllt die Felder
+- [x] `VramResponse`-TS-Typ in `model.model.ts` synchron erweitert
+- [x] Endpoint-Check mit echten Werten (Formeln direkt geprüft; Live-Endpoint nach Neustart, s. Report-Back)
 
 ## Report-Back
+
+**Status: complete** (2026-07-02)
+
+- Formeln 1:1 aus der Skizze übernommen; ruff + mypy (strict auf `vram.py`) grün.
+- Realitäts-Check mit der echten GPU (Funktionen direkt aufgerufen, gleicher Code-Pfad wie
+  der Endpoint): RTX 3060, 12 GB → Tagging 4, Captioning 4 — deckt sich exakt mit dem
+  Beispiel im Plan.
+- Der laufende Backend-Prozess servierte beim Check noch den alten Stand (kein Hot-Reload) —
+  `GET /api/models/vram` zeigt die zwei neuen Felder erst nach dem nächsten Neustart.
+  Wandert in die finale Smoke-Checkliste (Phase 4 braucht den Endpoint sowieso live).
+- Kein Frontend-Bruch: `VramResponse` wird nirgends als Objekt-Literal gebaut, nur als
+  HTTP-Response-Typ konsumiert.

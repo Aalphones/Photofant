@@ -51,6 +51,8 @@ export interface VramRecommendation {
 export interface VramResponse {
   gpu: GpuInfoDto;
   recommendations: VramRecommendation[];
+  suggested_tagging_workers: number | null;
+  suggested_captioning_workers: number | null;
 }
 
 export interface ComponentSpec {

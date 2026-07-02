@@ -23,7 +23,12 @@ from photofant.models.validation import (
     validate_component_model,
     validate_in_place,
 )
-from photofant.models.vram import detect_gpu, recommend_variant
+from photofant.models.vram import (
+    detect_gpu,
+    recommend_variant,
+    suggest_captioning_workers,
+    suggest_tagging_workers,
+)
 
 log = logging.getLogger(__name__)
 
@@ -397,6 +402,8 @@ class VramRecommendation(BaseModel):
 class VramResponse(BaseModel):
     gpu: GpuInfoDto
     recommendations: list[VramRecommendation]
+    suggested_tagging_workers: int | None
+    suggested_captioning_workers: int | None
 
 
 @router.get("/vram", response_model=VramResponse)
@@ -421,4 +428,15 @@ async def get_vram() -> VramResponse:
             recommended_variant=variant,
         ))
 
-    return VramResponse(gpu=gpu_dto, recommendations=recommendations)
+    suggested_tagging: int | None = None
+    suggested_captioning: int | None = None
+    if gpu_info is not None:
+        suggested_tagging = suggest_tagging_workers(gpu_info.vram_gb)
+        suggested_captioning = suggest_captioning_workers(gpu_info.vram_gb)
+
+    return VramResponse(
+        gpu=gpu_dto,
+        recommendations=recommendations,
+        suggested_tagging_workers=suggested_tagging,
+        suggested_captioning_workers=suggested_captioning,
+    )

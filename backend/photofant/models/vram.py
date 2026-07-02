@@ -79,6 +79,24 @@ def _try_nvidia_smi() -> GpuInfo | None:
         return None
 
 
+def suggest_tagging_workers(vram_gb: float) -> int:
+    """Suggest how many parallel WD14 tagging workers fit into the given VRAM.
+
+    WD14 SwinV2-v3: ~450 MB per session instance + ~200 MB activations per run.
+    """
+    available_gb = vram_gb - 1.5  # OS + other models
+    return max(1, min(4, int(available_gb / 0.65)))
+
+
+def suggest_captioning_workers(vram_gb: float) -> int:
+    """Suggest how many parallel Florence-2 captioning workers fit into the given VRAM.
+
+    Florence-2-base: ~1.5 GB per session instance (4 ONNX sessions) + ~300 MB activations.
+    """
+    available_gb = vram_gb - 0.5  # OS
+    return max(1, min(4, int(available_gb / 1.8)))
+
+
 def recommend_variant(
     vram_gb: float | None,
     variants: list[dict[str, Any]],
