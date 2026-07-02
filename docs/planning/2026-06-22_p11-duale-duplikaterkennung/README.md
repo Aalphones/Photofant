@@ -19,7 +19,7 @@ gezeigt.
 | Phase | Thema | Tier | Status |
 |---|---|---|---|
 | 1 | Schema & Settings | standard | complete |
-| 2 | Backend-Engine (Scan + Similar) | heikel | pending |
+| 2 | Backend-Engine (Scan + Similar) | heikel | complete |
 | 3 | API-Kontrakt (DTOs) | standard | pending |
 | 4 | Frontend-Einstellungen | standard | pending |
 | 5 | Frontend-Review-UI | standard | pending |

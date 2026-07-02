@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root
+from photofant.db import vector_index
 from photofant.db.models import Asset, AssetInstance, ReviewItem
 from photofant.db.session import get_session
 from photofant.media.phash import find_similar
@@ -44,12 +47,15 @@ class DupePairDto(BaseModel):
     id: int
     asset_a: AssetSummaryDto
     asset_b: AssetSummaryDto
-    phash_distance: int
+    # Nullable since Phase 2: CLIP-only pairs have no pHash match.
+    # Full similarity_pct/triggered_by shape lands in Phase 3 (API-Kontrakt).
+    phash_distance: int | None
     created_at: datetime
 
 
 class SimilarAssetDto(AssetSummaryDto):
-    phash_distance: int
+    phash_distance: int | None = None
+    clip_distance: float | None = None
 
 
 class ResolveRequest(BaseModel):
@@ -176,29 +182,65 @@ async def resolve_dupe(item_id: int, body: ResolveRequest, session: DbSession) -
     return _to_pair_dto(item, asset_a, asset_b)
 
 
+@dataclass
+class _SimilarMatch:
+    """Per-asset distances found by each method — UNION merge, like the scan job."""
+    phash_distance: int | None = None
+    clip_distance: float | None = None
+
+
 @router.get("/assets/{asset_id}/similar", response_model=list[SimilarAssetDto])
 async def get_similar_assets(asset_id: int, session: DbSession) -> list[SimilarAssetDto]:
-    """Return assets similar to the given one (ad-hoc pHash search, for Lightbox)."""
+    """Return assets similar to the given one (ad-hoc pHash + CLIP search, for Lightbox)."""
     from photofant.settings import load_settings
 
     asset = session.get(Asset, asset_id)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
-    if asset.phash is None:
-        return []
 
     settings = load_settings()
-    threshold: int = settings["dupe_threshold"]
+    phash_enabled: bool = settings["dupe_phash_enabled"]
+    clip_enabled: bool = settings["dupe_clip_enabled"]
+    clip_threshold: float = settings["dupe_clip_threshold"]
 
-    similar_pairs = find_similar(session, asset.phash, asset_id, threshold)
+    matches: dict[int, _SimilarMatch] = {}
+
+    if phash_enabled and asset.phash is not None:
+        for similar_id, distance in find_similar(session, asset.phash, asset_id, 0):
+            matches.setdefault(similar_id, _SimilarMatch()).phash_distance = distance
+
+    if clip_enabled and asset.clip_embedding is not None:
+        query_embedding = np.frombuffer(asset.clip_embedding, dtype=np.float32)
+        for similar_id, cosine_similarity in vector_index.search(session, query_embedding, limit=20):
+            if similar_id == asset_id:
+                continue
+            clip_distance = 1.0 - cosine_similarity
+            if clip_distance > clip_threshold:
+                continue
+            matches.setdefault(similar_id, _SimilarMatch()).clip_distance = clip_distance
 
     result: list[SimilarAssetDto] = []
-    for similar_id, distance in similar_pairs:
+    for similar_id, match in matches.items():
         similar_asset = session.get(Asset, similar_id)
         if similar_asset is None:
             continue
         result.append(SimilarAssetDto(
             **_to_summary(similar_asset).model_dump(),
-            phash_distance=distance,
+            phash_distance=match.phash_distance,
+            clip_distance=match.clip_distance,
         ))
+
+    def _best_score(dto: SimilarAssetDto) -> float:
+        # Normalize pHash (0-64) onto the same 0-1 scale as CLIP cosine-distance
+        # so the UNION can be sorted by "best" match regardless of which method found it.
+        candidates = [
+            value for value in (
+                dto.phash_distance / 64 if dto.phash_distance is not None else None,
+                dto.clip_distance,
+            )
+            if value is not None
+        ]
+        return min(candidates) if candidates else 1.0
+
+    result.sort(key=_best_score)
     return result
