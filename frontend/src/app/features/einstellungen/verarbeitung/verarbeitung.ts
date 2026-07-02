@@ -15,6 +15,7 @@ export class Verarbeitung {
 
   readonly processingConfig = this.store.selectSignal(modelsSelectors.selectProcessingConfig);
   private readonly allModels = this.store.selectSignal(modelsSelectors.selectModels);
+  private readonly vram = this.store.selectSignal(modelsSelectors.selectVram);
 
   readonly captionerOptions = computed((): ModelDto[] =>
     this.allModels().filter((model: ModelDto) => model.caption_mode != null)
@@ -26,6 +27,8 @@ export class Verarbeitung {
   protected readonly faceDetIouDisplay          = linkedSignal(() => this.processingConfig().faceDetIouThreshold);
   protected readonly faceAutoThresholdDisplay   = linkedSignal(() => this.processingConfig().faceAutoThreshold);
   protected readonly faceReviewThresholdDisplay = linkedSignal(() => this.processingConfig().faceReviewThreshold);
+  protected readonly taggingWorkersDisplay      = linkedSignal(() => this.processingConfig().taggingWorkers);
+  protected readonly captioningWorkersDisplay   = linkedSignal(() => this.processingConfig().captioningWorkers);
 
   protected readonly dupeClipThresholdPct = computed((): number =>
     Math.round((1 - this.dupeClipThresholdDisplay()) * 100)
@@ -62,10 +65,19 @@ export class Verarbeitung {
     this.processingConfig().faceReviewThreshold >= this.processingConfig().faceAutoThreshold
   );
 
+  protected readonly suggestedTaggingWorkers = computed((): number | null =>
+    this.vram()?.suggested_tagging_workers ?? null
+  );
+
+  protected readonly suggestedCaptioningWorkers = computed((): number | null =>
+    this.vram()?.suggested_captioning_workers ?? null
+  );
+
   constructor() {
     effect(() => {
       this.store.dispatch(modelsActions.loadConfig());
       this.store.dispatch(modelsActions.loadModels());
+      this.store.dispatch(modelsActions.loadVram());
     });
   }
 
@@ -169,5 +181,25 @@ export class Verarbeitung {
     const clamped = Math.min(20, Math.max(2, isNaN(raw) ? 3 : raw));
     target.value = String(clamped);
     this.patchProcessingConfig({ faceMinClusterSize: clamped });
+  }
+
+  onTaggingWorkersInput(target: HTMLInputElement): void {
+    this.taggingWorkersDisplay.set(parseInt(target.value, 10));
+  }
+
+  onTaggingWorkersChange(target: HTMLInputElement): void {
+    const raw = parseInt(target.value, 10);
+    const clamped = Math.min(4, Math.max(1, isNaN(raw) ? 1 : raw));
+    this.patchProcessingConfig({ taggingWorkers: clamped });
+  }
+
+  onCaptioningWorkersInput(target: HTMLInputElement): void {
+    this.captioningWorkersDisplay.set(parseInt(target.value, 10));
+  }
+
+  onCaptioningWorkersChange(target: HTMLInputElement): void {
+    const raw = parseInt(target.value, 10);
+    const clamped = Math.min(4, Math.max(1, isNaN(raw) ? 1 : raw));
+    this.patchProcessingConfig({ captioningWorkers: clamped });
   }
 }

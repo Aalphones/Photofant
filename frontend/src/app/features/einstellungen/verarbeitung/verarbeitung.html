@@ -64,6 +64,58 @@
       ><i></i></button>
     </div>
   </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Tagging-Worker</div>
+      <div class="verarbeitung__zeile-sub">
+        Wie viele Bilder gleichzeitig getaggt werden. Mehr = schneller, braucht aber mehr Grafikspeicher.
+        @if (suggestedTaggingWorkers(); as suggested) {
+          Empfohlen: {{ suggested }}
+        }
+      </div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ taggingWorkersDisplay() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="1"
+          max="4"
+          step="1"
+          [value]="taggingWorkersDisplay()"
+          (input)="onTaggingWorkersInput($any($event.target))"
+          (change)="onTaggingWorkersChange($any($event.target))"
+        >
+      </div>
+    </div>
+  </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Caption-Worker</div>
+      <div class="verarbeitung__zeile-sub">
+        Wie viele Bilder gleichzeitig beschrieben werden. Mehr = schneller, braucht aber mehr Grafikspeicher.
+        @if (suggestedCaptioningWorkers(); as suggested) {
+          Empfohlen: {{ suggested }}
+        }
+      </div>
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ captioningWorkersDisplay() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="1"
+          max="4"
+          step="1"
+          [value]="captioningWorkersDisplay()"
+          (input)="onCaptioningWorkersInput($any($event.target))"
+          (change)="onCaptioningWorkersChange($any($event.target))"
+        >
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="verarbeitung__gruppen-label">Duplikaterkennung</div>

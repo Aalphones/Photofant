@@ -1,6 +1,6 @@
 # P19 — Inference Session Pool (Option B: mehrere Worker pro Modelltyp)
 
-**Status:** Freigegeben, in Umsetzung (freigegeben 2026-07-02)
+**Status:** Freigegeben, alle Phasen umgesetzt — finale Smoke-Checkliste offen (freigegeben 2026-07-02)
 **Voraussetzung erfüllt:** Option A (dedizierte Worker pro Modelltyp, `queue.py`) ist bereits
 im Code — `_tagging_worker`/`_captioning_worker` laufen je einzeln.
 
@@ -72,7 +72,7 @@ Skizze, siehe Deviations unten): `GET /api/models/vram` liefert zusätzlich
 | 1 | [SessionManager: Pool statt Singleton](phase-1-session-pool.md) | heikel | complete (UI-Smoke offen) |
 | 2 | [Settings + N-Worker-Loop in queue.py](phase-2-settings-queue-workers.md) | standard | complete (Manuelle Smokes offen) |
 | 3 | [VRAM-Budget-Rechner + API-Erweiterung](phase-3-vram-budget-api.md) | mechanisch | complete (Live-Endpoint-Check nach Neustart offen) |
-| 4 | [Frontend: Worker-Slider in Verarbeitung](phase-4-frontend-slider.md) | standard | pending |
+| 4 | [Frontend: Worker-Slider in Verarbeitung](phase-4-frontend-slider.md) | standard | complete (UI-Smoke offen) |
 
 ## Finale Akzeptanzkriterien (Smoke-Checkliste, User prüft am Plan-Ende)
 

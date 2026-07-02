@@ -38,6 +38,8 @@ export interface ProcessingConfig {
   faceAutoThreshold: number;
   faceReviewThreshold: number;
   faceMinClusterSize: number;
+  taggingWorkers: number;
+  captioningWorkers: number;
 }
 
 export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
@@ -58,6 +60,8 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   faceAutoThreshold: 0.6,
   faceReviewThreshold: 0.45,
   faceMinClusterSize: 3,
+  taggingWorkers: 1,
+  captioningWorkers: 1,
 };
 
 export interface ShortcutBinding {

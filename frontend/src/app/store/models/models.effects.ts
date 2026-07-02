@@ -29,6 +29,8 @@ const PROCESSING_CONFIG_KEY_MAP: Record<keyof ProcessingConfig, string> = {
   faceAutoThreshold:    'face_auto_threshold',
   faceReviewThreshold:  'face_review_threshold',
   faceMinClusterSize:   'face_min_cluster_size',
+  taggingWorkers:       'tagging_workers',
+  captioningWorkers:    'captioning_workers',
 };
 
 function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfig {
@@ -50,6 +52,8 @@ function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfi
     faceAutoThreshold:    Number(data['face_auto_threshold']        ?? PROCESSING_CONFIG_DEFAULTS.faceAutoThreshold),
     faceReviewThreshold:  Number(data['face_review_threshold']      ?? PROCESSING_CONFIG_DEFAULTS.faceReviewThreshold),
     faceMinClusterSize:   Number(data['face_min_cluster_size']      ?? PROCESSING_CONFIG_DEFAULTS.faceMinClusterSize),
+    taggingWorkers:       Number(data['tagging_workers']            ?? PROCESSING_CONFIG_DEFAULTS.taggingWorkers),
+    captioningWorkers:    Number(data['captioning_workers']         ?? PROCESSING_CONFIG_DEFAULTS.captioningWorkers),
   };
 }
 

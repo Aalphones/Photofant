@@ -47,14 +47,20 @@
 
 ## Checkliste
 
-- [ ] `ProcessingConfig`: `taggingWorkers`, `captioningWorkers` ergänzt (+ Defaults `1`)
-- [ ] `PROCESSING_CONFIG_KEY_MAP`: beide neuen Keys → `tagging_workers`/`captioning_workers`
-- [ ] `extractProcessingConfig`: beide Keys mit Fallback auf Default
-- [ ] `verarbeitung.ts`: `linkedSignal` + Input/Change-Handler für beide Slider (Clamp 1-4,
+- [x] `ProcessingConfig`: `taggingWorkers`, `captioningWorkers` ergänzt (+ Defaults `1`)
+- [x] `PROCESSING_CONFIG_KEY_MAP`: beide neuen Keys → `tagging_workers`/`captioning_workers`
+- [x] `extractProcessingConfig`: beide Keys mit Fallback auf Default
+- [x] `verarbeitung.ts`: `linkedSignal` + Input/Change-Handler für beide Slider (Clamp 1-4,
       ganzzahlig), Vram-Selector eingebunden, `loadVram()` dispatchen falls noch nicht geladen
-- [ ] `verarbeitung.html`: zwei neue Zeilen im bestehenden Slider-Pattern, inkl. „Empfohlen: N"
-- [ ] `docs/code-map.md`: keine neue Zeile nötig (keine neue Struktur, nur Feld-Erweiterung
-      innerhalb bestehender Verarbeitung-Sektion) — prüfen, ob die Zeile zu „Modell-Management"
-      trotzdem einen Hinweis auf Worker-Konfiguration verdient (Ermessensfrage, kein Muss)
+- [x] `verarbeitung.html`: zwei neue Zeilen im bestehenden Slider-Pattern, inkl. „Empfohlen: N"
+- [x] `docs/code-map.md`: geprüft — keine neue Zeile nötig, `features/einstellungen/verarbeitung`
+      und `settings.py`/`vram.py` stehen bereits unter „Einstellungen" bzw. „Modell-Management"
 
 ## Report-Back
+
+Beide Slider sitzen in der Auto-Pipeline-Gruppe der Verarbeitung-Sektion, direkt nach dem
+CLIP-Embedding-Schalter — gleiches Slider-Pattern wie die bestehenden Threshold-Regler
+(`verarbeitung__slider-gruppe`), Range 1-4, „Empfohlen: N" im Subtext, ausgeblendet wenn die
+GPU-Empfehlung `null` ist. `tsc --noEmit` läuft fehlerfrei durch; kein `ng test` (private-Profil).
+Offen: manueller UI-Smoke — Slider ziehen, App neu laden, Wert bleibt (AK 1-4) — läuft mit der
+finalen Smoke-Checkliste am Plan-Ende, da dort ohnehin ein Live-Backend gebraucht wird.
