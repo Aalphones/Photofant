@@ -55,11 +55,12 @@ class WD14Tagger:
     def tag(self, image: np.ndarray) -> list[TagScore]:
         from photofant.inference.preprocessing import preprocess_for_wd14
         from photofant.inference.session_manager import session_manager
+        from photofant.settings import load_settings
 
         labels = _load_labels(self._csv_path)
         input_array = preprocess_for_wd14(image)
 
-        pool_size = 1  # TODO(P19 Phase 2): wire from load_settings()["tagging_workers"]
+        pool_size = load_settings()["tagging_workers"]
         session = session_manager.acquire_exclusive_session(self._model_path, pool_size)
         try:
             input_name = session.get_inputs()[0].name

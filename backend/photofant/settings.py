@@ -89,6 +89,8 @@ SETTINGS_DEFAULTS: AppSettings = {
     "face_auto_threshold": 0.6,
     "face_review_threshold": 0.45,
     "face_min_cluster_size": 3,
+    "tagging_workers": 1,
+    "captioning_workers": 1,
     "display": {
         "locale": "de",
         "date_format": "dmy",
@@ -136,6 +138,8 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "face_auto_threshold": (float, int),
     "face_review_threshold": (float, int),
     "face_min_cluster_size": int,
+    "tagging_workers": int,
+    "captioning_workers": int,
     "display": dict,
     "comfyui": dict,
 }

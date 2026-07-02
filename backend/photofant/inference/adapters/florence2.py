@@ -110,13 +110,14 @@ class Florence2Captioner:
     def caption(self, image: np.ndarray, preset: dict) -> str:  # type: ignore[type-arg]
         from photofant.inference.preprocessing import preprocess_for_florence
         from photofant.inference.session_manager import session_manager
+        from photofant.settings import load_settings
 
         prompt, max_new_tokens, num_beams = task_token_settings(preset)
         tokenizer = _load_tokenizer(self._tokenizer_path)
 
         pixel_values = preprocess_for_florence(image)
 
-        pool_size = 1  # TODO(P19 Phase 2): wire from load_settings()["captioning_workers"]
+        pool_size = load_settings()["captioning_workers"]
         embed_session = session_manager.acquire_exclusive_session(self._embed_path, pool_size)
         vision_session = session_manager.acquire_exclusive_session(self._vision_path, pool_size)
         encoder_session = session_manager.acquire_exclusive_session(self._encoder_path, pool_size)

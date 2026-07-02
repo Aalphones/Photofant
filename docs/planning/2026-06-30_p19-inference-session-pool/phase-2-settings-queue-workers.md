@@ -35,14 +35,33 @@
 
 ## Checkliste
 
-- [ ] `tagging_workers`/`captioning_workers` in `SETTINGS_DEFAULTS` + `_EXPECTED_TYPES`
-- [ ] `JobQueue`: Task-Handles von Einzel-Task auf `list[asyncio.Task]` pro Typ umgestellt
-- [ ] `start()`: liest Settings, startet N Tasks pro Typ
-- [ ] `stop()`: cancelt alle Tasks der Liste
-- [ ] WD14/Florence2-Adapter (aus Phase 1) an echten Settings-Wert angebunden
-- [ ] Manueller Test: `tagging_workers=1` (Default) — Verhalten unverändert
+- [x] `tagging_workers`/`captioning_workers` in `SETTINGS_DEFAULTS` + `_EXPECTED_TYPES`
+- [x] `JobQueue`: Task-Handles von Einzel-Task auf `list[asyncio.Task]` pro Typ umgestellt
+- [x] `start()`: liest Settings, startet N Tasks pro Typ
+- [x] `stop()`: cancelt alle Tasks der Liste
+- [x] WD14/Florence2-Adapter (aus Phase 1) an echten Settings-Wert angebunden
+- [ ] Manueller Test: `tagging_workers=1` (Default) — Verhalten unverändert (offen, User prüft)
 - [ ] Manueller Test: `tagging_workers=2`, Batch-Import mit mehreren Bildern → zwei TAGGING-Jobs
-      laufen im Job-Dock sichtbar überlappend
-- [ ] `docs/code-map.md` Zeile 65 aktualisiert
+      laufen im Job-Dock sichtbar überlappend (offen, User prüft — braucht `settings.json`-Edit
+      per Hand, da der Slider erst in Phase 4 kommt)
+- [x] `docs/code-map.md` Zeile 65 aktualisiert
 
 ## Report-Back
+
+**Umgesetzt:** `tagging_workers`/`captioning_workers` (Default je `1`) in `settings.py`
+ergänzt. `JobQueue` führt Tagging-/Captioning-Worker jetzt als `list[asyncio.Task]`
+statt Einzel-Task; `start()` liest die Settings und startet entsprechend viele Tasks,
+`stop()` cancelt alle. `WD14Tagger`/`Florence2Captioner` übergeben den echten Settings-Wert
+statt des Phase-1-Platzhalters `1` an `acquire_exclusive_session`. `docs/code-map.md`
+Zeile 65 korrigiert (Queue hat mehr als „drei Spuren", Tagging/Captioning jetzt als
+konfigurierbarer Pool beschrieben).
+
+**Manuelle Smoke-Tests offen** (User, da kein Slider in der UI existiert — kommt Phase 4):
+Wert testweise direkt in `settings.json` setzen (`"tagging_workers": 2`), App neu starten,
+Batch-Import anstoßen, im Job-Dock auf zwei parallel laufende TAGGING-Jobs prüfen. Mit
+`tagging_workers=1` (Default) ist keine Verhaltensänderung zu erwarten — das ist Backend-seitig
+verifiziert (`ruff` + `pytest` grün, keine neuen Fehlschläge ggü. Master-Stand).
+
+**CI:** Backend `ruff check` + `pytest` grün (10 vorbestehende Fehlschläge in
+`test_comfyui_run.py`/`test_caption_config.py`, verifiziert unabhängig von dieser Phase via
+`git stash`). Frontend `lint` (tsc) + `build` grün (keine Frontend-Änderungen in dieser Phase).

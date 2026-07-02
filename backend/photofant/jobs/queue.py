@@ -110,31 +110,36 @@ class JobQueue:
         self._subscribers: list[asyncio.Queue[JobStatus]] = []
         self._worker_task: asyncio.Task[None] | None = None
         self._background_worker_task: asyncio.Task[None] | None = None
-        self._tagging_worker_task: asyncio.Task[None] | None = None
-        self._captioning_worker_task: asyncio.Task[None] | None = None
+        self._tagging_worker_tasks: list[asyncio.Task[None]] = []
+        self._captioning_worker_tasks: list[asyncio.Task[None]] = []
         self._parallel_tasks: set[asyncio.Task[None]] = set()
 
     def start(self) -> None:
         from photofant.jobs.face_pipeline import face_pipeline
+        from photofant.settings import load_settings
 
+        settings = load_settings()
         face_pipeline.set_loop(asyncio.get_running_loop())
         self._worker_task = asyncio.create_task(self._worker())
         self._background_worker_task = asyncio.create_task(self._background_worker())
-        self._tagging_worker_task = asyncio.create_task(self._tagging_worker())
-        self._captioning_worker_task = asyncio.create_task(self._captioning_worker())
+        self._tagging_worker_tasks = [
+            asyncio.create_task(self._tagging_worker()) for _ in range(settings["tagging_workers"])
+        ]
+        self._captioning_worker_tasks = [
+            asyncio.create_task(self._captioning_worker()) for _ in range(settings["captioning_workers"])
+        ]
 
     async def stop(self) -> None:
-        all_worker_tasks = (
-            self._worker_task,
-            self._background_worker_task,
-            self._tagging_worker_task,
-            self._captioning_worker_task,
-        )
-        for worker_task in all_worker_tasks:
+        singleton_worker_tasks = (self._worker_task, self._background_worker_task)
+        for worker_task in singleton_worker_tasks:
             if worker_task:
                 worker_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await worker_task
+        for pool_task in (*self._tagging_worker_tasks, *self._captioning_worker_tasks):
+            pool_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await pool_task
         for task in list(self._parallel_tasks):
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
