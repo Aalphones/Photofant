@@ -20,7 +20,7 @@ import { CreatePersonDialog } from './create-person-dialog/create-person-dialog'
 import { AlphabetRail } from './alphabet-rail/alphabet-rail';
 import { groupColor } from './group-color.util';
 
-type PersonSortKey = 'group' | 'created' | 'name';
+type PersonSortKey = 'group' | 'created' | 'name' | 'unnamed' | 'count';
 type PersonViewMode = 'single' | 'grid4' | 'face';
 
 @Component({
@@ -37,9 +37,10 @@ export class Personen implements OnInit {
 
   protected readonly groupColor = groupColor;
 
-  private readonly SORT_CYCLE: PersonSortKey[] = ['group', 'created', 'name'];
+  private readonly SORT_CYCLE: PersonSortKey[] = ['group', 'created', 'name', 'unnamed', 'count'];
   private readonly SORT_LABELS: Record<PersonSortKey, string> = {
     group: 'Gruppe', created: 'Erstellungsdatum', name: 'Name',
+    unnamed: 'Unbenannt zuerst', count: 'Anzahl Fotos',
   };
 
   protected readonly persons = this.store.selectSignal(personsSelectors.selectAll);
@@ -89,6 +90,17 @@ export class Personen implements OnInit {
         const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
         return bTime - aTime; // neueste zuerst, NULL (=0) landet am Ende
       });
+    }
+    if (this.sortKey() === 'unnamed') {
+      return list.sort((a, b) => {
+        const aUnnamed = a.is_unknown || !a.name;
+        const bUnnamed = b.is_unknown || !b.name;
+        if (aUnnamed !== bUnnamed) { return aUnnamed ? -1 : 1; }
+        return (a.name ?? '').localeCompare(b.name ?? '');
+      });
+    }
+    if (this.sortKey() === 'count') {
+      return list.sort((a, b) => b.count - a.count);
     }
     return list; // 'group' — Gruppierung übernimmt die Sortierung in personGroups()
   });

@@ -172,6 +172,10 @@
   gap: 8px;
 }
 
+.personen__empty--filtered {
+  height: 30vh;
+}
+
 .personen__loading-text {
   font-size: 13px;
   color: var(--text-3);

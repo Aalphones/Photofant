@@ -1,7 +1,7 @@
 # Phase 4 — Politur: Zusatz-Sortierungen, Empty-States, Perf-Check
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete (Perf-Messung mit echten Daten steht beim User aus, siehe Checkliste)
 **Voraussetzung:** Phase 3 abgeschlossen
 
 Abtrennbare Erweiterungen — falls nach Phase 3 erstmal Ruhe sein soll, bleibt
@@ -18,9 +18,9 @@ diese Phase einfach im Backlog liegen.
 
 ## Abnahme-Kriterien
 
-- [ ] Zusätzliche Sortierungen „Unbenannt zuerst" und „Anzahl Fotos" verfügbar
-- [ ] Leere Gruppen (z.B. nach Filter-Kombination ohne Treffer) zeigen einen dezenten Empty-State statt einer leeren Fläche
-- [ ] Bei sehr vielen Personen (Richtwert: > 300) bleibt die Seite flüssig — gemessen, nicht geraten
+- [x] Zusätzliche Sortierungen „Unbenannt zuerst" und „Anzahl Fotos" verfügbar
+- [x] Leere Gruppen (z.B. nach Filter-Kombination ohne Treffer) zeigen einen dezenten Empty-State statt einer leeren Fläche
+- [ ] Bei sehr vielen Personen (Richtwert: > 300) bleibt die Seite flüssig — gemessen, nicht geraten (**offen — Messung durch User, siehe unten**)
 
 ---
 
@@ -28,37 +28,23 @@ diese Phase einfach im Backlog liegen.
 
 ### personen.ts — erweiterter Sortier-Zyklus
 
-- [ ] `PersonSortKey` erweitern: `'group' | 'created' | 'name' | 'unnamed' | 'count'`
-- [ ] `SORT_CYCLE` und `sortLabel()` entsprechend ergänzen
-- [ ] `sortedPersons()` — neue Zweige:
-  ```typescript
-  if (this.sortKey() === 'unnamed') {
-    return list.sort((a, b) => {
-      const aUnnamed = a.is_unknown || !a.name;
-      const bUnnamed = b.is_unknown || !b.name;
-      if (aUnnamed !== bUnnamed) { return aUnnamed ? -1 : 1; }
-      return (a.name ?? '').localeCompare(b.name ?? '');
-    });
-  }
-  if (this.sortKey() === 'count') {
-    return list.sort((a, b) => b.count - a.count);
-  }
-  ```
+- [x] `PersonSortKey` erweitern: `'group' | 'created' | 'name' | 'unnamed' | 'count'`
+- [x] `SORT_CYCLE` und `sortLabel()` entsprechend ergänzen
+- [x] `sortedPersons()` — neue Zweige (unnamed, count)
 
 ### personen.html — Empty-States pro Gruppe/Filter
 
-- [ ] Wenn `filteredPersons().length === 0` und Suche/Filter aktiv: „Keine Personen gefunden" statt der generellen Leerstate
-- [ ] Unterscheidung von der bestehenden „Noch keine Personen erkannt"-Leerstate (die bleibt für den Fall ganz ohne Personen)
+- [x] Wenn `filteredPersons().length === 0` und Suche/Filter aktiv: „Keine Personen gefunden" statt der generellen Leerstate
+- [x] Unterscheidung von der bestehenden „Noch keine Personen erkannt"-Leerstate (die bleibt für den Fall ganz ohne Personen)
 
 ### Performance-Check
 
-- [ ] Mit realistischer Personenzahl (Test-DB oder Produktions-Kopie) prüfen: Scroll-Ruckeln, Such-Tipp-Latenz
-- [ ] Falls spürbar ruckelig: `computed()`-Ketten auf unnötige Neuberechnungen prüfen (z.B. `filteredPersons`/`sortedPersons` nicht mehrfach pro Render-Zyklus aufrufen)
-- [ ] Nur wenn wirklich nötig: virtuelles Scrollen nachziehen (Vorlage: P20, falls im Repo vorhanden) — kein Vorgriff ohne Messung
+- [x] `computed()`-Ketten geprüft: `filteredPersons` → `sortedPersons` → `personGroups` sind Angular-`computed()`-Signals, werden gecacht und nur bei Dependency-Änderung neu berechnet — auch bei Mehrfach-Referenz im Template (Grid + Alphabet-Rail) keine doppelte Neuberechnung pro Render-Zyklus. Kein struktureller Fix nötig.
+- [ ] **Offen — braucht echte Daten:** Mit realistischer Personenzahl (> 300, Test-DB oder Produktions-Kopie) Scroll-Ruckeln/Such-Tipp-Latenz messen. Kann ich agentenlos ohne laufende App mit echtem Datenbestand nicht simulieren — bitte einmal in der laufenden App gegenprüfen. Falls ruckelig: virtuelles Scrollen nachziehen (Vorlage: P20, falls im Repo vorhanden).
 
 ---
 
 ## Doc-Updates
 
-- [ ] Keine neuen Settings-Keys
-- [ ] FINDINGS.md: Messergebnisse aus dem Performance-Check festhalten
+- [x] Keine neuen Settings-Keys
+- [x] FINDINGS.md: Messergebnisse aus dem Performance-Check festhalten (Entscheidung dokumentiert, Live-Messung durch User offen)

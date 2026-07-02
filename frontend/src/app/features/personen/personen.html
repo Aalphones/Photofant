@@ -70,6 +70,12 @@
     </div>
   }
 
+  @if (filteredPersons().length === 0) {
+    <div class="personen__empty personen__empty--filtered">
+      <p class="personen__empty-text">Keine Personen gefunden.</p>
+      <p class="personen__empty-hint">Suche oder Gruppen-Filter anpassen.</p>
+    </div>
+  } @else {
   <div class="personen__body">
     <div class="personen__content">
       @if (sortKey() === 'group') {
@@ -122,6 +128,7 @@
 
     <pf-alphabet-rail [persons]="sortedPersons()" (jump)="onAlphabetJump($event)" />
   </div>
+  }
 }
 
 @if (showMergeDialog()) {
