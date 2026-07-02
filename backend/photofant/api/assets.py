@@ -38,7 +38,8 @@ DbSession = Annotated[Session, Depends(get_session)]
 
 _VALID_THUMB_SIZES = frozenset({256, 512, 1024})
 _VALID_FRAMINGS = frozenset({"close_up", "medium", "full_body"})
-# Fuzzy-Score-Schwelle (rapidfuzz.fuzz.WRatio, 0-100) fuer q_mode=text — ADR-015.
+# Fuzzy-Score-Schwelle (rapidfuzz, 0-100) fuer q_mode=text — ADR-015.
+# fuzz.ratio fuer Tag-/Personen-Namen, fuzz.partial_ratio fuer Captions (siehe _text_score).
 _TEXT_FUZZY_THRESHOLD = 60
 
 
