@@ -148,6 +148,9 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         _mark_done(asset_id)
         return
 
+    # Best-scoring face first — the fixed-person override always targets face_index 0.
+    faces = sorted(faces, key=lambda f: f.get("score") or 0.0, reverse=True)
+
     data_root = get_data_root()
     faces_dir = data_root / "_unknown" / "faces"
     faces_dir.mkdir(parents=True, exist_ok=True)
@@ -159,19 +162,19 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
             return
         unknown_person_id = unknown_person.id
 
-        # Single face + fixed_person upload → assign directly to the known person.
+        # Fixed-person upload → best-scoring face is assigned directly to the
+        # known person; any remaining faces stay _unknown for normal matching.
         fixed_person_id: int | None = None
-        if len(faces) == 1:
-            from sqlalchemy import select as sa_select
-            fixed_instance = session.scalar(
-                sa_select(AssetInstance).where(
-                    AssetInstance.asset_id == asset_id,
-                    AssetInstance.fixed_person.is_(True),
-                    AssetInstance.deleted_at.is_(None),
-                )
+        from sqlalchemy import select as sa_select
+        fixed_instance = session.scalar(
+            sa_select(AssetInstance).where(
+                AssetInstance.asset_id == asset_id,
+                AssetInstance.fixed_person.is_(True),
+                AssetInstance.deleted_at.is_(None),
             )
-            if fixed_instance is not None:
-                fixed_person_id = fixed_instance.person_id
+        )
+        if fixed_instance is not None:
+            fixed_person_id = fixed_instance.person_id
 
     for face_index, face_dict in enumerate(faces):
         bbox = face_dict["bbox"]
@@ -192,10 +195,13 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         crop_phash = _compute_crop_phash(crop_path)
         resolution = crop_np.shape[0] * crop_np.shape[1]
 
+        # Only the best-scoring face (index 0) gets the fixed-person override.
+        is_fixed_best_face = fixed_person_id is not None and face_index == 0
+
         with SessionLocal() as session:
             face_row = Face(
                 asset_id=asset_id,
-                person_id=fixed_person_id if fixed_person_id is not None else unknown_person_id,
+                person_id=fixed_person_id if is_fixed_best_face else unknown_person_id,
                 crop_path=str(crop_path.resolve()),
                 bbox={"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3]},
                 padding=padding,
@@ -221,16 +227,24 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         except Exception:
             log.exception("Face thumbnail failed for face %d", face_id)
 
-        # Vector index + incremental matching
+        # Vector index + incremental matching — skipped for the face that
+        # already got the fixed-person override, it needs no clustering.
         if embedding is not None:
             try:
                 _upsert_face_vector(face_id, embedding)
             except Exception:
                 log.exception("Face vector index upsert failed for face %d", face_id)
-            try:
-                _run_incremental_match(face_id)
-            except Exception:
-                log.exception("Incremental match failed for face %d", face_id)
+            if not is_fixed_best_face:
+                try:
+                    _run_incremental_match(face_id)
+                except Exception:
+                    log.exception("Incremental match failed for face %d", face_id)
+
+        if is_fixed_best_face:
+            log.info(
+                "Fixed-person override: face %d → person %d (asset %d)",
+                face_id, fixed_person_id, asset_id,
+            )
 
         log.info(
             "Face %d saved: asset=%d idx=%d score=%.3f age=%s",

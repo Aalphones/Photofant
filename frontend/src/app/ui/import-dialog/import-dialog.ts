@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { AssetService } from '../../services/asset.service';
+import { PersonService } from '../../services/person.service';
 import { Icon } from '../icon/icon';
 
 @Component({
@@ -23,10 +24,13 @@ import { Icon } from '../icon/icon';
 })
 export class ImportDialog implements OnInit {
   private readonly assetService = inject(AssetService);
+  private readonly personService = inject(PersonService);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly initialFiles = input<File[]>([]);
+  readonly personId = input<number | null>(null);
+  readonly personName = input<string | null>(null);
   readonly close = output<void>();
   readonly imported = output<string>();
 
@@ -114,7 +118,12 @@ export class ImportDialog implements OnInit {
     this.errorMsg.set(null);
     this.isLoading.set(true);
 
-    this.assetService.uploadFiles(this.files()).subscribe({
+    const personId = this.personId();
+    const request$ = personId != null
+      ? this.personService.importToPersonFolder(personId, this.files())
+      : this.assetService.uploadFiles(this.files());
+
+    request$.subscribe({
       next: (response: { job_id: string }) => {
         this.isLoading.set(false);
         this.imported.emit(response.job_id);

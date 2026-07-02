@@ -21,6 +21,18 @@
     </button>
   </div>
 
+  <!-- Person-Banner -->
+  @if (personId() != null) {
+    <div class="imp-person-banner">
+      <pf-icon name="people" [size]="14" />
+      @if (personName()) {
+        Bilder werden <strong>{{ personName() }}</strong> zugeordnet
+      } @else {
+        Bilder werden dieser Person zugeordnet
+      }
+    </div>
+  }
+
   <!-- Body -->
   <div class="imp-body">
     <input

@@ -14,7 +14,7 @@ Personen-Ordner, (3) Ausgewählte Bilder per Bulk-Bar einer Person manuell zuwei
 | Phase | Thema | Tier | Status |
 |---|---|---|---|
 | 1 | Neue Person anlegen — Personen-UI + NgRx | standard | complete |
-| 2 | Person-bewusster Upload — face_job + Shell/ImportDialog | heikel | pending |
+| 2 | Person-bewusster Upload — face_job + Shell/ImportDialog | heikel | complete |
 | 3 | Bulk-Personenzuweisung — BulkBar + Backend-Job | standard | pending |
 
 ---

@@ -35,6 +35,7 @@
 @if (isImportOpen()) {
   <pf-import-dialog
     [initialFiles]="droppedFiles()"
+    [personId]="importPersonId()"
     (close)="closeImport()"
     (imported)="onImported()"
   />

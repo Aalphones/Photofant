@@ -1,7 +1,7 @@
 # Phase 2 — Person-bewusster Upload (face_job + Shell/ImportDialog)
 
 **Tier:** heikel
-**Status:** pending
+**Status:** complete
 
 Zwei unabhängige Teilprobleme in einer Phase:
 1. **Backend:** `face_job` soll bei `fixed_person=True`-Assets das beste Gesicht direkt der Person zuweisen.
@@ -24,12 +24,14 @@ Zwei unabhängige Teilprobleme in einer Phase:
 
 ## Abnahme-Kriterien
 
-- [ ] Asset importiert in Person-Ordner (via Upload-Button oder Drag&Drop) → `fixed_person=True` ✅ (bereits)
-- [ ] Face-Job läuft nach Import → 1 Gesicht erkannt → direkt der Person zugewiesen (nicht `_unknown`)
-- [ ] Face-Job → 2+ Gesichter erkannt → bestes zur Person, Rest bleibt `_unknown` (incremental match normal)
-- [ ] Galerie mit Personen-Filter aktiv → Upload-Button öffnet ImportDialog mit Person-Banner
-- [ ] ImportDialog mit Person-Banner → lädt über `POST /api/persons/{id}/import`
-- [ ] Galerie ohne Personen-Filter → normaler Upload-Pfad (unverändert)
+- [x] Asset importiert in Person-Ordner (via Upload-Button oder Drag&Drop) → `fixed_person=True` ✅ (bereits)
+- [x] Face-Job läuft nach Import → 1 Gesicht erkannt → direkt der Person zugewiesen (nicht `_unknown`)
+- [x] Face-Job → 2+ Gesichter erkannt → bestes zur Person, Rest bleibt `_unknown` (incremental match normal)
+- [x] Galerie mit Personen-Filter aktiv → Upload-Button öffnet ImportDialog mit Person-Banner
+- [x] ImportDialog mit Person-Banner → lädt über `POST /api/persons/{id}/import`
+- [x] Galerie ohne Personen-Filter → normaler Upload-Pfad (unverändert)
+
+**Smoke-Test steht noch aus** (User führt am Plan-Ende durch, siehe finale AK in der README).
 
 ---
 
@@ -37,7 +39,14 @@ Zwei unabhängige Teilprobleme in einer Phase:
 
 ### Backend: face_job.py
 
-- [ ] Hilfsfunktion `_get_fixed_person_id(asset_id: int) -> int | None` ergänzen:
+🟡 **Abweichung:** kein separates `_get_fixed_person_id()` + Post-hoc-Update auf
+`Face` nach dem Insert — stattdessen wird `fixed_person_id` einmal vor der
+Schleife geholt und direkt beim `Face(...)`-Insert als `person_id` gesetzt
+(spart eine zusätzliche Session-Runde pro Asset, gleiches Ergebnis). Ein
+Ad-hoc-Fix von vor der Phase (`544c95a`) deckte nur den Single-Face-Fall ab —
+siehe FINDINGS.md.
+
+- [x] Hilfsfunktion `_get_fixed_person_id(asset_id: int) -> int | None` ergänzen:
   ```python
   def _get_fixed_person_id(asset_id: int) -> int | None:
     from photofant.db.models import AssetInstance
@@ -52,7 +61,7 @@ Zwei unabhängige Teilprobleme in einer Phase:
         return int(instance.person_id) if instance is not None else None
   ```
 
-- [ ] In `_run_face_job()` — nach der Gesichts-Schleife (alle `face_id`s bekannt):
+- [x] In `_run_face_job()` — nach der Gesichts-Schleife (alle `face_id`s bekannt):
 
   Vor dem ersten `for face_index, face_dict in enumerate(faces):` Block wird
   `fixed_person_id = _get_fixed_person_id(asset_id)` einmalig geholt.
@@ -80,7 +89,7 @@ Zwei unabhängige Teilprobleme in einer Phase:
   ```
   Einfügen direkt nach `faces = engine.detect(image)` und dem `if not faces:` Guard.
 
-- [ ] `_run_incremental_match(face_id)` — nur aufrufen wenn `fixed_person_id is None or face_index != 0`:
+- [x] `_run_incremental_match(face_id)` — nur aufrufen wenn `fixed_person_id is None or face_index != 0`:
   ```python
   if embedding is not None:
       try:
@@ -96,82 +105,69 @@ Zwei unabhängige Teilprobleme in einer Phase:
 
 ### Frontend: import-dialog.ts
 
-- [ ] Neue Inputs ergänzen:
+🟡 **Abweichung:** Die Plan-Skizze ging von einem bestehenden Pfad-Tab
+(`mode()`, `pathInput()`) im ImportDialog aus — den gibt es in der aktuellen
+Komponente nicht (nur Drag&Drop/Datei-Upload). `submit()` und `canSubmit()`
+brauchten daher keinen Tab-Zweig, nur die Person/Normal-Verzweigung.
+
+- [x] Neue Inputs ergänzen:
   ```typescript
   readonly personId   = input<number | null>(null)
   readonly personName = input<string | null>(null)
   ```
-- [ ] `submit()`-Methode: Person-Pfad einschlagen wenn `personId()` gesetzt:
+- [x] `submit()`-Methode: Person-Pfad einschlagen wenn `personId()` gesetzt:
   ```typescript
-  const pid = this.personId();
-  const request$ = pid != null
-    ? this.personService.importToPersonFolder(pid, this.files())
-    : this.mode() === 'path'
-      ? this.assetService.importPaths(this.parsePaths())
-      : this.assetService.uploadFiles(this.files());
+  const personId = this.personId();
+  const request$ = personId != null
+    ? this.personService.importToPersonFolder(personId, this.files())
+    : this.assetService.uploadFiles(this.files());
   ```
-- [ ] `PersonService` via `inject()` ergänzen (bereits tree-shakeable, kein Modul-Import nötig).
-- [ ] `canSubmit()`: wenn `personId()` gesetzt → nur Upload-Tab relevant (Pfad-Tab ausblenden):
-  ```typescript
-  protected canSubmit(): boolean {
-    if (this.isLoading()) { return false; }
-    if (this.personId() != null) { return this.files().length > 0; }
-    if (this.mode() === 'path') { return this.pathInput().trim().length > 0; }
-    return this.files().length > 0;
-  }
-  ```
+- [x] `PersonService` via `inject()` ergänzt.
+- [x] `canSubmit()`: unverändert (`files().length > 0`) — es gibt keinen Pfad-Tab, der ausgeblendet werden müsste.
 
 ### Frontend: import-dialog.html
 
-- [ ] Banner oberhalb der Tabs einfügen (nur wenn personName() gesetzt):
-  ```html
-  @if (personName()) {
-    <div class="import-dialog__person-banner">
-      <pf-icon name="user" [size]="14" />
-      Bilder werden <strong>{{ personName() }}</strong> zugeordnet
-    </div>
-  }
-  ```
-- [ ] Pfad-Tab ausblenden wenn personId() gesetzt (Upload ist der einzig sinnvolle Modus):
-  ```html
-  @if (!personId()) {
-    <div class="import-dialog__tabs">…</div>
-  }
-  ```
-- [ ] CSS-Klasse `import-dialog__person-banner` in `import-dialog.scss` ergänzen
-  (dezenter Info-Chip, analog anderen Bannern im Projekt).
+- [x] Banner oberhalb des Body einfügen (nur wenn `personId()` gesetzt; zeigt
+  Namen wenn vorhanden, sonst generischen Text — Klasse `imp-person-banner`
+  passend zum bestehenden `imp-*`-Naming der Komponente, nicht
+  `import-dialog__*`).
+- [x] Kein Pfad-Tab vorhanden → nichts auszublenden (siehe Abweichung oben).
+- [x] CSS-Klasse `imp-person-banner` in `import-dialog.scss` ergänzt (Info-Chip
+  mit `--accent-weak`, analog `.imp-error`).
 
 ### Frontend: shell.ts
 
-- [ ] `Store` bereits injiziert ✅. Person-Filter lesen:
+🟡 **Vereinfachung Phase 2 (wie im Plan vorgesehen):** kein `activePersonName`
+computed — würde ohnehin immer `null` liefern (persons sind in der Shell nicht
+geladen). Banner zeigt ohne Namen „Bilder werden dieser Person zugeordnet".
+Namensauflösung ist ein möglicher Phase-3-Follow-up.
+
+**Zusätzliche Abweichung:** Person-Pfad gilt auch für den globalen
+Drag&Drop-Handler (`registerGlobalDnD` → `onDrop`), nicht nur für den
+Upload-Button — beide nutzen jetzt `resolveImportPersonId()`. Die finalen AK
+verlangen ausdrücklich „via Upload-Button oder Drag&Drop".
+
+- [x] `Store` bereits injiziert ✅. Person-Filter lesen:
   ```typescript
-  private readonly activePersonId   = this.store.selectSignal(filtersSelectors.personId);
-  private readonly activePersonName = computed((): string | null => {
-    const personId = this.activePersonId();
-    if (personId == null) { return null; }
-    // persons muss für diese Auflösung im Store sein — nur auflösen wenn bereits geladen
-    // Shell nutzt personsSelectors nicht direkt; Name ist optional (Banner zeigt ID-Fallback)
-    return null;   // Phase 2: personId reicht, Name wird in ImportDialog nicht gezeigt wenn null
-  });
+  private readonly activePersonId = this.store.selectSignal(filtersSelectors.personId);
   ```
 
-  🟡 **Vereinfachung Phase 2:** Shell übergibt nur `personId`, `personName = null`.
-  Der Banner zeigt dann „Bilder werden dieser Person zugeordnet" ohne Namen.
-  Verbesserung (Name anzeigen) kann als Follow-up in Phase 3 mitgenommen werden,
-  wenn persons im Store sowieso für den AssignPersonDialog geladen werden.
-
-- [ ] `openImport()` — aktuelle Route prüfen + personId übergeben:
+- [x] `openImport()` — aktuelle Route prüfen + personId übergeben:
   ```typescript
   protected openImport(): void {
     this.droppedFiles.set([]);
-    const onGalerie = this.router.url.startsWith('/galerie');
-    this.importPersonId.set(onGalerie ? (this.activePersonId() ?? null) : null);
+    this.importPersonId.set(this.resolveImportPersonId());
     this.isImportOpen.set(true);
   }
-  ```
-  Neues Signal: `importPersonId = signal<number | null>(null)`.
 
-- [ ] `closeImport()`:
+  private resolveImportPersonId(): number | null {
+    return this.router.url.startsWith('/galerie') ? this.activePersonId() : null;
+  }
+  ```
+  Neues Signal: `importPersonId = signal<number | null>(null)`. Gleicher Aufruf
+  auch im DnD-`onDrop`-Handler.
+
+- [x] `closeImport()`:
   ```typescript
   protected closeImport(): void {
     this.isImportOpen.set(false);
@@ -182,7 +178,7 @@ Zwei unabhängige Teilprobleme in einer Phase:
 
 ### Frontend: shell.html
 
-- [ ] `pf-import-dialog` erhält die neuen Inputs:
+- [x] `pf-import-dialog` erhält die neuen Inputs:
   ```html
   <pf-import-dialog
     [initialFiles]="droppedFiles()"
@@ -196,5 +192,5 @@ Zwei unabhängige Teilprobleme in einer Phase:
 
 ## Doc-Updates
 
-- [ ] Keine neuen Settings-Keys
-- [ ] FINDINGS.md in diesem Plan-Ordner: Beobachtungen zur `fixed_person`-Logik festhalten falls Abweichungen vom Plan auftreten
+- [x] Keine neuen Settings-Keys
+- [x] FINDINGS.md in diesem Plan-Ordner: Ad-hoc-Fix-Fund festgehalten

@@ -10,7 +10,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { filter, map, startWith } from 'rxjs';
-import { jobsActions, jobsSelectors } from '../store';
+import { filtersSelectors, jobsActions, jobsSelectors } from '../store';
 import { NavRail } from './nav-rail/nav-rail';
 import { TopBar } from './top-bar/top-bar';
 import { JobDock } from '../ui/job-dock/job-dock';
@@ -45,10 +45,12 @@ export class Shell {
   protected readonly isImportOpen    = signal(false);
   protected readonly droppedFiles    = signal<File[]>([]);
   protected readonly isDraggingFiles = signal(false);
+  protected readonly importPersonId  = signal<number | null>(null);
 
   protected readonly isDockOpen = this.store.selectSignal(jobsSelectors.isDockOpen);
   protected readonly activeJobs = this.store.selectSignal(jobsSelectors.activeCount);
   protected readonly allJobs    = this.store.selectSignal(jobsSelectors.sortedJobs);
+  private readonly activePersonId = this.store.selectSignal(filtersSelectors.personId);
 
   protected readonly activeRoute = toSignal(
     this.router.events.pipe(
@@ -99,6 +101,7 @@ export class Shell {
           file.type.startsWith('image/')
         );
         this.droppedFiles.set(images);
+        this.importPersonId.set(this.resolveImportPersonId());
         this.isImportOpen.set(true);
       }
     };
@@ -134,6 +137,7 @@ export class Shell {
 
   protected openImport(): void {
     this.droppedFiles.set([]);
+    this.importPersonId.set(this.resolveImportPersonId());
     this.isImportOpen.set(true);
   }
 
@@ -145,6 +149,12 @@ export class Shell {
   protected closeImport(): void {
     this.isImportOpen.set(false);
     this.droppedFiles.set([]);
+    this.importPersonId.set(null);
+  }
+
+  // Person-Upload-Pfad nur auf /galerie mit aktivem Personen-Filter, sonst normaler Import.
+  private resolveImportPersonId(): number | null {
+    return this.router.url.startsWith('/galerie') ? this.activePersonId() : null;
   }
 
   protected onImported(): void {
