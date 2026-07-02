@@ -22,3 +22,4 @@
 | [P25](docs/planning/2026-07-01_p25-lore-panel/README.md) | Lore Panel | — | pending |
 | [P26](docs/planning/2026-07-01_p26-recommendation-engine/README.md) | Recommendation Engine | — | pending |
 | [P27](docs/planning/2026-07-01_p27-gemma-integration/README.md) | Gemma Integration | — | pending |
+| [P28](docs/planning/2026-07-02_p28-suche-redesign/README.md) | Suche — Redesign & Bugfixes | 3 (alle pending) | pending |
