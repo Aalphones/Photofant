@@ -59,6 +59,10 @@ class MergeRequest(BaseModel):
     into_id: int
 
 
+class BulkAssignRequest(BaseModel):
+    asset_ids: list[int]
+
+
 class SplitRequest(BaseModel):
     face_ids: list[int]
 
@@ -274,6 +278,27 @@ async def import_to_person_folder(
         saved_paths.append(str(dest))
 
     status = await enqueue_person_import(person_id, saved_paths)
+    return PersonImportResponse(job_id=status.id)
+
+
+@router.post("/{person_id}/bulk-assign", response_model=PersonImportResponse)
+async def bulk_assign_to_person(
+    person_id: int,
+    body: BulkAssignRequest,
+    session: DbSession,
+) -> PersonImportResponse:
+    """Assign a selection of assets to an existing named person as a background job."""
+    person = session.get(Person, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    if person.is_unknown:
+        raise HTTPException(status_code=400, detail="Cannot assign to unknown person")
+    if not body.asset_ids:
+        raise HTTPException(status_code=422, detail="asset_ids must not be empty")
+
+    from photofant.jobs.bulk_assign_person_job import enqueue_bulk_assign_person
+
+    status = await enqueue_bulk_assign_person(body.asset_ids, person_id)
     return PersonImportResponse(job_id=status.id)
 
 

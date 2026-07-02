@@ -15,3 +15,4 @@ export type { BulkEditPayload } from './bulk-edit-dialog/bulk-edit-dialog';
 export { ComfyuiImportDialog } from './comfyui-import-dialog/comfyui-import-dialog';
 export { ExportDialog } from './export-dialog/export-dialog';
 export type { ExportDialogFilters } from './export-dialog/export-dialog';
+export { AssignPersonDialog } from './assign-person-dialog/assign-person-dialog';

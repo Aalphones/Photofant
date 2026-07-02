@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, injec
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { collectionsActions, collectionsSelectors, comfyuiActions, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, personsActions, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
-import { AssetService, ClassifyService, ComfyUIService } from '@photofant/services';
+import { collectionsActions, collectionsSelectors, comfyuiActions, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, jobsActions, personsActions, personsSelectors, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
+import { AssetService, ClassifyService, ComfyUIService, PersonService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { FaceGrid } from './face-grid/face-grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
@@ -11,13 +11,13 @@ import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
 import { RunLeiste } from './run-leiste/run-leiste';
 import type { RunFirePayload } from './run-leiste/run-leiste';
-import { BulkBar, BulkEditDialog, ExportDialog, Icon, RerunDialog } from '@photofant/ui';
+import { AssignPersonDialog, BulkBar, BulkEditDialog, ExportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { BulkEditPayload, ExportDialogFilters, RerunPayload } from '@photofant/ui';
 
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, FaceGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, ExportDialog, RouterLink],
+  imports: [SubToolbar, GalerieGrid, FaceGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, ExportDialog, AssignPersonDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
   host: { '(document:keydown.escape)': 'onEscape()' },
@@ -29,6 +29,7 @@ export class Galerie {
   private readonly classifyService = inject(ClassifyService);
   private readonly assetService    = inject(AssetService);
   private readonly comfyuiService  = inject(ComfyUIService);
+  private readonly personService   = inject(PersonService);
   private readonly destroyRef      = inject(DestroyRef);
 
   protected readonly groups        = this.store.selectSignal(gallerySelectors.selectGroups);
@@ -67,9 +68,12 @@ export class Galerie {
   protected readonly albums = this.store.selectSignal(collectionsSelectors.selectAlbums);
   protected readonly trainingSets = this.store.selectSignal(collectionsSelectors.selectTrainingSets);
 
+  protected readonly persons = this.store.selectSignal(personsSelectors.selectAll);
+
   protected readonly railOpen = signal(false);
   protected readonly showBulkRerunDialog = signal(false);
   protected readonly showBulkEditDialog = signal(false);
+  protected readonly showAssignPersonDialog = signal(false);
   protected readonly bulkRerunPresets = this.store.selectSignal(presetsSelectors.selectPresets);
   protected readonly dupeScanToast = signal<string | null>(null);
   private dupeScanToastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -312,6 +316,27 @@ export class Galerie {
 
   protected onBulkEditCancel(): void {
     this.showBulkEditDialog.set(false);
+  }
+
+  protected onBulkAssignPersonOpen(): void {
+    this.store.dispatch(personsActions.loadPersons());
+    this.showAssignPersonDialog.set(true);
+  }
+
+  protected onBulkAssignPersonConfirm(personId: number): void {
+    this.showAssignPersonDialog.set(false);
+    const ids = this.selectedIds();
+    if (!ids.length) { return; }
+    this.personService.bulkAssignPerson(personId, ids)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.store.dispatch(jobsActions.toggleDock());
+        this.store.dispatch(galleryActions.clearSelection());
+      });
+  }
+
+  protected onBulkAssignPersonCancel(): void {
+    this.showAssignPersonDialog.set(false);
   }
 
   protected onBulkUpscale(): void {

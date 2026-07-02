@@ -88,6 +88,7 @@
     [albums]="albums()"
     [trainingSets]="trainingSets()"
     [canUpscale]="canBulkUpscale()"
+    [persons]="persons()"
     (close)="onBulkClose()"
     (tagAction)="onBulkTag($event)"
     (addToAlbum)="onAddToAlbum($event)"
@@ -97,6 +98,7 @@
     (upscaleAction)="onBulkUpscale()"
     (dupeScanAction)="onBulkDupeScan()"
     (trashAction)="onBulkTrash()"
+    (assignPersonAction)="onBulkAssignPersonOpen()"
   />
 }
 
@@ -125,6 +127,14 @@
     [scopeLabel]="selectedCount() + ' Bilder'"
     (confirm)="onBulkEditConfirm($event)"
     (cancel)="onBulkEditCancel()"
+  />
+}
+
+@if (showAssignPersonDialog()) {
+  <pf-assign-person-dialog
+    [persons]="persons()"
+    (close)="onBulkAssignPersonCancel()"
+    (confirm)="onBulkAssignPersonConfirm($event)"
   />
 }
 

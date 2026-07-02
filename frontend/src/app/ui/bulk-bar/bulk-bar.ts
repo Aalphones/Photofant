@@ -11,7 +11,7 @@ import { of, switchMap } from 'rxjs';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Icon } from '../icon/icon';
 import { TagService } from '../../services/tag.service';
-import type { TagListItem } from '@photofant/models';
+import type { PersonDto, TagListItem } from '@photofant/models';
 
 export interface BulkAlbumOption {
   id: number;
@@ -30,6 +30,7 @@ export class BulkBar {
   readonly albums = input<BulkAlbumOption[]>([]);
   readonly trainingSets = input<BulkAlbumOption[]>([]);
   readonly canUpscale = input<boolean>(false);
+  readonly persons = input<PersonDto[]>([]);
 
   readonly close = output<void>();
   readonly tagAction = output<{ add: string[]; remove: number[] }>();
@@ -40,6 +41,7 @@ export class BulkBar {
   readonly upscaleAction = output<void>();
   readonly dupeScanAction = output<void>();
   readonly trashAction = output<void>();
+  readonly assignPersonAction = output<void>();
 
   private readonly tagService = inject(TagService);
 
@@ -64,6 +66,10 @@ export class BulkBar {
     const n = this.count();
     return n === 1 ? '1 Bild ausgewählt' : `${n} Bilder ausgewählt`;
   });
+
+  protected readonly hasNamedPersons = computed((): boolean =>
+    this.persons().some((person: PersonDto) => !person.is_unknown)
+  );
 
   protected openTagInput(): void {
     this.showTagInput.set(true);
@@ -136,5 +142,9 @@ export class BulkBar {
 
   protected moveToTrash(): void {
     this.trashAction.emit();
+  }
+
+  protected openAssignPerson(): void {
+    this.assignPersonAction.emit();
   }
 }

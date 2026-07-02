@@ -1,0 +1,34 @@
+<div class="assign-person-dialog__backdrop" (click)="onBackdrop($event)">
+  <div class="assign-person-dialog__card">
+    <div class="assign-person-dialog__header">
+      <h3 class="assign-person-dialog__title">Person zuweisen</h3>
+      <button class="assign-person-dialog__close" (click)="close.emit()">
+        <pf-icon name="x" [size]="18" />
+      </button>
+    </div>
+
+    <div class="assign-person-dialog__body">
+      @if (namedPersons().length === 0) {
+        <p class="assign-person-dialog__empty">Noch keine benannten Personen angelegt.</p>
+      } @else {
+        <div class="assign-person-dialog__list">
+          @for (person of namedPersons(); track person.id) {
+            <button class="assign-person-dialog__row" (click)="pick(person.id)">
+              @if (portraitUrl(person); as url) {
+                <img class="assign-person-dialog__avatar" [src]="url" alt="" />
+              } @else {
+                <div class="assign-person-dialog__avatar assign-person-dialog__avatar--empty">
+                  <pf-icon name="user" [size]="18" />
+                </div>
+              }
+              <div class="assign-person-dialog__row-info">
+                <span class="assign-person-dialog__row-name">{{ person.name }}</span>
+                <span class="assign-person-dialog__row-count">{{ person.count }} Bilder</span>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

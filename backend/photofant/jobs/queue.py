@@ -39,6 +39,7 @@ class JobKind(StrEnum):
     FACE = "face"
     CLUSTERING = "clustering"
     BULK_EDIT = "bulk_edit"
+    BULK_ASSIGN = "bulk_assign"
     COMFYUI_RUN = "comfyui_run"
     EXPORT = "export"
     CAPTIONS = "captions"

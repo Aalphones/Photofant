@@ -109,6 +109,14 @@
     </button>
   }
 
+  @if (hasNamedPersons()) {
+    <div class="bulkbar__divider"></div>
+    <button class="bulkbar__action" (click)="openAssignPerson()" title="Person zuweisen">
+      <pf-icon name="user" [size]="15" />
+      Person
+    </button>
+  }
+
   <div class="bulkbar__divider"></div>
   <button class="bulkbar__action bulkbar__action--danger" (click)="moveToTrash()">
     <pf-icon name="trash" [size]="15" />

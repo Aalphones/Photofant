@@ -63,6 +63,10 @@ export class PersonService {
     return this.http.post<void>(`/api/persons/${personId}/reveal`, null);
   }
 
+  bulkAssignPerson(personId: number, assetIds: number[]): Observable<PersonImportResponse> {
+    return this.http.post<PersonImportResponse>(`/api/persons/${personId}/bulk-assign`, { asset_ids: assetIds });
+  }
+
   importToPersonFolder(personId: number, files: File[]): Observable<PersonImportResponse> {
     const formData = new FormData();
     for (const file of files) {
