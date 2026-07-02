@@ -1,6 +1,6 @@
 # Phase 2 — Interaktionsmodell: Dropdown / Freitext-Fuzzy / exakte Auswahl
 
-**Komplexität:** heikel (neue Architektur-Entscheidung: Fuzzy-Suche-Ansatz) · **Status:** pending
+**Komplexität:** heikel (neue Architektur-Entscheidung: Fuzzy-Suche-Ansatz) · **Status:** complete
 
 **Voraussetzung:** Phase 1 abgeschlossen (stabiler Such-Modus, sonst baut diese Phase auf wackeligem Fundament).
 
@@ -39,13 +39,17 @@ Nächste freie ADR-Nummer: **015** (015 ist frei — höchste bislang reserviert
 
 ## Umsetzung
 
-- [ ] `rapidfuzz` als Backend-Dependency hinzufügen (`mode-dependencies`-Konventionen beachten).
-- [ ] `SEARCH_MODES` (Frontend) und `SearchMode`-Enum (Backend, `assets.py:52-55`) um `'text'` erweitern.
-- [ ] `assets.py` `list_assets`: neuer Zweig `q_mode == SearchMode.TEXT` — Kandidaten (Tag-Name, Caption, Personen-Name über bestehenden Join-Pfad) holen, mit `rapidfuzz.process` scoren, Ergebnis-IDs analog zum bestehenden `semantic_score_map`-Muster (Zeile 511-518) in die Query einspeisen.
-- [ ] `search-box.ts`: Freitext-Dispatch auf `mode: 'text'` umstellen (Reducer/Action ggf. um `mode`-Parameter in `setQuery` erweitern, falls nicht schon durch Phase 1 vorbereitet).
-- [ ] `search-box.ts` `selectSuggestion()`, Zweig `type === 'tag'`: `filtersActions.setTagIds({ tagIds: [item.id!] })` dispatchen statt `searchActions.setQuery`.
-- [ ] Recent-Search-Eintrag für Tag-Auswahl (`saveRecentSearch`) ggf. anpassen, falls er bisher an der `q`-Textsuche hing.
-- [ ] Doc: `docs/routes.md` (`q_mode=text` ergänzen), `docs/models.md` falls neue Felder/Indizes, `docs/code-map.md` (Zeile „Suche") falls neue Dateien entstehen (Namensschema beachten: bleibt in `api/search.py`? Nein — Logik lebt in `assets.py`, code-map bleibt korrekt, nur prüfen ob Zeile 20 noch stimmt).
-- [ ] `docs/decisions/015-fuzzy-freitextsuche.md` anlegen (10-Zeilen-ADR: Kontext/Optionen/Entscheidung/Konsequenzen, Inhalt siehe Abschnitt oben).
+- [x] `rapidfuzz` als Backend-Dependency hinzufügen (`mode-dependencies`-Konventionen beachten).
+- [x] `SEARCH_MODES` (Frontend) und `SearchMode`-Enum (Backend, `assets.py:52-55`) um `'text'` erweitern.
+- [x] `assets.py` `list_assets`: neuer Zweig `q_mode == SearchMode.TEXT` — Kandidaten (Tag-Name, Caption, Personen-Name über bestehenden Join-Pfad) holen, mit `rapidfuzz` (`fuzz.WRatio`) scoren, Ergebnis-IDs analog zum bestehenden Score-Map-Muster in die Query einspeisen.
+- [x] `search-box.ts`: Freitext-Dispatch auf `mode: 'text'` umstellen (Reducer setzt `mode: 'text'` implizit bei `setQuery`/`clear`, kein separater `mode`-Parameter nötig).
+- [x] `search-box.ts` `selectSuggestion()`, Zweig `type === 'tag'`: `filtersActions.setTagIds({ tagIds: [item.id!] })` dispatchen statt `searchActions.setQuery`.
+- [x] Recent-Search-Eintrag für Tag-Auswahl (`saveRecentSearch`) geprüft — hing nie an der `q`-Textsuche (nimmt `item.text`/`'tag'` direkt), keine Anpassung nötig.
+- [x] Doc: `docs/routes.md` (`q_mode=text` ergänzt), `docs/code-map.md` (Suche-Zeile aktualisiert, `api/assets.py` als Träger der Fuzzy-Logik ergänzt). `docs/models.md` — keine neuen Felder/Indizes, entfällt.
+- [x] `docs/decisions/015-fuzzy-freitextsuche.md` angelegt.
 
 ## Report-Back
+
+- **Row-Count-Check:** dev-DB hat aktuell 53 Assets (weit unter der 50k-Schwelle aus der Architektur-Entscheidung) — Kandidaten werden trotzdem bewusst aus der bereits gefilterten `query` gezogen, nicht der Gesamtbibliothek (🟡-Fallback von Anfang an aktiv, siehe ADR-015).
+- **Verifiziert:** Backend-Import (`rapidfuzz.fuzz`) lädt und rechnet korrekt; `assets.py` AST-parst fehlerfrei; Frontend `tsc --noEmit` läuft ohne Fehler.
+- **Abweichung vom Plan:** `setQuery` bekam **keinen** zusätzlichen `mode`-Parameter — der Reducer setzt `mode: 'text'` fest bei jedem `setQuery`/`clear`, das deckt die AC ohne zusätzliche Action-Signatur ab.

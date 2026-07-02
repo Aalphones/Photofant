@@ -182,10 +182,12 @@ export class SearchBox {
       this.localQuery.set('');
       this.queryInput$.next('');
     } else {
-      this.localQuery.set(item.text);
-      this.queryInput$.next(item.text);
-      this.store.dispatch(searchActions.setQuery({ q: item.text }));
+      // Tag exakt filtern (statt als freien q-Text zu schicken) — sonst liefern
+      // mehrdeutige Tag-Namen falsche Treffer (ADR-015).
+      this.store.dispatch(filtersActions.setTagIds({ tagIds: [item.id!] }));
       this.saveRecentSearch(item.text, 'tag');
+      this.localQuery.set('');
+      this.queryInput$.next('');
     }
     this.isOpen.set(false);
     this.navigateToGalleryIfNeeded();

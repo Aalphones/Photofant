@@ -1,4 +1,4 @@
-export const SEARCH_MODES = ['tags', 'caption', 'semantic'] as const;
+export const SEARCH_MODES = ['tags', 'caption', 'semantic', 'text'] as const;
 export type SearchMode = (typeof SEARCH_MODES)[number];
 
 export const MEDIA_TYPES = ['photos', 'faces'] as const;

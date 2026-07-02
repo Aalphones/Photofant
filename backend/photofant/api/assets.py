@@ -15,6 +15,7 @@ import numpy as np
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+from rapidfuzz import fuzz
 from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.orm import Query as OrmQuery
 from sqlalchemy.orm import Session
@@ -37,6 +38,8 @@ DbSession = Annotated[Session, Depends(get_session)]
 
 _VALID_THUMB_SIZES = frozenset({256, 512, 1024})
 _VALID_FRAMINGS = frozenset({"close_up", "medium", "full_body"})
+# Fuzzy-Score-Schwelle (rapidfuzz.fuzz.WRatio, 0-100) fuer q_mode=text — ADR-015.
+_TEXT_FUZZY_THRESHOLD = 60
 
 
 class SortField(StrEnum):
@@ -53,6 +56,7 @@ class SearchMode(StrEnum):
     TAGS = "tags"
     CAPTION = "caption"
     SEMANTIC = "semantic"
+    TEXT = "text"
 
 
 class AssetDto(BaseModel):
@@ -486,7 +490,7 @@ async def list_assets(
         query = query.filter(Asset.id.in_(tag_sub))
 
     # Text / semantic search
-    semantic_score_map: dict[int, float] = {}
+    score_map: dict[int, float] = {}
     q_clean = (q or "").strip()
     if q_clean:
         if q_mode == SearchMode.TAGS:
@@ -514,29 +518,99 @@ async def list_assets(
             if not candidates:
                 return AssetsPage(items=[], total=0, page=page, page_size=page_size, facets=_empty_facets())
             candidate_ids = [asset_id for asset_id, _ in candidates]
-            semantic_score_map = dict(candidates)
+            score_map = dict(candidates)
             query = query.filter(Asset.id.in_(candidate_ids))
+        elif q_mode == SearchMode.TEXT:
+            # Fuzzy-Freitextsuche über Tag-Name + Caption + Personen-Name (ADR-015, Option A).
+            # Kandidaten kommen bewusst aus `query` (bereits durch alle vorigen Filter
+            # eingeschränkt) statt aus der Gesamtbibliothek — das ist der im ADR dokumentierte
+            # 🟡-Fallback, hier von Anfang an so gebaut statt erst ab einer Schwelle zuzuschalten.
+            candidate_pairs = query.with_entities(Asset.id, AssetInstance.person_id).all()
+            candidate_ids = sorted({asset_id for asset_id, _ in candidate_pairs})
+            if not candidate_ids:
+                return AssetsPage(items=[], total=0, page=page, page_size=page_size, facets=_empty_facets())
+
+            # (kind, text) statt nur text: Captions brauchen einen anderen Scorer als kurze
+            # Tag-/Personen-Namen (siehe _text_score unten).
+            candidate_texts: dict[int, list[tuple[str, str]]] = {asset_id: [] for asset_id in candidate_ids}
+
+            for asset_id, caption in (
+                session.query(Asset.id, Asset.caption)
+                .filter(Asset.id.in_(candidate_ids), Asset.caption.isnot(None))
+                .all()
+            ):
+                if caption:
+                    candidate_texts[asset_id].append(("caption", caption))
+
+            for asset_id, tag_name in (
+                session.query(AssetTag.asset_id, Tag.name)
+                .join(Tag, Tag.id == AssetTag.tag_id)
+                .filter(AssetTag.asset_id.in_(candidate_ids), AssetTag.manually_removed.is_(False))
+                .all()
+            ):
+                candidate_texts[asset_id].append(("tag", tag_name))
+
+            person_ids = {person_id for _, person_id in candidate_pairs if person_id is not None}
+            person_names: dict[int, str] = {}
+            if person_ids:
+                person_names = {
+                    person_id: name
+                    for person_id, name in (
+                        session.query(Person.id, Person.name)
+                        .filter(Person.id.in_(person_ids), Person.is_unknown.is_(False))
+                        .all()
+                    )
+                    if name is not None
+                }
+            for asset_id, person_id in candidate_pairs:
+                name = person_names.get(person_id) if person_id is not None else None
+                if name:
+                    candidate_texts[asset_id].append(("person", name))
+
+            def _text_score(kind: str, text: str) -> float:
+                # Kurze Tag-/Personen-Namen: volle String-Ähnlichkeit (fuzz.ratio). WRatio
+                # matcht bei kurzen Kandidaten gegen lange/unpassende Suchbegriffe zu oft per
+                # Teil-Alignment (getestet: "zzzzznonexistentqueryxyz" traf "nose" mit 67.5) —
+                # ein reiner Ratio-Vergleich vermeidet diese False Positives, toleriert aber
+                # weiterhin einzelne Tippfehler (z.B. "black_hiar" ./. "black_hair" -> 90).
+                # Captions: partial_ratio, weil die Eingabe nur ein Wort/Fragment eines langen
+                # Freitexts sein darf (Substring-artiges Matching, ebenfalls tippfehlertolerant).
+                if kind == "caption":
+                    return fuzz.partial_ratio(q_clean, text)
+                return fuzz.ratio(q_clean, text)
+
+            for asset_id, texts in candidate_texts.items():
+                if not texts:
+                    continue
+                best = max(_text_score(kind, text) for kind, text in texts)
+                if best >= _TEXT_FUZZY_THRESHOLD:
+                    score_map[asset_id] = best
+
+            if not score_map:
+                return AssetsPage(items=[], total=0, page=page, page_size=page_size, facets=_empty_facets())
+            query = query.filter(Asset.id.in_(score_map.keys()))
 
     facets = _compute_facets(session, query)
     version_query = _version_candidates_query(session, query)
 
     total = query.count() + version_query.count()
 
-    if semantic_score_map:
+    if score_map:
         # Version-Pseudo-Einträge übernehmen den Score des Original-Assets (kein eigener
-        # Embedding-Vektor) — siehe README: Filter/Suche greifen bei ihnen über das Original.
+        # Embedding-Vektor/Fuzzy-Match) — siehe README: Filter/Suche greifen bei ihnen über
+        # das Original. Gilt für beide score-basierten Modi (semantic + text).
         asset_rows = query.all()
         version_rows = version_query.all()
         entries = [
             _GalleryEntry(
                 kind="asset", asset=asset, instance=instance,
-                sort_key=semantic_score_map.get(asset.id, 0.0),
+                sort_key=score_map.get(asset.id, 0.0),
             )
             for asset, instance in asset_rows
         ] + [
             _GalleryEntry(
                 kind="version", asset=asset, instance=instance, version=version,
-                sort_key=semantic_score_map.get(asset.id, 0.0),
+                sort_key=score_map.get(asset.id, 0.0),
             )
             for version, instance, asset in version_rows
         ]

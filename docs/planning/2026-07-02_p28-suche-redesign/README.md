@@ -19,7 +19,7 @@
 | # | Phase | Tier | Status |
 |---|---|---|---|
 | 1 | [Bugfixes: hängender Modus, fehlender Redirect, fehlendes Reset](phase-1-bugfixes-redirect.md) | standard | complete |
-| 2 | [Interaktionsmodell: Dropdown/Freitext-Fuzzy/exakte Auswahl](phase-2-interaktionsmodell-fuzzy.md) | heikel | pending |
+| 2 | [Interaktionsmodell: Dropdown/Freitext-Fuzzy/exakte Auswahl](phase-2-interaktionsmodell-fuzzy.md) | heikel | complete |
 | 3 | [Semantische Suche: Kaltstart-Latenz beheben](phase-3-semantic-performance.md) | standard | pending |
 
 ## Finale Abnahmekriterien (Smoke, macht der User am Ende)
