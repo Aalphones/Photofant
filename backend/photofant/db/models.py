@@ -29,6 +29,8 @@ class Person(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_unknown: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    group_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class Asset(Base):

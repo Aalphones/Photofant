@@ -583,7 +583,7 @@ Aktions-Semantik (`PATCH /api/review/dupes/{id}`):
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
 | `/personen` (Liste) | `GET` | `/api/persons` | — | `PersonDto[]` (sortiert: benannt nach Count desc, Unbekannt zuletzt) |
-| `/personen` (Umbenennen) | `PATCH` | `/api/persons/{id}` | `{ name: string }` | `PersonDto` (400 bei `is_unknown`, 422 bei leerem Namen) |
+| `/personen` (Umbenennen/Gruppe setzen) | `PATCH` | `/api/persons/{id}` | `{ name?: string, group_name?: string }` | `PersonDto` (mind. eines der beiden Felder gesetzt, sonst 422; 400 bei Rename von `is_unknown`, 422 bei leerem Namen; `group_name: ""` löscht die Gruppe) |
 | `/galerie` (Person-Filter) | `GET` | `/api/assets` | `person_id` (int, optional) | `AssetsPage` — filtert auf `AssetInstance.person_id` |
 | `/galerie` (Framing-Filter) | `GET` | `/api/assets` | `framing[]` (repeatable) | `AssetsPage` — filtert auf `Asset.framing` |
 
@@ -595,6 +595,8 @@ interface PersonDto {
   count: number;           // nicht-gelöschte AssetInstances für diese Person
   fav_count: number;       // davon Favoriten
   portrait_face_id: number | null;  // bestes Face (höchster Score), Thumbnail via /api/faces/{id}/thumbnail
+  group_name: string | null;        // freie Gruppen-Zuweisung
+  created_at: string | null;        // ISO-String; NULL für Bestandspersonen (kein Backfill)
 }
 ```
 

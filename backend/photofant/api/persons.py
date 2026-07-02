@@ -11,6 +11,7 @@ import asyncio
 import logging
 import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -36,14 +37,17 @@ class PersonDto(BaseModel):
     count: int
     fav_count: int
     portrait_face_id: int | None
+    group_name: str | None
+    created_at: datetime | None
 
 
 class CreatePersonRequest(BaseModel):
     name: str
 
 
-class RenameRequest(BaseModel):
-    name: str
+class UpdatePersonRequest(BaseModel):
+    name: str | None = None
+    group_name: str | None = None
 
 
 class PersonFaceDto(BaseModel):
@@ -116,6 +120,8 @@ def _build_person_dto(session: Session, person: Person) -> PersonDto:
         count=count,
         fav_count=fav_count,
         portrait_face_id=portrait_face.id if portrait_face is not None else None,
+        group_name=person.group_name,
+        created_at=person.created_at,
     )
 
 
@@ -129,7 +135,7 @@ async def create_person(body: CreatePersonRequest, session: DbSession) -> Person
     if not name:
         raise HTTPException(status_code=422, detail="Name must not be empty")
 
-    new_person = Person(name=name, is_unknown=False)
+    new_person = Person(name=name, is_unknown=False, created_at=datetime.now(UTC).replace(tzinfo=None))
     session.add(new_person)
     session.flush()
 
@@ -177,29 +183,36 @@ async def list_person_faces(person_id: int, session: DbSession) -> list[PersonFa
 
 
 @router.patch("/{person_id}", response_model=PersonDto)
-async def rename_person(person_id: int, body: RenameRequest, session: DbSession) -> PersonDto:
+async def update_person(person_id: int, body: UpdatePersonRequest, session: DbSession) -> PersonDto:
     person = session.get(Person, person_id)
     if person is None:
         raise HTTPException(status_code=404, detail="Person not found")
-    if person.is_unknown:
-        raise HTTPException(status_code=400, detail="Cannot rename the unknown person")
-    new_name = body.name.strip()
-    if not new_name:
-        raise HTTPException(status_code=422, detail="Name must not be empty")
+    if body.name is None and body.group_name is None:
+        raise HTTPException(status_code=422, detail="Nothing to update")
 
-    from photofant.config import get_data_root
-    from photofant.media.person_folders import person_folder_name, rename_person_folder
+    if body.name is not None:
+        if person.is_unknown:
+            raise HTTPException(status_code=400, detail="Cannot rename the unknown person")
+        new_name = body.name.strip()
+        if not new_name:
+            raise HTTPException(status_code=422, detail="Name must not be empty")
 
-    old_folder_name = person_folder_name(person)
-    person.name = new_name
-    session.flush()
+        from photofant.config import get_data_root
+        from photofant.media.person_folders import person_folder_name, rename_person_folder
 
-    data_root = get_data_root()
-    await asyncio.to_thread(rename_person_folder, session, person, old_folder_name, data_root)
+        old_folder_name = person_folder_name(person)
+        person.name = new_name
+        session.flush()
+
+        data_root = get_data_root()
+        await asyncio.to_thread(rename_person_folder, session, person, old_folder_name, data_root)
+        log.info("Renamed person %d to %r", person_id, person.name)
+
+    if body.group_name is not None:
+        person.group_name = body.group_name.strip() or None
 
     session.commit()
     session.refresh(person)
-    log.info("Renamed person %d to %r", person_id, person.name)
     return _build_person_dto(session, person)
 
 

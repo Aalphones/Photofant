@@ -23,7 +23,7 @@ nach dem Import), erst der Rest wird wie bisher neu geclustert.
 | Phase | Thema | Tier | Status |
 |---|---|---|---|
 | 1 | Backend — Clustering: erst gegen bestehende Personen matchen, dann Rest clustern | standard | complete |
-| 2 | Backend — Gruppenfeld + Erstellungsdatum | standard | pending |
+| 2 | Backend — Gruppenfeld + Erstellungsdatum | standard | complete |
 | 3 | Frontend Store — Persistenz für Gruppen-Zuweisung | standard | pending |
 | 4 | Frontend UI — Toolbar, Grid, Karte, Clustering-Button | standard | pending |
 | 5 | Politur — Zusatz-Sortierungen, Empty-States, Perf-Check | standard | pending |

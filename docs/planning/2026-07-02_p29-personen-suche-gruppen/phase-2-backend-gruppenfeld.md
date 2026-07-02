@@ -1,7 +1,7 @@
 # Phase 1 — Backend: Gruppenfeld + Erstellungsdatum
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete
 
 ---
 
@@ -16,12 +16,12 @@
 
 ## Abnahme-Kriterien
 
-- [ ] Migration läuft sauber gegen die bestehende DB (`alembic upgrade head`)
-- [ ] `GET /api/persons` liefert `group_name` und `created_at` für jede Person
-- [ ] `POST /api/persons` (neue Person) setzt `created_at` automatisch
-- [ ] `PATCH /api/persons/{id}` akzeptiert `group_name` (optional, unabhängig von `name`)
-- [ ] `group_name: ""` im PATCH-Body löscht die Gruppe (wird zu `None`)
-- [ ] Weder `name` noch `group_name` gesetzt → 422
+- [x] Migration läuft sauber gegen die bestehende DB (`alembic upgrade head`)
+- [x] `GET /api/persons` liefert `group_name` und `created_at` für jede Person
+- [x] `POST /api/persons` (neue Person) setzt `created_at` automatisch
+- [x] `PATCH /api/persons/{id}` akzeptiert `group_name` (optional, unabhängig von `name`)
+- [x] `group_name: ""` im PATCH-Body löscht die Gruppe (wird zu `None`)
+- [x] Weder `name` noch `group_name` gesetzt → 422
 
 ---
 
@@ -29,18 +29,18 @@
 
 ### Migration (neu, alembic)
 
-- [ ] `alembic revision -m "add person group_name and created_at"` im `backend/`-Verzeichnis
-- [ ] Upgrade:
+- [x] `alembic revision -m "add person group_name and created_at"` im `backend/`-Verzeichnis
+- [x] Upgrade:
   ```python
   op.add_column("person", sa.Column("group_name", sa.Text(), nullable=True))
   op.add_column("person", sa.Column("created_at", sa.DateTime(), nullable=True))
   ```
-- [ ] Downgrade: beide Spalten wieder droppen
-- [ ] Kein Backfill für bestehende Zeilen — beide Felder bleiben `NULL`
+- [x] Downgrade: beide Spalten wieder droppen
+- [x] Kein Backfill für bestehende Zeilen — beide Felder bleiben `NULL`
 
 ### db/models.py
 
-- [ ] `Person`-Klasse erweitern:
+- [x] `Person`-Klasse erweitern:
   ```python
   group_name: Mapped[str | None] = mapped_column(Text, nullable=True)
   created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -49,28 +49,28 @@
 
 ### api/persons.py
 
-- [ ] `PersonDto` erweitern:
+- [x] `PersonDto` erweitern:
   ```python
   group_name: str | None
   created_at: datetime | None
   ```
-- [ ] `_build_person_dto` — beide neuen Felder durchreichen:
+- [x] `_build_person_dto` — beide neuen Felder durchreichen:
   ```python
   group_name=person.group_name,
   created_at=person.created_at,
   ```
-- [ ] `create_person` — `created_at` setzen:
+- [x] `create_person` — `created_at` setzen:
   ```python
   from datetime import UTC, datetime
   new_person = Person(name=name, is_unknown=False, created_at=datetime.now(UTC).replace(tzinfo=None))
   ```
-- [ ] `RenameRequest` → umbenennen/erweitern zu `UpdatePersonRequest`:
+- [x] `RenameRequest` → umbenennen/erweitern zu `UpdatePersonRequest`:
   ```python
   class UpdatePersonRequest(BaseModel):
       name: str | None = None
       group_name: str | None = None
   ```
-- [ ] `rename_person` → `update_person` umbauen:
+- [x] `rename_person` → `update_person` umbauen:
   ```python
   @router.patch("/{person_id}", response_model=PersonDto)
   async def update_person(person_id: int, body: UpdatePersonRequest, session: DbSession) -> PersonDto:
@@ -105,5 +105,5 @@
 
 ## Doc-Updates
 
-- [ ] `docs/models.md` — `Person`-Tabelle um `group_name`, `created_at` ergänzen
-- [ ] `docs/routes.md` — `PATCH /api/persons/{id}` Request-Body-Doku aktualisieren
+- [x] `docs/models.md` — `Person`-Tabelle um `group_name`, `created_at` ergänzen
+- [x] `docs/routes.md` — `PATCH /api/persons/{id}` Request-Body-Doku aktualisieren

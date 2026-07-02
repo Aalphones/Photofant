@@ -22,13 +22,15 @@ JSON blob. Replaces the former `app_config`-blob storage.
 > **`app_config` (migration 0001) was dropped in migration 0013.** All user settings now
 > live in `.photofant/settings.json` (see `photofant/settings.py`), not the DB.
 
-### `person` (migration 0002)
+### `person` (migration 0002, erweitert 0026)
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | INTEGER PK | |
 | `name` | TEXT | nullable; `_unknown` for the seed row |
 | `is_unknown` | BOOLEAN | `1` for the `_unknown` catch-all person |
+| `group_name` | TEXT | nullable; freie Gruppen-Zuweisung (z.B. „Familie") |
+| `created_at` | DATETIME | nullable; `NULL` für Bestandspersonen (kein Backfill), neue Personen setzen UTC-Zeitstempel |
 
 Seed row: `id=1, name='_unknown', is_unknown=1` — inserted by migration 0002.
 
