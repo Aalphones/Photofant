@@ -1,10 +1,10 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-02_p29-personen-suche-gruppen/`
-**Phase:** 3/6 — Frontend Store: Persistenz für Gruppen-Zuweisung (pending)
-**Nächster Schritt:** Phase-3-Checkliste in `phase-3-store-persistenz.md` abarbeiten.
-Phase 2 fertig: `Person.group_name`/`created_at` (Migration 0026), `PersonDto` erweitert,
-`PATCH /persons/{id}` nimmt jetzt `name`/`group_name` unabhängig entgegen (422 wenn beides
-leer). Backend ruff+pytest sauber (12 vorbestehende, unabhängige ComfyUI-Test-Fehler ignoriert).
-Doc-Updates (`docs/models.md`, `docs/routes.md`) erledigt.
-Committen steht noch aus (`mode-committing`), danach `/clear` vor Phase 3.
+**Phase:** 4/6 — Frontend UI: Toolbar, Grid, Karte, Clustering-Button (pending)
+**Nächster Schritt:** Phase-4-Checkliste in `phase-4-toolbar-grid-ansichten.md` abarbeiten.
+
+Phase 3 fertig: `PersonDto` um `group_name`/`created_at` erweitert, neue Action
+`setPersonGroup` (+ Success/Failure), Effect + Reducer analog `renamePerson`.
+`docs/clients.md` existiert nicht im Projekt — Doc-Update entfällt. `npm run lint`
+(tsc --noEmit) sauber. Committen steht noch aus, danach `/clear` vor Phase 4.

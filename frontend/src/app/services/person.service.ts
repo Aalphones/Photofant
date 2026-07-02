@@ -31,6 +31,10 @@ export class PersonService {
     return this.http.patch<PersonDto>(`/api/persons/${id}`, { name });
   }
 
+  setPersonGroup(id: number, groupName: string | null): Observable<PersonDto> {
+    return this.http.patch<PersonDto>(`/api/persons/${id}`, { group_name: groupName });
+  }
+
   mergePersons(fromId: number, intoId: number): Observable<MergeResult> {
     return this.http.post<MergeResult>('/api/persons/merge', { from_id: fromId, into_id: intoId });
   }

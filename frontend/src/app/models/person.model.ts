@@ -5,6 +5,8 @@ export interface PersonDto {
   count: number;
   fav_count: number;
   portrait_face_id: number | null;
+  group_name: string | null;
+  created_at: string | null;
 }
 
 export interface PersonFace {

@@ -44,6 +44,20 @@ export class PersonsEffects {
     )
   );
 
+  readonly setPersonGroup$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(personsActions.setPersonGroup),
+      mergeMap(({ id, groupName }) =>
+        this.personService.setPersonGroup(id, groupName).pipe(
+          map((person: PersonDto) => personsActions.setPersonGroupSuccess({ person })),
+          catchError((error: HttpErrorResponse) =>
+            of(personsActions.setPersonGroupFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
   readonly mergePersons$ = createEffect(() =>
     this.actions$.pipe(
       ofType(personsActions.mergePersons),

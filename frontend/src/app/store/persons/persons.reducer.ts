@@ -49,6 +49,13 @@ export const personsFeature = createFeature({
       ...state,
       error,
     })),
+    on(personsActions.setPersonGroupSuccess, (state: PersonsState, { person }) =>
+      adapter.updateOne({ id: person.id, changes: person }, state)
+    ),
+    on(personsActions.setPersonGroupFailure, (state: PersonsState, { error }) => ({
+      ...state,
+      error,
+    })),
     on(personsActions.triggerClustering, (state: PersonsState) => ({
       ...state,
       isClustering: true,

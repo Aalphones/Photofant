@@ -1,7 +1,7 @@
 # Phase 2 — Frontend Store: Persistenz für Gruppen-Zuweisung
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete
 **Voraussetzung:** Phase 1 abgeschlossen (Backend liefert `group_name`/`created_at`)
 
 ---
@@ -22,9 +22,9 @@ Gruppen-Zuweisung ab.
 
 ## Abnahme-Kriterien
 
-- [ ] `store.dispatch(personsActions.setPersonGroup({ id, groupName }))` persistiert die Gruppe im Backend
-- [ ] Nach Erfolg: Person im Store aktualisiert (`group_name` sichtbar in `selectAll`)
-- [ ] Fehlerfall: `error`-State gesetzt, keine optimistische UI-Änderung, die hängen bleibt
+- [x] `store.dispatch(personsActions.setPersonGroup({ id, groupName }))` persistiert die Gruppe im Backend
+- [x] Nach Erfolg: Person im Store aktualisiert (`group_name` sichtbar in `selectAll`)
+- [x] Fehlerfall: `error`-State gesetzt, keine optimistische UI-Änderung, die hängen bleibt
 
 ---
 
@@ -32,11 +32,11 @@ Gruppen-Zuweisung ab.
 
 ### models/person.model.ts
 
-- [ ] `PersonDto` um `group_name: string | null` und `created_at: string | null` erweitern
+- [x] `PersonDto` um `group_name: string | null` und `created_at: string | null` erweitern
 
 ### services/person.service.ts
 
-- [ ] Neue Methode (oder bestehende `renamePerson` umbauen, falls Backend-PATCH vereinheitlicht wurde):
+- [x] Neue Methode (oder bestehende `renamePerson` umbauen, falls Backend-PATCH vereinheitlicht wurde):
   ```typescript
   setPersonGroup(id: number, groupName: string | null): Observable<PersonDto> {
     return this.http.patch<PersonDto>(`/api/persons/${id}`, { group_name: groupName });
@@ -45,7 +45,7 @@ Gruppen-Zuweisung ab.
 
 ### store/persons/persons.actions.ts
 
-- [ ] Neue Events ergänzen:
+- [x] Neue Events ergänzen:
   ```typescript
   'Set Person Group':         props<{ id: number; groupName: string | null }>()
   'Set Person Group Success': props<{ person: PersonDto }>()
@@ -54,7 +54,7 @@ Gruppen-Zuweisung ab.
 
 ### store/persons/persons.effects.ts
 
-- [ ] `setPersonGroup$`-Effect (analog `renamePerson$`):
+- [x] `setPersonGroup$`-Effect (analog `renamePerson$`):
   ```typescript
   readonly setPersonGroup$ = createEffect(() =>
     this.actions$.pipe(
@@ -73,7 +73,7 @@ Gruppen-Zuweisung ab.
 
 ### store/persons/persons.reducer.ts
 
-- [ ] `on(personsActions.setPersonGroupSuccess, ...)`:
+- [x] `on(personsActions.setPersonGroupSuccess, ...)`:
   ```typescript
   on(personsActions.setPersonGroupSuccess, (state: PersonsState, { person }) =>
     adapter.updateOne({ id: person.id, changes: person }, state)
@@ -88,4 +88,4 @@ Gruppen-Zuweisung ab.
 
 ## Doc-Updates
 
-- [ ] `docs/clients.md` — `PersonService.setPersonGroup` ergänzen, falls die Datei existiert
+- [x] `docs/clients.md` — existiert nicht im Projekt, entfällt
