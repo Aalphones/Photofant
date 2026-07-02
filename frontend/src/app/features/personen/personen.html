@@ -21,19 +21,106 @@
       <pf-icon name="merge" [size]="14" />
       Zusammenführen
     </button>
-  </div>
-  <div class="personen__grid">
-    @for (person of persons(); track person.id) {
-      <pf-person-card
-        [person]="person"
-        (select)="onSelect(person)"
-        (rename)="onRename($event)"
-        (importFiles)="onImportFiles($event)"
-        (splitClick)="onSplitClick(person)"
-        (dupeCheck)="onDupeCheck(person)"
-        (revealInFileBrowser)="onRevealInFileBrowser(person)"
+    <button
+      class="personen__action-btn"
+      [disabled]="isClustering()"
+      (click)="triggerClustering()"
+      title="Gruppiert alle unbekannten Gesichter neu"
+    >
+      @if (isClustering()) {
+        <span class="spinner"></span> Läuft…
+      } @else {
+        <pf-icon name="scan" [size]="14" />
+        Clustering starten
+      }
+    </button>
+
+    <div class="personen__search">
+      <pf-icon name="search" [size]="14" />
+      <input
+        type="text"
+        placeholder="Personen durchsuchen…"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
       />
-    }
+    </div>
+
+    <button class="personen__action-btn" (click)="cycleSortKey()" [title]="'Sortiert nach: ' + sortLabel()">
+      <pf-icon name="sort" [size]="14" />
+      {{ sortLabel() }}
+    </button>
+
+    <div class="personen__view-toggle">
+      <button [class.active]="viewMode() === 'single'" (click)="setViewMode('single')" title="Einzelfoto"><pf-icon name="album" [size]="14" /></button>
+      <button [class.active]="viewMode() === 'grid4'" (click)="setViewMode('grid4')" title="4er-Grid"><pf-icon name="layers" [size]="14" /></button>
+      <button [class.active]="viewMode() === 'face'" (click)="setViewMode('face')" title="Gesichtsausschnitt"><pf-icon name="face" [size]="14" /></button>
+    </div>
+  </div>
+
+  @if (availableGroups().length > 0) {
+    <div class="personen__group-chips">
+      @for (group of availableGroups(); track group) {
+        <button
+          class="personen__group-chip"
+          [class.personen__group-chip--active]="groupFilter().has(group)"
+          [style.--chip-color]="groupColor(group)"
+          (click)="toggleGroupFilter(group)"
+        >{{ group }}</button>
+      }
+    </div>
+  }
+
+  <div class="personen__body">
+    <div class="personen__content">
+      @if (sortKey() === 'group') {
+        @for (bucket of personGroups(); track bucket.label) {
+          <section class="personen__section">
+            <div class="personen__section-head">
+              <h3 class="personen__section-label">{{ bucket.label }}</h3>
+              <span class="personen__section-count">{{ bucket.persons.length }}</span>
+              <div class="personen__section-line"></div>
+            </div>
+            <div class="personen__grid">
+              @for (person of bucket.persons; track person.id) {
+                <div [id]="'person-' + person.id">
+                  <pf-person-card
+                    [person]="person"
+                    [viewMode]="viewMode()"
+                    (select)="onSelect(person)"
+                    (rename)="onRename($event)"
+                    (setGroup)="onSetGroup($event)"
+                    (importFiles)="onImportFiles($event)"
+                    (splitClick)="onSplitClick(person)"
+                    (dupeCheck)="onDupeCheck(person)"
+                    (revealInFileBrowser)="onRevealInFileBrowser(person)"
+                  />
+                </div>
+              }
+            </div>
+          </section>
+        }
+      } @else {
+        <div class="personen__grid">
+          @for (person of sortedPersons(); track person.id) {
+            <div [id]="'person-' + person.id">
+              <pf-person-card
+                [person]="person"
+                [viewMode]="viewMode()"
+                (select)="onSelect(person)"
+                (rename)="onRename($event)"
+                (setGroup)="onSetGroup($event)"
+                (importFiles)="onImportFiles($event)"
+                (splitClick)="onSplitClick(person)"
+                (dupeCheck)="onDupeCheck(person)"
+                (revealInFileBrowser)="onRevealInFileBrowser(person)"
+              />
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <pf-alphabet-rail [persons]="sortedPersons()" (jump)="onAlphabetJump($event)" />
   </div>
 }
 

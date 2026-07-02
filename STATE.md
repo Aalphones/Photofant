@@ -1,10 +1,13 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-02_p29-personen-suche-gruppen/`
-**Phase:** 4/6 — Frontend UI: Toolbar, Grid, Karte, Clustering-Button (pending)
-**Nächster Schritt:** Phase-4-Checkliste in `phase-4-toolbar-grid-ansichten.md` abarbeiten.
+**Phase:** 5/6 — Politur: Zusatz-Sortierungen, Empty-States, Perf-Check (pending)
+**Nächster Schritt:** Phase-5-Checkliste in `phase-5-politur.md` abarbeiten (optionale Erweiterung — kann auch im Backlog bleiben).
 
-Phase 3 fertig: `PersonDto` um `group_name`/`created_at` erweitert, neue Action
-`setPersonGroup` (+ Success/Failure), Effect + Reducer analog `renamePerson`.
-`docs/clients.md` existiert nicht im Projekt — Doc-Update entfällt. `npm run lint`
-(tsc --noEmit) sauber. Committen steht noch aus, danach `/clear` vor Phase 4.
+Phase 4 fertig: Toolbar (Suche, Sortier-Zyklus, View-Toggle, Clustering-Button),
+Gruppen-Filter-Chips, gruppierte Section-Header, neue `alphabet-rail`-Komponente,
+`group-color.util.ts`, Personen-Karte um Gruppen-Zuweisung + 3 View-Modi
+(Einzelfoto/4er-Grid/Gesichtsausschnitt, über bestehende `getPersonFaces` +
+`AssetService.thumbnailUrl` gelöst — kein neues Backend-Feld nötig).
+`docs/code-map.md` nachgezogen. `npm run lint` (tsc --noEmit) sauber.
+Committen steht noch aus, danach `/clear` vor Phase 5.

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  effect,
   ElementRef,
   inject,
   input,
@@ -9,9 +10,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { PersonDto } from '@photofant/models';
+import type { PersonDto, PersonFace } from '@photofant/models';
 import { Icon } from '@photofant/ui';
-import { PersonService } from '@photofant/services';
+import { AssetService, PersonService } from '@photofant/services';
+import { groupColor } from '../group-color.util';
+
+export type PersonViewMode = 'single' | 'grid4' | 'face';
 
 @Component({
   selector: 'pf-person-card',
@@ -22,11 +26,16 @@ import { PersonService } from '@photofant/services';
 })
 export class PersonCard {
   private readonly personService = inject(PersonService);
+  private readonly assetService = inject(AssetService);
+
+  protected readonly groupColor = groupColor;
 
   readonly person = input.required<PersonDto>();
+  readonly viewMode = input<PersonViewMode>('face');
 
   readonly select = output<void>();
   readonly rename = output<{ id: number; name: string }>();
+  readonly setGroup = output<{ id: number; groupName: string }>();
   readonly importFiles = output<{ personId: number; files: File[] }>();
   readonly splitClick = output<void>();
   readonly dupeCheck = output<void>();
@@ -34,16 +43,47 @@ export class PersonCard {
 
   protected readonly isEditing = signal(false);
   protected readonly editName = signal('');
+  protected readonly isEditingGroup = signal(false);
+  protected readonly editGroupName = signal('');
   protected readonly isDragOver = signal(false);
   protected readonly actionsVisible = signal(false);
+  protected readonly extraPhotoUrls = signal<string[]>([]);
 
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastLoadedPersonId: number | null = null;
 
   private readonly nameInputRef = viewChild<ElementRef<HTMLInputElement>>('nameInput');
+  private readonly groupInputRef = viewChild<ElementRef<HTMLInputElement>>('groupInput');
+
+  constructor() {
+    effect(() => {
+      const mode = this.viewMode();
+      const personId = this.person().id;
+      if (mode === 'face') { return; }
+      if (this.lastLoadedPersonId === personId && this.extraPhotoUrls().length > 0) { return; }
+      this.lastLoadedPersonId = personId;
+      this.personService.getPersonFaces(personId).subscribe((faces: PersonFace[]) => {
+        const urls = faces
+          .filter((face: PersonFace) => face.asset_id != null)
+          .slice(0, 4)
+          .map((face: PersonFace) => this.assetService.thumbnailUrl(face.asset_id as number));
+        this.extraPhotoUrls.set(urls);
+      });
+    });
+  }
 
   protected get avatarUrl(): string | null {
     const faceId = this.person().portrait_face_id;
     return faceId != null ? this.personService.portraitUrl(faceId) : null;
+  }
+
+  protected get singleImageUrl(): string | null {
+    return this.extraPhotoUrls()[0] ?? this.avatarUrl;
+  }
+
+  protected get gridImageUrls(): string[] {
+    const urls = this.extraPhotoUrls();
+    return urls.length > 0 ? urls : (this.avatarUrl != null ? [this.avatarUrl] : []);
   }
 
   protected get displayName(): string {
@@ -103,6 +143,33 @@ export class PersonCard {
     event.stopPropagation();
     this.actionsVisible.set(false);
     this.startEdit();
+  }
+
+  private startEditGroup(): void {
+    this.editGroupName.set(this.person().group_name ?? '');
+    this.isEditingGroup.set(true);
+    setTimeout(() => { this.groupInputRef()?.nativeElement.focus(); }, 0);
+  }
+
+  protected confirmGroupEdit(): void {
+    this.setGroup.emit({ id: this.person().id, groupName: this.editGroupName().trim() });
+    this.isEditingGroup.set(false);
+  }
+
+  protected cancelGroupEdit(): void {
+    this.isEditingGroup.set(false);
+  }
+
+  protected onGroupEditKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') { this.confirmGroupEdit(); }
+    if (event.key === 'Escape') { this.cancelGroupEdit(); }
+    event.stopPropagation();
+  }
+
+  protected onGroupClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.actionsVisible.set(false);
+    this.startEditGroup();
   }
 
   protected onSplitClick(event: MouseEvent): void {

@@ -1,0 +1,35 @@
+:host {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  flex: none;
+}
+
+.alphabet-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 2px;
+}
+
+.alphabet-rail__letter {
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--text-3);
+  text-align: center;
+  padding: 1px 3px;
+  border-radius: 3px;
+  opacity: 0.3;
+  cursor: default;
+
+  &--active {
+    color: var(--text-2);
+    opacity: 1;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface-2);
+      color: var(--accent);
+    }
+  }
+}

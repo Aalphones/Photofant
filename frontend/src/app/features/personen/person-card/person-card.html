@@ -24,6 +24,14 @@
       </button>
       <button
         class="person-card__hover-btn"
+        (click)="onGroupClick($event)"
+        aria-label="Gruppe zuweisen"
+        title="Gruppe zuweisen"
+      >
+        <pf-icon name="tag" [size]="14" />
+      </button>
+      <button
+        class="person-card__hover-btn"
         (click)="onSplitClick($event)"
         aria-label="Person aufteilen"
         title="Gesichter abspalten"
@@ -59,12 +67,23 @@
 
   <!-- Avatar -->
   <div class="person-card__avatar-wrap">
-    @if (avatarUrl) {
+    @if (viewMode() === 'grid4' && gridImageUrls.length > 1) {
+      <div class="person-card__avatar person-card__avatar--grid4">
+        @for (url of gridImageUrls; track url) {
+          <img [src]="url" alt="" loading="lazy" />
+        }
+      </div>
+    } @else if (viewMode() === 'single' && singleImageUrl) {
+      <img class="person-card__avatar" [src]="singleImageUrl" alt="" loading="lazy" />
+    } @else if (avatarUrl) {
       <img class="person-card__avatar" [src]="avatarUrl" alt="" loading="lazy" />
     } @else {
       <div class="person-card__avatar person-card__avatar--placeholder">
         <pf-icon name="user" [size]="40" />
       </div>
+    }
+    @if (person().group_name) {
+      <span class="person-card__group-badge" [style.--chip-color]="groupColor(person().group_name!)">{{ person().group_name }}</span>
     }
   </div>
 
@@ -85,6 +104,26 @@
             <pf-icon name="check" [size]="12" />
           </button>
           <button class="person-card__editor-btn" (click)="cancelEdit()" aria-label="Abbrechen">
+            <pf-icon name="x" [size]="12" />
+          </button>
+        </div>
+      </div>
+    } @else if (isEditingGroup()) {
+      <div class="person-card__editor" (click)="$event.stopPropagation()">
+        <input
+          #groupInput
+          class="person-card__name-input"
+          placeholder="Gruppe…"
+          [value]="editGroupName()"
+          (input)="editGroupName.set($any($event.target).value)"
+          (keydown)="onGroupEditKeydown($event)"
+          maxlength="80"
+        />
+        <div class="person-card__editor-actions">
+          <button class="person-card__editor-btn" (click)="confirmGroupEdit()" aria-label="Bestätigen">
+            <pf-icon name="check" [size]="12" />
+          </button>
+          <button class="person-card__editor-btn" (click)="cancelGroupEdit()" aria-label="Abbrechen">
             <pf-icon name="x" [size]="12" />
           </button>
         </div>

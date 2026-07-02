@@ -8,8 +8,9 @@
 .personen__toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .personen__action-btn {
@@ -28,6 +29,131 @@
   &:hover {
     background: var(--surface-3, var(--line));
   }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.personen__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  min-width: 200px;
+
+  input {
+    border: none;
+    background: transparent;
+    outline: none;
+    color: var(--text);
+    font-size: 12.5px;
+    width: 100%;
+
+    &::placeholder {
+      color: var(--text-3);
+    }
+  }
+}
+
+.personen__view-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 6px;
+  background: var(--surface-2);
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    color: var(--text-3);
+    transition: background 0.12s, color 0.12s;
+
+    &:hover {
+      color: var(--text);
+    }
+
+    &.active {
+      background: var(--surface-3, var(--line));
+      color: var(--accent);
+    }
+  }
+}
+
+.personen__group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.personen__group-chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &--active {
+    color: #fff;
+    background: var(--chip-color, var(--accent));
+    border-color: var(--chip-color, var(--accent));
+  }
+}
+
+.personen__body {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.personen__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.personen__section {
+  margin-bottom: 8px;
+}
+
+.personen__section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0 10px;
+}
+
+.personen__section-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.personen__section-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+  flex: none;
+}
+
+.personen__section-line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 
 .personen__grid {

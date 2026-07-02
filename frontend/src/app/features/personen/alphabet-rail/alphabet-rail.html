@@ -1,0 +1,10 @@
+<div class="alphabet-rail">
+  @for (letter of letters; track letter) {
+    <button
+      class="alphabet-rail__letter"
+      [class.alphabet-rail__letter--active]="isAvailable(letter)"
+      [disabled]="!isAvailable(letter)"
+      (click)="onLetterClick(letter)"
+    >{{ letter }}</button>
+  }
+</div>

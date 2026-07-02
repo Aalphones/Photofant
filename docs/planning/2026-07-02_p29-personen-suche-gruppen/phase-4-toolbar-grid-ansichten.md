@@ -1,7 +1,7 @@
-# Phase 3 — Frontend UI: Toolbar, Grid, Karte, Clustering-Button
+# Phase 4 — Frontend UI: Toolbar, Grid, Karte, Clustering-Button
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete
 **Voraussetzung:** Phase 2 abgeschlossen (`group_name`/`created_at` im Store)
 
 ---
@@ -25,14 +25,14 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
 
 ## Abnahme-Kriterien
 
-- [ ] Schnellsuche filtert live nach `name` (case-insensitive, `is_unknown`-Personen bleiben durchsuchbar über „Unbekannt")
-- [ ] Sortier-Icon zykelt Gruppe → Erstellungsdatum (neueste zuerst) → Name (A-Z), Label zeigt aktuellen Modus
-- [ ] Bei Sortierung „Gruppe": Section-Header pro Gruppe (Stil wie `grid__month-head`), „Ohne Gruppe" als letzter Bucket
-- [ ] Gruppen-Filter-Chips: Mehrfachauswahl, nur Gruppen zeigen, die tatsächlich vergeben sind
-- [ ] View-Toggle: Einzelfoto / 4er-Grid / Gesichtsausschnitt (aktuelles Verhalten), Auswahl bleibt für die Session erhalten
-- [ ] Alphabet-Leiste springt zur ersten Person mit passendem Anfangsbuchstaben
-- [ ] Gruppen-Zuweisung an der Personen-Karte (Freitext, analog Rename-Inline-Edit)
-- [ ] „Clustering starten"-Button in der Personen-Toolbar, nutzt bestehenden `isClustering`-State
+- [x] Schnellsuche filtert live nach `name` (case-insensitive, `is_unknown`-Personen bleiben durchsuchbar über „Unbekannt")
+- [x] Sortier-Icon zykelt Gruppe → Erstellungsdatum (neueste zuerst) → Name (A-Z), Label zeigt aktuellen Modus
+- [x] Bei Sortierung „Gruppe": Section-Header pro Gruppe (Stil wie `grid__month-head`), „Ohne Gruppe" als letzter Bucket
+- [x] Gruppen-Filter-Chips: Mehrfachauswahl, nur Gruppen zeigen, die tatsächlich vergeben sind
+- [x] View-Toggle: Einzelfoto / 4er-Grid / Gesichtsausschnitt (aktuelles Verhalten), Auswahl bleibt für die Session erhalten
+- [x] Alphabet-Leiste springt zur ersten Person mit passendem Anfangsbuchstaben
+- [x] Gruppen-Zuweisung an der Personen-Karte (Freitext, analog Rename-Inline-Edit)
+- [x] „Clustering starten"-Button in der Personen-Toolbar, nutzt bestehenden `isClustering`-State
 
 ---
 
@@ -40,19 +40,19 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
 
 ### personen.ts — lokaler Filter-/Sortier-/View-State
 
-- [ ] Neue Typen (lokal in der Datei oder `personen.model.ts`, falls es das schon gibt):
+- [x] Neue Typen (lokal in der Datei oder `personen.model.ts`, falls es das schon gibt):
   ```typescript
   type PersonSortKey = 'group' | 'created' | 'name';
   type PersonViewMode = 'single' | 'grid4' | 'face';
   ```
-- [ ] Signals:
+- [x] Signals:
   ```typescript
   protected readonly searchQuery = signal('');
   protected readonly sortKey     = signal<PersonSortKey>('group');
   protected readonly groupFilter = signal<Set<string>>(new Set());
   protected readonly viewMode    = signal<PersonViewMode>('face');
   ```
-- [ ] `availableGroups` computed — alle vorkommenden `group_name`-Werte, sortiert:
+- [x] `availableGroups` computed — alle vorkommenden `group_name`-Werte, sortiert:
   ```typescript
   protected readonly availableGroups = computed((): string[] => {
     const names = new Set<string>();
@@ -62,7 +62,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     return [...names].sort((a, b) => a.localeCompare(b));
   });
   ```
-- [ ] `filteredPersons` computed — Suche + Gruppen-Filter anwenden (vor Sortierung):
+- [x] `filteredPersons` computed — Suche + Gruppen-Filter anwenden (vor Sortierung):
   ```typescript
   protected readonly filteredPersons = computed((): PersonDto[] => {
     const query = this.searchQuery().trim().toLowerCase();
@@ -79,7 +79,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     });
   });
   ```
-- [ ] `sortedPersons` computed — nach `sortKey()`:
+- [x] `sortedPersons` computed — nach `sortKey()`:
   ```typescript
   protected readonly sortedPersons = computed((): PersonDto[] => {
     const list = [...this.filteredPersons()];
@@ -96,7 +96,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     return list; // 'group' — Gruppierung übernimmt die Sortierung in personGroups()
   });
   ```
-- [ ] `personGroups` computed — nur relevant für `sortKey() === 'group'`, sonst leer:
+- [x] `personGroups` computed — nur relevant für `sortKey() === 'group'`, sonst leer:
   ```typescript
   protected readonly personGroups = computed((): { label: string; persons: PersonDto[] }[] => {
     if (this.sortKey() !== 'group') { return []; }
@@ -115,7 +115,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     return entries.map(([label, persons]) => ({ label, persons }));
   });
   ```
-- [ ] `cycleSortKey()`:
+- [x] `cycleSortKey()`:
   ```typescript
   private readonly SORT_CYCLE: PersonSortKey[] = ['group', 'created', 'name'];
 
@@ -131,7 +131,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     return labels[this.sortKey()];
   }
   ```
-- [ ] `toggleGroupFilter(groupName: string)`:
+- [x] `toggleGroupFilter(groupName: string)`:
   ```typescript
   protected toggleGroupFilter(groupName: string): void {
     const next = new Set(this.groupFilter());
@@ -139,7 +139,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     this.groupFilter.set(next);
   }
   ```
-- [ ] `setViewMode(mode: PersonViewMode)` + `onSetGroup(event: { id: number; groupName: string })`:
+- [x] `setViewMode(mode: PersonViewMode)` + `onSetGroup(event: { id: number; groupName: string })`:
   ```typescript
   protected setViewMode(mode: PersonViewMode): void {
     this.viewMode.set(mode);
@@ -158,7 +158,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
 
 ### group-color.util.ts (neu, co-located in `features/personen/`)
 
-- [ ] Deterministische Hash → HSL-Farbe (keine externe Lib nötig):
+- [x] Deterministische Hash → HSL-Farbe (keine externe Lib nötig):
   ```typescript
   export function groupColor(groupName: string): string {
     let hash = 0;
@@ -173,7 +173,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
 
 ### personen.html — Toolbar erweitern
 
-- [ ] Schnellsuche-Input (debounced über `signal` reicht, kein RxJS nötig bei clientseitigem Filter):
+- [x] Schnellsuche-Input (debounced über `signal` reicht, kein RxJS nötig bei clientseitigem Filter):
   ```html
   <div class="personen__search">
     <pf-icon name="search" [size]="14" />
@@ -185,14 +185,14 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     />
   </div>
   ```
-- [ ] Sortier-Button:
+- [x] Sortier-Button:
   ```html
   <button class="personen__action-btn" (click)="cycleSortKey()" [title]="'Sortiert nach: ' + sortLabel()">
     <pf-icon name="sort" [size]="14" />
     {{ sortLabel() }}
   </button>
   ```
-- [ ] Gruppen-Filter-Chips (nur wenn `availableGroups().length > 0`):
+- [x] Gruppen-Filter-Chips (nur wenn `availableGroups().length > 0`):
   ```html
   @if (availableGroups().length > 0) {
     <div class="personen__group-chips">
@@ -207,7 +207,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     </div>
   }
   ```
-- [ ] View-Toggle (3 Icons):
+- [x] View-Toggle (3 Icons):
   ```html
   <div class="personen__view-toggle">
     <button [class.active]="viewMode() === 'single'" (click)="setViewMode('single')" title="Einzelfoto"><pf-icon name="album" [size]="14" /></button>
@@ -215,7 +215,7 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
     <button [class.active]="viewMode() === 'face'" (click)="setViewMode('face')" title="Gesichtsausschnitt"><pf-icon name="face" [size]="14" /></button>
   </div>
   ```
-- [ ] Clustering-Button (analog `backup-wartung.html` Zeile 18-28, kompakter):
+- [x] Clustering-Button (analog `backup-wartung.html` Zeile 18-28, kompakter):
   ```html
   <button class="personen__action-btn" [disabled]="isClustering()" (click)="triggerClustering()" title="Gruppiert alle unbekannten Gesichter neu">
     @if (isClustering()) {
@@ -228,32 +228,32 @@ geladen ist. Section-Header (Gruppierung) erscheinen **nur**, wenn
 
 ### personen.html — Grid mit Section-Headern
 
-- [ ] Bei `sortKey() === 'group'`: `personGroups()` mit Headern rendern (Stil analog `grid__month-head`)
-- [ ] Sonst: `sortedPersons()` flach rendern
-- [ ] Alphabet-Leiste als eigene Komponente einbinden (siehe unten), `personen` an `sortedPersons()` weiterreichen
+- [x] Bei `sortKey() === 'group'`: `personGroups()` mit Headern rendern (Stil analog `grid__month-head`)
+- [x] Sonst: `sortedPersons()` flach rendern
+- [x] Alphabet-Leiste als eigene Komponente einbinden (siehe unten), `personen` an `sortedPersons()` weiterreichen
 
 ### alphabet-rail (neu, `features/personen/alphabet-rail/`)
 
-- [ ] `ng generate component features/personen/alphabet-rail --skip-tests`
-- [ ] Input: `persons = input<PersonDto[]>([])`, Output: `jump = output<number>()` (Personen-ID der ersten Person mit dem Buchstaben)
-- [ ] Berechnet vorhandene Anfangsbuchstaben aus `persons()`, disabled für fehlende Buchstaben
-- [ ] `Personen`-Komponente: `scrollIntoView` auf die passende `pf-person-card` (via `id`-Attribut oder `ViewChildren` + `find`)
+- [x] `ng generate component features/personen/alphabet-rail --skip-tests`
+- [x] Input: `persons = input<PersonDto[]>([])`, Output: `jump = output<number>()` (Personen-ID der ersten Person mit dem Buchstaben)
+- [x] Berechnet vorhandene Anfangsbuchstaben aus `persons()`, disabled für fehlende Buchstaben
+- [x] `Personen`-Komponente: `scrollIntoView` auf die passende `pf-person-card` (via `id`-Attribut oder `ViewChildren` + `find`)
 
 ### person-card.ts / .html — Gruppen-Zuweisung + View-Modi
 
-- [ ] Neuer Output: `setGroup = output<{ id: number; groupName: string }>()`
-- [ ] Long-Press-Menü um „Gruppe zuweisen" erweitern (analog `onRenameClick`/`startEdit`-Pattern), eigenes Signal `isEditingGroup`
-- [ ] Neuer Input: `viewMode = input<'single' | 'grid4' | 'face'>('face')`
-- [ ] Template: je nach `viewMode()` unterschiedliche Bild-Darstellung:
+- [x] Neuer Output: `setGroup = output<{ id: number; groupName: string }>()`
+- [x] Long-Press-Menü um „Gruppe zuweisen" erweitern (analog `onRenameClick`/`startEdit`-Pattern), eigenes Signal `isEditingGroup`
+- [x] Neuer Input: `viewMode = input<'single' | 'grid4' | 'face'>('face')`
+- [x] Template: je nach `viewMode()` unterschiedliche Bild-Darstellung:
   - `face`: aktuelles Verhalten (Portrait-Face-Crop) — unverändert
   - `single`: größtes/erstes reguläres Foto der Person (neuer Service-Call oder vorhandenes Feld nutzen — 🟡 prüfen ob `PersonFaceDto`/Asset-Thumbnail dafür reicht oder ein neues DTO-Feld nötig ist)
   - `grid4`: 2×2-Ausschnitt aus bis zu 4 Fotos/Gesichtern der Person
   - 🟡 **Scope-Check:** falls `single`/`grid4` ein neues Backend-Feld brauchen (z.B. `recent_photo_urls: string[]`), das in FINDINGS.md festhalten und ggf. als eigene Mini-Iteration nachziehen statt Phase 3 zu sprengen — Kernanforderung (Suche/Gruppe/Sortierung) hat Vorrang vor der Bild-Vielfalt der View-Modi.
-- [ ] `person-card.scss`: Gruppen-Badge (nutzt `groupColor()`) klein am Kartenrand, nicht aufdringlich
+- [x] `person-card.scss`: Gruppen-Badge (nutzt `groupColor()`) klein am Kartenrand, nicht aufdringlich
 
 ---
 
 ## Doc-Updates
 
-- [ ] `docs/code-map.md` — `alphabet-rail`, `group-color.util.ts` unter `features/personen/` ergänzen
-- [ ] Keine neuen Settings-Keys
+- [x] `docs/code-map.md` — `alphabet-rail`, `group-color.util.ts` unter `features/personen/` ergänzen
+- [x] Keine neuen Settings-Keys
