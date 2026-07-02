@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { Store } from '@ngrx/store';
 import type { Collection, Density, GroupKey, MediaType, PersonDto, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
 import { MEDIA_TYPES } from '@photofant/models';
-import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, personsSelectors, presetsSelectors } from '@photofant/store';
+import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, personsSelectors, presetsSelectors, searchActions, searchSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
 interface FilterChip {
-  kind: 'source' | 'qualityMin' | 'tag' | 'collection' | 'person';
+  kind: 'source' | 'qualityMin' | 'tag' | 'collection' | 'person' | 'framing' | 'hasFaces' | 'semantic';
   chipKey: string;
   label: string;
   id?: number;
@@ -42,9 +42,13 @@ export class SubToolbar {
   protected readonly tagIds     = this.store.selectSignal(filtersSelectors.tagIds);
   protected readonly collectionId = this.store.selectSignal(filtersSelectors.collectionId);
   protected readonly personId     = this.store.selectSignal(filtersSelectors.personId);
+  protected readonly framings     = this.store.selectSignal(filtersSelectors.framings);
+  protected readonly hasFaces     = this.store.selectSignal(filtersSelectors.hasFaces);
   protected readonly collections  = this.store.selectSignal(collectionsSelectors.selectAll);
   protected readonly persons      = this.store.selectSignal(personsSelectors.selectAll);
   protected readonly facets       = this.store.selectSignal(gallerySelectors.selectFacets);
+  protected readonly searchQuery  = this.store.selectSignal(searchSelectors.selectQ);
+  protected readonly searchMode   = this.store.selectSignal(searchSelectors.selectMode);
 
   protected readonly mediaType = this.store.selectSignal(filtersSelectors.mediaType);
 
@@ -61,8 +65,17 @@ export class SubToolbar {
     sdxl: 'SDXL',
   };
 
+  protected readonly FRAMING_LABELS: Record<string, string> = {
+    close_up:  'Nahaufnahme',
+    medium:    'Halbkörper',
+    full_body: 'Ganzkörper',
+  };
+
   protected readonly chips = computed((): FilterChip[] => {
     const result: FilterChip[] = [];
+    if (this.searchMode() === 'semantic' && this.searchQuery()) {
+      result.push({ kind: 'semantic', chipKey: 'Suche', label: this.searchQuery() });
+    }
     for (const source of this.sources()) {
       result.push({ kind: 'source', chipKey: 'Quelle', label: this.SOURCE_LABELS[source] ?? source, value: source });
     }
@@ -73,6 +86,12 @@ export class SubToolbar {
     for (const tagId of this.tagIds()) {
       const tag = tags.find((t: TagFacetItem) => t.id === tagId);
       result.push({ kind: 'tag', chipKey: 'Tag', label: tag?.name ?? `${tagId}`, id: tagId });
+    }
+    for (const framing of this.framings()) {
+      result.push({ kind: 'framing', chipKey: 'Ausschnitt', label: this.FRAMING_LABELS[framing] ?? framing, value: framing });
+    }
+    if (this.hasFaces() === false) {
+      result.push({ kind: 'hasFaces', chipKey: 'Gesichter', label: 'Ohne Gesichter' });
     }
     const collectionId = this.collectionId();
     if (collectionId != null) {
@@ -119,15 +138,23 @@ export class SubToolbar {
     } else if (chip.kind === 'tag' && chip.id !== undefined) {
       const next = this.tagIds().filter((id: number) => id !== chip.id);
       this.store.dispatch(filtersActions.setTagIds({ tagIds: next }));
+    } else if (chip.kind === 'framing' && chip.value !== undefined) {
+      const next = this.framings().filter((f: string) => f !== chip.value);
+      this.store.dispatch(filtersActions.setFramings({ framings: next }));
+    } else if (chip.kind === 'hasFaces') {
+      this.store.dispatch(filtersActions.setHasFaces({ hasFaces: null }));
     } else if (chip.kind === 'collection') {
       this.store.dispatch(filtersActions.setCollectionId({ collectionId: null }));
     } else if (chip.kind === 'person') {
       this.store.dispatch(filtersActions.setPersonId({ personId: null }));
+    } else if (chip.kind === 'semantic') {
+      this.store.dispatch(searchActions.clear());
     }
   }
 
   protected clearAllFilters(): void {
     this.store.dispatch(filtersActions.clearAllFilters());
+    this.store.dispatch(searchActions.clear());
   }
 
   protected cycleSortKey(): void {

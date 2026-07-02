@@ -27,6 +27,7 @@ interface AutocompleteItem {
 interface RecentSearch {
   text: string;
   type: 'tag' | 'semantic';
+  id?: number;
 }
 
 const RECENT_SEARCHES_KEY = 'pf_recent_searches';
@@ -84,6 +85,7 @@ export class SearchBox {
       return this.recentSearches().map((recent: RecentSearch): AutocompleteItem => ({
         type: recent.type,
         text: recent.text,
+        ...(recent.id != null ? { id: recent.id } : {}),
         ...(recent.type === 'semantic' ? { badge: 'CLIP' } : {}),
       }));
     }
@@ -193,11 +195,17 @@ export class SearchBox {
       this.saveRecentSearch(item.text, 'semantic');
       this.localQuery.set('');
       this.queryInput$.next('');
-    } else {
+    } else if (item.id != null) {
       // Tag exakt filtern (statt als freien q-Text zu schicken) — sonst liefern
       // mehrdeutige Tag-Namen falsche Treffer (ADR-015).
-      this.store.dispatch(filtersActions.setTagIds({ tagIds: [item.id!] }));
-      this.saveRecentSearch(item.text, 'tag');
+      this.store.dispatch(filtersActions.setTagIds({ tagIds: [item.id] }));
+      this.saveRecentSearch(item.text, 'tag', item.id);
+      this.localQuery.set('');
+      this.queryInput$.next('');
+    } else {
+      // Alte, vor diesem Fix gemerkte Tag-Suche ohne ID (Altbestand in
+      // localStorage) — als Freitext statt als kaputten Tag-Filter ausführen.
+      this.store.dispatch(searchActions.setQuery({ q: item.text }));
       this.localQuery.set('');
       this.queryInput$.next('');
     }
@@ -217,14 +225,15 @@ export class SearchBox {
       if (!raw) return [];
       const parsed: unknown = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      // migrate old format (plain strings) to RecentSearch objects
+      // migrate old format (plain strings, or objects without id) to RecentSearch objects
       return parsed.map((entry: unknown): RecentSearch => {
         if (typeof entry === 'string') return { text: entry, type: 'tag' };
         if (typeof entry === 'object' && entry !== null && 'text' in entry) {
-          const typed = entry as { text: unknown; type?: unknown };
+          const typed = entry as { text: unknown; type?: unknown; id?: unknown };
           const text = typeof typed.text === 'string' ? typed.text : '';
           const type = typed.type === 'semantic' ? 'semantic' : 'tag';
-          return { text, type };
+          const id = typeof typed.id === 'number' ? typed.id : undefined;
+          return { text, type, ...(id != null ? { id } : {}) };
         }
         return { text: String(entry), type: 'tag' };
       }).filter((entry: RecentSearch) => entry.text.trim() !== '');
@@ -233,13 +242,13 @@ export class SearchBox {
     }
   }
 
-  private saveRecentSearch(text: string, type: 'tag' | 'semantic'): void {
+  private saveRecentSearch(text: string, type: 'tag' | 'semantic', id?: number): void {
     const trimmed = text.trim();
     if (!trimmed) return;
     const filtered = this.recentSearches().filter(
       (entry: RecentSearch) => !(entry.text === trimmed && entry.type === type),
     );
-    const next = [{ text: trimmed, type }, ...filtered].slice(0, MAX_RECENT);
+    const next = [{ text: trimmed, type, ...(id != null ? { id } : {}) }, ...filtered].slice(0, MAX_RECENT);
     this.recentSearches.set(next);
     try {
       localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
