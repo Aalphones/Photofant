@@ -63,6 +63,13 @@ export const personsFeature = createFeature({
       isClustering: false,
       error,
     })),
+    on(personsActions.createPersonSuccess, (state: PersonsState, { person }) =>
+      adapter.addOne(person, state)
+    ),
+    on(personsActions.createPersonFailure, (state: PersonsState, { error }) => ({
+      ...state,
+      error,
+    })),
   ),
   extraSelectors: ({ selectPersonsState }) => ({
     ...adapter.getSelectors(selectPersonsState),

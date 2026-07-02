@@ -1,7 +1,7 @@
 # Phase 1 — Neue Person anlegen (Personen-UI + NgRx)
 
 **Tier:** standard
-**Status:** pending
+**Status:** complete
 
 ---
 
@@ -30,7 +30,7 @@
 
 ### persons.actions.ts
 
-- [ ] 3 neue Events in `createActionGroup` ergänzen:
+- [x] 3 neue Events in `createActionGroup` ergänzen:
   ```typescript
   'Create Person':         props<{ name: string }>()
   'Create Person Success': props<{ person: PersonDto }>()
@@ -39,7 +39,7 @@
 
 ### persons.effects.ts
 
-- [ ] `createPerson$`-Effect ergänzen — ruft `personService.createPerson(name)`:
+- [x] `createPerson$`-Effect ergänzen — ruft `personService.createPerson(name)`:
   ```typescript
   readonly createPerson$ = createEffect(() =>
     this.actions$.pipe(
@@ -55,7 +55,7 @@
     )
   );
   ```
-- [ ] `navigateAfterCreate$`-Effect ergänzen — nach `createPersonSuccess` in Galerie navigieren:
+- [x] `navigateAfterCreate$`-Effect ergänzen — nach `createPersonSuccess` in Galerie navigieren:
   ```typescript
   readonly navigateAfterCreate$ = createEffect(() =>
     this.actions$.pipe(
@@ -72,7 +72,7 @@
 
 ### persons.reducer.ts
 
-- [ ] `on(personsActions.createPersonSuccess, ...)` — neue Person an `ids`/`entities` anhängen:
+- [x] `on(personsActions.createPersonSuccess, ...)` — neue Person an `ids`/`entities` anhängen:
   ```typescript
   on(personsActions.createPersonSuccess, (state, { person }) =>
     personsAdapter.addOne(person, state)
@@ -81,9 +81,9 @@
 
 ### CreatePersonDialog-Komponente (neu)
 
-- [ ] `ng generate component features/personen/create-person-dialog --skip-tests`
+- [x] `ng generate component features/personen/create-person-dialog --skip-tests`
   → erzeugt `create-person-dialog.ts`, `.html`, `.scss`
-- [ ] **create-person-dialog.ts:**
+- [x] **create-person-dialog.ts:**
   ```typescript
   close   = output<void>()
   confirm = output<string>()    // emittiert den Namen
@@ -105,15 +105,15 @@
     if (event.key === 'Escape') { this.close.emit(); }
   }
   ```
-- [ ] **create-person-dialog.html:** Modal mit Name-Input, Bestätigen-Button (disabled wenn !canConfirm()), Schließen-Button.
+- [x] **create-person-dialog.html:** Modal mit Name-Input, Bestätigen-Button (disabled wenn !canConfirm()), Schließen-Button.
   BEM-Block: `create-person-dialog`
-- [ ] **create-person-dialog.scss:** Analog zu `merge-dialog.scss` stylen (gleiche Modal-Optik).
+- [x] **create-person-dialog.scss:** Analog zu `merge-dialog.scss` stylen (gleiche Modal-Optik).
 
 ### personen.ts
 
-- [ ] `CreatePersonDialog` importieren + in `imports: []` aufnehmen
-- [ ] `showCreateDialog = signal(false)` ergänzen
-- [ ] Handler ergänzen:
+- [x] `CreatePersonDialog` importieren + in `imports: []` aufnehmen
+- [x] `showCreateDialog = signal(false)` ergänzen
+- [x] Handler ergänzen:
   ```typescript
   protected onCreatePerson(name: string): void {
     this.store.dispatch(personsActions.createPerson({ name }));
@@ -123,14 +123,14 @@
 
 ### personen.html
 
-- [ ] „Neue Person"-Button in `personen__toolbar` neben „Zusammenführen":
+- [x] „Neue Person"-Button in `personen__toolbar` neben „Zusammenführen":
   ```html
   <button class="personen__action-btn" (click)="showCreateDialog.set(true)">
     <pf-icon name="plus" [size]="14" />
     Neue Person
   </button>
   ```
-- [ ] `CreatePersonDialog`-Instanz am Ende des Templates einfügen:
+- [x] `CreatePersonDialog`-Instanz am Ende des Templates einfügen:
   ```html
   @if (showCreateDialog()) {
     <pf-create-person-dialog
@@ -139,15 +139,15 @@
     />
   }
   ```
-- [ ] „Noch keine Personen"-Leerstate: ebenfalls „Neue Person"-Button anzeigen (gleiche Action).
+- [x] „Noch keine Personen"-Leerstate: ebenfalls „Neue Person"-Button anzeigen (gleiche Action).
 
 ### Store-Barrel (persons/index.ts)
 
-- [ ] Prüfen, ob neue Actions automatisch re-exportiert werden — falls `index.ts` explizit listed, neue Action-Names ergänzen.
+- [x] Prüfen, ob neue Actions automatisch re-exportiert werden — falls `index.ts` explizit listed, neue Action-Names ergänzen.
 
 ---
 
 ## Doc-Updates
 
-- [ ] Keine neuen Settings-Keys → settings.json bleibt unverändert
-- [ ] `docs/clients.md` falls vorhanden: `PersonService.createPerson` ist bereits dokumentiert, kein Update nötig
+- [x] Keine neuen Settings-Keys → settings.json bleibt unverändert
+- [x] `docs/clients.md` falls vorhanden: `PersonService.createPerson` ist bereits dokumentiert, kein Update nötig

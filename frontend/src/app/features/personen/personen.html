@@ -6,9 +6,17 @@
   <div class="personen__empty">
     <p class="personen__empty-text">Noch keine Personen erkannt.</p>
     <p class="personen__empty-hint">Starte die Gesichtserkennung in den Einstellungen.</p>
+    <button class="personen__action-btn" (click)="showCreateDialog.set(true)">
+      <pf-icon name="plus" [size]="14" />
+      Neue Person
+    </button>
   </div>
 } @else {
   <div class="personen__toolbar">
+    <button class="personen__action-btn" (click)="showCreateDialog.set(true)">
+      <pf-icon name="plus" [size]="14" />
+      Neue Person
+    </button>
     <button class="personen__action-btn" (click)="showMergeDialog.set(true)">
       <pf-icon name="merge" [size]="14" />
       Zusammenführen
@@ -49,5 +57,12 @@
   <pf-dupe-check-dialog
     [person]="person"
     (close)="dupeCheckPerson.set(null)"
+  />
+}
+
+@if (showCreateDialog()) {
+  <pf-create-person-dialog
+    (close)="showCreateDialog.set(false)"
+    (confirm)="onCreatePerson($event)"
   />
 }

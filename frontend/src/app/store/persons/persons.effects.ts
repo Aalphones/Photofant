@@ -1,15 +1,20 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, of, switchMap, mergeMap } from 'rxjs';
+import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { catchError, map, of, switchMap, mergeMap, tap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { ClusterResult, PersonDto, MergeResult, SplitResult } from '@photofant/models';
 import { PersonService } from '@photofant/services';
+import { filtersActions } from '../filters/filters.actions';
 import { personsActions } from './persons.actions';
 
 @Injectable()
 export class PersonsEffects {
   private readonly actions$ = inject(Actions);
   private readonly personService = inject(PersonService);
+  private readonly router = inject(Router);
+  private readonly store = inject(Store);
 
   readonly loadPersons$ = createEffect(() =>
     this.actions$.pipe(
@@ -93,5 +98,31 @@ export class PersonsEffects {
         )
       ),
     )
+  );
+
+  readonly createPerson$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(personsActions.createPerson),
+      switchMap(({ name }) =>
+        this.personService.createPerson(name).pipe(
+          map((person: PersonDto) => personsActions.createPersonSuccess({ person })),
+          catchError((error: HttpErrorResponse) =>
+            of(personsActions.createPersonFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly navigateAfterCreate$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(personsActions.createPersonSuccess),
+        tap(({ person }) => {
+          this.store.dispatch(filtersActions.setPersonId({ personId: person.id }));
+          void this.router.navigate(['/galerie']);
+        }),
+      ),
+    { dispatch: false }
   );
 }

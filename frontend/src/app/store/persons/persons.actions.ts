@@ -19,5 +19,8 @@ export const personsActions = createActionGroup({
     'Trigger Clustering':        emptyProps(),
     'Trigger Clustering Success': props<{ result: ClusterResult }>(),
     'Trigger Clustering Failure': props<{ error: string }>(),
+    'Create Person':              props<{ name: string }>(),
+    'Create Person Success':      props<{ person: PersonDto }>(),
+    'Create Person Failure':      props<{ error: string }>(),
   },
 });

@@ -15,11 +15,12 @@ import { PersonCard } from './person-card/person-card';
 import { MergeDialog } from './merge-dialog/merge-dialog';
 import { SplitDialog } from './split-dialog/split-dialog';
 import { DupeCheckDialog } from './dupe-check-dialog/dupe-check-dialog';
+import { CreatePersonDialog } from './create-person-dialog/create-person-dialog';
 
 @Component({
   selector: 'pf-personen',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PersonCard, MergeDialog, SplitDialog, DupeCheckDialog, Icon],
+  imports: [PersonCard, MergeDialog, SplitDialog, DupeCheckDialog, CreatePersonDialog, Icon],
   templateUrl: './personen.html',
   styleUrl: './personen.scss',
 })
@@ -31,6 +32,7 @@ export class Personen implements OnInit {
   protected readonly persons = this.store.selectSignal(personsSelectors.selectAll);
   protected readonly isLoading = this.store.selectSignal(personsSelectors.selectIsLoading);
   protected readonly showMergeDialog = signal(false);
+  protected readonly showCreateDialog = signal(false);
   protected readonly splitPerson = signal<PersonDto | null>(null);
   protected readonly dupeCheckPerson = signal<PersonDto | null>(null);
 
@@ -71,5 +73,10 @@ export class Personen implements OnInit {
   protected onSplit(event: { personId: number; faceIds: number[] }): void {
     this.store.dispatch(personsActions.splitPerson(event));
     this.splitPerson.set(null);
+  }
+
+  protected onCreatePerson(name: string): void {
+    this.store.dispatch(personsActions.createPerson({ name }));
+    this.showCreateDialog.set(false);
   }
 }
