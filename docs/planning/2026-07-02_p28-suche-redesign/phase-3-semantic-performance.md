@@ -1,6 +1,6 @@
 # Phase 3 — Semantische Suche: Kaltstart-Latenz beheben
 
-**Komplexität:** standard · **Status:** pending
+**Komplexität:** standard · **Status:** complete
 
 **Voraussetzung:** Phase 1 (sonst läuft weiterhin *jede* Eingabe als Semantik-Suche und diese Phase optimiert das falsche Problem).
 
@@ -19,9 +19,28 @@
 
 ## Umsetzung
 
-- [ ] Ist-Latenz messen: einmal kalt (>5 min Pause), einmal warm — Zahlen im Report-Back festhalten, bevor optimiert wird (Spec-first-Grundsatz: erst Beleg, dann Fix).
-- [ ] Prewarm-Trigger einbauen: sobald die Freitext-Eingabe im Dropdown einen Semantik-Vorschlag anzeigt (also sobald `query` nicht leer ist, siehe `search-box.ts:99`), im Hintergrund einen leichten Aufruf absetzen, der `resolve_clip_embedder()` + Text-Session anstößt, **ohne** auf das Ergebnis zu warten oder einen Suchtreffer zu erzeugen — Ziel: Session ist bereits warm, wenn der User tatsächlich auswählt. Braucht einen kleinen neuen Endpunkt oder Wiederverwendung eines bestehenden (prüfen, ob `api/models.py` bereits einen Warm-Mechanismus für andere Adapter hat, sonst neu in `api/search.py` — Namensschema beachten).
-- [ ] Debounce für den Prewarm-Call großzügiger wählen als der Suggestion-Debounce (z. B. 500-800 ms), damit nicht jeder Tastendruck einen Warm-Request auslöst.
-- [ ] Doc: `docs/routes.md` (neuer Endpunkt, falls angelegt), `docs/clients.md` (neue Service-Methode, falls Frontend-seitig ein Client-Call dazukommt).
+- [x] Ist-Latenz messen: einmal kalt (>5 min Pause), einmal warm — Zahlen im Report-Back festhalten, bevor optimiert wird (Spec-first-Grundsatz: erst Beleg, dann Fix).
+- [x] Prewarm-Trigger einbauen: sobald die Freitext-Eingabe im Dropdown einen Semantik-Vorschlag anzeigt (also sobald `query` nicht leer ist, siehe `search-box.ts:99`), im Hintergrund einen leichten Aufruf absetzen, der `resolve_clip_embedder()` + Text-Session anstößt, **ohne** auf das Ergebnis zu warten oder einen Suchtreffer zu erzeugen — Ziel: Session ist bereits warm, wenn der User tatsächlich auswählt. Braucht einen kleinen neuen Endpunkt oder Wiederverwendung eines bestehenden (prüfen, ob `api/models.py` bereits einen Warm-Mechanismus für andere Adapter hat, sonst neu in `api/search.py` — Namensschema beachten).
+- [x] Debounce für den Prewarm-Call großzügiger wählen als der Suggestion-Debounce (z. B. 500-800 ms), damit nicht jeder Tastendruck einen Warm-Request auslöst.
+- [x] Doc: `docs/routes.md` (neuer Endpunkt, falls angelegt), `docs/clients.md` (neue Service-Methode, falls Frontend-seitig ein Client-Call dazukommt).
 
 ## Report-Back
+
+**Latenz (gemessen per Skript, Eviction direkt über `session_manager.evict_all()` erzwungen — gleicher Codepfad wie die 300s-Idle-Eviction, ohne real 5 Minuten zu warten):**
+
+| Zustand | Zeit |
+|---|---|
+| kalt (Session neu geladen) | **~9.4 s** |
+| warm (Session bereits im Speicher) | **~18 ms** |
+
+Der Kaltstart dominiert die "langsam"-Wahrnehmung fast vollständig — nicht die Embedding-Berechnung selbst.
+
+**Umsetzung:**
+- `CLIPEmbedder.warm_text()` (`backend/photofant/inference/adapters/clip.py`) — acquire+release der Text-Session ohne Inferenz, forct also nur das Laden.
+- `POST /api/search/warm` (`backend/photofant/api/search.py`) — `204`, No-op falls CLIP deaktiviert.
+- `SearchService.warmSemantic()` (neuer Service, `frontend/src/app/services/search.service.ts`) + Trigger in `search-box.ts` (eigener `queryInput$`-Stream, 600ms-Debounce, fire-and-forget, Fehler geschluckt).
+- `docs/routes.md` ergänzt (kein `docs/clients.md` in diesem Projekt — Frontend-Aufrufer stehen dort ohnehin schon inline).
+
+**Verifiziert:** `POST /api/search/warm` via FastAPI-`TestClient` aufgerufen — lädt die Text-Session real, `204` zurück.
+
+🟡 Nebenbefund (nicht Teil dieses Plans): Die ONNX-CUDA-Provider-Erkennung schlägt lokal fehl (`cublasLt64_13.dll` fehlt) und fällt automatisch auf CPU zurück — bereits vorhandenes, korrektes Fallback-Verhalten (`session_manager.detect_providers`), nur eben langsamer als mit funktionierendem CUDA. Kein Auftrag, das zu fixen.

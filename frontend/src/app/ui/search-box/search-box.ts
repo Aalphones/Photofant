@@ -10,9 +10,9 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, filter, of, Subject, switchMap } from 'rxjs';
 import type { PersonDto, TagListItem } from '@photofant/models';
-import { TagService } from '@photofant/services';
+import { SearchService, TagService } from '@photofant/services';
 import { filtersActions, personsActions, personsSelectors, searchActions } from '@photofant/store';
 import { Icon } from '../icon/icon';
 
@@ -40,10 +40,11 @@ const MAX_RECENT = 5;
   styleUrl: './search-box.scss',
 })
 export class SearchBox {
-  private readonly store      = inject(Store);
-  private readonly tagService = inject(TagService);
-  private readonly router     = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly store         = inject(Store);
+  private readonly tagService    = inject(TagService);
+  private readonly searchService = inject(SearchService);
+  private readonly router        = inject(Router);
+  private readonly destroyRef    = inject(DestroyRef);
 
   private readonly queryInput$ = new Subject<string>();
   private readonly allPersons  = this.store.selectSignal(personsSelectors.selectAll);
@@ -113,6 +114,17 @@ export class SearchBox {
       this.store.dispatch(searchActions.setQuery({ q: query }));
       if (query) { this.navigateToGalleryIfNeeded(); }
     });
+
+    // Prewarm the CLIP text session as soon as a semantic suggestion could be
+    // chosen (P28 Phase 3) — debounce is more generous than the suggestion
+    // debounce (300ms) so we don't fire a warm request on every keystroke.
+    this.queryInput$.pipe(
+      debounceTime(600),
+      distinctUntilChanged(),
+      filter((query: string) => query.trim().length > 0),
+      switchMap(() => this.searchService.warmSemantic().pipe(catchError(() => of(undefined)))),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe();
 
     // Reset keyboard selection whenever the list changes
     effect(() => {

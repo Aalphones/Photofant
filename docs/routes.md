@@ -488,6 +488,15 @@ Verhalten:
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
 | — (kein Frontend-Aufrufer, siehe unten) | `POST` | `/api/search/semantic` | `SemanticSearchRequest` | `SemanticSearchResponse` |
+| `pf-search-box` (jede Route, sobald `query` nicht leer, 600ms-Debounce, `SearchService.warmSemantic`) | `POST` | `/api/search/warm` | — | `204 No Content` |
+
+**`POST /api/search/warm` (P28 Phase 3):** Prewarm-Endpoint gegen den Kaltstart der CLIP-Textsession
+(`session_manager` evictet nach 5 Min. Idle, Neuladen kostete gemessen **~9.4s kalt** vs. **~18ms warm**).
+Lädt/hält die Text-Session per `CLIPEmbedder.warm_text()` warm, **ohne** eine echte Embedding-Berechnung
+auszulösen — kein Suchtreffer, kein DB-Zugriff. No-op (still `204`), wenn das CLIP-Modell deaktiviert ist.
+Die Suchleiste feuert ihn fire-and-forget, sobald ein Semantik-Vorschlag im Dropdown erscheinen könnte,
+mit großzügigerem Debounce als die Tag-/Personen-Vorschläge (300ms), damit nicht jeder Tastendruck einen
+Warm-Request auslöst.
 
 `POST /api/search/semantic` ist ein eigenständiger Endpoint aus P5, bevor die Suchleiste existierte
 („bis dahin API"). Er wird **von keiner Frontend-Stelle aufgerufen** (verifiziert per Grep,
