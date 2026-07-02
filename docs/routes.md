@@ -12,6 +12,7 @@
 | `/galerie` (import — Browser-Upload) | `POST` | `/api/assets/upload` | `multipart/form-data; files[]` | `{ job_id }` |
 | `/galerie` (scan) | `POST` | `/api/assets/scan` | — | `{ job_id }` |
 | `/galerie` (favourite, P5) | `PATCH` | `/api/assets/{id}/favourite` | `{ value: bool }` | aktualisiertes `AssetDto` |
+| Lightbox (Person ohne Gesicht zuordnen, P30 Phase 1) | `PATCH` | `/api/assets/{id}/assign-person` | `{ person_id: number }` | `{ asset_id, person_id, instance_id }` — physischer Move/Copy wie bei Face-Zuordnung (ADR-016), 404 Asset/Person nicht gefunden, 500 bei IO-Fehler |
 | Export-Dialog / Lightbox (Einzelbild im Dateisystem anzeigen, P10 Phase 4) | `POST` | `/api/assets/{id}/reveal` | — | `204` — öffnet den Explorer mit der Datei vorausgewählt |
 | `/galerie` (trash, P5) | `DELETE` | `/api/assets/{id}` | — | Soft-Delete |
 | Trash-View (P5) | `GET` | `/api/trash` | — | `AssetDto[]` (sortiert nach `deleted_at` desc) |

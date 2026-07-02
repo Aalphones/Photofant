@@ -10,7 +10,7 @@
 
 | Phase | Inhalt | Tier | Status |
 |---|---|---|---|
-| 1 | Backend: Endpoint „Person direkt einem Asset zuordnen" | standard | pending |
+| 1 | Backend: Endpoint „Person direkt einem Asset zuordnen" | standard | complete |
 | 2 | Frontend: Lightbox-Empty-State + Picker-Wiederverwendung + Unbekannt-Korrektur | standard | pending |
 
 ## Kontrakt (Backend ↔ Frontend)
@@ -32,18 +32,18 @@ Frontend ruft das über eine neue Methode `assignPersonToAsset(assetId, personId
 - Der Personen-Picker in der Lightbox (`showPersonPicker`, `faceMatches`, `pickerList`, `personSearchQuery`, `assignFaceToPerson()`, `startCreatePerson()`/`confirmCreatePerson()`) — die Top-Treffer-Spalte hängt bereits an `faceMatches().length > 0`; bleibt `faceMatches` leer (kein Face zum Matchen), fällt sie automatisch weg. Keine zweite Dialog-Komponente nötig.
 - **„Unbekannt" ist bereits ein normaler `Person`-Datensatz** (`is_unknown = true`), und `PATCH /api/faces/{face_id}/assign` (`assign_face` → `reassign_face`) akzeptiert **jede** Ziel-Person, inklusive der Unbekannt-Person — das ist heute schon der Mechanismus, den die Review-Queue für „Ablehnen" nutzt (`api/review_queue.py` → `resolve_face_review(action="reject")` → `reassign_face(..., unknown_person.id, ...)`). Der Picker filtert `is_unknown`-Personen aber bewusst aus Suche/Directory raus (`lightbox.ts:326`, `:332` — richtig so, „Unbekannt" soll nicht durchsuchbar in der Namensliste auftauchen). **Kein Backend-Task** — reine Frontend-Ergänzung: eigener, klar abgesetzter Button statt Aufnahme in die Trefferliste (Vorbild: `review-faces.ts` `onReject()`).
 
-## Phase 1 — Backend: Endpoint
+## Phase 1 — Backend: Endpoint ✅
 
 **Kontext:** `backend/photofant/api/faces.py:515` (`assign_face`, Vorbild für Struktur/Fehlerbehandlung) · `backend/photofant/media/person_folders.py:236` (`materialize_assignment`) · `backend/photofant/api/assets.py` (Ziel-Datei, hat `Asset`/`Person`/`AssetInstance`-Imports bereits).
 
 **AK:**
-- [ ] `PATCH /api/assets/{asset_id}/assign-person` in `api/assets.py`, DTOs `AssignPersonRequest{person_id: int}` / `AssetPersonAssignResultDto{asset_id, person_id, instance_id}`
-- [ ] 404 bei unbekanntem Asset oder Person; 500 mit Klartext-Detail wenn `materialize_assignment` `None` liefert
-- [ ] Erfolgsfall: `session.commit()`, danach `enqueue_reevaluate_assets([asset_id])` (Smart-Alben aktualisieren, analog `assign_face`)
-- [ ] `person.service.ts`: neue Methode `assignPersonToAsset(assetId: number, personId: number)`
-- [ ] ADR-016 (`docs/decisions/016-manuelle-personen-zuordnung-ohne-gesicht.md`): Entscheidung „physische Kopie/Move wie bei Face-Zuordnung, über `materialize_assignment` wiederverwendet" statt schlankem DB-only-Tag — Kontext/Optionen/Konsequenzen, 10 Zeilen
-- [ ] `docs/routes.md`: neuer Endpoint-Eintrag bei den Asset-Routen
-- [ ] `docs/code-map.md`: Zeile „Personen & Faces" bzw. „Galerie & Lightbox" ergänzen falls die neue Route dort noch fehlt
+- [x] `PATCH /api/assets/{asset_id}/assign-person` in `api/assets.py`, DTOs `AssignPersonRequest{person_id: int}` / `AssetPersonAssignResultDto{asset_id, person_id, instance_id}`
+- [x] 404 bei unbekanntem Asset oder Person; 500 mit Klartext-Detail wenn `materialize_assignment` `None` liefert
+- [x] Erfolgsfall: `session.commit()`, danach `enqueue_reevaluate_assets([asset_id])` (Smart-Alben aktualisieren, analog `assign_face`)
+- [x] `person.service.ts`: neue Methode `assignPersonToAsset(assetId: number, personId: number)`
+- [x] ADR-016 (`docs/decisions/016-manuelle-personen-zuordnung-ohne-gesicht.md`): Entscheidung „physische Kopie/Move wie bei Face-Zuordnung, über `materialize_assignment` wiederverwendet" statt schlankem DB-only-Tag — Kontext/Optionen/Konsequenzen, 10 Zeilen
+- [x] `docs/routes.md`: neuer Endpoint-Eintrag bei den Asset-Routen
+- [x] `docs/code-map.md`: Zeile „Personen & Faces" bzw. „Galerie & Lightbox" ergänzen falls die neue Route dort noch fehlt
 
 ## Phase 2 — Frontend: Lightbox-Empty-State + Picker
 

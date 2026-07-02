@@ -1127,6 +1127,57 @@ async def patch_asset_caption(asset_id: int, body: PatchCaptionRequest, session:
     )
 
 
+class AssignPersonRequest(BaseModel):
+    person_id: int
+
+
+class AssetPersonAssignResultDto(BaseModel):
+    asset_id: int
+    person_id: int
+    instance_id: int
+
+
+@router.patch("/{asset_id}/assign-person", response_model=AssetPersonAssignResultDto)
+async def assign_person_to_asset(
+    asset_id: int, body: AssignPersonRequest, session: DbSession,
+) -> AssetPersonAssignResultDto:
+    """Manually assign a person to an asset that has no face to reassign.
+
+    Reuses the same physical move/copy logic as face reassignment
+    (`materialize_assignment`) — works for assets without any extracted face.
+    """
+    from photofant.media.person_folders import materialize_assignment
+
+    asset = session.get(Asset, asset_id)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    person = session.get(Person, body.person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    data_root = get_data_root()
+    instance = await asyncio.to_thread(
+        materialize_assignment, session, asset_id, body.person_id, data_root, fixed=True,
+    )
+    if instance is None:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not assign asset {asset_id} to person {body.person_id} — file missing or IO error",
+        )
+
+    session.commit()
+    log.info("assign_person_to_asset: asset %d → person %d", asset_id, body.person_id)
+
+    await enqueue_reevaluate_assets([asset_id])
+
+    return AssetPersonAssignResultDto(
+        asset_id=asset_id,
+        person_id=body.person_id,
+        instance_id=instance.id,
+    )
+
+
 class SetOriginalRequest(BaseModel):
     original_id: int | None
 

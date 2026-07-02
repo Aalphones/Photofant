@@ -55,6 +55,10 @@ export class PersonService {
     return this.http.patch(`/api/faces/${faceId}/assign`, { person_id: personId });
   }
 
+  assignPersonToAsset(assetId: number, personId: number): Observable<unknown> {
+    return this.http.patch(`/api/assets/${assetId}/assign-person`, { person_id: personId });
+  }
+
   revealPersonFolder(personId: number): Observable<void> {
     return this.http.post<void>(`/api/persons/${personId}/reveal`, null);
   }
