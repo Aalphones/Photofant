@@ -10,16 +10,16 @@ import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import type { Density, PersonDto } from '@photofant/models';
 import { PersonService } from '@photofant/services';
-import { Icon } from '@photofant/ui';
 import { filtersActions, personsActions, personsSelectors } from '@photofant/store';
-import { PersonCard } from './person-card/person-card';
-import { MergeDialog } from './merge-dialog/merge-dialog';
-import { SplitDialog } from './split-dialog/split-dialog';
-import { DupeCheckDialog } from './dupe-check-dialog/dupe-check-dialog';
+import { Icon } from '@photofant/ui';
+import { AlphabetRail } from './alphabet-rail/alphabet-rail';
 import { CreatePersonDialog } from './create-person-dialog/create-person-dialog';
 import { DeletePersonDialog } from './delete-person-dialog/delete-person-dialog';
-import { AlphabetRail } from './alphabet-rail/alphabet-rail';
+import { DupeCheckDialog } from './dupe-check-dialog/dupe-check-dialog';
 import { groupColor } from './group-color.util';
+import { MergeDialog } from './merge-dialog/merge-dialog';
+import { PersonCard } from './person-card/person-card';
+import { SplitDialog } from './split-dialog/split-dialog';
 
 type PersonSortKey = 'group' | 'created' | 'name' | 'unnamed' | 'count';
 type PersonViewMode = 'single' | 'grid4' | 'face';
@@ -56,7 +56,7 @@ export class Personen implements OnInit {
   protected readonly searchQuery = signal('');
   protected readonly sortKey = signal<PersonSortKey>('group');
   protected readonly groupFilter = signal<Set<string>>(new Set());
-  protected readonly viewMode = signal<PersonViewMode>('face');
+  protected readonly viewMode = signal<PersonViewMode>('grid4');
   protected readonly cardSize = signal<Density>('md');
 
   protected readonly SIZES: { key: Density; iconSize: number }[] = [
