@@ -116,10 +116,11 @@ class Florence2Captioner:
 
         pixel_values = preprocess_for_florence(image)
 
-        embed_session = session_manager.acquire_session(self._embed_path)
-        vision_session = session_manager.acquire_session(self._vision_path)
-        encoder_session = session_manager.acquire_session(self._encoder_path)
-        decoder_session = session_manager.acquire_session(self._decoder_path)
+        pool_size = 1  # TODO(P19 Phase 2): wire from load_settings()["captioning_workers"]
+        embed_session = session_manager.acquire_exclusive_session(self._embed_path, pool_size)
+        vision_session = session_manager.acquire_exclusive_session(self._vision_path, pool_size)
+        encoder_session = session_manager.acquire_exclusive_session(self._encoder_path, pool_size)
+        decoder_session = session_manager.acquire_exclusive_session(self._decoder_path, pool_size)
         try:
             encoder_hidden, encoder_mask = self._encode(
                 embed_session, vision_session, encoder_session, tokenizer, prompt, pixel_values
@@ -133,10 +134,10 @@ class Florence2Captioner:
                 max_new_tokens=max_new_tokens,
             )
         finally:
-            session_manager.release_session(self._embed_path)
-            session_manager.release_session(self._vision_path)
-            session_manager.release_session(self._encoder_path)
-            session_manager.release_session(self._decoder_path)
+            session_manager.release_exclusive_session(self._embed_path, embed_session)
+            session_manager.release_exclusive_session(self._vision_path, vision_session)
+            session_manager.release_exclusive_session(self._encoder_path, encoder_session)
+            session_manager.release_exclusive_session(self._decoder_path, decoder_session)
 
         text: str = tokenizer.decode(token_ids, skip_special_tokens=True)
         return text.strip()

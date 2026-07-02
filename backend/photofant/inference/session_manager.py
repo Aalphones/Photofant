@@ -4,6 +4,13 @@ One SessionManager instance lives per process (singleton via module-level
 `session_manager`).  Model adapters call `acquire_session` / `release_session`
 to borrow an InferenceSession; the manager tracks idle time and evicts sessions
 that have been unused longer than IDLE_TIMEOUT_SECONDS.
+
+Callers that need N parallel worker tasks on the same model (P19 session pool)
+use the separate `acquire_exclusive_session` / `release_exclusive_session` pair
+instead — a pooled InferenceSession is not re-entrant, so each pool entry is
+handed to exactly one caller at a time and blocks new callers until one frees
+up. This pool is a distinct data structure from the singleton `_sessions`
+cache above so the two semantics can never accidentally mix.
 """
 from __future__ import annotations
 
@@ -31,6 +38,19 @@ class _SessionEntry:
     refcount: int = 0
 
 
+@dataclass
+class _PoolEntry:
+    session: ort.InferenceSession
+    in_use: bool = True
+    last_used: float = field(default_factory=time.monotonic)
+
+
+@dataclass
+class _PoolState:
+    entries: list[_PoolEntry] = field(default_factory=list)
+    pending: int = 0  # slots reserved for an in-flight _load_session call, not yet in `entries`
+
+
 class SessionManager:
     """Thread-safe cache of ONNX InferenceSessions with idle eviction."""
 
@@ -39,6 +59,10 @@ class SessionManager:
         self._lock = threading.Lock()
         self._sessions: dict[str, _SessionEntry] = {}
         self._executor = ThreadPoolExecutor(max_workers=_EXECUTOR_WORKERS, thread_name_prefix="ort-worker")
+        # Exclusive pool (P19): separate lock/condition from `_lock` above so pool waits
+        # never block the singleton path and vice versa.
+        self._pool_condition = threading.Condition()
+        self._pools: dict[str, _PoolState] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -77,6 +101,55 @@ class SessionManager:
             entry.refcount = max(0, entry.refcount - 1)
             entry.last_used = time.monotonic()
 
+    def acquire_exclusive_session(self, model_path: str, pool_size: int) -> ort.InferenceSession:
+        """Blocking: return a session that belongs exclusively to the calling thread.
+
+        Lazily loads up to `pool_size` instances for `model_path`; once all of them
+        are checked out, blocks until `release_exclusive_session` frees one. Distinct
+        pool from `acquire_session` — never mix the two for the same model_path.
+        """
+        while True:
+            with self._pool_condition:
+                state = self._pools.setdefault(model_path, _PoolState())
+                for entry in state.entries:
+                    if not entry.in_use:
+                        entry.in_use = True
+                        entry.last_used = time.monotonic()
+                        return entry.session
+                if len(state.entries) + state.pending < pool_size:
+                    state.pending += 1
+                    break
+                self._pool_condition.wait()
+
+        # Load outside the lock — model loading can take seconds and must not block
+        # other model_paths (or releases) from making progress.
+        try:
+            session = self._load_session(model_path, provider_override=None)
+        except Exception:
+            with self._pool_condition:
+                self._pools[model_path].pending -= 1
+                self._pool_condition.notify_all()
+            raise
+
+        with self._pool_condition:
+            state = self._pools[model_path]
+            state.pending -= 1
+            state.entries.append(_PoolEntry(session=session, in_use=True))
+        return session
+
+    def release_exclusive_session(self, model_path: str, session: ort.InferenceSession) -> None:
+        """Return a session borrowed via `acquire_exclusive_session` to its pool."""
+        with self._pool_condition:
+            state = self._pools.get(model_path)
+            if state is None:
+                return
+            for entry in state.entries:
+                if entry.session is session:
+                    entry.in_use = False
+                    entry.last_used = time.monotonic()
+                    break
+            self._pool_condition.notify_all()
+
     def evict_idle(self) -> None:
         """Evict sessions whose idle time exceeds the configured timeout.
 
@@ -94,20 +167,38 @@ class SessionManager:
                 del self._sessions[path]
                 log.info("Evicted idle ONNX session: %s", path)
 
+        with self._pool_condition:
+            for model_path, state in self._pools.items():
+                kept: list[_PoolEntry] = []
+                evicted_count = 0
+                for entry in state.entries:
+                    if not entry.in_use and (now - entry.last_used) > self._idle_timeout:
+                        evicted_count += 1
+                        continue
+                    kept.append(entry)
+                state.entries = kept
+                if evicted_count:
+                    log.info("Evicted %d idle exclusive ONNX session(s): %s", evicted_count, model_path)
+
     def evict_all(self) -> None:
         """Force-evict all sessions — called at shutdown."""
         with self._lock:
             count = len(self._sessions)
             self._sessions.clear()
-        if count:
-            log.info("Evicted %d ONNX session(s) at shutdown", count)
+        with self._pool_condition:
+            pool_count = sum(len(state.entries) for state in self._pools.values())
+            self._pools.clear()
+            self._pool_condition.notify_all()
+        total = count + pool_count
+        if total:
+            log.info("Evicted %d ONNX session(s) at shutdown", total)
 
     def shutdown(self) -> None:
         """Wait for running inference threads, evict all sessions, free VRAM.
 
         Called once at process exit. Waits for the executor to drain so that
         thread-local session references are released before the Python GC runs.
-        After this call the executor and session cache are both unusable.
+        After this call the executor and both session pools are unusable.
         """
         import gc
 
@@ -115,8 +206,13 @@ class SessionManager:
         with self._lock:
             count = len(self._sessions)
             self._sessions.clear()
-        if count:
-            log.info("Evicted %d ONNX session(s) at shutdown", count)
+        with self._pool_condition:
+            pool_count = sum(len(state.entries) for state in self._pools.values())
+            self._pools.clear()
+            self._pool_condition.notify_all()
+        total = count + pool_count
+        if total:
+            log.info("Evicted %d ONNX session(s) at shutdown", total)
         gc.collect()
 
     @property

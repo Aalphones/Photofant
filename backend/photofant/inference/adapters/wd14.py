@@ -59,12 +59,13 @@ class WD14Tagger:
         labels = _load_labels(self._csv_path)
         input_array = preprocess_for_wd14(image)
 
-        session = session_manager.acquire_session(self._model_path)
+        pool_size = 1  # TODO(P19 Phase 2): wire from load_settings()["tagging_workers"]
+        session = session_manager.acquire_exclusive_session(self._model_path, pool_size)
         try:
             input_name = session.get_inputs()[0].name
             raw_outputs = session.run(None, {input_name: input_array})
         finally:
-            session_manager.release_session(self._model_path)
+            session_manager.release_exclusive_session(self._model_path, session)
 
         logits: np.ndarray = raw_outputs[0][0].astype(np.float32)
         scores = 1.0 / (1.0 + np.exp(-logits))  # sigmoid

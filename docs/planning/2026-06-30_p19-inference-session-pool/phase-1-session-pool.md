@@ -52,16 +52,32 @@ neue `acquire_exclusive_session` muss deshalb **selbst** exklusiven Zugriff erzw
 
 ## Checkliste
 
-- [ ] `_SessionEntry`/Pool-Struktur für exklusive Sessions ergänzt
-- [ ] `acquire_exclusive_session` implementiert (blockierend, `threading.Condition`)
-- [ ] `release_exclusive_session` implementiert
-- [ ] `evict_idle`/`evict_all`/`shutdown` decken beide Pools ab
-- [ ] `WD14Tagger.tag()` umgestellt
-- [ ] Florence2-Adapter umgestellt (alle vier Sessions: embed/vision/encoder/decoder)
-- [ ] ADR-017 geschrieben: `docs/decisions/017-inference-session-pool.md` (Kontext: ONNX-Session
-      nicht re-entrant; Optionen: (a) N separate Sessions pro Modelltyp — gewählt, (b) neue
-      Session pro Job ohne Pooling — verworfen wegen Ladezeit pro Bild bei Batch-Import;
-      Konsequenzen: Pool-Größe = Worker-Anzahl, VRAM-Verbrauch skaliert mit N)
+- [x] `_SessionEntry`/Pool-Struktur für exklusive Sessions ergänzt (`_PoolEntry`/`_PoolState`)
+- [x] `acquire_exclusive_session` implementiert (blockierend, `threading.Condition`)
+- [x] `release_exclusive_session` implementiert
+- [x] `evict_idle`/`evict_all`/`shutdown` decken beide Pools ab
+- [x] `WD14Tagger.tag()` umgestellt
+- [x] Florence2-Adapter umgestellt (alle vier Sessions: embed/vision/encoder/decoder)
+- [x] ADR-017 geschrieben: `docs/decisions/017-inference-session-pool.md`
 - [ ] Manueller Smoke-Test: ein Bild taggen + captionen über die bestehende UI, keine Regression
+      (**vom User zu prüfen** — braucht die laufende Electron-App + echtes Bild, private-Profil
+      testet keine UI selbst)
 
 ## Report-Back
+
+Pool-Logik mit einem Wegwerf-Sanity-Skript gegen eine gefakte `_load_session` verifiziert
+(nicht Teil des Repos, nur lokal ausgeführt): pool_size=2 lädt zwei getrennte Instanzen, ein
+dritter Acquire blockiert nachweisbar bis zum Release und nutzt den freien Slot ohne Neu-Laden,
+ein fehlgeschlagener Load wirft `RuntimeError` weiter **und** hinterlässt keinen hängenden
+`pending`-Slot (Pool bleibt danach nutzbar), `evict_idle` entfernt nur freie, keine
+gerade ausgeliehenen Pool-Einträge. Alle vier Checks grün.
+
+`pool_size` ist in `WD14Tagger.tag()` und `Florence2Captioner.caption()` noch hartcodiert auf
+`1` (TODO-Kommentar an Ort und Stelle) — Verdrahtung mit den Settings ist Phase 2, wie in den
+Akzeptanzkriterien vorgesehen.
+
+**Offen für den User:** Punkt 7 der Checkliste (manueller UI-Smoke-Test: ein Bild taggen +
+captionen über die App) — die Session-Semantik ist für die unveränderten Aufrufer (CLIP,
+Buffalo-L, `media/ops.py`) unangetastet (`acquire_session`/`release_session` nicht verändert),
+trotzdem lohnt ein kurzer Klick-Test vor dem Weitergehen zu Phase 2, weil hier echte
+Inferenz-Pfade umgestellt wurden.
