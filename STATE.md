@@ -9,4 +9,4 @@ Empty-State „Keine Personen gefunden" bei leerem Suche/Filter-Ergebnis,
 computed()-Kette auf Perf geprüft (kein struktureller Fix nötig). Offen:
 Perf-Messung mit echten Daten (>300 Personen) — agentenlos nicht simulierbar,
 Notiz in FINDINGS.md + Smoke-Checkliste am Plan-Ende. `npm run lint` +
-`ng build` sauber. Committen steht noch aus.
+`ng build` sauber. Committet (`e58a9e2`).
