@@ -1,101 +1,85 @@
 <div
   class="person-card"
   [class.person-card--drag-over]="isDragOver()"
+  [class.person-card--menu-open]="menuOpen()"
   (click)="onCardClick($event)"
-  (pointerdown)="onPointerDown()"
-  (pointerup)="onPointerUp()"
-  (pointerleave)="onPointerUp()"
   (dragover)="onDragOver($event)"
   (dragleave)="onDragLeave()"
   (drop)="onDrop($event)"
   role="button"
   tabindex="0"
 >
-  <!-- Hover-Actions -->
-  @if (!person().is_unknown) {
-    <div class="person-card__hover-actions" [class.person-card__hover-actions--visible]="actionsVisible()">
-      <button
-        class="person-card__hover-btn"
-        (click)="onRenameClick($event)"
-        aria-label="Person umbenennen"
-        title="Umbenennen"
-      >
-        <pf-icon name="pencil" [size]="14" />
-      </button>
-      <button
-        class="person-card__hover-btn"
-        (click)="onGroupClick($event)"
-        aria-label="Gruppe zuweisen"
-        title="Gruppe zuweisen"
-      >
-        <pf-icon name="tag" [size]="14" />
-      </button>
-      <button
-        class="person-card__hover-btn"
-        (click)="onSplitClick($event)"
-        aria-label="Person aufteilen"
-        title="Gesichter abspalten"
-      >
-        <pf-icon name="split" [size]="14" />
-      </button>
-      <button
-        class="person-card__hover-btn"
-        (click)="onDupeCheckClick($event)"
-        aria-label="Duplikate suchen"
-        title="Duplikate suchen"
-      >
-        <pf-icon name="compare" [size]="14" />
-      </button>
-      <button
-        class="person-card__hover-btn"
-        (click)="onImportClick($event)"
-        aria-label="Bilder importieren"
-        title="Bilder importieren"
-      >
-        <pf-icon name="upload" [size]="14" />
-      </button>
-      <button
-        class="person-card__hover-btn"
-        (click)="onRevealClick($event)"
-        aria-label="Im Datei-Explorer öffnen"
-        title="Im Datei-Explorer öffnen"
-      >
-        <pf-icon name="folder" [size]="14" />
-      </button>
-      <button
-        class="person-card__hover-btn person-card__hover-btn--danger"
-        (click)="onDeleteClick($event)"
-        aria-label="Person löschen"
-        title="Person löschen"
-      >
-        <pf-icon name="trash" [size]="14" />
-      </button>
-    </div>
-  }
-
-  <!-- Avatar -->
-  <div class="person-card__avatar-wrap">
+  <!-- Bild-Hintergrund -->
+  <div class="person-card__img-wrap">
     @if (viewMode() === 'grid4' && gridImageUrls.length > 1) {
-      <div class="person-card__avatar person-card__avatar--grid4">
+      <div class="person-card__img person-card__img--grid4">
         @for (url of gridImageUrls; track url) {
           <img [src]="url" alt="" loading="lazy" />
         }
       </div>
     } @else if (viewMode() === 'single' && singleImageUrl) {
-      <img class="person-card__avatar" [src]="singleImageUrl" alt="" loading="lazy" />
+      <img class="person-card__img" [src]="singleImageUrl" alt="" loading="lazy" />
     } @else if (avatarUrl) {
-      <img class="person-card__avatar" [src]="avatarUrl" alt="" loading="lazy" />
+      <img class="person-card__img" [src]="avatarUrl" alt="" loading="lazy" />
     } @else {
-      <div class="person-card__avatar person-card__avatar--placeholder">
+      <div class="person-card__img person-card__img--placeholder">
         <pf-icon name="user" [size]="40" />
       </div>
     }
-    @if (person().group_name) {
-      <span class="person-card__group-badge" [style.--chip-color]="groupColor(person().group_name!)">{{ person().group_name }}</span>
-    }
   </div>
 
-  <!-- Name / Inline-Editor -->
+  <div class="person-card__veil"></div>
+
+  <!-- ID (oben links) -->
+  <div class="person-card__id-badge" title="Personen-ID">#{{ person().id }}</div>
+
+  <!-- Aktionen: Punkte-Button + Dropdown (oben rechts) -->
+  @if (!person().is_unknown) {
+    <div class="person-card__menu" (click)="$event.stopPropagation()">
+      <button
+        class="person-card__menu-toggle"
+        (click)="toggleMenu($event)"
+        aria-label="Aktionen"
+        [attr.aria-expanded]="menuOpen()"
+      >
+        <pf-icon name="dots" [size]="16" />
+      </button>
+      @if (menuOpen()) {
+        <div class="person-card__menu-panel">
+          <button class="person-card__menu-item" (click)="onRenameClick($event)">
+            <pf-icon name="pencil" [size]="13" />
+            <span>Umbenennen</span>
+          </button>
+          <button class="person-card__menu-item" (click)="onGroupClick($event)">
+            <pf-icon name="tag" [size]="13" />
+            <span>Gruppe zuweisen</span>
+          </button>
+          <button class="person-card__menu-item" (click)="onSplitClick($event)">
+            <pf-icon name="split" [size]="13" />
+            <span>Gesichter abspalten</span>
+          </button>
+          <button class="person-card__menu-item" (click)="onDupeCheckClick($event)">
+            <pf-icon name="compare" [size]="13" />
+            <span>Duplikate suchen</span>
+          </button>
+          <button class="person-card__menu-item" (click)="onImportClick($event)">
+            <pf-icon name="upload" [size]="13" />
+            <span>Bilder importieren</span>
+          </button>
+          <button class="person-card__menu-item" (click)="onRevealClick($event)">
+            <pf-icon name="folder" [size]="13" />
+            <span>Im Datei-Explorer öffnen</span>
+          </button>
+          <button class="person-card__menu-item person-card__menu-item--danger" (click)="onDeleteClick($event)">
+            <pf-icon name="trash" [size]="13" />
+            <span>Person löschen</span>
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Meta (unten, im Verlauf) -->
   <div class="person-card__meta">
     @if (isEditing()) {
       <div class="person-card__editor" (click)="$event.stopPropagation()">
@@ -137,8 +121,11 @@
         </div>
       </div>
     } @else {
+      @if (person().group_name) {
+        <span class="person-card__group" [style.--chip-color]="groupColor(person().group_name!)">{{ person().group_name }}</span>
+      }
       <span class="person-card__name">{{ displayName }}</span>
-      <span class="person-card__count">{{ person().count }}</span>
+      <span class="person-card__count">{{ person().count }} {{ person().count === 1 ? 'Bild' : 'Bilder' }}</span>
     }
   </div>
 </div>

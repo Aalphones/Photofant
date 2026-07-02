@@ -50,10 +50,22 @@
       {{ sortLabel() }}
     </button>
 
-    <div class="personen__view-toggle">
+    <div class="personen__seg-toggle">
       <button [class.active]="viewMode() === 'single'" (click)="setViewMode('single')" title="Einzelfoto"><pf-icon name="album" [size]="14" /></button>
       <button [class.active]="viewMode() === 'grid4'" (click)="setViewMode('grid4')" title="4er-Grid"><pf-icon name="layers" [size]="14" /></button>
       <button [class.active]="viewMode() === 'face'" (click)="setViewMode('face')" title="Gesichtsausschnitt"><pf-icon name="face" [size]="14" /></button>
+    </div>
+
+    <div class="personen__seg-toggle">
+      @for (item of SIZES; track item.key) {
+        <button
+          [class.active]="cardSize() === item.key"
+          (click)="setCardSize(item.key)"
+          [title]="'Kartengröße ' + item.key"
+        >
+          <pf-icon name="gallery" [size]="item.iconSize" />
+        </button>
+      }
     </div>
   </div>
 
@@ -76,7 +88,7 @@
       <p class="personen__empty-hint">Suche oder Gruppen-Filter anpassen.</p>
     </div>
   } @else {
-  <div class="personen__body">
+  <div class="personen__body" [style.--pf-person-card-w.px]="cardWidth()">
     <div class="personen__content">
       @if (sortKey() === 'group') {
         @for (bucket of personGroups(); track bucket.label) {

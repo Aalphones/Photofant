@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import type { PersonDto } from '@photofant/models';
+import type { Density, PersonDto } from '@photofant/models';
 import { PersonService } from '@photofant/services';
 import { Icon } from '@photofant/ui';
 import { filtersActions, personsActions, personsSelectors } from '@photofant/store';
@@ -57,6 +57,17 @@ export class Personen implements OnInit {
   protected readonly sortKey = signal<PersonSortKey>('group');
   protected readonly groupFilter = signal<Set<string>>(new Set());
   protected readonly viewMode = signal<PersonViewMode>('face');
+  protected readonly cardSize = signal<Density>('md');
+
+  protected readonly SIZES: { key: Density; iconSize: number }[] = [
+    { key: 'sm', iconSize: 13 },
+    { key: 'md', iconSize: 15 },
+    { key: 'lg', iconSize: 17 },
+  ];
+
+  private readonly CARD_WIDTHS: Record<Density, number> = { sm: 150, md: 200, lg: 270 };
+
+  protected readonly cardWidth = computed((): number => this.CARD_WIDTHS[this.cardSize()]);
 
   protected readonly availableGroups = computed((): string[] => {
     const names = new Set<string>();
@@ -199,6 +210,10 @@ export class Personen implements OnInit {
 
   protected setViewMode(mode: PersonViewMode): void {
     this.viewMode.set(mode);
+  }
+
+  protected setCardSize(size: Density): void {
+    this.cardSize.set(size);
   }
 
   protected triggerClustering(): void {

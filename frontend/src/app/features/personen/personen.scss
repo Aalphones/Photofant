@@ -60,7 +60,7 @@
   }
 }
 
-.personen__view-toggle {
+.personen__seg-toggle {
   display: flex;
   gap: 2px;
   padding: 3px;
@@ -158,8 +158,8 @@
 
 .personen__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--pf-person-card-w, 200px), 1fr));
+  gap: 14px;
 }
 
 .personen__loading,

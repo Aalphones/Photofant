@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
@@ -27,6 +28,8 @@ export type PersonViewMode = 'single' | 'grid4' | 'face';
 export class PersonCard {
   private readonly personService = inject(PersonService);
   private readonly assetService = inject(AssetService);
+  private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly groupColor = groupColor;
 
@@ -47,16 +50,23 @@ export class PersonCard {
   protected readonly isEditingGroup = signal(false);
   protected readonly editGroupName = signal('');
   protected readonly isDragOver = signal(false);
-  protected readonly actionsVisible = signal(false);
+  protected readonly menuOpen = signal(false);
   protected readonly extraPhotoUrls = signal<string[]>([]);
 
-  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private lastLoadedPersonId: number | null = null;
 
   private readonly nameInputRef = viewChild<ElementRef<HTMLInputElement>>('nameInput');
   private readonly groupInputRef = viewChild<ElementRef<HTMLInputElement>>('groupInput');
 
   constructor() {
+    const closeOnOutsideClick = (event: MouseEvent): void => {
+      if (this.menuOpen() && !this.elementRef.nativeElement.contains(event.target as Node)) {
+        this.menuOpen.set(false);
+      }
+    };
+    document.addEventListener('click', closeOnOutsideClick);
+    this.destroyRef.onDestroy(() => document.removeEventListener('click', closeOnOutsideClick));
+
     effect(() => {
       const mode = this.viewMode();
       const personId = this.person().id;
@@ -94,26 +104,18 @@ export class PersonCard {
   }
 
   protected onCardClick(event: MouseEvent): void {
-    if (this.isEditing()) return;
-    if (this.actionsVisible()) {
-      this.actionsVisible.set(false);
+    if (this.isEditing() || this.isEditingGroup()) { return; }
+    if (this.menuOpen()) {
+      this.menuOpen.set(false);
       event.stopPropagation();
       return;
     }
     this.select.emit();
+  }
+
+  protected toggleMenu(event: MouseEvent): void {
     event.stopPropagation();
-  }
-
-  protected onPointerDown(): void {
-    if (this.person().is_unknown) return;
-    this.longPressTimer = setTimeout(() => { this.actionsVisible.set(true); }, 600);
-  }
-
-  protected onPointerUp(): void {
-    if (this.longPressTimer !== null) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-    }
+    this.menuOpen.update((open: boolean) => !open);
   }
 
   private startEdit(): void {
@@ -142,7 +144,7 @@ export class PersonCard {
 
   protected onRenameClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.actionsVisible.set(false);
+    this.menuOpen.set(false);
     this.startEdit();
   }
 
@@ -169,37 +171,37 @@ export class PersonCard {
 
   protected onGroupClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.actionsVisible.set(false);
+    this.menuOpen.set(false);
     this.startEditGroup();
   }
 
   protected onSplitClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.actionsVisible.set(false);
+    this.menuOpen.set(false);
     this.splitClick.emit();
   }
 
   protected onDupeCheckClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.actionsVisible.set(false);
+    this.menuOpen.set(false);
     this.dupeCheck.emit();
   }
 
   protected onRevealClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.actionsVisible.set(false);
+    this.menuOpen.set(false);
     this.revealInFileBrowser.emit();
   }
 
   protected onDeleteClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.actionsVisible.set(false);
+    this.menuOpen.set(false);
     this.deleteClick.emit();
   }
 
   protected onImportClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.actionsVisible.set(false);
+    this.menuOpen.set(false);
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
