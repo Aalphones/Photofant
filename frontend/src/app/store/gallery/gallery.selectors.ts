@@ -99,10 +99,10 @@ const selectFetchParams = createSelector(
   filtersFeature.selectSort, filtersFeature.selectOrder, filtersFeature.selectFavourite,
   filtersFeature.selectSources, filtersFeature.selectQualityMin, filtersFeature.selectTagIds,
   filtersFeature.selectCollectionId, filtersFeature.selectPersonId, filtersFeature.selectFramings,
-  filtersFeature.selectMediaType,
+  filtersFeature.selectHasFaces, filtersFeature.selectMediaType,
   searchFeature.selectQ, searchFeature.selectMode,
-  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, mediaType, q, qMode) =>
-    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, mediaType, q, qMode })
+  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, hasFaces, mediaType, q, qMode) =>
+    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, hasFaces, mediaType, q, qMode })
 );
 
 const FACE_PAGE_SIZE = 500;

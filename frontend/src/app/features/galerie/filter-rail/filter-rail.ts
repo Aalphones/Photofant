@@ -33,6 +33,7 @@ export class FilterRail {
   protected readonly collections  = this.store.selectSignal(collectionsSelectors.selectAll);
   protected readonly collectionId = this.store.selectSignal(filtersSelectors.collectionId);
   protected readonly framings     = this.store.selectSignal(filtersSelectors.framings);
+  protected readonly hasFaces     = this.store.selectSignal(filtersSelectors.hasFaces);
 
   protected readonly tagQuery = signal('');
 
@@ -50,6 +51,7 @@ export class FilterRail {
   protected readonly openTags      = signal(true);
   protected readonly openSammlung  = signal(true);
   protected readonly openFraming   = signal(true);
+  protected readonly openGesichter = signal(true);
 
   // Slider drag
   private readonly sliderTrackRef = viewChild<ElementRef<HTMLDivElement>>('sliderTrack');
@@ -101,6 +103,11 @@ export class FilterRail {
       ? current.filter((f: string) => f !== framing)
       : [...current, framing];
     this.store.dispatch(filtersActions.setFramings({ framings: next }));
+  }
+
+  protected toggleHasFaces(): void {
+    const next = this.hasFaces() === false ? null : false;
+    this.store.dispatch(filtersActions.setHasFaces({ hasFaces: next }));
   }
 
   protected sourceFacetCount(source: string): number {

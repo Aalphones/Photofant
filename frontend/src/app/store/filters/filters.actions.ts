@@ -14,6 +14,7 @@ export const filtersActions = createActionGroup({
     'Set Collection Id': props<{ collectionId: number | null }>(),
     'Set Person Id':     props<{ personId: number | null }>(),
     'Set Framings':      props<{ framings: string[] }>(),
+    'Set Has Faces':     props<{ hasFaces: boolean | null }>(),
     'Set Media Type':    props<{ mediaType: MediaType }>(),
     'Clear All Filters': emptyProps(),
   },

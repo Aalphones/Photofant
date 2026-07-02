@@ -455,6 +455,7 @@ async def list_assets(
     collection_id: int | None = None,
     person_id: int | None = None,
     framing: Annotated[list[str] | None, Query()] = None,
+    has_faces: bool | None = None,
     q: str | None = None,
     q_mode: SearchMode = SearchMode.TAGS,
 ) -> AssetsPage:
@@ -468,6 +469,16 @@ async def list_assets(
         query = query.filter(AssetInstance.person_id == person_id)
     if framing:
         query = query.filter(Asset.framing.in_(framing))
+    if has_faces is not None:
+        # Extrahierte Gesichter hängen direkt am Original-Asset (Face.asset_id) —
+        # unabhängig vom ProcessingLedger-Flag, das nur "Extraktion schon gelaufen"
+        # markiert, nicht "es existieren noch Face-Zeilen" (z.B. nach manuellem
+        # Löschen in der Review-Queue).
+        face_asset_ids_sub = session.query(Face.asset_id).filter(Face.asset_id.isnot(None)).subquery()
+        if has_faces:
+            query = query.filter(Asset.id.in_(face_asset_ids_sub))
+        else:
+            query = query.filter(Asset.id.notin_(face_asset_ids_sub))
     if collection_id is not None:
         collection_sub = (
             session.query(CollectionItem.asset_id)

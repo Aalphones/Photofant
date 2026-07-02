@@ -12,6 +12,7 @@ const {
   selectCollectionId,
   selectPersonId,
   selectFramings,
+  selectHasFaces,
   selectMediaType,
 } = filtersFeature;
 
@@ -27,5 +28,6 @@ export const filtersSelectors = {
   collectionId: selectCollectionId,
   personId:     selectPersonId,
   framings:     selectFramings,
+  hasFaces:     selectHasFaces,
   mediaType:    selectMediaType,
 };

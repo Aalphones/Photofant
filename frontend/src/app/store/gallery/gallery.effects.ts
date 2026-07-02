@@ -64,6 +64,7 @@ export class GalleryEffects {
         filtersActions.setCollectionId,
         filtersActions.setPersonId,
         filtersActions.setFramings,
+        filtersActions.setHasFaces,
         filtersActions.setMediaType,
         filtersActions.clearAllFilters,
         searchActions.setQuery,
@@ -112,6 +113,7 @@ export class GalleryEffects {
           collectionId: params.collectionId,
           personId: params.personId,
           framings: params.framings,
+          hasFaces: params.hasFaces,
           ...(params.q ? { q: params.q, qMode: params.qMode } : {}),
         }).pipe(
           map((result: AssetsPage) => galleryActions.loadPageSuccess({

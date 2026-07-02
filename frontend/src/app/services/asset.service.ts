@@ -15,6 +15,7 @@ export interface ListAssetsParams {
   collectionId?: number | null;
   personId?: number | null;
   framings?: string[];
+  hasFaces?: boolean | null;
   q?: string;
   qMode?: SearchMode;
 }
@@ -55,6 +56,9 @@ export class AssetService {
       for (const framing of params.framings) {
         httpParams = httpParams.append('framing', framing);
       }
+    }
+    if (params.hasFaces != null) {
+      httpParams = httpParams.set('has_faces', String(params.hasFaces));
     }
     if (params.q) {
       httpParams = httpParams.set('q', params.q);
