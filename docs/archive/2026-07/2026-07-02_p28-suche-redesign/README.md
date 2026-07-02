@@ -36,3 +36,35 @@
 ## Follow-ups (nicht Teil dieses Plans)
 
 - `POST /api/search/semantic` ist toter Code — Entscheidung „entfernen oder für „ähnliche Bilder" reaktivieren" liegt außerhalb dieses Scopes.
+
+## Summary
+
+Suchleiste redirectet jetzt automatisch zur Galerie, der hängende Semantik-Modus-Bug ist behoben
+(Root Cause: `setQuery` änderte nie den Modus zurück), Freitext läuft standardmäßig fuzzy über
+Tag/Caption/Personen-Namen, exakte Auswahl (Person/Tag) läuft über die bestehenden Filter-Actions,
+und die semantische Suche hat keinen spürbaren Kaltstart mehr (Prewarm senkt effektive Latenz von
+~9.4s auf ~18ms bei der ersten Suche nach Inaktivität).
+
+## Files touched
+
+- `frontend/src/app/store/search/` (Reducer/Actions/Effects — Modus-Reset, Redirect)
+- `frontend/src/app/ui/search-box/` (Dropdown, Fuzzy-Freitext, Prewarm-Trigger)
+- `frontend/src/app/services/search.service.ts` (neu)
+- `frontend/src/app/store/gallery/gallery.effects.ts` (Trigger-Liste erweitert)
+- `backend/photofant/api/assets.py` (`q_mode=text`, Fuzzy-Scoring)
+- `backend/photofant/api/search.py` (`POST /api/search/warm`, neu)
+- `backend/photofant/inference/adapters/clip.py` (`warm_text()`, neu)
+- `docs/routes.md`, `docs/code-map.md`
+
+## Commits
+
+- Plan angelegt — `a4d2c9b`
+- Phase 1 (Bugfixes: Modus-Fix, Redirect) — `1aafe6b`
+- Phase 2 (Interaktionsmodell/Fuzzy) — `86715f1`
+- Phase 3 (Kaltstart-Prewarm) — `b96f97b`
+
+## Deviations
+
+Keine — Umsetzung folgt dem Kontrakt und den Phasen-Checklisten 1:1. `docs/clients.md` existiert in
+diesem Projekt nicht (Frontend-Aufrufer stehen inline in `routes.md`) — dort dokumentiert statt einer
+neuen Datei.
