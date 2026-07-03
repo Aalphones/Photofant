@@ -81,7 +81,39 @@ Phase 3 zieht das Frontend nach — beide Phasen in derselben Umsetzungsrunde ab
 ## Bottom Sections (beim Archivieren füllen)
 
 ### Summary
+
+CLIP-Duplikat-Schwelle von „gleiches Motiv" (85%) auf „echtes Beinahe-Duplikat" (97%)
+korrigiert, Lightbox-Ähnlichkeit davon entkoppelt, und die Review-Seite paginiert statt
+alle Paare + N+1-Queries auf einmal zu laden.
+
 ### Files touched
+
+- Backend: `backend/photofant/api/review.py`, `backend/photofant/api/duplicates.py`,
+  `backend/photofant/settings.py`, `backend/photofant/jobs/dupe_scan_job.py`
+- Frontend: `frontend/src/app/store/review/*`, `frontend/src/app/services/review.service.ts`,
+  `frontend/src/app/models/review.model.ts`, `frontend/src/app/models/index.ts`,
+  `frontend/src/app/features/review/review-dupes/*`, `frontend/src/app/shell/nav-rail/nav-rail.ts`,
+  `frontend/src/app/features/einstellungen/verarbeitung/*`
+- Docs: `docs/routes.md`
+
 ### Commits
+
+- `28a78bd` — Phase 1 (Threshold-Semantik & Entkopplung)
+- `c193b56` — Phase 2 + 3 (Pagination + Query-Fix, zusammen wegen Breaking Change)
+
 ### Deviations from plan
+
+- Phase 2+3 wurden wie geplant in einer Runde committet statt an der Phasengrenze zu
+  clearen — der Plan verlangt das explizit wegen des Breaking Change.
+- `nav-rail.ts` (Review-Badge) war nicht in der Checkliste, musste aber mitgezogen werden:
+  bezog den Zähler bisher aus der (jetzt paginierten) Entity-Anzahl, das hätte den Badge auf
+  `DUPE_PAGE_SIZE` gedeckelt. Siehe Report-Back Phase 3.
+
 ### Follow-ups
+
+- Smoke-Checkliste unten ist noch nicht vom User durchlaufen (Voll-Scan auf dem 8.440er-Bestand
+  manuell prüfen).
+- Offset-Pagination + gleichzeitiges Auflösen von Paaren ist eine bekannte, nicht behobene
+  Unschärfe: löst der User ein Paar mitten auf einer Seite auf, kann „Mehr laden" theoretisch
+  ein Paar überspringen (Backend-Liste verschiebt sich um 1). Nicht Teil der Abnahmekriterien,
+  aber notierenswert falls es auffällt.

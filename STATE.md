@@ -1,12 +1,14 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-03_p31-duplikate-schwelle-pagination/`
-**Phase:** 2/3 — Backend: Pagination + Query-Fix (offen)
-**Nächster Schritt:** `phase-2-api-pagination.md` lesen und umsetzen.
+**Aktiver Plan:** `docs/planning/2026-07-03_p32-perf-personen-galerie.md`
+**Phase:** 1/2 — noch nicht begonnen
+**Nächster Schritt:** Plan lesen, Phase 1 umsetzen.
 
 **Reihenfolge (kurzfristig eingeschoben, 2026-07-03):** P31 → P32 → P18 wird danach fortgesetzt.
 
-- P31 (Duplikate: Schwelle fixen, Review paginieren) — `docs/planning/2026-07-03_p31-duplikate-schwelle-pagination/`, 3 Phasen, alle pending.
+- P31 (Duplikate: Schwelle fixen, Review paginieren) — **archiviert** nach
+  `docs/archive/2026-07/2026-07-03_p31-duplikate-schwelle-pagination/`. Smoke-Checkliste dort
+  noch offen (User prüft: Voll-Scan auf 8.440er-Bestand, Review-Pagination, Lightbox, Slider).
 - P32 (Performance: Personen-Seite, -Suche, Galerie-Ballast) — `docs/planning/2026-07-03_p32-perf-personen-galerie.md`, 2 Phasen, alle pending.
 - P18 (Bildklassifizierung) — pausiert bei Phase 2/6 (Engine: CLIP + WD14-Fusion, Job, Pipeline-Hook).
   Phase 1 (Datenmodell & Seed-Katalog) ist committet. Nach P31+P32: `docs/planning/2026-06-30_p18-bildklassifizierung/phase-2-engine-fusion.md`
