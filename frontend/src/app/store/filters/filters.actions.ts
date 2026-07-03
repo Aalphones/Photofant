@@ -1,11 +1,10 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { Density, GroupKey, MediaType, SortKey, SortOrder } from '@photofant/models';
+import type { Density, MediaType, SortKey, SortOrder } from '@photofant/models';
 
 export const filtersActions = createActionGroup({
   source: 'Filters',
   events: {
     'Set Sort':         props<{ sort: SortKey; order: SortOrder }>(),
-    'Set Group':        props<{ group: GroupKey }>(),
     'Set Density':      props<{ density: Density }>(),
     'Set Favourite':    props<{ favourite: boolean | null }>(),
     'Set Sources':      props<{ sources: string[] }>(),

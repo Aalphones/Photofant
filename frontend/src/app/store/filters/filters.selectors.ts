@@ -3,7 +3,6 @@ import { filtersFeature } from './filters.reducer';
 const {
   selectSort,
   selectOrder,
-  selectGroup,
   selectDensity,
   selectFavourite,
   selectSources,
@@ -20,7 +19,6 @@ const {
 export const filtersSelectors = {
   sort:         selectSort,
   order:        selectOrder,
-  group:        selectGroup,
   density:      selectDensity,
   favourite:    selectFavourite,
   sources:      selectSources,

@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { collectionsActions, collectionsSelectors, comfyuiActions, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, jobsActions, personsActions, personsSelectors, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
+import type { AssetDto } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, PersonService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { FaceGrid } from './face-grid/face-grid';
@@ -221,6 +222,10 @@ export class Galerie {
 
   protected onSelectAll(ids: number[]): void {
     this.store.dispatch(galleryActions.selectAll({ ids }));
+  }
+
+  protected onSelectAllClick(): void {
+    this.onSelectAll(this.allAssets().map((asset: AssetDto) => asset.id));
   }
 
   protected onRangeSelect(targetId: number): void {

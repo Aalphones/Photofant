@@ -23,9 +23,6 @@ export type SortKey = (typeof SORT_KEYS)[number];
 export const SORT_ORDERS = ['asc', 'desc'] as const;
 export type SortOrder = (typeof SORT_ORDERS)[number];
 
-export const GROUP_KEYS = ['month', 'person', 'source', 'lineage'] as const;
-export type GroupKey = (typeof GROUP_KEYS)[number];
-
 export const FRAMINGS = ['close_up', 'medium', 'full_body'] as const;
 export type Framing = (typeof FRAMINGS)[number];
 
@@ -181,11 +178,6 @@ export interface AssetsPage {
   page: number;
   page_size: number;
   facets: Facets;
-}
-
-export interface AssetGroup {
-  label: string;
-  assets: AssetDto[];
 }
 
 // P10 Phase 1 — Ableitungs-Baum (Original → Editor-Versionen → Gesichter → deren Versionen)

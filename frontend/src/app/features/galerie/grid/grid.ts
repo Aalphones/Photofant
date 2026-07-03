@@ -46,7 +46,6 @@ export class GalerieGrid {
 
   readonly openAsset    = output<{ id: number; versionId: number | null }>();
   readonly openFace     = output<{ faceId: number; assetId: number | null; versionId: number | null }>();
-  readonly selectAll    = output<number[]>();
   readonly loadMore     = output<void>();
   readonly batchBind    = output<number>();
   readonly rangeSelect  = output<number>();
@@ -63,9 +62,10 @@ export class GalerieGrid {
 
   private readonly containerWidth = signal<number>(0);
 
-  protected readonly rows = computed((): VirtualRow[] =>
-    computeRows(buildLayoutItems(this.assets(), this.facesMap()), this.containerWidth(), this.baseHeight(), GRID_GAP)
-  );
+  protected readonly rows = computed((): VirtualRow[] => {
+    if (this.containerWidth() === 0) return [];
+    return computeRows(buildLayoutItems(this.assets(), this.facesMap()), this.containerWidth(), this.baseHeight(), GRID_GAP);
+  });
 
   protected readonly virtualizer = injectVirtualizer(() => ({
     count: this.rows().length,
@@ -81,11 +81,19 @@ export class GalerieGrid {
 
   constructor() {
     afterNextRender(() => {
+      let rafId: number | null = null;
       const resizeObserver = new ResizeObserver(([entry]) => {
-        if (entry) this.containerWidth.set(entry.contentRect.width);
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          if (entry) this.containerWidth.set(entry.contentRect.width);
+          rafId = null;
+        });
       });
       resizeObserver.observe(this.hostEl.nativeElement);
-      this.destroyRef.onDestroy(() => resizeObserver.disconnect());
+      this.destroyRef.onDestroy(() => {
+        resizeObserver.disconnect();
+        if (rafId !== null) cancelAnimationFrame(rafId);
+      });
     });
 
     effect(() => {
@@ -130,9 +138,5 @@ export class GalerieGrid {
 
   protected onRangeSelect(id: number): void {
     this.rangeSelect.emit(id);
-  }
-
-  protected onSelectAll(): void {
-    this.selectAll.emit(this.assets().map((asset: AssetDto) => asset.id));
   }
 }

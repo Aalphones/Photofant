@@ -2,18 +2,27 @@
 
 Format: `- [ ] → Phase N: <Erkenntnis>`
 
-- [ ] → Phase 3: „Alle auswählen" hatte bisher einen Button pro Monatsgruppe
-  (`.grid__month-head`). Der ist mit den Gruppen komplett weggefallen — es gibt
-  aktuell **keine** UI-Stelle mehr, die `GalerieGrid.onSelectAll()` auslöst
-  (Output/Wiring funktioniert, aber niemand ruft es auf). AK „Bulk-Select
-  liefert alle geladenen IDs korrekt" ist nur die Event-Kette, nicht die
-  Erreichbarkeit für den User. Braucht eine neue Stelle (z.B. `sub-toolbar` bei
-  aktivem `selectionMode`, oder ein schmaler Balken über `.grid__scroll-container`).
-- [ ] → Phase 3: `gallerySelectors.selectGroups` (`store/gallery/gallery.selectors.ts`)
-  wird nach diesem Umbau von keinem Consumer mehr referenziert — weder
-  `galerie.ts` noch `favoriten.ts` nutzen `groups` mehr. Bewusst nicht in Phase 2
-  angefasst (Store-Layer war nicht im Checklisten-Scope). Kandidat zum Entfernen,
-  falls nichts anderes noch draufzeigt (kurz greppen vor dem Löschen).
+- [x] → Phase 3 (erledigt): „Alle auswählen" hatte bisher einen Button pro
+  Monatsgruppe (`.grid__month-head`), der mit den Gruppen weggefallen war —
+  `GalerieGrid.onSelectAll()`/`selectAll`-Output waren unerreichbar (toter Pfad).
+  Fix: neuer „Alle auswählen"-Button in der Sub-Toolbar (sichtbar bei aktivem
+  Auswahlmodus), ruft direkt `allAssets()` im Parent (`galerie.ts`/`favoriten.ts`)
+  ab. Grids `selectAll`-Output samt `onSelectAll()`-Methode entfernt (toter Code),
+  beide Grid-Consumer (`galerie.html`, `favoriten.html`) umgestellt.
+- [x] → Phase 3 (erledigt): `gallerySelectors.selectGroups`/`buildGroups`
+  (`store/gallery/gallery.selectors.ts`) hatten keinen Consumer mehr — entfernt,
+  inklusive der nur dafür existierenden `selectPersonNameMap`/`formatMonthLabel`.
+- [x] → Phase 3 (erledigt, während der Recherche zum obigen Punkt entdeckt):
+  Der „Gruppierung"-Button in der Sub-Toolbar (`cycleGroup()`) änderte nach dem
+  Wegfall der Gruppen-Header nur noch unsichtbaren Store-Status
+  (`filtersFeature.selectGroup`) und löste einen wirkungslosen Refetch aus —
+  vorgetäuschte Funktion, kein P20-Plan-Scope. Dem User zur Entscheidung
+  vorgelegt (Entscheidungsblock), Antwort: jetzt entfernen. Kaskadiert entfernt:
+  Button + `GROUPS`/`cycleGroup`/`groupLabel` in `sub-toolbar.ts`/`.html`,
+  `filtersActions.setGroup`, `FiltersState.group`, `filtersSelectors.group`,
+  der `setGroup`-Eintrag in `gallery.effects.ts`s `onFiltersChange$`, sowie die
+  Typen `GroupKey`/`GROUP_KEYS` und das nie konsumierte `AssetGroup` aus
+  `models/asset.model.ts`. Details: ADR-011.
 - [x] → Phase 2 (erledigt, informativ für Phase 3/ADR): `injectVirtualizer`s
   echte Angular-Wrapper-API nimmt `scrollElement: ElementRef | Element` direkt
   entgegen, **nicht** `getScrollElement: () => …` wie der Plan-Snippet (React-Doku-Stil)

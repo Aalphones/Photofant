@@ -46,12 +46,6 @@
     <span class="subbar__order">{{ order() === 'asc' ? '↑' : '↓' }}</span>
   </button>
 
-  <!-- Gruppierung -->
-  <button class="subbar__btn" (click)="cycleGroup()" title="Gruppierung wechseln">
-    <pf-icon name="layers" [size]="15" />
-    <span>{{ groupLabel() }}</span>
-  </button>
-
   <!-- Density -->
   <div class="subbar__seg">
     @for (item of DENSITIES; track item.key) {
@@ -76,6 +70,12 @@
     <pf-icon name="select" [size]="14" />
     <span>{{ selectionMode() ? 'Beenden' : 'Auswählen' }}</span>
   </button>
+
+  @if (selectionMode()) {
+    <button class="subbar__btn" (click)="selectAllClick.emit()" title="Alle geladenen Bilder auswählen">
+      <span>Alle auswählen</span>
+    </button>
+  }
 
   <!-- Workflow-Modus -->
   <button

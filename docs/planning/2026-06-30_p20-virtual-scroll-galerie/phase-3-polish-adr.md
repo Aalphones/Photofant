@@ -19,7 +19,7 @@
 
 ### Implementierung
 
-- [ ] ResizeObserver-Callback per `requestAnimationFrame` debounced:
+- [x] ResizeObserver-Callback per `requestAnimationFrame` debounced:
   ```typescript
   let rafId: number | null = null;
   const ro = new ResizeObserver(([entry]) => {
@@ -32,17 +32,17 @@
   ```
   Cleanup: `cancelAnimationFrame(rafId)` im `destroyRef.onDestroy`.
 
-- [ ] `containerWidth === 0`-Guard in `rows`-Computed: `if (containerWidth() === 0) return []` — Virtualizer rendert 0 Items, zeigt nur Skeleton bis erste Messung.
+- [x] `containerWidth === 0`-Guard in `rows`-Computed: `if (containerWidth() === 0) return []` — Virtualizer rendert 0 Items, zeigt nur Skeleton bis erste Messung.
 
-- [ ] Edge-Case Viewport-Resize: `rows()` recomputed → `virtualizer` sieht neue Row-Anzahl → Scroll-Position kann springen. TanStack behält bei Count-Änderung die Scroll-Position. Prüfen ob sichtbarer Bereich nach Resize vernünftig ist; bei Bedarf `scrollToIndex` auf nächste sichtbare Row.
+- [x] Edge-Case Viewport-Resize: TanStack behält bei Count-Änderung die Scroll-Position (Offset-basiert, kein Index-Sprung) — geprüft, kein zusätzlicher `scrollToIndex`-Aufruf nötig; Smoke-Checkliste deckt den sichtbaren Fall ab (800px-Viewport-Test).
 
-- [ ] Selektions-Check: `onSelectAll` emittiert alle Asset-IDs über `assets()` (nicht mehr `groupIds`) — sicherstellen dass Galerie-Parent `(selectAll)` weiterhin alle IDs korrekt verarbeitet.
+- [x] Selektions-Check: `GalerieGrid.onSelectAll()`/`selectAll`-Output waren tot (kein Template-Trigger mehr seit Wegfall der Gruppen-Header — die Erkenntnis aus FINDINGS.md). Statt Grid-intern gefixt: neuer „Alle auswählen"-Button in der Sub-Toolbar (sichtbar bei aktivem Auswahlmodus), der direkt `allAssets()` im Galerie-/Favoriten-Parent nutzt. Grid-Output entfernt (toter Pfad), beide Consumer (`galerie.html`, `favoriten.html`) umgestellt.
 
-- [ ] Skeleton-Anzeige: bisher im Template nach dem Sentinel. Jetzt außerhalb des Virtualizer-Spacers — im `.grid__scroll-container` nach dem Spacer-Div. Prüfen ob Skeleton sichtbar ist wenn erste Page lädt (Bilder noch nicht da, `rows()` leer).
+- [x] Skeleton-Anzeige: war schon korrekt außerhalb des Spacer-Divs (aus Phase 2) — keine Änderung nötig.
 
 ### ADR anlegen
 
-- [ ] `docs/decisions/011-galerie-virtual-scroll.md` anlegen:
+- [x] `docs/decisions/011-galerie-virtual-scroll.md` anlegen:
 
 ```markdown
 # ADR-011 — Virtual-Scroll-Strategie: @tanstack/angular-virtual, Row-level
@@ -80,7 +80,12 @@ Die Row-Breaking-Engine ist ~40 Zeilen purer Code ohne Framework-Abhängigkeit.
 
 ### Docs
 
-- [ ] `docs/code-map.md` finaler Stand: `row-layout.ts` als Row-Breaking-Utility eingetragen, `grid.ts` als Virtualizer-Host, `#loadSentinel` als entfernt
-- [ ] README Bottom Sections füllen: Summary, Files touched, Commits, Deviations, Follow-ups
+- [x] `docs/code-map.md` finaler Stand: war bereits aus Phase 2 aktuell (row-layout.ts, Virtualizer-Host, `#loadSentinel` entfernt) — keine Änderung nötig, Phase 3 war reine Logik ohne Struktur-Änderung.
+- [x] README Bottom Sections füllen: Summary, Files touched, Commits, Deviations, Follow-ups
 
 ## Report-Back
+
+Alle Checkliste-Punkte umgesetzt, `tsc`/`ng build` sauber. Zusätzlicher, mit dem
+User abgestimmter Scope: der beim Umbau verwaiste „Gruppierung"-Button in der
+Sub-Toolbar (täuschte Funktion vor, ohne noch etwas sichtbar zu bewirken) wurde
+komplett samt Store-Pfad entfernt — Details in FINDINGS.md und ADR-011.

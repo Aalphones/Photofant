@@ -20,6 +20,7 @@ import {
   personsActions,
 } from '@photofant/store';
 import { AssetService } from '@photofant/services';
+import type { AssetDto } from '@photofant/models';
 import { GalerieGrid } from '../galerie/grid/grid';
 import { Lightbox } from '../galerie/lightbox/lightbox';
 import { FilterRail } from '../galerie/filter-rail/filter-rail';
@@ -135,6 +136,10 @@ export class Favoriten {
 
   protected onSelectAll(ids: number[]): void {
     this.store.dispatch(galleryActions.selectAll({ ids }));
+  }
+
+  protected onSelectAllClick(): void {
+    this.onSelectAll(this.allAssets().map((asset: AssetDto) => asset.id));
   }
 
   protected onRangeSelect(targetId: number): void {

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { Collection, Density, GroupKey, MediaType, PersonDto, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
+import type { Collection, Density, MediaType, PersonDto, SortKey, SortOrder, TagFacetItem } from '@photofant/models';
 import { MEDIA_TYPES } from '@photofant/models';
 import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors, personsSelectors, presetsSelectors, searchActions, searchSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
@@ -26,6 +26,7 @@ export class SubToolbar {
 
   readonly railToggle      = output<void>();
   readonly selToggle       = output<void>();
+  readonly selectAllClick  = output<void>();
   readonly workflowToggle  = output<void>();
 
   readonly selectionMode  = input<boolean>(false);
@@ -34,7 +35,6 @@ export class SubToolbar {
   protected readonly total      = this.store.selectSignal(gallerySelectors.selectServerTotal);
   protected readonly sort       = this.store.selectSignal(filtersSelectors.sort);
   protected readonly order      = this.store.selectSignal(filtersSelectors.order);
-  protected readonly group      = this.store.selectSignal(filtersSelectors.group);
   protected readonly density    = this.store.selectSignal(filtersSelectors.density);
   protected readonly presets    = this.store.selectSignal(presetsSelectors.selectPresets);
   protected readonly sources    = this.store.selectSignal(filtersSelectors.sources);
@@ -116,13 +116,6 @@ export class SubToolbar {
 
   protected readonly hasActiveFilters = computed((): boolean => this.chips().length > 0);
 
-  protected readonly GROUPS: { key: GroupKey; label: string }[] = [
-    { key: 'month',   label: 'Monat' },
-    { key: 'person',  label: 'Person' },
-    { key: 'source',  label: 'Quelle' },
-    { key: 'lineage', label: 'Original/Edit' },
-  ];
-
   protected readonly DENSITIES: { key: Density; size: number }[] = [
     { key: 'sm', size: 13 },
     { key: 'md', size: 15 },
@@ -175,20 +168,6 @@ export class SubToolbar {
     }
 
     this.store.dispatch(filtersActions.setSort({ sort: nextSort, order: nextOrder }));
-  }
-
-  protected setGroup(group: GroupKey): void {
-    this.store.dispatch(filtersActions.setGroup({ group }));
-  }
-
-  protected cycleGroup(): void {
-    const currentIndex = this.GROUPS.findIndex((entry) => entry.key === this.group());
-    const next = this.GROUPS[(currentIndex + 1) % this.GROUPS.length];
-    if (next != null) { this.setGroup(next.key); }
-  }
-
-  protected groupLabel(): string {
-    return this.GROUPS.find((entry) => entry.key === this.group())?.label ?? '';
   }
 
   protected setDensity(density: Density): void {

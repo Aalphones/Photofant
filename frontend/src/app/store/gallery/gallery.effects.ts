@@ -65,7 +65,6 @@ export class GalleryEffects {
     this.actions$.pipe(
       ofType(
         filtersActions.setSort,
-        filtersActions.setGroup,
         filtersActions.setDensity,
         filtersActions.setFavourite,
         filtersActions.setSources,

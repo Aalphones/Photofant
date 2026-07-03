@@ -1,11 +1,10 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import type { Density, GroupKey, MediaType, SortKey, SortOrder } from '@photofant/models';
+import type { Density, MediaType, SortKey, SortOrder } from '@photofant/models';
 import { filtersActions } from './filters.actions';
 
 interface FiltersState {
   sort: SortKey;
   order: SortOrder;
-  group: GroupKey;
   density: Density;
   favourite: boolean | null;
   sources: string[];
@@ -22,7 +21,6 @@ interface FiltersState {
 const initialState: FiltersState = {
   sort: 'date',
   order: 'desc',
-  group: 'month',
   density: 'md',
   favourite: null,
   sources: [],
@@ -44,10 +42,6 @@ export const filtersFeature = createFeature({
       ...state,
       sort,
       order,
-    })),
-    on(filtersActions.setGroup, (state: FiltersState, { group }) => ({
-      ...state,
-      group,
     })),
     on(filtersActions.setDensity, (state: FiltersState, { density }) => ({
       ...state,

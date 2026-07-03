@@ -9,7 +9,7 @@
 |---|---|---|---|
 | 1 | [Row-Breaking-Engine](phase-1-layout-engine.md) | heikel | done |
 | 2 | [@tanstack/angular-virtual Integration](phase-2-virtual-rendering.md) | heikel | done |
-| 3 | [Polish & ADR](phase-3-polish-adr.md) | standard | pending |
+| 3 | [Polish & ADR](phase-3-polish-adr.md) | standard | done |
 
 ## Scope & Designentscheidungen
 
@@ -83,7 +83,46 @@ Gap wird als Teil der Row-Höhe behandelt: `ROW_HEIGHT = baseHeight + GRID_GAP`.
 ## Bottom Sections (beim Archivieren füllen)
 
 ### Summary
+
+Galerie rendert jetzt virtualisiert (Row-level, `@tanstack/angular-virtual`) statt
+alle Assets als DOM-Knoten zu halten — Monatsgruppen sind einer flachen,
+fortlaufenden Liste gewichen. Phase 3 hat die Polish-Punkte geschlossen
+(ResizeObserver-Debounce, Zero-Width-Guard) und zwei liegen gebliebene
+UI-Lücken aus dem Umbau gefixt: „Alle auswählen" war unerreichbar geworden,
+und der „Gruppierung"-Button täuschte nach dem Wegfall der Gruppen-Header eine
+nicht mehr existierende Funktion vor — beide behoben, Details in FINDINGS.md
+und ADR-011.
+
 ### Files touched
+
+- `frontend/src/app/features/galerie/grid/{grid.ts,row-layout.ts}` — Virtualizer-Host + Row-Breaking-Engine (P20 Kern)
+- `frontend/src/app/features/galerie/{galerie,favoriten,sub-toolbar}/*` — Select-All-Wiring, Gruppierung-Button entfernt
+- `frontend/src/app/features/galerie/face-grid/*` — eigener Scroll-Container (Ripple-Effekt Phase 2)
+- `frontend/src/app/store/gallery/gallery.selectors.ts` — `selectGroups`/`buildGroups` entfernt
+- `frontend/src/app/store/filters/{filters.actions,filters.reducer,filters.selectors}.ts` — `group`-Filterstatus entfernt
+- `frontend/src/app/store/gallery/gallery.effects.ts` — `setGroup` aus Refetch-Trigger entfernt
+- `frontend/src/app/models/asset.model.ts` — `GroupKey`/`GROUP_KEYS`/`AssetGroup` entfernt
+- `docs/decisions/011-galerie-virtual-scroll.md` — neu
+
 ### Commits
+
+- `c612681` feat(galerie): row-breaking engine for virtual scroll (P20 phase 1)
+- `76347ba` feat(frontend): virtualize gallery grid with @tanstack/angular-virtual (Phase 2/3 Ripple-Effekte)
+- Phase-3-Commit: siehe `git log` (Polish, ADR-011, Gruppierung-Cleanup) — direkt nach diesem Archivieren
+
 ### Deviations from plan
+
+- `favoriten.ts`/`.html`/`.scss` und `face-grid.scss` waren nicht im ursprünglichen
+  Plan-Scope, wurden aber in Phase 2 mitgezogen (zweiter `GalerieGrid`-Consumer,
+  gleiche Höhenkette) — siehe FINDINGS.md.
+- Phase 3 hat zusätzlich zum Plan-Scope den toten „Gruppierung"-Button samt
+  Store-Pfad entfernt (mit dem User abgestimmt, kein stiller Change) —
+  siehe FINDINGS.md, ADR-011.
+
 ### Follow-ups
+
+- `docs/decisions/012-galerie-stapel-flache-einzeleintraege.md` dokumentierte
+  bereits zwei bekannte Lücken (Version-Favorit/-Löschen, Version-als-Workflow-Input) —
+  unverändert offen, nicht P20-Scope.
+- CSS-Budget `lightbox.scss` weiterhin über Soll (24.77 kB vs. 8 kB Komponenten-Budget) —
+  vorbestehend, keine P20-Regression, unbehoben.

@@ -1,7 +1,6 @@
 import { createSelector } from '@ngrx/store';
-import type { AssetDto, AssetGroup, FaceGalleryItemDto, GroupKey } from '@photofant/models';
+import type { AssetDto, FaceGalleryItemDto } from '@photofant/models';
 import { filtersFeature } from '../filters/filters.reducer';
-import { personsFeature } from '../persons/persons.reducer';
 import { searchFeature } from '../search/search.reducer';
 import { galleryFeature } from './gallery.reducer';
 
@@ -26,45 +25,6 @@ const {
   selectFaceTotal,
 } = galleryFeature;
 
-function formatMonthLabel(dateStr: string | null): string {
-  if (!dateStr) return 'Unbekannt';
-  const date = new Date(dateStr);
-  return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(date);
-}
-
-function buildGroups(
-  assets: AssetDto[],
-  group: GroupKey,
-  personNames: Map<number, string>,
-): AssetGroup[] {
-  const map = new Map<string, AssetDto[]>();
-
-  for (const asset of assets) {
-    let key: string;
-    if (group === 'source') {
-      key = asset.source ?? 'Unbekannt';
-    } else if (group === 'person') {
-      const personId = (asset as AssetDto & { person_id?: number }).person_id;
-      key = personId != null ? (personNames.get(personId) ?? 'Unbekannt') : 'Unbekannt';
-    } else if (group === 'lineage') {
-      // Original als Anker: stack_group_id fasst Original + Editor-Versionen +
-      // ComfyUI-original_id-Kinder zusammen (ADR-012); ohne Gruppe ist das Asset sein
-      // eigenes Original (Einzelbild ohne Ableitungen).
-      key = `Original #${asset.stack_group_id ?? asset.id}`;
-    } else {
-      key = formatMonthLabel(asset.created_at ?? asset.imported_at);
-    }
-    const bucket = map.get(key);
-    if (bucket !== undefined) {
-      bucket.push(asset);
-    } else {
-      map.set(key, [asset]);
-    }
-  }
-
-  return [...map.entries()].map(([label, groupAssets]) => ({ label, assets: groupAssets }));
-}
-
 // Adapter's `selectTotal` is shadowed onto the loaded-entity count, so read the
 // server-side total straight from feature state for "are there more pages" logic.
 const selectServerTotal = createSelector(
@@ -75,23 +35,6 @@ const selectServerTotal = createSelector(
 const selectHasMore = createSelector(
   selectServerTotal, selectPage, selectPageSize,
   (total: number, page: number, pageSize: number) => total > page * pageSize
-);
-
-const selectPersonNameMap = createSelector(
-  personsFeature.selectAll,
-  (persons) => {
-    const map = new Map<number, string>();
-    for (const person of persons) {
-      map.set(person.id, person.name ?? 'Unbekannt');
-    }
-    return map;
-  },
-);
-
-const selectGroups = createSelector(
-  selectAll, filtersFeature.selectGroup, selectPersonNameMap,
-  (assets: AssetDto[], group: GroupKey, personNames: Map<number, string>) =>
-    buildGroups(assets, group, personNames)
 );
 
 const selectFetchParams = createSelector(
@@ -203,7 +146,6 @@ export const gallerySelectors = {
   selectIsLoading,
   selectError,
   selectHasMore,
-  selectGroups,
   selectFetchParams,
   selectFacets,
   selectLightboxId,
@@ -220,7 +162,6 @@ export const gallerySelectors = {
   selectSelectionMode,
   selectSelectedIds,
   selectAnchorId,
-  selectPersonNameMap,
   selectFaceItems,
   selectFaceTotal,
   selectFaceHasMore,

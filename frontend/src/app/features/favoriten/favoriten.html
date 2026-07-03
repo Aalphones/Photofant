@@ -3,6 +3,7 @@
   [workflowMode]="false"
   (railToggle)="railOpen.set(!railOpen())"
   (selToggle)="toggleSelectionMode()"
+  (selectAllClick)="onSelectAllClick()"
 />
 
 <div class="favoriten__toolbar-extra">
@@ -36,7 +37,6 @@
         [selectedIds]="selectedIds()"
         [isArmed]="false"
         (openAsset)="onOpenAsset($event)"
-        (selectAll)="onSelectAll($event)"
         (rangeSelect)="onRangeSelect($event)"
         (loadMore)="onLoadMore()"
       />

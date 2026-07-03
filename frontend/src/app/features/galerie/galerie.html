@@ -3,6 +3,7 @@
   [workflowMode]="workflowMode()"
   (railToggle)="railOpen.set(!railOpen())"
   (selToggle)="toggleSelectionMode()"
+  (selectAllClick)="onSelectAllClick()"
   (workflowToggle)="toggleWorkflowMode()"
 />
 
@@ -72,7 +73,6 @@
         [isArmed]="isArmed()"
         (openAsset)="isArmed() ? onBindAsset($event) : onOpenAsset($event)"
         (batchBind)="onBatchBindAsset($event)"
-        (selectAll)="onSelectAll($event)"
         (rangeSelect)="onRangeSelect($event)"
         (loadMore)="onLoadMore()"
         (openFace)="isArmed() ? onBindFace($event) : onOpenFace($event)"
