@@ -78,6 +78,19 @@ def match_face_incremental(session: Session, face_id: int) -> MatchResult:
     return MatchResult(person_id=unknown_person_id, score=best_score, band="unknown")
 
 
+def _run_hdbscan(embeddings: np.ndarray, min_cluster_size: int, epsilon: float) -> np.ndarray:
+    from sklearn.cluster import HDBSCAN as SklearnHDBSCAN
+
+    clusterer = SklearnHDBSCAN(
+        min_cluster_size=min_cluster_size,
+        min_samples=1,
+        cluster_selection_epsilon=epsilon,
+        metric="cosine",
+        store_centers="centroid",
+    )
+    return clusterer.fit_predict(embeddings)
+
+
 def run_initial_clustering(session: Session) -> dict[str, int]:
     """Match unassigned faces against existing persons first, then HDBSCAN the rest.
 
@@ -176,16 +189,21 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
     )
 
     try:
-        from sklearn.cluster import HDBSCAN as SklearnHDBSCAN
-
-        clusterer = SklearnHDBSCAN(
-            min_cluster_size=min_cluster_size,
-            min_samples=1,
-            cluster_selection_epsilon=1.0 - auto_threshold,
-            metric="cosine",
-            store_centers="centroid",
+        labels = _run_hdbscan(embeddings, min_cluster_size, 1.0 - auto_threshold)
+    except TypeError as error:
+        # Known scikit-learn bug: epsilon-based cluster selection
+        # (traverse_upwards in _tree.pyx) coerces a multi-row numpy result into a
+        # scalar and crashes when the condensed tree has tied merge distances —
+        # which real face-embedding sets large enough to have near-duplicate
+        # faces run into. Falling back to epsilon=0 (pure excess-of-mass
+        # selection) avoids that code path entirely.
+        if "0-dimensional arrays" not in str(error):
+            raise
+        log.warning(
+            "HDBSCAN epsilon-based cluster selection hit a tied-distance bug (%s) — "
+            "retrying without epsilon merge", error,
         )
-        labels = clusterer.fit_predict(embeddings)
+        labels = _run_hdbscan(embeddings, min_cluster_size, 0.0)
     except ImportError:
         log.warning("scikit-learn HDBSCAN not available — falling back to DBSCAN")
         from sklearn.cluster import DBSCAN
