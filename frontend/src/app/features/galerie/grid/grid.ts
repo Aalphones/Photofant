@@ -101,6 +101,7 @@ export class GalerieGrid {
       const totalRows = this.rows().length;
       if (
         range !== null &&
+        totalRows > 0 &&
         range.endIndex >= totalRows - OVERSCAN - 3 &&
         this.hasMore() &&
         !this.isLoading()
