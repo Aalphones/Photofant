@@ -23,7 +23,7 @@ from photofant.media.phash import compute_phash, find_similar
 
 log = logging.getLogger(__name__)
 
-ClassifyStep = Literal["tags", "caption", "embedding", "heuristics", "faces", "phash"]
+ClassifyStep = Literal["tags", "caption", "embedding", "heuristics", "faces", "phash", "categories"]
 
 _STEP_FLAGS: dict[str, str] = {
     "tags": "tags_done",
@@ -31,6 +31,7 @@ _STEP_FLAGS: dict[str, str] = {
     "embedding": "embedding_done",
     "heuristics": "heuristics_done",
     "faces": "faces_done",
+    "categories": "classified",
 }
 
 
@@ -153,6 +154,7 @@ async def run_rerun_job(
     caption_preset_id: int | None,
 ) -> None:
     from photofant.jobs.caption_job import _run_caption_with_preset
+    from photofant.jobs.classification_job import _run_classification
     from photofant.jobs.embedding_job import _run_embedding
     from photofant.jobs.face_job import _run_face_job
     from photofant.jobs.heuristics_job import _run_heuristics
@@ -174,6 +176,8 @@ async def run_rerun_job(
             await asyncio.to_thread(_run_caption_with_preset, asset_id, asset_path, caption_preset_id, True)
         if "embedding" in steps:
             await asyncio.to_thread(_run_embedding, asset_id, asset_path)
+        if "categories" in steps:
+            await asyncio.to_thread(_run_classification, asset_id)
         if "faces" in steps:
             await asyncio.to_thread(_delete_existing_faces, asset_id)
             await asyncio.to_thread(_run_face_job, asset_id, asset_path)

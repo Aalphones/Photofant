@@ -23,10 +23,12 @@ def _run_embedding(asset_id: int, asset_path: str) -> None:
     from PIL import Image as PILImage
 
     from photofant.inference.adapters.clip import resolve_clip_embedder
+    from photofant.jobs.classification_pipeline import classification_pipeline
 
     embedder = resolve_clip_embedder()
     if embedder is None:
         log.info("CLIP not enabled — skipping embedding for asset %d", asset_id)
+        classification_pipeline.signal(asset_id)
         return
 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
@@ -48,6 +50,7 @@ def _run_embedding(asset_id: int, asset_path: str) -> None:
         session.commit()
 
     log.info("Embedded asset %d (%d dims)", asset_id, embedding.shape[0])
+    classification_pipeline.signal(asset_id)
 
 
 async def run_embedding_job(status: JobStatus, asset_id: int, asset_path: str) -> None:

@@ -444,13 +444,14 @@ async def _enqueue_pipeline(items: list[tuple[int, str]]) -> None:
     await _enqueue_heuristics_batch(items)
     auto_tag: bool = settings["auto_tag"]
     auto_caption: bool = settings["auto_caption"]
+    auto_embed: bool = settings["auto_embed"]
     auto_face: bool = settings.get("auto_face", True)  # type: ignore[assignment]
 
     if auto_tag:
         await _enqueue_tagging_batch(items)
     if auto_caption:
         await _enqueue_caption_batch(items)
-    if settings["auto_embed"]:
+    if auto_embed:
         await _enqueue_embedding_batch(items)
 
     if auto_face:
@@ -463,6 +464,17 @@ async def _enqueue_pipeline(items: list[tuple[int, str]]) -> None:
 
             for asset_id, asset_path in items:
                 face_pipeline.register(asset_id, asset_path, prereq_count)
+
+    classification_prereq_count = int(auto_tag) + int(auto_embed)
+    if classification_prereq_count == 0:
+        # Neither TAGGING nor EMBEDDING configured — CLASSIFICATION has no signal to wait for
+        # (the engine still runs; both fusion inputs simply stay absent).
+        await _enqueue_classification_batch(items)
+    else:
+        from photofant.jobs.classification_pipeline import classification_pipeline
+
+        for asset_id, _asset_path in items:
+            classification_pipeline.register(asset_id, classification_prereq_count)
 
 
 async def _enqueue_heuristics_batch(items: list[tuple[int, str]]) -> None:
@@ -498,3 +510,10 @@ async def _enqueue_face_batch(items: list[tuple[int, str]]) -> None:
 
     for asset_id, asset_path in items:
         await enqueue_face(asset_id, asset_path)
+
+
+async def _enqueue_classification_batch(items: list[tuple[int, str]]) -> None:
+    from photofant.jobs.classification_job import enqueue_classification
+
+    for asset_id, _asset_path in items:
+        await enqueue_classification(asset_id)

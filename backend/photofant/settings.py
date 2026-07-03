@@ -29,6 +29,14 @@ class ComfyUISettings(TypedDict):
     result_wait_timeout_seconds: int
 
 
+class ClassificationSettings(TypedDict):
+    clip_weight: float
+    wd14_weight: float
+    min_confidence: float
+    multi_min_confidence: float
+    clip_prompt_template: str
+
+
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
@@ -62,6 +70,7 @@ class AppSettings(TypedDict):
     captioning_workers: int
     display: DisplaySettings
     comfyui: ComfyUISettings
+    classification: ClassificationSettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -111,6 +120,13 @@ SETTINGS_DEFAULTS: AppSettings = {
         "result_poll_interval_seconds": 1.0,
         "result_wait_timeout_seconds": 1800,
     },
+    "classification": {
+        "clip_weight": 0.5,
+        "wd14_weight": 0.5,
+        "min_confidence": 0.3,
+        "multi_min_confidence": 0.45,
+        "clip_prompt_template": "a photo of {label}",
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -147,6 +163,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "captioning_workers": int,
     "display": dict,
     "comfyui": dict,
+    "classification": dict,
 }
 
 

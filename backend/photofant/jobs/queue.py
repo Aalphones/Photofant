@@ -33,6 +33,7 @@ class JobKind(StrEnum):
     CAPTIONING = "captioning"
     EMBEDDING = "embedding"
     HEURISTICS = "heuristics"
+    CLASSIFICATION = "classification"
     RERUN = "rerun"
     REEVALUATE = "reevaluate"
     DUPE_SCAN = "dupe_scan"
@@ -78,6 +79,7 @@ _BACKGROUND_PRIORITY: dict[JobKind, int] = {
     JobKind.COMFYUI_RUN: 10,
     JobKind.HEURISTICS: 20,
     JobKind.EMBEDDING: 30,
+    JobKind.CLASSIFICATION: 35,
     JobKind.FACE: 45,
     JobKind.CLUSTERING: 50,
     JobKind.DUPE_SCAN: 50,
@@ -118,11 +120,13 @@ class JobQueue:
         self._parallel_tasks: set[asyncio.Task[None]] = set()
 
     def start(self) -> None:
+        from photofant.jobs.classification_pipeline import classification_pipeline
         from photofant.jobs.face_pipeline import face_pipeline
         from photofant.settings import load_settings
 
         settings = load_settings()
         face_pipeline.set_loop(asyncio.get_running_loop())
+        classification_pipeline.set_loop(asyncio.get_running_loop())
         self._worker_task = asyncio.create_task(self._worker())
         self._background_worker_task = asyncio.create_task(self._background_worker())
         self._scale_pool(

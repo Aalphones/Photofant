@@ -20,6 +20,7 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
     from PIL import Image as PILImage
 
     from photofant.inference.adapters.wd14 import resolve_wd14_tagger
+    from photofant.jobs.classification_pipeline import classification_pipeline
     from photofant.jobs.face_pipeline import face_pipeline
     from photofant.settings import load_settings
 
@@ -30,6 +31,7 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
     if tagger is None:
         log.info("WD14 not enabled — skipping tagging for asset %d", asset_id)
         face_pipeline.signal(asset_id)
+        classification_pipeline.signal(asset_id)
         return
 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
@@ -98,6 +100,7 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
 
     log.info("Tagged asset %d: %d tag(s) persisted", asset_id, len(tag_scores))
     face_pipeline.signal(asset_id)
+    classification_pipeline.signal(asset_id)
 
 
 async def run_tagging_job(status: JobStatus, asset_id: int, asset_path: str) -> None:

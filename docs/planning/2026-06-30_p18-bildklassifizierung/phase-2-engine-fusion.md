@@ -43,13 +43,43 @@
 
 ## Checkliste
 
-- [ ] `classification/engine.py`: `ClassificationResult` (dataclass) + `classify_asset`.
-- [ ] `classification/scoring.py` (oder in `inference/`): `score_labels(image_emb, prompts_per_label)` mit Text-Embedding-Cache + Softmax je Kategorie.
-- [ ] `jobs/classification_job.py`: Per-Asset-Job + `enqueue_classification` + Batch-Enqueue-Helfer für den Retro-Lauf (Selektion/„all").
-- [ ] `jobs/queue.py`: `JobKind.CLASSIFICATION` + Position in `_BACKGROUND_PRIORITY` (nach Embedding/Tagging).
-- [ ] Import-Hook: in `embedding_job`/`tagging_job` (oder Orchestrierung) Klassifizierung anstoßen, sobald beide Vorbedingungen erfüllt sind.
-- [ ] `api/classify.py`: `"categories"` zu `ClassifyStep`; `rerun_job.py` Mapping + Ledger-Reset.
-- [ ] Settings-Zugriff über `load_settings()` für die fünf Keys (keine Magic Numbers).
-- [ ] Tests: `backend/tests/test_classification_engine.py` (Fusions-Tabelle).
+- [x] `classification/engine.py`: `ClassificationResult` (dataclass) + `classify_asset`.
+- [x] `classification/scoring.py` (oder in `inference/`): `score_labels(image_emb, prompts_per_label)` mit Text-Embedding-Cache + Softmax je Kategorie.
+- [x] `jobs/classification_job.py`: Per-Asset-Job + `enqueue_classification` + Batch-Enqueue-Helfer für den Retro-Lauf (Selektion/„all").
+- [x] `jobs/queue.py`: `JobKind.CLASSIFICATION` + Position in `_BACKGROUND_PRIORITY` (nach Embedding/Tagging).
+- [x] Import-Hook: in `embedding_job`/`tagging_job` (oder Orchestrierung) Klassifizierung anstoßen, sobald beide Vorbedingungen erfüllt sind.
+- [x] `api/classify.py`: `"categories"` zu `ClassifyStep`; `rerun_job.py` Mapping + Ledger-Reset.
+- [x] Settings-Zugriff über `load_settings()` für die fünf Keys (keine Magic Numbers).
+- [x] Tests: `backend/tests/test_classification_engine.py` (Fusions-Tabelle).
 
 ## Report-Back
+
+**Umgesetzt wie geplant** — Kontrakt-Signatur, Fusionsformel und HTTP-Anbindung
+1:1 aus der README übernommen, keine Abweichungen.
+
+- **Engine** (`classification/engine.py` + `classification/scoring.py`): liest
+  `asset.clip_embedding` + gespeicherte `asset_tag.score`-Werte, lädt nie ein
+  Bild, ruft nie ein Vision-Modell. CLIP-Prompt-Text-Embeddings werden per
+  `lru_cache` prozessweit gecacht. Fallback-Kette: CLIP inaktiv **oder** Asset
+  hat kein gespeichertes Embedding → WD14-only (kein Crash); Label ohne
+  passenden WD14-Tag → clip-only; beide da → gewichtete Fusion.
+- **Job + Pipeline-Hook**: `jobs/classification_job.py` (idempotent — ersetzt
+  die `asset_classification`-Zeilen des Assets atomar, setzt
+  `ProcessingLedger.classified`). Neue `jobs/classification_pipeline.py`
+  (Kopie des `face_pipeline`-Musters) wartet auf Tagging **und** Embedding und
+  enqueued Klassifizierung genau einmal pro Asset — verdrahtet in
+  `tagging_job.py`/`embedding_job.py` (Signal auch im Skip-Pfad, falls WD14/CLIP
+  deaktiviert) und `import_job._enqueue_pipeline` (Prereq-Count wie beim
+  Face-Pattern: `int(auto_tag) + int(auto_embed)`).
+- **Rerun**: `"categories"` als neuer `ClassifyStep` in `api/classify.py` +
+  `rerun_job.py` (Ledger-Reset via `_STEP_FLAGS["categories"] = "classified"`,
+  läuft nach dem `"embedding"`-Schritt in derselben Iteration).
+- **Settings**: `classification.*`-Keys in `Data/.photofant/settings.json` +
+  `photofant/settings.py` (Defaults, Typen, Merge) ergänzt — von Sascha vorab
+  freigegeben (Critical Rule 7).
+- **Tests**: 9 table-driven Fälle in `test_classification_engine.py` — single
+  argmax (über/unter Schwelle), multi-Schwelle, WD14-Fallback, CLIP-aus-Fallback,
+  fehlendes Embedding, Kategorie-Override der Schwelle, ein Ende-zu-Ende-Fall
+  mit echtem WD14-Score (nicht gemockt). `ruff` grün, volle Backend-Suite läuft
+  (13 vorbestehende, unabhängige ComfyUI/Caption-Config-Fails unverändert —
+  vor dieser Phase verifiziert, nicht Teil dieser Phase).
