@@ -22,6 +22,14 @@ export interface DupePair {
   created_at: string;
 }
 
+export interface DupePage {
+  items: DupePair[];
+  total: number;
+}
+
+// Reine UI-Portionierung (kein Tuning-Charakter) — kein Settings-Key, siehe P31-Plan.
+export const DUPE_PAGE_SIZE = 50;
+
 export const DUPE_RESOLUTIONS = [
   'a_is_original',
   'b_is_original',

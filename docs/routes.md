@@ -532,7 +532,7 @@ Fehler-Codes (strukturiert im `detail`-Feld):
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| Review-Tab (Duplikate) | `GET` | `/api/review/dupes` | — | `DupePairDto[]` (nur unresolved) |
+| Review-Tab (Duplikate) | `GET` | `/api/review/dupes?offset&limit` | — | `DupePageDto` (paginiert, nur unresolved) |
 | Review-Tab (Auflösen) | `PATCH` | `/api/review/dupes/{id}` | `{ resolution: DupeResolution }` | `DupePairDto` |
 | Review-Tab / Action-Bar | `POST` | `/api/jobs/dupe-scan` | `{ scope: 'all' \| 'selection', asset_ids?: number[] }` | `{ job_id: string }` |
 | Lightbox (Ähnliche Bilder) | `GET` | `/api/assets/{id}/similar` | — | `SimilarAssetDto[]` |
@@ -564,6 +564,12 @@ interface DupePairDto {
   created_at: string;
 }
 
+// Seiten-Antwort von GET /api/review/dupes (P31 Phase 2).
+interface DupePageDto {
+  items: DupePairDto[];
+  total: number;   // ungelöste Paare nach Auto-Resolve, unabhängig von offset/limit
+}
+
 interface SimilarAssetDto extends AssetSummaryDto {
   phash_distance: number | null;
   clip_distance: number | null;
@@ -580,6 +586,10 @@ Aktions-Semantik (`PATCH /api/review/dupes/{id}`):
 - `dismiss`: keine Asset-Änderung, Paar als erledigt markiert
 
 `POST /api/jobs/dupe-scan` mit `scope='selection'` erfordert `asset_ids` (sonst `422`).
+
+`GET /api/review/dupes` — Query-Params: `offset` (Default 0), `limit` (Default 50, hart
+gedeckelt auf 200). Sortierung: exakte pHash-Treffer zuerst, dann nach `phash_distance`,
+`clip_distance`, `id`. Auto-Resolve (Papierkorb-Paare) läuft vor jeder Seite als Bulk-UPDATE.
 
 ## Personen (P7 Phase 4)
 

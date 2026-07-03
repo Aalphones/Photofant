@@ -1,14 +1,16 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { DupePair, DupeResolution, FaceReviewItem, FaceReviewAction } from '@photofant/models';
+import { DUPE_PAGE_SIZE } from '@photofant/models';
+import type { DupePage, DupePair, DupeResolution, FaceReviewItem, FaceReviewAction } from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
 export class ReviewService {
   private readonly http = inject(HttpClient);
 
-  listDupePairs(): Observable<DupePair[]> {
-    return this.http.get<DupePair[]>('/api/review/dupes');
+  listDupePairs(offset = 0, limit = DUPE_PAGE_SIZE): Observable<DupePage> {
+    const params = new HttpParams().set('offset', offset).set('limit', limit);
+    return this.http.get<DupePage>('/api/review/dupes', { params });
   }
 
   resolveDupePair(itemId: number, resolution: DupeResolution): Observable<DupePair> {

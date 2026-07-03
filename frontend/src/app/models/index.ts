@@ -57,8 +57,8 @@ export type {
   RegisterLocalResponse,
 } from './model.model';
 
-export type { AssetSummary, DupePair, DupeResolution, FaceReviewItem, FaceReviewAction, MergeResult, SplitResult } from './review.model';
-export { DUPE_RESOLUTIONS, FACE_REVIEW_ACTIONS } from './review.model';
+export type { AssetSummary, DupePair, DupePage, DupeResolution, FaceReviewItem, FaceReviewAction, MergeResult, SplitResult } from './review.model';
+export { DUPE_RESOLUTIONS, DUPE_PAGE_SIZE, FACE_REVIEW_ACTIONS } from './review.model';
 export {
   MODEL_ENRICHMENT,
   ROLE_META,

@@ -1,14 +1,19 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, ROOT_EFFECTS_INIT, createEffect, ofType } from '@ngrx/effects';
+import { Store } from '@ngrx/store';
+import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, map, mergeMap, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { DupePair, FaceReviewItem } from '@photofant/models';
+import { DUPE_PAGE_SIZE } from '@photofant/models';
+import type { DupePage, FaceReviewItem } from '@photofant/models';
 import { ReviewService } from '@photofant/services';
 import { reviewActions } from './review.actions';
+import { reviewSelectors } from './review.selectors';
 
 @Injectable()
 export class ReviewEffects {
   private readonly actions$ = inject(Actions);
+  private readonly store = inject(Store);
   private readonly reviewService = inject(ReviewService);
 
   readonly init$ = createEffect(() =>
@@ -22,10 +27,25 @@ export class ReviewEffects {
     this.actions$.pipe(
       ofType(reviewActions.loadDupePairs),
       switchMap(() =>
-        this.reviewService.listDupePairs().pipe(
-          map((pairs: DupePair[]) => reviewActions.loadDupePairsSuccess({ pairs })),
+        this.reviewService.listDupePairs(0, DUPE_PAGE_SIZE).pipe(
+          map((page: DupePage) => reviewActions.loadDupePairsSuccess({ pairs: page.items, total: page.total })),
           catchError((error: HttpErrorResponse) =>
             of(reviewActions.loadDupePairsFailure({ error: error.message })),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  readonly loadMoreDupePairs$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(reviewActions.loadMoreDupePairs),
+      concatLatestFrom(() => this.store.select(reviewSelectors.selectOffset)),
+      switchMap(([, offset]) =>
+        this.reviewService.listDupePairs(offset, DUPE_PAGE_SIZE).pipe(
+          map((page: DupePage) => reviewActions.loadMoreDupePairsSuccess({ pairs: page.items, total: page.total })),
+          catchError((error: HttpErrorResponse) =>
+            of(reviewActions.loadMoreDupePairsFailure({ error: error.message })),
           ),
         ),
       ),

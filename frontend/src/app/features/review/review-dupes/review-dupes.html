@@ -1,6 +1,6 @@
 <div class="review-dupes__header">
   <div class="review-dupes__header-left">
-    <span class="review-dupes__badge">{{ pairCount() }}</span>
+    <span class="review-dupes__badge">{{ pairCount() }} von {{ total() }}</span>
     <span class="review-dupes__title">Offene Duplikat-Paare</span>
   </div>
   <button class="review-dupes__scan-btn" (click)="onScan()">
@@ -31,6 +31,15 @@
       />
     }
   </div>
+  @if (hasMore()) {
+    <button
+      class="review-dupes__load-more-btn"
+      [disabled]="isLoadingMore()"
+      (click)="onLoadMore()"
+    >
+      {{ isLoadingMore() ? 'Lädt…' : 'Mehr laden' }}
+    </button>
+  }
 }
 
 @if (comparePair(); as activePair) {

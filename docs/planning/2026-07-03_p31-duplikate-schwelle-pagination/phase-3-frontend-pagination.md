@@ -21,15 +21,33 @@
 
 ## Checkliste
 
-- [ ] `review.service.ts`: `loadDupePairs(offset, limit)` → `{ items, total }` (Typ in
+- [x] `review.service.ts`: `loadDupePairs(offset, limit)` → `{ items, total }` (Typ in
       `models/review.model.ts` ergänzen)
-- [ ] `store/review`: State um `total` + `offset` + `isLoadingMore` erweitern;
+- [x] `store/review`: State um `total` + `offset` + `isLoadingMore` erweitern;
       Actions `loadDupePairs` (reset) / `loadMoreDupePairs` (append); Reducer `addMany`
       statt `setAll` beim Append; `resolveDupePairSuccess` dekrementiert `total`
-- [ ] Selector `selectTotal` (Backend-Total, nicht Entity-Count) + `selectHasMore`
-- [ ] `review-dupes.ts/html`: „Mehr laden"-Button, „X von Y"-Kopfzeile, Loading-State
-- [ ] `DUPE_PAGE_SIZE = 50` als benannte Konstante (kein Magic Number im Effect)
-- [ ] Doc-Update: `docs/routes.md` bereits in Phase 2 erledigt — prüfen, sonst nichts
-- [ ] `npm run lint` + `npm run build`
+- [x] Selector `selectTotal` (Backend-Total, nicht Entity-Count) + `selectHasMore`
+- [x] `review-dupes.ts/html`: „Mehr laden"-Button, „X von Y"-Kopfzeile, Loading-State
+- [x] `DUPE_PAGE_SIZE = 50` als benannte Konstante (kein Magic Number im Effect)
+- [x] Doc-Update: `docs/routes.md` bereits in Phase 2 erledigt — prüfen, sonst nichts
+- [x] `npm run lint` + `npm run build`
 
 ## Report-Back
+
+- Wegen der Namenskollision zwischen NgRx-EntityAdapter (`selectTotal` = geladene Anzahl)
+  und dem Backend-Total wurde **derselbe Kniff wie bei `gallerySelectors`** übernommen:
+  neuer `selectServerTotal` (liest `state.total` direkt), `selectTotal` bleibt die
+  geladene Entity-Anzahl. `selectHasMore = total > loaded`.
+- `state.offset` ist der Fetch-Cursor für „Mehr laden" (Anzahl bereits geladener Items),
+  unabhängig von der Entity-Anzahl nach Auflösen — bewusst so, sonst würde ein Resolve
+  mitten in der Liste den nächsten Fetch verschieben.
+- **Nachbarstelle mitgefixt:** `nav-rail.ts` bezog den Review-Badge-Count bisher aus
+  `selectTotal` — vor der Pagination war das identisch mit dem Backend-Total (alles wurde
+  geladen), jetzt wäre es auf `DUPE_PAGE_SIZE` gedeckelt gewesen. Auf `selectServerTotal`
+  umgestellt, sonst hätte der Badge bei >50 offenen Paaren falsch niedrig anzeigt.
+- AK5 „Neuer Scan getriggert … resettet auf Seite 1": es gibt keinen SSE-Hook, der die
+  Liste nach Job-Abschluss automatisch neu lädt (weder vorher noch jetzt) — die Reset-
+  Garantie gilt für jeden `loadDupePairs()`-Dispatch (Seiten-Eintritt). Kein Scope-Zuwachs
+  für diese Phase, da nicht in der Checkliste; als Beobachtung hier vermerkt.
+- `npm run lint` (`tsc --noEmit`) und `npm run build` beide grün; Bundle-Budget-Warnungen
+  sind vorbestehend (Lightbox-SCSS, Initial-Bundle) und unabhängig von dieser Änderung.

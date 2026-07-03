@@ -25,7 +25,9 @@ export class NavRail {
   private readonly store = inject(Store);
 
   private readonly galerieCount = this.store.selectSignal(gallerySelectors.selectServerTotal);
-  private readonly reviewCount = this.store.selectSignal(reviewSelectors.selectTotal);
+  // selectTotal ist die geladene Seite (max DUPE_PAGE_SIZE) — das Badge braucht die
+  // echte Backend-Zahl offener Paare, siehe P31 Phase 3.
+  private readonly reviewCount = this.store.selectSignal(reviewSelectors.selectServerTotal);
   private readonly storageStatus = this.store.selectSignal(maintenanceSelectors.selectStatus);
 
   protected readonly diskFreeLabel = computed<string>(() => {

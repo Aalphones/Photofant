@@ -5,8 +5,11 @@ export const reviewActions = createActionGroup({
   source: 'Review',
   events: {
     'Load Dupe Pairs':         emptyProps(),
-    'Load Dupe Pairs Success': props<{ pairs: DupePair[] }>(),
+    'Load Dupe Pairs Success': props<{ pairs: DupePair[]; total: number }>(),
     'Load Dupe Pairs Failure': props<{ error: string }>(),
+    'Load More Dupe Pairs':         emptyProps(),
+    'Load More Dupe Pairs Success': props<{ pairs: DupePair[]; total: number }>(),
+    'Load More Dupe Pairs Failure': props<{ error: string }>(),
     'Resolve Dupe Pair':       props<{ itemId: number; resolution: DupeResolution }>(),
     'Resolve Dupe Pair Success': props<{ itemId: number }>(),
     'Resolve Dupe Pair Failure': props<{ error: string }>(),

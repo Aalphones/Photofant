@@ -4,13 +4,15 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal, cast
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import ColumnElement, exists, func, select, update
+from sqlalchemy.engine import CursorResult
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from photofant.config import get_data_root
 from photofant.db import vector_index
@@ -54,6 +56,11 @@ class DupePairDto(BaseModel):
     clip_similarity_pct: int | None
     triggered_by: Literal["phash", "clip", "both"]
     created_at: datetime
+
+
+class DupePageDto(BaseModel):
+    items: list[DupePairDto]
+    total: int
 
 
 class SimilarAssetDto(AssetSummaryDto):
@@ -105,54 +112,82 @@ def _to_pair_dto(item: ReviewItem, asset_a: Asset, asset_b: Asset) -> DupePairDt
     )
 
 
-@router.get("/review/dupes", response_model=list[DupePairDto])
-async def list_dupe_pairs(session: DbSession) -> list[DupePairDto]:
-    """Return all unresolved dupe-candidate pairs with full asset data on both sides."""
-    # Join only asset_a; asset_b loaded via identity-map (single extra SELECT per missing item).
-    rows = (
-        session.query(ReviewItem, Asset)
-        .join(Asset, Asset.id == ReviewItem.asset_a_id)
-        .filter(ReviewItem.type == "dupe_candidate")
-        .filter(ReviewItem.resolved_at.is_(None))
-        .order_by(ReviewItem.phash_distance, ReviewItem.id)
-        .all()
+def _has_active_instance(asset_id_column: InstrumentedAttribute[int]) -> ColumnElement[bool]:
+    return exists(
+        select(AssetInstance.id).where(
+            AssetInstance.asset_id == asset_id_column,
+            AssetInstance.deleted_at.is_(None),
+        )
     )
-    result: list[DupePairDto] = []
-    auto_resolved: list[ReviewItem] = []
 
-    for item, asset_a in rows:
-        asset_b = session.get(Asset, item.asset_b_id)
-        if asset_b is None:
-            log.warning("review_item %d references missing asset_b %d — skipping", item.id, item.asset_b_id)
-            continue
 
-        a_active: int = session.scalar(
-            select(func.count())
-            .select_from(AssetInstance)
-            .where(AssetInstance.asset_id == asset_a.id, AssetInstance.deleted_at.is_(None))
-        ) or 0
-        b_active: int = session.scalar(
-            select(func.count())
-            .select_from(AssetInstance)
-            .where(AssetInstance.asset_id == asset_b.id, AssetInstance.deleted_at.is_(None))
-        ) or 0
+def _auto_resolve_trashed_pairs(session: Session) -> None:
+    """Bulk-resolve unresolved pairs whose asset_a or asset_b has no active instance left.
 
-        if a_active == 0 or b_active == 0:
-            log.info(
-                "review_item %d auto-resolved: asset_a active=%d asset_b active=%d (in trash)",
-                item.id, a_active, b_active,
+    Single UPDATE with correlated EXISTS subqueries — replaces the former per-row
+    2-COUNT-queries-in-Python loop that caused >111k queries on a large backlog.
+    """
+    result = cast(
+        "CursorResult[Any]",
+        session.execute(
+            update(ReviewItem)
+            .where(
+                ReviewItem.type == "dupe_candidate",
+                ReviewItem.resolved_at.is_(None),
+                ~(_has_active_instance(ReviewItem.asset_a_id) & _has_active_instance(ReviewItem.asset_b_id)),
             )
-            item.resolved_at = _now_utc()
-            item.resolution = "auto_trashed"
-            auto_resolved.append(item)
-            continue
-
-        result.append(_to_pair_dto(item, asset_a, asset_b))
-
-    if auto_resolved:
+            .values(resolved_at=_now_utc(), resolution="auto_trashed")
+        ),
+    )
+    if result.rowcount:
+        log.info("auto-resolved %d dupe pairs (asset in trash)", result.rowcount)
         session.commit()
 
-    return result
+
+@router.get("/review/dupes", response_model=DupePageDto)
+async def list_dupe_pairs(session: DbSession, offset: int = 0, limit: int = 50) -> DupePageDto:
+    """Return a page of unresolved dupe-candidate pairs with full asset data on both sides.
+
+    Actionable-first sort: exact pHash matches before CLIP-only matches, then by distance.
+    """
+    offset = max(offset, 0)
+    limit = min(max(limit, 1), 200)
+
+    _auto_resolve_trashed_pairs(session)
+
+    asset_a = aliased(Asset)
+    asset_b = aliased(Asset)
+    base_filters = (
+        ReviewItem.type == "dupe_candidate",
+        ReviewItem.resolved_at.is_(None),
+    )
+    # INNER JOIN on both sides: a review_item whose asset_b (or asset_a) no longer
+    # exists is silently excluded, instead of the former warn-and-skip in Python.
+    joined = (
+        select(ReviewItem, asset_a, asset_b)
+        .join(asset_a, asset_a.id == ReviewItem.asset_a_id)
+        .join(asset_b, asset_b.id == ReviewItem.asset_b_id)
+        .where(*base_filters)
+    )
+
+    total: int = session.scalar(
+        select(func.count()).select_from(joined.with_only_columns(ReviewItem.id).subquery())
+    ) or 0
+
+    rows = session.execute(
+        joined
+        .order_by(
+            ReviewItem.phash_distance.is_(None),
+            ReviewItem.phash_distance,
+            ReviewItem.clip_distance,
+            ReviewItem.id,
+        )
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    items = [_to_pair_dto(item, row_asset_a, row_asset_b) for item, row_asset_a, row_asset_b in rows]
+    return DupePageDto(items=items, total=total)
 
 
 @router.patch("/review/dupes/{item_id}", response_model=DupePairDto)
