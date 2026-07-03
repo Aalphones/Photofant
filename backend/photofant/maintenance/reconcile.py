@@ -96,6 +96,23 @@ class MisassignedInstanceItem:
 
 
 @dataclass
+class StrandedFaceItem:
+    """A Face assigned to a real person whose crop file sits in the wrong folder.
+
+    The DB says the face belongs to person X, but the crop lives elsewhere on
+    disk — still in `_unknown/faces/` after a fixed-person upload, or under a
+    different person's folder. Repairing it moves the crop into person X's
+    `faces/` dir so filesystem and DB agree again.
+    """
+
+    face_id: int
+    person_id: int
+    person_name: str | None
+    crop_path: str
+    detail: str
+
+
+@dataclass
 class AcknowledgedMissingItem:
     """An AssetInstance marked missing (missing_at IS NOT NULL) but not yet purged.
 
@@ -121,6 +138,7 @@ class ReconcileReport:
     misassigned_instances: list[MisassignedInstanceItem] = field(default_factory=list)
     acknowledged_missing: list[AcknowledgedMissingItem] = field(default_factory=list)
     orphaned_edits: list[OrphanItem] = field(default_factory=list)
+    stranded_faces: list[StrandedFaceItem] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -132,6 +150,7 @@ class ReconcileReport:
             + len(self.misassigned_instances)
             + len(self.acknowledged_missing)
             + len(self.orphaned_edits)
+            + len(self.stranded_faces)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -144,6 +163,7 @@ class ReconcileReport:
             "misassigned_instances": [asdict(item) for item in self.misassigned_instances],
             "acknowledged_missing": [asdict(item) for item in self.acknowledged_missing],
             "orphaned_edits": [asdict(item) for item in self.orphaned_edits],
+            "stranded_faces": [asdict(item) for item in self.stranded_faces],
         }
 
 

@@ -101,6 +101,7 @@ export type {
   OrphanedFace,
   MisassignedInstance,
   AcknowledgedMissing,
+  StrandedFace,
   ReconcileReport,
   RepairItem,
   RepairAction,

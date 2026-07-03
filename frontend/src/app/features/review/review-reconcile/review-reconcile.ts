@@ -17,6 +17,7 @@ import type {
   OrphanedFace,
   RepairAction,
   RepairActionKind,
+  StrandedFace,
 } from '@photofant/models';
 import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
 import { RrSection } from './rr-section/rr-section';
@@ -53,6 +54,9 @@ export class ReviewReconcile {
   ];
   protected readonly ORPHANED_FACE_ACTIONS: RrAction[] = [
     { label: 'Endgültig entfernen', variant: 'danger', action: 'purge', icon: 'trash' },
+  ];
+  protected readonly STRANDED_FACE_ACTIONS: RrAction[] = [
+    { label: 'In richtigen Ordner verschieben', variant: 'primary', action: 'move_crop', icon: 'check' },
   ];
   protected readonly ACK_MISSING_ACTIONS: RrAction[] = [
     { label: 'Endgültig entfernen', variant: 'danger', action: 'purge', icon: 'trash' },
@@ -120,6 +124,14 @@ export class ReviewReconcile {
     }))
   );
 
+  protected readonly strandedFaceRows = computed((): RrRow[] =>
+    (this.report()?.stranded_faces ?? []).map((face: StrandedFace) => ({
+      key: face.face_id,
+      name: this.fileName(face.crop_path),
+      meta: `${face.person_name ?? 'Person ' + face.person_id} · Crop im falschen Ordner`,
+    }))
+  );
+
   protected readonly totalIssues = computed((): number =>
     this.orphanRows().length +
     this.missingRows().length +
@@ -127,7 +139,8 @@ export class ReviewReconcile {
     this.misassignedRows().length +
     this.orphanedFaceRows().length +
     this.ackMissingRows().length +
-    this.orphanedEditRows().length
+    this.orphanedEditRows().length +
+    this.strandedFaceRows().length
   );
 
   // ── Actions ─────────────────────────────────────────────────────────────────
@@ -162,6 +175,7 @@ export class ReviewReconcile {
         return { item: { kind, instance_id: key as number, found_path: drift.found_path }, action };
       }
       case 'orphaned_face':
+      case 'stranded_face':
         return { item: { kind, face_id: key as number }, action };
       default:
         // missing, misassigned, acknowledged_missing — all keyed by instance id.

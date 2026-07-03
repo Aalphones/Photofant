@@ -92,6 +92,18 @@
       />
     }
 
+    @if (strandedFaceRows().length > 0) {
+      <pf-rr-section
+        title="Gesichter im falschen Ordner"
+        subtitle="Einer Person zugeordnet, aber der Ausschnitt liegt noch woanders (z. B. in _unknown)."
+        variant="warn"
+        [rows]="strandedFaceRows()"
+        [actions]="STRANDED_FACE_ACTIONS"
+        [busy]="isRepairing()"
+        (repair)="onRepair('stranded_face', $event)"
+      />
+    }
+
     @if (ackMissingRows().length > 0) {
       <pf-rr-section
         title="Als fehlend markiert"

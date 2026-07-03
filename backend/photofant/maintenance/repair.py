@@ -81,6 +81,18 @@ def fix_drift(session: Session, instance_id: int, found_path: str, data_root: Pa
     session.commit()
 
 
+def fix_stranded_face(session: Session, face_id: int, data_root: Path) -> None:
+    """Move a stranded face crop into its assigned person's faces/ folder."""
+    from photofant.media.person_folders import move_face_crop_to_assigned_folder
+
+    moved = move_face_crop_to_assigned_folder(session, face_id, data_root)
+    if not moved:
+        raise RepairError(
+            f"Face {face_id}: Crop konnte nicht verschoben werden (Datei fehlt oder liegt schon richtig)"
+        )
+    session.commit()
+
+
 def fix_misassigned(session: Session, instance_id: int, data_root: Path) -> None:
     """Clean up a wrong person assignment by re-running the face-driven prune.
 

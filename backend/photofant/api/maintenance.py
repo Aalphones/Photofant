@@ -129,6 +129,14 @@ class AcknowledgedMissingDto(BaseModel):
     detail: str
 
 
+class StrandedFaceDto(BaseModel):
+    face_id: int
+    person_id: int
+    person_name: str | None
+    crop_path: str
+    detail: str
+
+
 class ReconcileReportDto(BaseModel):
     generated_at: str | None
     orphaned_files: list[OrphanDto]
@@ -138,6 +146,7 @@ class ReconcileReportDto(BaseModel):
     misassigned_instances: list[MisassignedInstanceDto] = []
     acknowledged_missing: list[AcknowledgedMissingDto] = []
     orphaned_edits: list[OrphanDto] = []
+    stranded_faces: list[StrandedFaceDto] = []
 
 
 _EMPTY_REPORT = ReconcileReportDto(
@@ -149,13 +158,14 @@ _EMPTY_REPORT = ReconcileReportDto(
     misassigned_instances=[],
     acknowledged_missing=[],
     orphaned_edits=[],
+    stranded_faces=[],
 )
 
 
 class RepairItem(BaseModel):
     kind: Literal[
         "orphan", "missing", "drift", "orphaned_face", "misassigned", "acknowledged_missing",
-        "orphaned_edit",
+        "orphaned_edit", "stranded_face",
     ]
     instance_id: int | None = None
     face_id: int | None = None
@@ -165,7 +175,9 @@ class RepairItem(BaseModel):
 
 class RepairActionDto(BaseModel):
     item: RepairItem
-    action: Literal["index", "mark_missing", "trash", "fix_path", "purge", "fix_assignment"]
+    action: Literal[
+        "index", "mark_missing", "trash", "fix_path", "purge", "fix_assignment", "move_crop",
+    ]
 
 
 class RepairRequest(BaseModel):
@@ -249,6 +261,10 @@ async def _apply_one(
         if item.instance_id is None:
             raise repair.RepairError("acknowledged_missing purge requires an instance_id")
         await repair.purge_missing(session, item.instance_id, get_cache_db_path())
+    elif item.kind == "stranded_face" and action == "move_crop":
+        if item.face_id is None:
+            raise repair.RepairError("move_crop requires a face_id")
+        repair.fix_stranded_face(session, item.face_id, data_root)
     else:
         raise repair.RepairError(f"unsupported action '{action}' for kind '{item.kind}'")
 

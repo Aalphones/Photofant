@@ -16,6 +16,7 @@ from photofant.maintenance.reconcile import (
     InstanceRecord,
     MisassignedInstanceItem,
     OrphanedFaceItem,
+    StrandedFaceItem,
     classify_orphaned_edits,
     classify_reconcile,
     norm_path,
@@ -190,6 +191,43 @@ def _gather_misassigned_instances() -> list[MisassignedInstanceItem]:
     ]
 
 
+def _gather_stranded_faces(data_root: Path) -> list[StrandedFaceItem]:
+    """Faces assigned to a real person whose crop file isn't in that person's folder.
+
+    Resolves each crop's folder back to a person; legacy `person_{id}/` and named
+    folders both count as correct. Only a genuine mismatch — crop still under
+    `_unknown/faces/`, or in another person's folder — is reported.
+    """
+    from photofant.media.person_folders import person_id_from_path
+
+    items: list[StrandedFaceItem] = []
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(Face.id, Face.crop_path, Face.person_id, Person.name)
+            .join(Person, Person.id == Face.person_id)
+            .where(Person.is_unknown.is_(False))
+        ).all()
+
+        for face_id, crop_path, person_id, person_name in rows:
+            folder_person_id = person_id_from_path(Path(crop_path), data_root, session)
+            if folder_person_id == person_id:
+                continue
+            items.append(
+                StrandedFaceItem(
+                    face_id=face_id,
+                    person_id=person_id,
+                    person_name=person_name,
+                    crop_path=crop_path,
+                    detail=(
+                        f"face.id={face_id} · gehört "
+                        f"{person_name or f'Person {person_id}'} · Crop liegt im falschen Ordner"
+                    ),
+                )
+            )
+
+    return items
+
+
 def _gather_acknowledged_missing() -> list[AcknowledgedMissingItem]:
     """AssetInstances already marked missing but not yet purged (missing_at IS NOT NULL)."""
     with SessionLocal() as session:
@@ -231,13 +269,14 @@ def _run_reconcile() -> int:
     report.orphaned_edits = classify_orphaned_edits(
         _walk_edits_dirs(data_root), _gather_active_version_paths()
     )
+    report.stranded_faces = _gather_stranded_faces(data_root)
 
     with SessionLocal() as session:
         persist_report(session, report)
 
     log.info(
         "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces, "
-        "%d misassigned, %d acknowledged-missing, %d orphaned edits",
+        "%d misassigned, %d acknowledged-missing, %d orphaned edits, %d stranded faces",
         len(report.orphaned_files),
         len(report.missing_files),
         len(report.path_drift),
@@ -245,6 +284,7 @@ def _run_reconcile() -> int:
         len(report.misassigned_instances),
         len(report.acknowledged_missing),
         len(report.orphaned_edits),
+        len(report.stranded_faces),
     )
     return report.total
 

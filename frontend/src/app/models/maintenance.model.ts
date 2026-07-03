@@ -13,6 +13,7 @@ export const ISSUE_KINDS = [
   'misassigned',
   'acknowledged_missing',
   'orphaned_edit',
+  'stranded_face',
 ] as const;
 export type IssueKind = typeof ISSUE_KINDS[number];
 
@@ -23,6 +24,7 @@ export const REPAIR_ACTIONS = [
   'fix_path',
   'purge',
   'fix_assignment',
+  'move_crop',
 ] as const;
 export type RepairActionKind = typeof REPAIR_ACTIONS[number];
 
@@ -75,6 +77,14 @@ export interface AcknowledgedMissing {
   detail: string;
 }
 
+export interface StrandedFace {
+  face_id: number;
+  person_id: number;
+  person_name: string | null;
+  crop_path: string;
+  detail: string;
+}
+
 export interface ReconcileReport {
   generated_at: string | null;
   orphaned_files: OrphanFile[];
@@ -84,6 +94,7 @@ export interface ReconcileReport {
   misassigned_instances: MisassignedInstance[];
   acknowledged_missing: AcknowledgedMissing[];
   orphaned_edits: OrphanFile[];
+  stranded_faces: StrandedFace[];
 }
 
 export interface RepairItem {
