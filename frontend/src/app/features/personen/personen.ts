@@ -24,6 +24,8 @@ import { SplitDialog } from './split-dialog/split-dialog';
 type PersonSortKey = 'group' | 'created' | 'name' | 'unnamed' | 'count';
 type PersonViewMode = 'single' | 'grid4' | 'face';
 
+const NO_GROUP = 'Ohne Gruppe';
+
 @Component({
   selector: 'pf-personen',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,6 +71,8 @@ export class Personen implements OnInit {
 
   protected readonly cardWidth = computed((): number => this.CARD_WIDTHS[this.cardSize()]);
 
+  protected readonly NO_GROUP = NO_GROUP;
+
   protected readonly availableGroups = computed((): string[] => {
     const names = new Set<string>();
     for (const person of this.persons()) {
@@ -76,6 +80,10 @@ export class Personen implements OnInit {
     }
     return [...names].sort((a, b) => a.localeCompare(b));
   });
+
+  protected readonly hasUngroupedPersons = computed((): boolean =>
+    this.persons().some((person: PersonDto) => !person.group_name),
+  );
 
   protected readonly filteredPersons = computed((): PersonDto[] => {
     const query = this.searchQuery().trim().toLowerCase();
@@ -86,7 +94,8 @@ export class Personen implements OnInit {
         if (!label.includes(query)) { return false; }
       }
       if (groups.size > 0) {
-        if (!person.group_name || !groups.has(person.group_name)) { return false; }
+        const groupKey = person.group_name ?? NO_GROUP;
+        if (!groups.has(groupKey)) { return false; }
       }
       return true;
     });
@@ -122,14 +131,14 @@ export class Personen implements OnInit {
     if (this.sortKey() !== 'group') { return []; }
     const buckets = new Map<string, PersonDto[]>();
     for (const person of this.sortedPersons()) {
-      const key = person.group_name ?? 'Ohne Gruppe';
+      const key = person.group_name ?? NO_GROUP;
       const bucket = buckets.get(key) ?? [];
       bucket.push(person);
       buckets.set(key, bucket);
     }
     const entries = [...buckets.entries()].sort(([a], [b]) => {
-      if (a === 'Ohne Gruppe') { return 1; }
-      if (b === 'Ohne Gruppe') { return -1; }
+      if (a === NO_GROUP) { return 1; }
+      if (b === NO_GROUP) { return -1; }
       return a.localeCompare(b);
     });
     return entries.map(([label, persons]) => ({ label, persons }));

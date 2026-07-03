@@ -65,8 +65,16 @@
     </div>
   </div>
 
-  @if (availableGroups().length > 0) {
+  @if (availableGroups().length > 0 || hasUngroupedPersons()) {
     <div class="personen__group-chips">
+      @if (hasUngroupedPersons()) {
+        <button
+          class="personen__group-chip"
+          [class.personen__group-chip--active]="groupFilter().has(NO_GROUP)"
+          [style.--chip-color]="'var(--text-muted, #888)'"
+          (click)="toggleGroupFilter(NO_GROUP)"
+        >{{ NO_GROUP }}</button>
+      }
       @for (group of availableGroups(); track group) {
         <button
           class="personen__group-chip"
@@ -135,7 +143,9 @@
       }
     </div>
 
-    <pf-alphabet-rail [persons]="sortedPersons()" (jump)="onAlphabetJump($event)" />
+    @if (sortKey() === 'name') {
+      <pf-alphabet-rail [persons]="sortedPersons()" (jump)="onAlphabetJump($event)" />
+    }
   </div>
   }
 }
