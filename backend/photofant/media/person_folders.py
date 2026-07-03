@@ -406,6 +406,46 @@ def move_face_crops_to_person(
     return moved
 
 
+def move_face_crop_to_assigned_folder(
+    session: Session,
+    face_id: int,
+    data_root: Path,
+) -> bool:
+    """Move a single face's crop into its assigned person's faces/ dir.
+
+    Repairs a crop that lags behind its DB assignment — e.g. a fixed-person upload
+    whose best face was assigned to the person but left behind in _unknown/faces.
+    No-op (returns False) when the face has no person, belongs to _unknown, is
+    already in place, or its file is missing.
+    """
+    face = session.get(Face, face_id)
+    if face is None or face.person_id is None:
+        return False
+
+    person = session.get(Person, face.person_id)
+    if person is None or person.is_unknown:
+        return False
+
+    faces_dir = ensure_person_folder(data_root, person) / "faces"
+    old_path = Path(face.crop_path)
+    new_path = faces_dir / old_path.name
+    if old_path.resolve() == new_path.resolve():
+        return False
+
+    try:
+        final = _safe_move(old_path, new_path)
+    except FileNotFoundError:
+        log.warning(
+            "Face crop %s missing — cannot move face %d to its person folder",
+            old_path, face_id,
+        )
+        return False
+
+    face.crop_path = str(final.resolve())
+    session.flush()
+    return True
+
+
 # ── bulk post-clustering materialization ─────────────────────────────────
 
 

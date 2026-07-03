@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from photofant.db.models import Asset, AssetInstance, Face, Person
 from photofant.media.person_folders import (
     merge_persons,
+    move_face_crop_to_assigned_folder,
     person_folder_name,
     prune_orphaned_instances,
     reassign_face,
@@ -388,6 +389,56 @@ def test_prune_no_photo_loss_on_last_orphan(db_session: Session, tmp_path: Path)
 
     final = sum(1 for child in tmp_path.rglob("*") if child.is_file())
     assert final == initial
+
+
+# ── move_face_crop_to_assigned_folder: fixed-person crop left in _unknown ─────
+
+
+def test_move_stranded_crop_from_unknown_to_person(db_session: Session, tmp_path: Path) -> None:
+    """A crop stuck in _unknown/faces moves into the assigned person's faces/ dir."""
+    person = _create_person(db_session, "Alice", tmp_path)
+    for sub in ("photos", "favourites", "faces", "edits"):
+        (tmp_path / "_unknown" / sub).mkdir(parents=True, exist_ok=True)
+
+    asset = _create_asset(db_session)
+    stray_crop = tmp_path / "_unknown" / "faces" / f"{asset.id}_0.jpg"
+    stray_crop.write_bytes(b"crop-bytes")
+
+    # DB says Alice, but the file physically sits in _unknown/faces (the bug).
+    face = Face(
+        asset_id=asset.id,
+        person_id=person.id,
+        crop_path=str(stray_crop.resolve()),
+        score=0.9,
+    )
+    db_session.add(face)
+    db_session.flush()
+    db_session.commit()
+
+    moved = move_face_crop_to_assigned_folder(db_session, face.id, tmp_path)
+    db_session.commit()
+
+    assert moved is True
+    target = tmp_path / person_folder_name(person) / "faces" / f"{asset.id}_0.jpg"
+    db_session.refresh(face)
+    assert Path(face.crop_path).resolve() == target.resolve()
+    assert target.exists()
+    assert not stray_crop.exists()  # moved, not copied
+
+
+def test_move_stranded_crop_noop_when_already_placed(db_session: Session, tmp_path: Path) -> None:
+    """A crop already in the person's faces/ dir is left untouched."""
+    person = _create_person(db_session, "Alice", tmp_path)
+    asset = _create_asset(db_session)
+    face = _create_face(db_session, asset, person, tmp_path)
+    db_session.commit()
+
+    original_path = face.crop_path
+    moved = move_face_crop_to_assigned_folder(db_session, face.id, tmp_path)
+
+    assert moved is False
+    db_session.refresh(face)
+    assert face.crop_path == original_path
 
 
 # ── reassign_face: the lightbox "no, this is personB" flow ───────────────────

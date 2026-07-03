@@ -176,6 +176,8 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
         if fixed_instance is not None:
             fixed_person_id = fixed_instance.person_id
 
+    fixed_best_face_id: int | None = None
+
     for face_index, face_dict in enumerate(faces):
         bbox = face_dict["bbox"]
         score = face_dict.get("score")
@@ -241,6 +243,7 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
                     log.exception("Incremental match failed for face %d", face_id)
 
         if is_fixed_best_face:
+            fixed_best_face_id = face_id
             log.info(
                 "Fixed-person override: face %d → person %d (asset %d)",
                 face_id, fixed_person_id, asset_id,
@@ -250,6 +253,16 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
             "Face %d saved: asset=%d idx=%d score=%.3f age=%s",
             face_id, asset_id, face_index, score or 0.0, age,
         )
+
+    # The fixed-person best face was assigned directly and skipped the incremental
+    # match, so its crop is still in _unknown/faces — move it into the person's
+    # folder here (every other assignment path does this via move_face_crops_to_person).
+    if fixed_best_face_id is not None:
+        from photofant.media.person_folders import move_face_crop_to_assigned_folder
+
+        with SessionLocal() as session:
+            move_face_crop_to_assigned_folder(session, fixed_best_face_id, data_root)
+            session.commit()
 
     _update_framing(asset_id, image.shape[1], image.shape[0])
     _mark_done(asset_id)
