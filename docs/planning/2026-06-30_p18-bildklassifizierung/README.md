@@ -27,7 +27,7 @@ nachträglich klassifizieren.
 
 | # | Phase | Tier | Status |
 |---|---|---|---|
-| 1 | [Datenmodell & Seed-Katalog](phase-1-datenmodell-seed.md) | heikel | pending |
+| 1 | [Datenmodell & Seed-Katalog](phase-1-datenmodell-seed.md) | heikel | complete |
 | 2 | [Engine: CLIP + WD14-Fusion, Job, Pipeline-Hook](phase-2-engine-fusion.md) | heikel | pending |
 | 3 | [Backend-API: CRUD, Retro-Lauf, Filter/Facets/Suche](phase-3-backend-api-suche.md) | standard | pending |
 | 4 | [Einstellungen-Tab (Frontend)](phase-4-einstellungen-tab.md) | standard | pending |

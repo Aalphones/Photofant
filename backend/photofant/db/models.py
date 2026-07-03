@@ -233,6 +233,48 @@ class PromptTemplate(Base):
 
 
 
+class ClassificationCategory(Base):
+    __tablename__ = "classification_category"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    mode: Mapped[str] = mapped_column(Text, nullable=False)  # single | multi
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    builtin: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    min_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class ClassificationLabel(Base):
+    __tablename__ = "classification_label"
+    __table_args__ = (
+        UniqueConstraint("category_id", "name", name="uq_classification_label_category_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("classification_category.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    clip_prompts: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    wd14_tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+
+
+class AssetClassification(Base):
+    __tablename__ = "asset_classification"
+
+    asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), primary_key=True, index=True)
+    label_id: Mapped[int] = mapped_column(
+        ForeignKey("classification_label.id", ondelete="CASCADE"), primary_key=True,
+    )
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("classification_category.id"), nullable=False, index=True,
+    )  # denormalisiert für Filter/Facets
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)  # clip | wd14 | fused
+
+
 class ReviewItem(Base):
     """Review queue for both duplicate candidates and face suggestions.
 

@@ -1,9 +1,10 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** Nächsten Plan aus dem Backlog wählen (`docs/planning/*`) — mehrere geparkt:
-p18, p20, p22-p27. `/implement` fragt beim nächsten Start danach.
+**Aktiver Plan:** `docs/planning/2026-06-30_p18-bildklassifizierung/`
+**Phase:** 2/6 — Engine: CLIP + WD14-Fusion, Job, Pipeline-Hook (offen)
+**Nächster Schritt:** `phase-2-engine-fusion.md` lesen und umsetzen.
+
+Phase 1 (Datenmodell & Seed-Katalog) ist committet. Rest im Backlog geparkt: p20, p22-p27.
 
 P19 (Inference Session Pool) archiviert nach
 `docs/archive/2026-07/2026-07-02_p19-inference-session-pool/`. Finale Smoke-Checkliste wurde
