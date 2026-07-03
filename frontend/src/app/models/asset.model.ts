@@ -1,3 +1,5 @@
+import type { AssetClassification } from './classification.model';
+
 export const SEARCH_MODES = ['tags', 'caption', 'semantic', 'text'] as const;
 export type SearchMode = (typeof SEARCH_MODES)[number];
 
@@ -42,10 +44,23 @@ export interface TagFacetItem {
   count: number;
 }
 
+export interface ClassificationFacetItem {
+  label_id: number;
+  name: string;
+  count: number;
+}
+
+export interface ClassificationCategoryFacet {
+  category_id: number;
+  name: string;
+  items: ClassificationFacetItem[];
+}
+
 export interface Facets {
   sources: FacetItem[];
   tags_top: TagFacetItem[];
   framings?: FacetItem[];
+  classifications?: ClassificationCategoryFacet[];
 }
 
 export interface VersionDto {
@@ -139,6 +154,7 @@ export interface AssetDetailDto extends AssetDto {
   linked_edits: AssetLinkSummary[];
   quality: number | null;
   framing: Framing | null;
+  classifications: AssetClassification[];
 }
 
 export interface FaceDetailDto {

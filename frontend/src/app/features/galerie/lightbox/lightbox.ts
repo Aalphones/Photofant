@@ -12,7 +12,7 @@ import { DOCUMENT } from '@angular/common';
 import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, type Observable } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, Framing, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, Framing, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, PersonService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -23,6 +23,12 @@ import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare
 import { Editor } from '../../editor/editor';
 
 interface GenMetaEntry { key: string; value: string }
+
+interface ClassificationGroup {
+  category_id: number;
+  category_name: string;
+  items: AssetClassification[];
+}
 
 type CompareTag = 'current' | 'version' | 'original' | 'edit';
 
@@ -351,6 +357,29 @@ export class Lightbox {
   );
 
   protected readonly caption = computed((): string | null => this.detail()?.caption ?? null);
+
+  // ── Klassifizierung (P18 Phase 5) ─────────────────────────────────────────
+
+  protected readonly classificationsByCategory = computed((): ClassificationGroup[] => {
+    const groups = new Map<number, ClassificationGroup>();
+    for (const item of this.detail()?.classifications ?? []) {
+      const group = groups.get(item.category_id);
+      if (group != null) {
+        group.items.push(item);
+      } else {
+        groups.set(item.category_id, {
+          category_id: item.category_id,
+          category_name: item.category_name,
+          items: [item],
+        });
+      }
+    }
+    return [...groups.values()];
+  });
+
+  protected confidencePercent(confidence: number): number {
+    return Math.round(confidence * 100);
+  }
 
   protected readonly imageUrl = computed((): string => {
     if (this.isFaceMode()) { return this.faceStageUrl(); }

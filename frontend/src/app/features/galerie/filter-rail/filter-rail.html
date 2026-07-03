@@ -119,6 +119,38 @@
   </div>
 }
 
+<!-- Klassifizierung: eine Akkordeon-Gruppe je aktiver Kategorie -->
+@for (category of categories(); track category.id) {
+  @if (category.enabled) {
+    <div class="rail__facet" [class.rail__facet--closed]="!isClassificationCategoryOpen(category.id)">
+      <button class="rail__facet-head" (click)="toggleClassificationCategoryOpen(category.id)">
+        <span class="rail__facet-title">{{ category.name }}</span>
+        <span class="rail__chev"><pf-icon name="chevronDown" [size]="14" /></span>
+      </button>
+      <div class="rail__facet-body">
+        @for (label of category.labels; track label.id) {
+          <div
+            class="rail__row"
+            [class.rail__row--on]="classificationLabelIds().includes(label.id)"
+            (click)="toggleClassificationLabel(label.id)"
+          >
+            <div class="rail__cbox" [class.rail__cbox--on]="classificationLabelIds().includes(label.id)">
+              @if (classificationLabelIds().includes(label.id)) {
+                <pf-icon name="check" [size]="10" />
+              }
+            </div>
+            <span class="rail__row-label">{{ label.name }}</span>
+            <span class="rail__count">{{ classificationFacetCount(category.id, label.id) }}</span>
+          </div>
+        }
+        @if (category.labels.length === 0) {
+          <span class="rail__empty">Keine Labels angelegt</span>
+        }
+      </div>
+    </div>
+  }
+}
+
 <!-- Gesichter -->
 <div class="rail__facet" [class.rail__facet--closed]="!openGesichter()">
   <button class="rail__facet-head" (click)="openGesichter.set(!openGesichter())">

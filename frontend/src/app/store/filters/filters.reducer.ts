@@ -16,6 +16,7 @@ interface FiltersState {
   framings: string[];
   hasFaces: boolean | null;
   mediaType: MediaType;
+  classificationLabelIds: number[];
 }
 
 const initialState: FiltersState = {
@@ -32,6 +33,7 @@ const initialState: FiltersState = {
   framings: [],
   hasFaces: null,
   mediaType: 'photos',
+  classificationLabelIds: [],
 };
 
 export const filtersFeature = createFeature({
@@ -87,6 +89,10 @@ export const filtersFeature = createFeature({
       ...state,
       mediaType,
     })),
+    on(filtersActions.setClassificationLabelIds, (state: FiltersState, { classificationLabelIds }) => ({
+      ...state,
+      classificationLabelIds,
+    })),
     on(filtersActions.clearAllFilters, (state: FiltersState) => ({
       ...state,
       favourite: null,
@@ -97,6 +103,7 @@ export const filtersFeature = createFeature({
       personId: null,
       framings: [],
       hasFaces: null,
+      classificationLabelIds: [],
     })),
   ),
 });

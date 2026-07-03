@@ -7,6 +7,7 @@ import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job } from '@phot
 import { AssetService, PersonService, SettingsService } from '@photofant/services';
 import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import type { FaceGalleryItemDto } from '@photofant/models';
+import { classificationActions } from '../classification/classification.actions';
 import { filtersActions } from '../filters/filters.actions';
 import { jobsActions } from '../jobs/jobs.actions';
 import { searchActions } from '../search/search.actions';
@@ -32,6 +33,15 @@ export class GalleryEffects {
     this.actions$.pipe(
       ofType(ROOT_EFFECTS_INIT),
       map(() => galleryActions.setPageSize({ pageSize: this.settingsService.galleryPageSize() })),
+    )
+  );
+
+  // Kategorien werden app-weit gebraucht (Filter-Rail, Lightbox, Suche) — nicht nur im
+  // Einstellungen-Tab, der sie bisher exklusiv geladen hat.
+  readonly initClassificationCategories$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ROOT_EFFECTS_INIT),
+      map(() => classificationActions.load()),
     )
   );
 
@@ -66,6 +76,7 @@ export class GalleryEffects {
         filtersActions.setFramings,
         filtersActions.setHasFaces,
         filtersActions.setMediaType,
+        filtersActions.setClassificationLabelIds,
         filtersActions.clearAllFilters,
         searchActions.setQuery,
         searchActions.setMode,
@@ -114,6 +125,7 @@ export class GalleryEffects {
           personId: params.personId,
           framings: params.framings,
           hasFaces: params.hasFaces,
+          classificationLabelIds: params.classificationLabelIds,
           ...(params.q ? { q: params.q, qMode: params.qMode } : {}),
         }).pipe(
           map((result: AssetsPage) => galleryActions.loadPageSuccess({

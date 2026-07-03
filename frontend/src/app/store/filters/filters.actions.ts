@@ -15,6 +15,7 @@ export const filtersActions = createActionGroup({
     'Set Person Id':     props<{ personId: number | null }>(),
     'Set Framings':      props<{ framings: string[] }>(),
     'Set Has Faces':     props<{ hasFaces: boolean | null }>(),
+    'Set Classification Label Ids': props<{ classificationLabelIds: number[] }>(),
     'Set Media Type':    props<{ mediaType: MediaType }>(),
     'Clear All Filters': emptyProps(),
   },

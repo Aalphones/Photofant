@@ -13,11 +13,11 @@ import { Store } from '@ngrx/store';
 import { catchError, debounceTime, distinctUntilChanged, filter, of, Subject, switchMap } from 'rxjs';
 import type { PersonDto, TagListItem } from '@photofant/models';
 import { SearchService, TagService } from '@photofant/services';
-import { filtersActions, personsActions, personsSelectors, searchActions } from '@photofant/store';
+import { classificationSelectors, filtersActions, personsActions, personsSelectors, searchActions } from '@photofant/store';
 import { Icon } from '../icon/icon';
 
 interface AutocompleteItem {
-  type: 'tag' | 'person' | 'semantic';
+  type: 'tag' | 'person' | 'semantic' | 'class';
   text: string;
   id?: number;
   count?: number;
@@ -26,7 +26,7 @@ interface AutocompleteItem {
 
 interface RecentSearch {
   text: string;
-  type: 'tag' | 'semantic';
+  type: 'tag' | 'semantic' | 'class';
   id?: number;
 }
 
@@ -49,6 +49,7 @@ export class SearchBox {
 
   private readonly queryInput$ = new Subject<string>();
   private readonly allPersons  = this.store.selectSignal(personsSelectors.selectAll);
+  private readonly allCategories = this.store.selectSignal(classificationSelectors.selectAll);
   private readonly recentSearches = signal<RecentSearch[]>(this.loadRecentSearches());
 
   protected readonly localQuery  = signal('');
@@ -79,6 +80,20 @@ export class SearchBox {
       .slice(0, 4);
   });
 
+  private readonly classificationSuggestions = computed<AutocompleteItem[]>(() => {
+    const query = this.localQuery().trim().toLowerCase();
+    if (!query) return [];
+    const matches: AutocompleteItem[] = [];
+    for (const category of this.allCategories()) {
+      for (const label of category.labels) {
+        if (label.name.toLowerCase().includes(query)) {
+          matches.push({ type: 'class', text: label.name, id: label.id });
+        }
+      }
+    }
+    return matches.slice(0, 4);
+  });
+
   protected readonly suggestions = computed<AutocompleteItem[]>(() => {
     const query = this.localQuery().trim();
     if (!query) {
@@ -101,8 +116,9 @@ export class SearchBox {
       id: tag.id,
       count: tag.count,
     }));
+    const classifications = this.classificationSuggestions();
     const semantic: AutocompleteItem = { type: 'semantic', text: query, badge: 'CLIP' };
-    return [...persons, ...tags, semantic];
+    return [...persons, ...tags, ...classifications, semantic];
   });
 
   constructor() {
@@ -195,6 +211,11 @@ export class SearchBox {
       this.saveRecentSearch(item.text, 'semantic');
       this.localQuery.set('');
       this.queryInput$.next('');
+    } else if (item.type === 'class' && item.id != null) {
+      this.store.dispatch(filtersActions.setClassificationLabelIds({ classificationLabelIds: [item.id] }));
+      this.saveRecentSearch(item.text, 'class', item.id);
+      this.localQuery.set('');
+      this.queryInput$.next('');
     } else if (item.id != null) {
       // Tag exakt filtern (statt als freien q-Text zu schicken) — sonst liefern
       // mehrdeutige Tag-Namen falsche Treffer (ADR-015).
@@ -231,7 +252,7 @@ export class SearchBox {
         if (typeof entry === 'object' && entry !== null && 'text' in entry) {
           const typed = entry as { text: unknown; type?: unknown; id?: unknown };
           const text = typeof typed.text === 'string' ? typed.text : '';
-          const type = typed.type === 'semantic' ? 'semantic' : 'tag';
+          const type = typed.type === 'semantic' || typed.type === 'class' ? typed.type : 'tag';
           const id = typeof typed.id === 'number' ? typed.id : undefined;
           return { text, type, ...(id != null ? { id } : {}) };
         }
@@ -242,7 +263,7 @@ export class SearchBox {
     }
   }
 
-  private saveRecentSearch(text: string, type: 'tag' | 'semantic', id?: number): void {
+  private saveRecentSearch(text: string, type: 'tag' | 'semantic' | 'class', id?: number): void {
     const trimmed = text.trim();
     if (!trimmed) return;
     const filtered = this.recentSearches().filter(

@@ -39,11 +39,33 @@
 
 ## Checkliste
 
-- [ ] `store/filters`: Feld + Action + Reducer-Case + `clearAllFilters` + Selector.
-- [ ] `gallery.effects.ts`: Action in `onFiltersChange$`; Param in `fetchPage$`.
-- [ ] `services/asset.service.ts` (bzw. wo `listAssets` lebt): `classification`-Param serialisieren.
-- [ ] `filter-rail.ts` + `.html` + `.scss`: Kategorie-Gruppen aus Store + Facets rendern, Toggle dispatchen.
-- [ ] `lightbox.html` + `lightbox.ts`: Sektion „Klassifizierung" (gruppiert, Confidence).
-- [ ] `search-box.ts` + `.html`: Label-Vorschläge + Auswahl-Handling.
+- [x] `store/filters`: Feld + Action + Reducer-Case + `clearAllFilters` + Selector.
+- [x] `gallery.effects.ts`: Action in `onFiltersChange$`; Param in `fetchPage$`.
+- [x] `services/asset.service.ts` (bzw. wo `listAssets` lebt): `classification`-Param serialisieren.
+- [x] `filter-rail.ts` + `.html` + `.scss`: Kategorie-Gruppen aus Store + Facets rendern, Toggle dispatchen.
+- [x] `lightbox.html` + `lightbox.ts`: Sektion „Klassifizierung" (gruppiert, Confidence).
+- [x] `search-box.ts` + `.html`: Label-Vorschläge + Auswahl-Handling.
 
 ## Report-Back
+
+- Modelle (`asset.model.ts`): `ClassificationFacetItem`, `ClassificationCategoryFacet` ergänzt,
+  `Facets.classifications` + `AssetDetailDto.classifications` (Typ `AssetClassification`).
+- `store/filters`: `classificationLabelIds: number[]` durchgängig (Action, Reducer, Selector,
+  `clearAllFilters`).
+- `gallery.effects.ts`: neue Action löst `reset` aus; `fetchPage$` reicht die Label-IDs durch;
+  **zusätzlich** ein `initClassificationCategories$`-Effect (`ROOT_EFFECTS_INIT`), der die
+  Kategorien app-weit lädt — bisher lud sie exklusiv der Einstellungen-Tab, Filter-Rail/Lightbox/
+  Suche hätten sonst eine leere Kategorie-Liste gesehen. Kein Plan-Abweichung im Kontrakt, nur
+  eine notwendige Ergänzung, um den bestehenden Store nutzbar zu machen.
+- `asset.service.ts`: `classificationLabelIds` als wiederholter `classification`-Query-Parameter
+  (matcht das Phase-3-Backend-Kontrakt 1:1).
+- `filter-rail`: eine Akkordeon-Gruppe je aktiver Kategorie (dynamische Closed-Set statt fixer
+  Open-Signale, da die Kategorie-Anzahl zur Laufzeit variiert), Toggle + Facet-Count wie beim
+  `framing`-Vorbild.
+- `lightbox`: neue Panel-Sektion „Klassifizierung", nach Kategorie gruppiert, Balken + Prozent;
+  nur im Asset-Modus (Klassifizierung lebt auf `AssetDetailDto`, nicht auf Face-Detail).
+- `search-box`: neuer Autocomplete-Typ `class` (Icon „layers"), Client-seitiger Label-Abgleich
+  gegen den bereits geladenen Kategorien-Store (kein neuer Endpoint nötig); Auswahl setzt
+  `classificationLabelIds` auf `[labelId]`, analog zu `setPersonId`.
+- `npm run lint` (tsc --noEmit) und `npm run build` grün (bestehende Bundle-Budget-Warnungen
+  vorbestehend, nicht durch diese Phase verursacht).

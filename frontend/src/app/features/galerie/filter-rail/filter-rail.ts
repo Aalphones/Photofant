@@ -10,8 +10,8 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Store } from '@ngrx/store';
-import type { FacetItem, TagFacetItem } from '@photofant/models';
-import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors } from '@photofant/store';
+import type { ClassificationCategoryFacet, ClassificationFacetItem, FacetItem, TagFacetItem } from '@photofant/models';
+import { classificationSelectors, collectionsSelectors, filtersActions, filtersSelectors, gallerySelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 
 @Component({
@@ -34,6 +34,8 @@ export class FilterRail {
   protected readonly collectionId = this.store.selectSignal(filtersSelectors.collectionId);
   protected readonly framings     = this.store.selectSignal(filtersSelectors.framings);
   protected readonly hasFaces     = this.store.selectSignal(filtersSelectors.hasFaces);
+  protected readonly categories   = this.store.selectSignal(classificationSelectors.selectAll);
+  protected readonly classificationLabelIds = this.store.selectSignal(filtersSelectors.classificationLabelIds);
 
   protected readonly tagQuery = signal('');
 
@@ -52,6 +54,10 @@ export class FilterRail {
   protected readonly openSammlung  = signal(true);
   protected readonly openFraming   = signal(true);
   protected readonly openGesichter = signal(true);
+
+  // Klassifizierungs-Kategorien: dynamische Anzahl, darum eine Closed-Set statt
+  // einer festen Open-Signal-Property pro Facet (analog openFraming/openGesichter usw.).
+  private readonly closedClassificationCategories = signal<Set<number>>(new Set());
 
   // Slider drag
   private readonly sliderTrackRef = viewChild<ElementRef<HTMLDivElement>>('sliderTrack');
@@ -108,6 +114,33 @@ export class FilterRail {
   protected toggleHasFaces(): void {
     const next = this.hasFaces() === false ? null : false;
     this.store.dispatch(filtersActions.setHasFaces({ hasFaces: next }));
+  }
+
+  protected toggleClassificationLabel(labelId: number): void {
+    const current = this.classificationLabelIds();
+    const next = current.includes(labelId)
+      ? current.filter((id: number) => id !== labelId)
+      : [...current, labelId];
+    this.store.dispatch(filtersActions.setClassificationLabelIds({ classificationLabelIds: next }));
+  }
+
+  protected isClassificationCategoryOpen(categoryId: number): boolean {
+    return !this.closedClassificationCategories().has(categoryId);
+  }
+
+  protected toggleClassificationCategoryOpen(categoryId: number): void {
+    this.closedClassificationCategories.update((closed: Set<number>) => {
+      const next = new Set(closed);
+      if (next.has(categoryId)) { next.delete(categoryId); } else { next.add(categoryId); }
+      return next;
+    });
+  }
+
+  protected classificationFacetCount(categoryId: number, labelId: number): number {
+    const category = this.facets()?.classifications?.find(
+      (facet: ClassificationCategoryFacet) => facet.category_id === categoryId
+    );
+    return category?.items.find((item: ClassificationFacetItem) => item.label_id === labelId)?.count ?? 0;
   }
 
   protected sourceFacetCount(source: string): number {

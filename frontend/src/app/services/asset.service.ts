@@ -16,6 +16,7 @@ export interface ListAssetsParams {
   personId?: number | null;
   framings?: string[];
   hasFaces?: boolean | null;
+  classificationLabelIds?: number[];
   q?: string;
   qMode?: SearchMode;
 }
@@ -59,6 +60,11 @@ export class AssetService {
     }
     if (params.hasFaces != null) {
       httpParams = httpParams.set('has_faces', String(params.hasFaces));
+    }
+    if (params.classificationLabelIds?.length) {
+      for (const labelId of params.classificationLabelIds) {
+        httpParams = httpParams.append('classification', String(labelId));
+      }
     }
     if (params.q) {
       httpParams = httpParams.set('q', params.q);

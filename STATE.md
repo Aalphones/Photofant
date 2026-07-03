@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** P18 (Bildklassifizierung) — `docs/planning/2026-06-30_p18-bildklassifizierung/`
-**Phase:** 5/6 — Galerie-Filter, Lightbox, globale Suche (Frontend) (`phase-5-galerie-lightbox-suche.md`)
-**Nächster Schritt:** Phase 5 starten (README-Kontrakt + `phase-5-galerie-lightbox-suche.md` lesen).
+**Phase:** 6/6 — Docs & ADR-010 (`phase-6-docs-adr.md`)
+**Nächster Schritt:** Phase 6 starten (README-Kontrakt + `phase-6-docs-adr.md` lesen). Danach Plan fertig — Smoke-Checkliste an User, archivieren.
 
 **Reihenfolge (kurzfristig eingeschoben, 2026-07-03):** P31 → P32 → Editor-Basis-Fixes
 (alle 3 Phasen) erledigt, jetzt zurück zu P18.
@@ -25,8 +25,9 @@
 - P18 (Bildklassifizierung) — Phase 1 (Datenmodell & Seed-Katalog) + Phase 2 (Engine:
   CLIP+WD14-Fusion, Job, Pipeline-Hook) + Phase 3 (Backend-API: CRUD, Filter/Facets/Suche,
   explizites Cascade-Delete) + Phase 4 (Einstellungen-Tab Frontend: Shell + Kategorie-Editor,
-  CRUD über store/classification, „Bestehende Bilder klassifizieren" verdrahtet) committet,
-  Phase 5 (Galerie-Filter/Lightbox/Suche Frontend) jetzt dran. Rest im Backlog geparkt: p20, p22-p27.
+  CRUD über store/classification, „Bestehende Bilder klassifizieren" verdrahtet) + Phase 5
+  (Galerie-Filter-Rail je Kategorie, Lightbox-Sektion „Klassifizierung", Such-Autocomplete für
+  Labels) committet, Phase 6 (Docs & ADR-010) jetzt dran. Rest im Backlog geparkt: p20, p22-p27.
 
 **Unabhängig im Working Tree liegen gelassen (nicht Teil eines aktiven Plans):** ein fertig
 wirkender „stranded_face"-Reparatur-Fix (Backend + Reconcile-UI + Tests, verirrte

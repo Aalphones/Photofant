@@ -320,6 +320,27 @@
         </div>
       </div>
 
+      <!-- Klassifizierung -->
+      @if (classificationsByCategory().length > 0) {
+        <div class="panel-sec">
+          <div class="psec-title">Klassifizierung</div>
+          @for (group of classificationsByCategory(); track group.category_id) {
+            <div class="pclass-group">
+              <div class="pclass-group__title">{{ group.category_name }}</div>
+              @for (item of group.items; track item.label_id) {
+                <div class="pclass-row">
+                  <span class="pclass-row__label">{{ item.label_name }}</span>
+                  <div class="pclass-row__bar">
+                    <div class="pclass-row__fill" [style.width.%]="confidencePercent(item.confidence)"></div>
+                  </div>
+                  <span class="pclass-row__pct">{{ confidencePercent(item.confidence) }}%</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
       <!-- Gesichter -->
       @if (faces().length > 0) {
         <div class="panel-sec">

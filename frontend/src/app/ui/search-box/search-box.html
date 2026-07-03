@@ -48,7 +48,7 @@
         (click)="selectSuggestion(item)"
       >
         <pf-icon
-          [name]="item.type === 'person' ? 'user' : item.type === 'semantic' ? 'sparkle' : 'tag'"
+          [name]="item.type === 'person' ? 'user' : item.type === 'semantic' ? 'sparkle' : item.type === 'class' ? 'layers' : 'tag'"
           [size]="12"
         />
         <span class="search-box__suggestion-text">{{ item.text }}</span>

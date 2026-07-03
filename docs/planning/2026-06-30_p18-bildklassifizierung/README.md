@@ -31,7 +31,7 @@ nachträglich klassifizieren.
 | 2 | [Engine: CLIP + WD14-Fusion, Job, Pipeline-Hook](phase-2-engine-fusion.md) | heikel | complete |
 | 3 | [Backend-API: CRUD, Retro-Lauf, Filter/Facets/Suche](phase-3-backend-api-suche.md) | standard | complete |
 | 4 | [Einstellungen-Tab (Frontend)](phase-4-einstellungen-tab.md) | standard | complete |
-| 5 | [Galerie-Filter, Lightbox, globale Suche (Frontend)](phase-5-galerie-lightbox-suche.md) | standard | pending |
+| 5 | [Galerie-Filter, Lightbox, globale Suche (Frontend)](phase-5-galerie-lightbox-suche.md) | standard | complete |
 | 6 | [Docs & ADR-010](phase-6-docs-adr.md) | mechanisch | pending |
 
 ## Kontrakt (Cross-Modul — Drift-Anker über `/clear`-Grenzen)
