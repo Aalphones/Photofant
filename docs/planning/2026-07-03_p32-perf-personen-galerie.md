@@ -44,7 +44,7 @@ unkritisch): `api/faces.py:311-314`, `api/review.py:231`, `api/search.py:65-73`,
 | Phase | Inhalt | Tier | Status |
 |---|---|---|---|
 | 1 | Indexe + deferred BLOB-Spalten (Migration + models.py) | mechanisch | complete |
-| 2 | `GET /persons` ohne N+1 (Aggregat-Umbau) | standard | pending |
+| 2 | `GET /persons` ohne N+1 (Aggregat-Umbau) | standard | complete |
 
 ---
 
@@ -103,12 +103,24 @@ wenn es den Code netto vereinfacht; kein Zwang.
 
 **Checkliste:**
 
-- [ ] `api/persons.py`: `list_persons` auf Aggregat-Queries umbauen (DTO-Form unverändert:
-      gleiche Felder, gleiche Sortierung `is_unknown ASC, id ASC`).
-- [ ] Personen ohne Instanzen/Faces liefern weiterhin `count=0`, `fav_count=0`,
+- [x] `api/persons.py`: `list_persons` auf Aggregat-Queries umbauen (DTO-Form unverändert:
+      gleiche Felder, gleiche Sortierung `is_unknown ASC, id ASC`). Umgesetzt als 2 gruppierte
+      Queries (`_person_instance_counts` mit `func.sum(case(...))` für count+fav_count in einer
+      Query, `_person_portrait_face_ids` mit `row_number() OVER (PARTITION BY person_id ...)`)
+      statt der im Plan skizzierten 3 — spart eine Query gegenüber dem Vorschlag.
+- [x] Personen ohne Instanzen/Faces liefern weiterhin `count=0`, `fav_count=0`,
       `portrait_face_id=None` (LEFT-Semantik: Maps mit `.get(person_id, 0)`, nicht INNER JOIN).
-- [ ] `cd backend && uv run ruff check .` grün; bestehende Backend-Tests laufen lassen.
-- [ ] Doc-Check: `docs/routes.md` — Response-Shape unverändert, nur verifizieren, nichts umschreiben.
+      Per Ad-hoc-Smoke verifiziert (In-Memory-SQLite, 3 Personen inkl. eine ohne Fotos, eine
+      mit Soft-Deleted-Instanz): Zahlen und Query-Count (3 total: Persons + Counts + Portraits)
+      stimmen.
+- [x] `cd backend && uv run ruff check .` grün (persons.py sauber; 6 pre-existing Findings in
+      assets.py/comfyui_run_job.py unberührt); Backend-Tests: 147 passed, 12 pre-existing
+      Failures (ComfyUI/Caption, identisch zu Phase 1) — keine Regression.
+- [x] Doc-Check: `docs/routes.md` (Personen-Sektion, Zeile 594-613) — Response-Shape (`PersonDto`)
+      unverändert, verifiziert. Hinweis: die dortige Sortierungs-Notiz („benannt nach Count desc")
+      war schon vor dieser Phase falsch (Ist-Code sortiert `is_unknown ASC, id ASC`, wie Plan es
+      auch für diese Phase vorschreibt) — laut Plan „nur verifizieren, nichts umschreiben",
+      daher unangetastet gelassen; Drift ist pre-existing, nicht durch P32 entstanden.
 
 **AK Phase 2:**
 

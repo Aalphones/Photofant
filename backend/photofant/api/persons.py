@@ -17,7 +17,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from photofant.db.models import AssetInstance, Face, Person
@@ -125,6 +125,42 @@ def _build_person_dto(session: Session, person: Person) -> PersonDto:
     )
 
 
+def _person_instance_counts(session: Session) -> dict[int, tuple[int, int]]:
+    """Grouped (count, fav_count) per person_id — one query instead of 2×N."""
+    rows = session.execute(
+        select(
+            AssetInstance.person_id,
+            func.count(AssetInstance.id),
+            func.sum(case((AssetInstance.favourite.is_(True), 1), else_=0)),
+        )
+        .where(AssetInstance.deleted_at.is_(None))
+        .group_by(AssetInstance.person_id)
+    ).all()
+    return {
+        person_id: (count, int(fav_count or 0))
+        for person_id, count, fav_count in rows
+    }
+
+
+def _person_portrait_face_ids(session: Session) -> dict[int, int]:
+    """Best face (highest score, NULLs last) per person_id — one query instead of N."""
+    ranked = (
+        select(
+            Face.person_id,
+            Face.id,
+            func.row_number()
+            .over(partition_by=Face.person_id, order_by=Face.score.desc().nulls_last())
+            .label("rank"),
+        )
+        .where(Face.person_id.is_not(None))
+        .subquery()
+    )
+    rows = session.execute(
+        select(ranked.c.person_id, ranked.c.id).where(ranked.c.rank == 1)
+    ).all()
+    return dict(rows)
+
+
 @router.post("", response_model=PersonDto, status_code=201)
 async def create_person(body: CreatePersonRequest, session: DbSession) -> PersonDto:
     """Create a new named person and ensure their folder exists."""
@@ -156,7 +192,22 @@ async def list_persons(session: DbSession) -> list[PersonDto]:
         .order_by(Person.is_unknown.asc(), Person.id.asc())
         .all()
     )
-    return [_build_person_dto(session, person) for person in persons]
+    counts = _person_instance_counts(session)
+    portrait_face_ids = _person_portrait_face_ids(session)
+
+    return [
+        PersonDto(
+            id=person.id,
+            name=person.name,
+            is_unknown=person.is_unknown,
+            count=counts.get(person.id, (0, 0))[0],
+            fav_count=counts.get(person.id, (0, 0))[1],
+            portrait_face_id=portrait_face_ids.get(person.id),
+            group_name=person.group_name,
+            created_at=person.created_at,
+        )
+        for person in persons
+    ]
 
 
 @router.get("/{person_id}/faces", response_model=list[PersonFaceDto])
