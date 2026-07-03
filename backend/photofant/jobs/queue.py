@@ -103,15 +103,18 @@ class JobQueue:
     def __init__(self) -> None:
         self._queue: asyncio.Queue[_Job] = asyncio.Queue()
         self._background_queue: asyncio.PriorityQueue[tuple[int, int, _Job]] = asyncio.PriorityQueue()
-        self._tagging_queue: asyncio.Queue[_Job] = asyncio.Queue()
-        self._captioning_queue: asyncio.Queue[_Job] = asyncio.Queue()
+        # `None` is a poison pill: pushed by _scale_pool() to shrink a pool. Whichever
+        # worker dequeues it exits — it never jumps ahead of real jobs already queued,
+        # so shrinking never interrupts a job that's already running.
+        self._tagging_queue: asyncio.Queue[_Job | None] = asyncio.Queue()
+        self._captioning_queue: asyncio.Queue[_Job | None] = asyncio.Queue()
         self._bg_seq: int = 0
         self._jobs: dict[str, JobStatus] = {}
         self._subscribers: list[asyncio.Queue[JobStatus]] = []
         self._worker_task: asyncio.Task[None] | None = None
         self._background_worker_task: asyncio.Task[None] | None = None
-        self._tagging_worker_tasks: list[asyncio.Task[None]] = []
-        self._captioning_worker_tasks: list[asyncio.Task[None]] = []
+        self._tagging_worker_tasks: set[asyncio.Task[None]] = set()
+        self._captioning_worker_tasks: set[asyncio.Task[None]] = set()
         self._parallel_tasks: set[asyncio.Task[None]] = set()
 
     def start(self) -> None:
@@ -122,12 +125,43 @@ class JobQueue:
         face_pipeline.set_loop(asyncio.get_running_loop())
         self._worker_task = asyncio.create_task(self._worker())
         self._background_worker_task = asyncio.create_task(self._background_worker())
-        self._tagging_worker_tasks = [
-            asyncio.create_task(self._tagging_worker()) for _ in range(settings["tagging_workers"])
-        ]
-        self._captioning_worker_tasks = [
-            asyncio.create_task(self._captioning_worker()) for _ in range(settings["captioning_workers"])
-        ]
+        self._scale_pool(
+            self._tagging_worker_tasks, self._tagging_queue, self._tagging_worker, settings["tagging_workers"]
+        )
+        self._scale_pool(
+            self._captioning_worker_tasks,
+            self._captioning_queue,
+            self._captioning_worker,
+            settings["captioning_workers"],
+        )
+
+    def resize_tagging_workers(self, target: int) -> None:
+        """Grow/shrink the tagging pool to `target` workers without a process restart."""
+        self._scale_pool(self._tagging_worker_tasks, self._tagging_queue, self._tagging_worker, target)
+
+    def resize_captioning_workers(self, target: int) -> None:
+        """Grow/shrink the captioning pool to `target` workers without a process restart."""
+        self._scale_pool(self._captioning_worker_tasks, self._captioning_queue, self._captioning_worker, target)
+
+    def _scale_pool(
+        self,
+        tasks: set[asyncio.Task[None]],
+        queue: asyncio.Queue[_Job | None],
+        spawn_worker: Callable[[], Coroutine[Any, Any, None]],
+        target: int,
+    ) -> None:
+        target = max(0, target)
+        current = len(tasks)
+        if target > current:
+            for _ in range(target - current):
+                task = asyncio.create_task(spawn_worker())
+                tasks.add(task)
+                task.add_done_callback(tasks.discard)
+        elif target < current:
+            # Wake exactly the surplus count of idle workers via poison pills; a worker
+            # stuck mid-job is never touched since it only checks the queue between jobs.
+            for _ in range(current - target):
+                queue.put_nowait(None)
 
     async def stop(self) -> None:
         singleton_worker_tasks = (self._worker_task, self._background_worker_task)
@@ -217,6 +251,8 @@ class JobQueue:
         while True:
             job = await self._tagging_queue.get()
             try:
+                if job is None:  # poison pill from _scale_pool() — shrink by one
+                    return
                 await self._run_job(job.status, job.coro_factory)
             finally:
                 self._tagging_queue.task_done()
@@ -225,6 +261,8 @@ class JobQueue:
         while True:
             job = await self._captioning_queue.get()
             try:
+                if job is None:  # poison pill from _scale_pool() — shrink by one
+                    return
                 await self._run_job(job.status, job.coro_factory)
             finally:
                 self._captioning_queue.task_done()

@@ -58,6 +58,8 @@ class AppSettings(TypedDict):
     face_auto_threshold: float
     face_review_threshold: float
     face_min_cluster_size: int
+    tagging_workers: int
+    captioning_workers: int
     display: DisplaySettings
     comfyui: ComfyUISettings
 

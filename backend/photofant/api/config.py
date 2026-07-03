@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from photofant.jobs.queue import job_queue
 from photofant.settings import load_settings, patch_settings
 
 log = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def get_config() -> ConfigResponse:
 
 
 @router.patch("", response_model=ConfigResponse)
-def patch_config(body: ConfigPatchRequest) -> ConfigResponse:
+async def patch_config(body: ConfigPatchRequest) -> ConfigResponse:
     """Update one or more settings keys. Writes atomically to settings.json."""
     try:
         updated = patch_settings(body.data)
@@ -45,6 +46,14 @@ def patch_config(body: ConfigPatchRequest) -> ConfigResponse:
         if models_dir_raw:
             Path(models_dir_raw).mkdir(parents=True, exist_ok=True)
             log.info("models_dir set to %s — directory ensured", models_dir_raw)
+
+    # Live-resize the tagging/captioning worker pools — no backend restart needed.
+    if "tagging_workers" in body.data:
+        job_queue.resize_tagging_workers(updated["tagging_workers"])
+        log.info("tagging worker pool resized to %d", updated["tagging_workers"])
+    if "captioning_workers" in body.data:
+        job_queue.resize_captioning_workers(updated["captioning_workers"])
+        log.info("captioning worker pool resized to %d", updated["captioning_workers"])
 
     reboot_required = "data_root" in body.data or None
     log.info("config patched: %s", list(body.data.keys()))
