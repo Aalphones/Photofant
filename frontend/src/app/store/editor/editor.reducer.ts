@@ -16,6 +16,7 @@ export interface EditorState {
   steps: EditorStep[];
   currentSeq: number;
   applying: boolean;
+  saving: boolean;
   generating: boolean;
   generativeJobId: string | null;
   generativeResult: GenerativeResult | null;
@@ -31,6 +32,7 @@ const initialState: EditorState = {
   steps: [],
   currentSeq: 0,
   applying: false,
+  saving: false,
   generating: false,
   generativeJobId: null,
   generativeResult: null,
@@ -52,6 +54,7 @@ export const editorFeature = createFeature({
       steps: [],
       currentSeq: 0,
       applying: false,
+      saving: false,
       generating: false,
       generativeJobId: null,
       generativeResult: null,
@@ -107,6 +110,23 @@ export const editorFeature = createFeature({
       currentSeq: seq,
       applying: false,
       generativeSelected: false,
+    })),
+
+    on(editorActions.save, (state: EditorState): EditorState => ({
+      ...state,
+      saving: true,
+      error: null,
+    })),
+
+    on(editorActions.saveSuccess, (state: EditorState): EditorState => ({
+      ...state,
+      saving: false,
+    })),
+
+    on(editorActions.saveFailure, (state: EditorState, { error }): EditorState => ({
+      ...state,
+      saving: false,
+      error,
     })),
 
     on(editorActions.runGenerative, (state: EditorState): EditorState => ({

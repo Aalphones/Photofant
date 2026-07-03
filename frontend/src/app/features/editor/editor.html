@@ -42,7 +42,7 @@
         </button>
       }
 
-      <button class="ed-save-btn" [disabled]="!hasUnsavedSteps()" (click)="showSaveModal.set(true)">
+      <button class="ed-save-btn" [disabled]="!hasUnsavedSteps() || saving()" (click)="showSaveModal.set(true)">
         <pf-icon name="download" [size]="16" /> Speichern
       </button>
     </div>
@@ -174,7 +174,7 @@
       </div>
     } @else {
       <div class="ed-canvas-wrap">
-        @if (applying()) {
+        @if (applying() || saving()) {
           <div class="ed-applying-overlay">
             <div class="ed-spinner"></div>
           </div>
@@ -232,7 +232,7 @@
         <span>Verlauf</span>
       </button>
       <div class="mb-sep"></div>
-      <button class="mb-tool" (click)="showSaveModal.set(true)" [disabled]="!hasUnsavedSteps()">
+      <button class="mb-tool" (click)="showSaveModal.set(true)" [disabled]="!hasUnsavedSteps() || saving()">
         <pf-icon name="download" [size]="20" />
         <span>Speichern</span>
       </button>

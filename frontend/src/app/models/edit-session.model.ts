@@ -1,5 +1,7 @@
 export type EditorTargetKind = 'instance' | 'face' | 'version';
 
+export type SaveMode = 'overwrite' | 'new_copy';
+
 export type CropRatio = 'free' | '1:1' | '4:3' | '3:4' | '16:9' | '3:2' | '2:3';
 
 export interface CropRect {

@@ -69,7 +69,7 @@ export {
   formatModelSize,
 } from './model.model';
 
-export type { EditorTargetKind, CropRatio, CropRect, EditorStep, CreateSessionResponse, ApplyStepResponse, RollbackResponse } from './edit-session.model';
+export type { EditorTargetKind, SaveMode, CropRatio, CropRect, EditorStep, CreateSessionResponse, ApplyStepResponse, RollbackResponse } from './edit-session.model';
 
 export type {
   WorkflowInput,

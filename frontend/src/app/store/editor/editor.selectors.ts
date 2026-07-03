@@ -5,7 +5,7 @@ import { editorFeature } from './editor.reducer';
 
 const {
   selectSessionKey, selectSteps, selectCurrentSeq, selectOriginalPreviewUrl,
-  selectApplying, selectError, selectTargetId, selectGenerating, selectGenerativeJobId,
+  selectApplying, selectSaving, selectError, selectTargetId, selectGenerating, selectGenerativeJobId,
   selectGenerativeResult, selectGenerativeSelected,
 } = editorFeature;
 
@@ -55,6 +55,7 @@ export const editorSelectors = {
   selectCurrentSeq,
   selectOriginalPreviewUrl,
   selectApplying,
+  selectSaving,
   selectError,
   selectTargetId,
   selectGenerating,

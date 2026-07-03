@@ -13,6 +13,8 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { Actions, ofType } from '@ngrx/effects';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { Icon } from '@photofant/ui';
 import { comfyuiActions, comfyuiSelectors, editorActions, editorSelectors, modelsActions, modelsSelectors } from '@photofant/store';
@@ -48,6 +50,7 @@ export class Editor implements OnInit {
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly actions$ = inject(Actions);
 
   // Modal-Modus: vom Parent (z.B. Lightbox) eingebettet statt als Route geöffnet
   readonly modal = input(false);
@@ -60,6 +63,7 @@ export class Editor implements OnInit {
   protected readonly currentSeq = this.store.selectSignal(editorSelectors.selectCurrentSeq);
   protected readonly originalPreviewUrl = this.store.selectSignal(editorSelectors.selectOriginalPreviewUrl);
   protected readonly applying = this.store.selectSignal(editorSelectors.selectApplying);
+  protected readonly saving = this.store.selectSignal(editorSelectors.selectSaving);
   protected readonly error = this.store.selectSignal(editorSelectors.selectError);
   protected readonly currentPreviewUrl = this.store.selectSignal(editorSelectors.selectCurrentPreviewUrl);
   protected readonly hasUnsavedSteps = this.store.selectSignal(editorSelectors.selectHasUnsavedSteps);
@@ -166,6 +170,12 @@ export class Editor implements OnInit {
       this.store.dispatch(editorActions.close());
     });
 
+    // Gespeichert → Editor schließen (Route: zurück zur Galerie, Modal: closed-Output)
+    this.actions$.pipe(
+      ofType(editorActions.saveSuccess),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => this.goBack());
+
     effect((): void => {
       const error = this.error();
       if (error != null) {
@@ -232,7 +242,8 @@ export class Editor implements OnInit {
 
   protected onSave(mode: SaveMode): void {
     this.showSaveModal.set(false);
-    console.info('[Editor] Save requested:', mode);
+    if (this.sessionKey() == null) { return; }
+    this.store.dispatch(editorActions.save({ mode }));
   }
 
   protected setTool(tool: EditorTool): void {

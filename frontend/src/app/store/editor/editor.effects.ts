@@ -75,6 +75,22 @@ export class EditorEffects {
     )
   );
 
+  readonly onSave$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(editorActions.save),
+      concatLatestFrom(() => this.store.select(editorSelectors.selectSessionKey)),
+      concatMap(([{ mode }, sessionKey]) => {
+        if (sessionKey == null) { return EMPTY; }
+        return this.editSessionService.save(sessionKey, mode).pipe(
+          map((version: VersionDto) => editorActions.saveSuccess({ version })),
+          catchError((error: HttpErrorResponse) =>
+            of(editorActions.saveFailure({ error: error.message }))
+          ),
+        );
+      }),
+    )
+  );
+
   readonly onRunGenerative$ = createEffect(() =>
     this.actions$.pipe(
       ofType(editorActions.runGenerative),

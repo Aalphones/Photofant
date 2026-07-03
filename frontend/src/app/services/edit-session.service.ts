@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { ApplyStepResponse, CreateSessionResponse, EditorTargetKind, RollbackResponse } from '@photofant/models';
+import type { ApplyStepResponse, CreateSessionResponse, EditorTargetKind, RollbackResponse, SaveMode, VersionDto } from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
 export class EditSessionService {
@@ -19,6 +19,10 @@ export class EditSessionService {
 
   rollback(sessionKey: string, toSeq: number): Observable<RollbackResponse> {
     return this.http.post<RollbackResponse>(`/api/edit-sessions/${sessionKey}/rollback`, { to_seq: toSeq });
+  }
+
+  save(sessionKey: string, mode: SaveMode): Observable<VersionDto> {
+    return this.http.post<VersionDto>(`/api/edit-sessions/${sessionKey}/save`, { mode });
   }
 
   previewUrl(sessionKey: string, seq: number): string {

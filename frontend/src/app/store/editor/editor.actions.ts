@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { DefaultRunTask, EditorStep, EditorTargetKind, ResolutionRun } from '@photofant/models';
+import type { DefaultRunTask, EditorStep, EditorTargetKind, ResolutionRun, SaveMode, VersionDto } from '@photofant/models';
 
 export const editorActions = createActionGroup({
   source: 'Editor',
@@ -12,6 +12,11 @@ export const editorActions = createActionGroup({
     'Apply Step Failure': props<{ error: string }>(),
     'Rollback': props<{ toSeq: number }>(),
     'Rollback Success': props<{ seq: number }>(),
+    // Final-Render + speichern. mode entscheidet overwrite vs. neue Kopie;
+    // bei reinen Orientierungs-Sessions überschreibt das Backend die Quelle direkt.
+    'Save': props<{ mode: SaveMode }>(),
+    'Save Success': props<{ version: VersionDto }>(),
+    'Save Failure': props<{ error: string }>(),
     // Generativer Run über den Default-Run-Endpunkt (Edit / Inpaint / Upscale).
     // task bestimmt, welcher Default-Workflow aus den Einstellungen verwendet wird.
     // imageSlotKey = der Bild-Slot des Workflows, an den das Editor-Asset gebunden wird.
