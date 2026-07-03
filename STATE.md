@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-03_p31-duplikate-schwelle-pagination/`
-**Phase:** 1/3 — Threshold-Semantik & Entkopplung (offen)
-**Nächster Schritt:** `phase-1-threshold-semantik.md` lesen und umsetzen.
+**Phase:** 2/3 — Backend: Pagination + Query-Fix (offen)
+**Nächster Schritt:** `phase-2-api-pagination.md` lesen und umsetzen.
 
 **Reihenfolge (kurzfristig eingeschoben, 2026-07-03):** P31 → P32 → P18 wird danach fortgesetzt.
 

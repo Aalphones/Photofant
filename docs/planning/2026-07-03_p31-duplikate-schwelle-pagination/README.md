@@ -9,7 +9,7 @@ auf einmal → >111k DB-Queries pro Request, DOM-Overload, Tab-Crash.
 
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | [Threshold-Semantik & Entkopplung](phase-1-threshold-semantik.md) | standard | pending |
+| 1 | [Threshold-Semantik & Entkopplung](phase-1-threshold-semantik.md) | standard | complete |
 | 2 | [Backend: Pagination + Query-Fix](phase-2-api-pagination.md) | standard | pending |
 | 3 | [Frontend: Review-Dupes nachladen](phase-3-frontend-pagination.md) | standard | pending |
 

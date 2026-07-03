@@ -145,7 +145,7 @@
           <input
             class="verarbeitung__slider"
             type="range"
-            min="70"
+            min="90"
             max="99"
             step="1"
             [value]="dupeClipThresholdPct()"
@@ -153,7 +153,7 @@
             (change)="onDupeClipThresholdChange($any($event.target))"
           >
         </div>
-        <div class="verarbeitung__zeile-sub">99 % = nur fast identische Motive · 70 % = auch entfernt ähnliche einschließen</div>
+        <div class="verarbeitung__zeile-sub">99 % = nur nahezu identische Bilder · 90 % = auch stärker bearbeitete Varianten</div>
       }
     </div>
     <div class="verarbeitung__zeile-steuerung">

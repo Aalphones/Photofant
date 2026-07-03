@@ -51,6 +51,7 @@ class AppSettings(TypedDict):
     dupe_phash_enabled: bool
     dupe_clip_enabled: bool
     dupe_clip_threshold: float
+    similar_clip_threshold: float
     face_det_conf_threshold: float
     face_det_iou_threshold: float
     face_crop_padding: int
@@ -82,7 +83,8 @@ SETTINGS_DEFAULTS: AppSettings = {
     "dupe_threshold": 10,
     "dupe_phash_enabled": True,
     "dupe_clip_enabled": True,
-    "dupe_clip_threshold": 0.15,
+    "dupe_clip_threshold": 0.03,
+    "similar_clip_threshold": 0.15,
     "face_det_conf_threshold": 0.5,
     "face_det_iou_threshold": 0.45,
     "face_crop_padding": 40,
@@ -132,6 +134,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "dupe_phash_enabled": bool,
     "dupe_clip_enabled": bool,
     "dupe_clip_threshold": (float, int),
+    "similar_clip_threshold": (float, int),
     "face_det_conf_threshold": (float, int),
     "face_det_iou_threshold": (float, int),
     "face_crop_padding": int,
@@ -169,6 +172,10 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return result
 
 
+_LEGACY_DUPE_CLIP_THRESHOLD = 0.15
+_MIGRATED_DUPE_CLIP_THRESHOLD = 0.03
+
+
 def load_settings() -> AppSettings:
     path = get_settings_path()
     if not path.exists():
@@ -176,6 +183,16 @@ def load_settings() -> AppSettings:
     try:
         raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
         merged = _deep_merge(dict(SETTINGS_DEFAULTS), raw)
+        # One-time migration: the old CLIP-duplicate default (85 % similarity) matched
+        # "same motif", not "same file" — only migrate an untouched default, never a
+        # value the user deliberately set to 0.15.
+        if raw.get("dupe_clip_threshold") == _LEGACY_DUPE_CLIP_THRESHOLD:
+            merged["dupe_clip_threshold"] = _MIGRATED_DUPE_CLIP_THRESHOLD
+            save_settings(merged)  # type: ignore[arg-type]
+            log.info(
+                "settings: migrated dupe_clip_threshold %.2f -> %.2f (85%% -> 97%% similarity)",
+                _LEGACY_DUPE_CLIP_THRESHOLD, _MIGRATED_DUPE_CLIP_THRESHOLD,
+            )
         return merged  # type: ignore[return-value]
     except json.JSONDecodeError as error:
         log.warning("settings.json contains invalid JSON (%s) — falling back to defaults", error)

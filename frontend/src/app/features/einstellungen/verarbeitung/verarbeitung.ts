@@ -125,7 +125,7 @@ export class Verarbeitung {
 
   onDupeClipThresholdChange(target: HTMLInputElement): void {
     const raw = parseInt(target.value, 10);
-    const pct = Math.min(99, Math.max(70, isNaN(raw) ? 85 : raw));
+    const pct = Math.min(99, Math.max(90, isNaN(raw) ? 97 : raw));
     this.patchProcessingConfig({ dupeClipThreshold: (100 - pct) / 100 });
   }
 

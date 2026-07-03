@@ -28,19 +28,30 @@
 
 ## Checkliste
 
-- [ ] `settings.py`: Default `dupe_clip_threshold` → 0.03; neuer Key `similar_clip_threshold`
+- [x] `settings.py`: Default `dupe_clip_threshold` → 0.03; neuer Key `similar_clip_threshold`
       (float, Default 0.15) inkl. Typ-Map
-- [ ] `settings.py` (Load-Pfad): einmalige Migration — persistierter Wert exakt 0.15 → 0.03
+- [x] `settings.py` (Load-Pfad): einmalige Migration — persistierter Wert exakt 0.15 → 0.03
       schreiben, kurzer `log.info`
-- [ ] `api/review.py` `get_similar_assets`: `similar_clip_threshold` statt `dupe_clip_threshold`
-- [ ] `api/duplicates.py`: `_MIN_CLIP_THRESHOLD = 0.01`; `_DEFAULT_CLIP_THRESHOLD` an neuen
-      Settings-Default angleichen
-- [ ] `jobs/dupe_scan_job.py`: Purge ungelöster `dupe_candidate`-Items am Anfang des Voll-Scans
+- [x] `api/review.py` `get_similar_assets`: `similar_clip_threshold` statt `dupe_clip_threshold`
+- [x] `api/duplicates.py`: `_MIN_CLIP_THRESHOLD = 0.01`; Request-Default liest jetzt
+      `settings["dupe_clip_threshold"]` statt hartem 0.15 (Konstante `_DEFAULT_CLIP_THRESHOLD`
+      entfernt, da überflüssig)
+- [x] `jobs/dupe_scan_job.py`: Purge ungelöster `dupe_candidate`-Items am Anfang des Voll-Scans
       (ein DELETE, vor dem Vergleich; Selection-Scope purgt nicht)
-- [ ] Frontend `config.model.ts`: `dupeClipThreshold`-Default 0.03 (Anzeige-Fallback)
-- [ ] Frontend `verarbeitung.html`: Slider `min="90"`, Erklärtext aktualisieren
-- [ ] Doc-Update: falls Settings-Keys irgendwo dokumentiert sind (grep `dupe_clip_threshold`
-      in `docs/`), nachziehen
-- [ ] `uv run ruff check .` + Backend-Tests
+- [x] Frontend `config.model.ts`: `dupeClipThreshold`-Default 0.03 (Anzeige-Fallback)
+- [x] Frontend `verarbeitung.html`: Slider `min="90"`, Erklärtext aktualisiert
+- [x] Doc-Update: grep `dupe_clip_threshold` in `docs/` geprüft — nur eigener Plan +
+      ADR-007 (historische Entscheidung, bewusst nicht rückwirkend geändert) betroffen
+- [x] `uv run ruff check .` (nur die vier geänderten Dateien: sauber; Repo-weite Findings sind
+      Altlasten in unbeteiligten Dateien) + Backend-Tests (12 Fehler — allesamt vorbestehend,
+      per `git stash` verifiziert: comfyui_run-Signaturmismatch + ein caption_config-Test,
+      keine dupe/settings/review-Tests existieren)
 
 ## Report-Back
+
+Threshold-Semantik entkoppelt: Voll-Scan-Duplikate (`dupe_clip_threshold`, jetzt 0.03 ≙ 97 %)
+und Lightbox-„Ähnliche Bilder" (neuer Key `similar_clip_threshold`, unverändert 0.15) laufen
+über getrennte Settings. Migration hebt einen exakt unveränderten Alt-Default automatisch auf
+den neuen Wert. Per-Person-Duplikat-Check clamped nicht mehr fälschlich auf 0.05 hoch und
+übernimmt den Settings-Default statt eines hartcodierten Werts. Voll-Scan löscht vor jedem
+Lauf alte ungelöste Kandidaten. Slider-UI zeigt 90–99 % mit angepasstem Erklärtext.

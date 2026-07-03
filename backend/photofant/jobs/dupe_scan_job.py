@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import numpy as np
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from photofant.db.models import Asset, ReviewItem
@@ -95,6 +95,23 @@ def _compare_chunk_clip(
     return found
 
 
+def _purge_unresolved_dupe_candidates() -> None:
+    """Delete unresolved dupe-candidate ReviewItems before a fresh full scan.
+
+    A full scan re-derives the whole candidate set from current settings/thresholds,
+    so stale unresolved candidates from a previous (e.g. looser) threshold would
+    otherwise pile up indefinitely. Manually resolved pairs are untouched.
+    """
+    with SessionLocal() as session:
+        session.execute(
+            delete(ReviewItem).where(
+                ReviewItem.type == "dupe_candidate",
+                ReviewItem.resolved_at.is_(None),
+            )
+        )
+        session.commit()
+
+
 def _insert_pairs(pairs: list[tuple[int, int, int | None, float | None]]) -> None:
     """Persist (asset_a_id, asset_b_id, phash_distance, clip_distance) tuples; skip conflicts."""
     with SessionLocal() as session:
@@ -122,6 +139,10 @@ async def run_dupe_scan_job(
     phash_enabled: bool = settings["dupe_phash_enabled"]
     clip_enabled: bool = settings["dupe_clip_enabled"]
     clip_threshold: float = settings["dupe_clip_threshold"]
+
+    if scope != "selection":
+        await asyncio.to_thread(_purge_unresolved_dupe_candidates)
+        log.info("dupe_scan: purged unresolved dupe-candidate items before full scan")
 
     with SessionLocal() as session:
         phash_assets: list[tuple[int, int]] = []

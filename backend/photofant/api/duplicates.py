@@ -26,15 +26,15 @@ DbSession = Annotated[Session, Depends(get_session)]
 
 _MAX_THRESHOLD = 32
 _DEFAULT_THRESHOLD = 10
-_DEFAULT_CLIP_THRESHOLD = 0.15
-_MIN_CLIP_THRESHOLD = 0.05
+_MIN_CLIP_THRESHOLD = 0.01
 _MAX_CLIP_THRESHOLD = 0.30
 
 
 class DupeSearchRequest(BaseModel):
     person_id: int
     threshold: int = _DEFAULT_THRESHOLD
-    clip_threshold: float = _DEFAULT_CLIP_THRESHOLD
+    # None = use the current dupe_clip_threshold setting (avoids hardcoding a stale default).
+    clip_threshold: float | None = None
 
 
 class DupePairDto(BaseModel):
@@ -70,9 +70,13 @@ async def search_person_duplicates(
     if person is None:
         raise HTTPException(status_code=404, detail="Person not found")
 
+    settings = load_settings()
     threshold = max(0, min(body.threshold, _MAX_THRESHOLD))
-    clip_threshold = max(_MIN_CLIP_THRESHOLD, min(body.clip_threshold, _MAX_CLIP_THRESHOLD))
-    clip_enabled: bool = load_settings()["dupe_clip_enabled"]
+    clip_threshold_input = (
+        body.clip_threshold if body.clip_threshold is not None else settings["dupe_clip_threshold"]
+    )
+    clip_threshold = max(_MIN_CLIP_THRESHOLD, min(clip_threshold_input, _MAX_CLIP_THRESHOLD))
+    clip_enabled: bool = settings["dupe_clip_enabled"]
 
     rows = session.execute(
         select(AssetInstance.asset_id, Asset.phash, Asset.content_hash, Asset.clip_embedding)

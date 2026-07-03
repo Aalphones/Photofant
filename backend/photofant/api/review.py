@@ -220,7 +220,7 @@ async def get_similar_assets(asset_id: int, session: DbSession) -> list[SimilarA
     settings = load_settings()
     phash_enabled: bool = settings["dupe_phash_enabled"]
     clip_enabled: bool = settings["dupe_clip_enabled"]
-    clip_threshold: float = settings["dupe_clip_threshold"]
+    clip_threshold: float = settings["similar_clip_threshold"]
 
     matches: dict[int, _SimilarMatch] = {}
 

@@ -53,7 +53,7 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   dupeThreshold: 10,
   dupePhashEnabled: true,
   dupeClipEnabled: true,
-  dupeClipThreshold: 0.15,
+  dupeClipThreshold: 0.03,
   faceDetConfThreshold: 0.5,
   faceDetIouThreshold: 0.45,
   faceCropPadding: 40,
