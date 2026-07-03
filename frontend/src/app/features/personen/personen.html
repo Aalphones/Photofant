@@ -128,13 +128,13 @@
               <pf-person-card
                 [person]="person"
                 [viewMode]="viewMode()"
-                (select)="onSelect(person)"
                 (rename)="onRename($event)"
                 (setGroup)="onSetGroup($event)"
                 (importFiles)="onImportFiles($event)"
                 (splitClick)="onSplitClick(person)"
                 (dupeCheck)="onDupeCheck(person)"
                 (revealInFileBrowser)="onRevealInFileBrowser(person)"
+                (deleteClick)="onDeleteClick(person)"
               />
             </div>
           }
