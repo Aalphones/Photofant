@@ -1,5 +1,11 @@
 :host {
   display: block;
+  height: 100%;
+}
+
+.grid__scroll-container {
+  height: 100%;
+  overflow-y: auto;
   padding: 0 16px 24px;
 }
 
@@ -11,42 +17,21 @@
   font-size: 13px;
 }
 
-.grid__group {
-  margin-bottom: 8px;
+.grid__spacer-track {
+  position: relative;
+  width: 100%;
 }
 
-.grid__month-head {
+.grid__virtual-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 0 10px;
-}
-
-.grid__month-label {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-2);
-  white-space: nowrap;
-}
-
-.grid__month-count {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-3);
-  flex: none;
-}
-
-.grid__month-line {
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-.grid__row {
-  display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; // wir kontrollieren den Inhalt pro Row
   gap: 8px;
+  align-items: flex-start;
+  padding-bottom: 8px; // ersetzt Row-Gap nach unten
   user-select: none;
 }
 
@@ -76,9 +61,4 @@
 @keyframes pf-skeleton-pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: .45; }
-}
-
-.grid__sentinel {
-  height: 1px;
-  visibility: hidden;
 }

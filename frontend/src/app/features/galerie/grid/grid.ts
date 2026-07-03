@@ -4,18 +4,24 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
-import type { AssetDto, AssetGroup, Density, FaceGalleryItemDto } from '@photofant/models';
+import { injectVirtualizer } from '@tanstack/angular-virtual';
+import type { AssetDto, Density, FaceGalleryItemDto } from '@photofant/models';
 import { BASE_HEIGHTS } from '@photofant/models';
 import { GalerieCell } from '../cell/cell';
 import { FaceCell } from '../face-cell/face-cell';
+import { buildLayoutItems, computeRows, GRID_GAP, ROW_HEIGHT } from './row-layout';
+import type { LayoutItem, VirtualRow } from './row-layout';
 
 const SKELETON_RATIOS = [1.4, 0.75, 1.0, 1.6, 0.85, 1.2, 0.7, 1.5, 1.1, 0.9];
+const OVERSCAN = 5;
 
 @Component({
   selector: 'pf-galerie-grid',
@@ -26,13 +32,15 @@ const SKELETON_RATIOS = [1.4, 0.75, 1.0, 1.6, 0.85, 1.2, 0.7, 1.5, 1.1, 0.9];
 })
 export class GalerieGrid {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly hostEl = inject(ElementRef<HTMLElement>);
 
-  readonly groups        = input.required<AssetGroup[]>();
-  readonly density       = input.required<Density>();
-  readonly isLoading     = input.required<boolean>();
-  readonly selectionMode = input<boolean>(false);
-  readonly selectedIds   = input<number[]>([]);
-  readonly isArmed       = input<boolean>(false);
+  readonly assets         = input.required<AssetDto[]>();
+  readonly density        = input.required<Density>();
+  readonly isLoading      = input.required<boolean>();
+  readonly hasMore        = input<boolean>(false);
+  readonly selectionMode  = input<boolean>(false);
+  readonly selectedIds    = input<number[]>([]);
+  readonly isArmed        = input<boolean>(false);
 
   readonly facesMap   = input<Map<number, FaceGalleryItemDto[]>>(new Map());
 
@@ -43,28 +51,54 @@ export class GalerieGrid {
   readonly batchBind    = output<number>();
   readonly rangeSelect  = output<number>();
 
-  private readonly sentinel = viewChild.required<ElementRef<HTMLDivElement>>('loadSentinel');
+  private readonly scrollEl = viewChild.required<ElementRef<HTMLElement>>('scrollContainer');
 
   protected readonly baseHeight = computed((): number => BASE_HEIGHTS[this.density()]);
 
   protected readonly skeletonCells = SKELETON_RATIOS.map((ratio, index) => ({ ratio, index }));
 
   protected readonly isEmpty = computed((): boolean =>
-    !this.isLoading() && this.groups().every((group) => group.assets.length === 0)
+    !this.isLoading() && this.assets().length === 0
   );
+
+  private readonly containerWidth = signal<number>(0);
+
+  protected readonly rows = computed((): VirtualRow[] =>
+    computeRows(buildLayoutItems(this.assets(), this.facesMap()), this.containerWidth(), this.baseHeight(), GRID_GAP)
+  );
+
+  protected readonly virtualizer = injectVirtualizer(() => ({
+    count: this.rows().length,
+    scrollElement: this.scrollEl(),
+    estimateSize: () => ROW_HEIGHT(this.baseHeight()),
+    overscan: OVERSCAN,
+    // Wir lesen getTotalSize()/getVirtualItems()/range() als Signals direkt im Template/effect —
+    // Angulars eigene Signal-Reaktivität reicht aus. Der eingebaute ApplicationRef.tick() kollidiert
+    // damit rekursiv (NG0101), wenn eine Row-Änderung während eines laufenden Tick eine weitere CD auslöst
+    // (z.B. via loadMore-Effect). Siehe FINDINGS.md.
+    useApplicationRefTick: false,
+  }));
 
   constructor() {
     afterNextRender(() => {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry?.isIntersecting) {
-            this.loadMore.emit();
-          }
-        },
-        { rootMargin: '400px' }
-      );
-      observer.observe(this.sentinel().nativeElement);
-      this.destroyRef.onDestroy(() => observer.disconnect());
+      const resizeObserver = new ResizeObserver(([entry]) => {
+        if (entry) this.containerWidth.set(entry.contentRect.width);
+      });
+      resizeObserver.observe(this.hostEl.nativeElement);
+      this.destroyRef.onDestroy(() => resizeObserver.disconnect());
+    });
+
+    effect(() => {
+      const range = this.virtualizer.range();
+      const totalRows = this.rows().length;
+      if (
+        range !== null &&
+        range.endIndex >= totalRows - OVERSCAN - 3 &&
+        this.hasMore() &&
+        !this.isLoading()
+      ) {
+        this.loadMore.emit();
+      }
     });
   }
 
@@ -72,16 +106,18 @@ export class GalerieGrid {
     return this.selectedIds().includes(assetId);
   }
 
-  protected facesForAsset(assetId: number): FaceGalleryItemDto[] {
-    return this.facesMap().get(assetId) ?? [];
+  // Invariant aus buildLayoutItems: assetData ist bei kind === 'asset' immer gesetzt.
+  protected assetOf(item: LayoutItem): AssetDto {
+    return item.assetData!;
+  }
+
+  // Invariant aus buildLayoutItems: faceData ist bei kind === 'face' immer gesetzt.
+  protected faceOf(item: LayoutItem): FaceGalleryItemDto {
+    return item.faceData!;
   }
 
   protected onOpenFace(event: { faceId: number; assetId: number | null; versionId: number | null }): void {
     this.openFace.emit(event);
-  }
-
-  protected groupIds(group: AssetGroup): number[] {
-    return group.assets.map((asset: AssetDto) => asset.id);
   }
 
   protected onOpenAsset(event: { id: number; versionId: number | null }): void {
@@ -96,7 +132,7 @@ export class GalerieGrid {
     this.rangeSelect.emit(id);
   }
 
-  protected onSelectAll(ids: number[]): void {
-    this.selectAll.emit(ids);
+  protected onSelectAll(): void {
+    this.selectAll.emit(this.assets().map((asset: AssetDto) => asset.id));
   }
 }

@@ -32,7 +32,6 @@ export class Galerie {
   private readonly personService   = inject(PersonService);
   private readonly destroyRef      = inject(DestroyRef);
 
-  protected readonly groups        = this.store.selectSignal(gallerySelectors.selectGroups);
   protected readonly density       = this.store.selectSignal(filtersSelectors.density);
   protected readonly isLoading     = this.store.selectSignal(gallerySelectors.selectIsLoading);
   protected readonly hasMore       = this.store.selectSignal(gallerySelectors.selectHasMore);
@@ -40,7 +39,7 @@ export class Galerie {
   protected readonly lightboxKind  = this.store.selectSignal(gallerySelectors.selectLightboxKind);
   protected readonly selectionMode = this.store.selectSignal(gallerySelectors.selectSelectionMode);
   protected readonly selectedIds   = this.store.selectSignal(gallerySelectors.selectSelectedIds);
-  private readonly allAssets       = this.store.selectSignal(gallerySelectors.selectAll);
+  protected readonly allAssets     = this.store.selectSignal(gallerySelectors.selectAll);
   private readonly anchorId        = this.store.selectSignal(gallerySelectors.selectAnchorId);
   protected readonly mediaType     = this.store.selectSignal(filtersSelectors.mediaType);
   protected readonly faceItems     = this.store.selectSignal(gallerySelectors.selectFaceItems);
@@ -117,7 +116,7 @@ export class Galerie {
     if (this.mediaType() === 'faces') {
       return !this.isLoading() && this.faceItems().length === 0;
     }
-    return !this.isLoading() && this.groups().length === 0;
+    return !this.isLoading() && this.allAssets().length === 0;
   });
 
   protected readonly selectedCount = computed((): number => this.selectedIds().length);

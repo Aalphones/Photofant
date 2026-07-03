@@ -8,7 +8,7 @@
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | [Row-Breaking-Engine](phase-1-layout-engine.md) | heikel | done |
-| 2 | [@tanstack/angular-virtual Integration](phase-2-virtual-rendering.md) | heikel | pending |
+| 2 | [@tanstack/angular-virtual Integration](phase-2-virtual-rendering.md) | heikel | done |
 | 3 | [Polish & ADR](phase-3-polish-adr.md) | standard | pending |
 
 ## Scope & Designentscheidungen

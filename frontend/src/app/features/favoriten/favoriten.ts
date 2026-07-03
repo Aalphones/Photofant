@@ -41,14 +41,13 @@ export class Favoriten {
   private readonly assetService = inject(AssetService);
   private readonly destroyRef   = inject(DestroyRef);
 
-  protected readonly groups        = this.store.selectSignal(gallerySelectors.selectGroups);
   protected readonly density       = this.store.selectSignal(filtersSelectors.density);
   protected readonly isLoading     = this.store.selectSignal(gallerySelectors.selectIsLoading);
   protected readonly hasMore       = this.store.selectSignal(gallerySelectors.selectHasMore);
   protected readonly lightboxId    = this.store.selectSignal(gallerySelectors.selectLightboxId);
   protected readonly selectionMode = this.store.selectSignal(gallerySelectors.selectSelectionMode);
   protected readonly selectedIds   = this.store.selectSignal(gallerySelectors.selectSelectedIds);
-  private readonly allAssets       = this.store.selectSignal(gallerySelectors.selectAll);
+  protected readonly allAssets     = this.store.selectSignal(gallerySelectors.selectAll);
   private readonly anchorId        = this.store.selectSignal(gallerySelectors.selectAnchorId);
 
   private readonly filterSources    = this.store.selectSignal(filtersSelectors.sources);
@@ -66,7 +65,7 @@ export class Favoriten {
   protected readonly selectedCount = computed((): number => this.selectedIds().length);
 
   protected readonly isEmpty = computed((): boolean =>
-    !this.isLoading() && this.groups().length === 0
+    !this.isLoading() && this.allAssets().length === 0
   );
 
   protected readonly exportFilters = computed((): ExportDialogFilters => ({

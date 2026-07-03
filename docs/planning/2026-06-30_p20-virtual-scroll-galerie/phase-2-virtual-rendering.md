@@ -26,24 +26,24 @@
 
 ### Dependency installieren
 
-- [ ] `npm install @tanstack/angular-virtual` im `frontend/`-Ordner
-- [ ] Prüfen: `@tanstack/angular-virtual` re-exportiert `injectVirtualizer` — ggf. direkt aus `@tanstack/virtual` importieren falls Angular-Adapter nur ein Wrapper ist
+- [x] `npm install @tanstack/angular-virtual` im `frontend/`-Ordner
+- [x] Prüfen: `@tanstack/angular-virtual` re-exportiert `injectVirtualizer` — ggf. direkt aus `@tanstack/virtual` importieren falls Angular-Adapter nur ein Wrapper ist
 
 ### `galerie.ts` anpassen
 
-- [ ] `allAssets` von `private` auf `protected` hochstufen (wird als Grid-Input übergeben)
-- [ ] `groups`-Signal und `GalerieGrid`-Import anpassen (Input-Typ ändert sich)
+- [x] `allAssets` von `private` auf `protected` hochstufen (wird als Grid-Input übergeben)
+- [x] `groups`-Signal und `GalerieGrid`-Import anpassen (Input-Typ ändert sich)
 
 ### `galerie.html` anpassen
 
-- [ ] `[groups]="groups()"` → `[assets]="allAssets()"` in `<pf-galerie-grid>`
+- [x] `[groups]="groups()"` → `[assets]="allAssets()"` in `<pf-galerie-grid>`
 
 ### `grid.ts` umbauen
 
-- [ ] Import `ElementRef`, `viewChild` ergänzen (für Scroll-Container-Ref)
-- [ ] Input umbenennen: `groups: input.required<AssetGroup[]>()` → `assets: input.required<AssetDto[]>()`
-- [ ] Neues Input: `hasMore = input<boolean>(false)` (für Pagination-Guard)
-- [ ] `containerWidth = signal<number>(0)`; ResizeObserver auf Host-Element in `afterNextRender`:
+- [x] Import `ElementRef`, `viewChild` ergänzen (für Scroll-Container-Ref)
+- [x] Input umbenennen: `groups: input.required<AssetGroup[]>()` → `assets: input.required<AssetDto[]>()`
+- [x] Neues Input: `hasMore = input<boolean>(false)` (für Pagination-Guard)
+- [x] `containerWidth = signal<number>(0)`; ResizeObserver auf Host-Element in `afterNextRender`:
   ```typescript
   const ro = new ResizeObserver(([entry]) => {
     if (entry) containerWidth.set(entry.contentRect.width);
@@ -51,12 +51,12 @@
   ro.observe(hostEl.nativeElement);
   this.destroyRef.onDestroy(() => ro.disconnect());
   ```
-- [ ] `rows = computed((): VirtualRow[] => computeRows(buildLayoutItems(assets(), facesMap()), containerWidth(), baseHeight(), GRID_GAP))`
-- [ ] Scroll-Container als `viewChild`:
+- [x] `rows = computed((): VirtualRow[] => computeRows(buildLayoutItems(assets(), facesMap()), containerWidth(), baseHeight(), GRID_GAP))`
+- [x] Scroll-Container als `viewChild`:
   ```typescript
   private readonly scrollEl = viewChild.required<ElementRef<HTMLElement>>('scrollContainer');
   ```
-- [ ] Virtualizer anlegen:
+- [x] Virtualizer anlegen:
   ```typescript
   protected readonly virtualizer = injectVirtualizer(() => ({
     count: this.rows().length,
@@ -66,7 +66,7 @@
   }));
   ```
   mit `const OVERSCAN = 5` als Konstante oben in der Datei.
-- [ ] Pagination-Trigger als `effect`:
+- [x] Pagination-Trigger als `effect`:
   ```typescript
   effect(() => {
     const range = this.virtualizer.range();
@@ -81,10 +81,17 @@
     }
   });
   ```
-- [ ] `IntersectionObserver` auf `#loadSentinel` **entfernen** — wird durch obigen `effect` ersetzt
-- [ ] `groupIds`-Methode entfernen (war für `selectAll` pro Group — wird nicht mehr benötigt)
-- [ ] `facesForAsset`-Methode bleibt (wird im Template pro Asset-Item in der Row gebraucht)
-- [ ] Hilfsmethode `isAssetSelected` bleibt
+- [x] `IntersectionObserver` auf `#loadSentinel` **entfernen** — wird durch obigen `effect` ersetzt
+- [x] `groupIds`-Methode entfernen (war für `selectAll` pro Group — wird nicht mehr benötigt)
+- [x] **Deviation:** `facesForAsset`-Methode **entfernt statt behalten** — mit Option A
+  (Faces direkt in `LayoutItem.faceData`, siehe unten) gibt es keinen Per-Asset-Lookup
+  mehr, das Template iteriert bereits flach über `row.items`. `facesForAsset` wäre toter
+  Code gewesen.
+- [x] Hilfsmethode `isAssetSelected` bleibt
+- [x] **Deviation:** `onSelectAll(ids: number[])` → `onSelectAll()` ohne Parameter, liest
+  `assets()` selbst (kein `groupIds` mehr, das die IDs geliefert hat). Output-Typ
+  (`number[]`) unverändert, nur der interne Aufrufer fällt weg — siehe FINDINGS.md
+  (aktuell keine UI-Stelle ruft `onSelectAll` noch auf, war vorher der Gruppen-Button).
 
 ### `grid.html` umbauen
 
@@ -155,9 +162,14 @@ Scroll-Container muss ein echtes Element mit `overflow-y: auto` und fixer Höhe 
 </div>
 ```
 
-**Wichtig:** Für `assetById` und `faceById` braucht das Grid eine Map-Lookup-Methode, da `rows()` nur IDs enthält:
-- [ ] `assetMap = computed((): Map<number, AssetDto> => new Map(assets().map((asset) => [asset.id, asset])))`
-- [ ] `protected assetById(id: number): AssetDto { return this.assetMap().get(id)! }`
+**Umgesetzt als Option A direkt** (siehe Empfehlung unten) — kein Map-Lookup im Grid nötig,
+`assetMap`/`assetById`/`faceById` daher **nicht** angelegt. Template nutzt
+`item.assetData`/`item.faceData` direkt (Zugriff über `assetOf(item)`/`faceOf(item)`-Helper
+mit dokumentierter Invariante statt rohem `!`-Zugriff im Template).
+
+Ursprüngliche Alternative (nicht umgesetzt, zur Nachvollziehbarkeit belassen):
+- [ ] ~~`assetMap = computed((): Map<number, AssetDto> => new Map(assets().map((asset) => [asset.id, asset])))`~~
+- [ ] ~~`protected assetById(id: number): AssetDto { return this.assetMap().get(id)! }`~~
 - [ ] Für Faces: `facesMap()` bereits vorhanden, aber Face-Objekte selbst nicht direkt. Entweder:
   - Option A: `LayoutItem` um `face?: FaceGalleryItemDto` erweitern (direkte Referenz statt ID-Lookup) — sauberer
   - Option B: `faceMap = computed((): Map<number, FaceGalleryItemDto> => ...)` aus `facesMap()`-Werten
@@ -177,11 +189,11 @@ Scroll-Container muss ein echtes Element mit `overflow-y: auto` und fixer Höhe 
   ```
   Dann im Template direkt `item.assetData` / `item.faceData` nutzen — kein Map-Lookup nötig.
 
-- [ ] `buildLayoutItems` in `row-layout.ts` entsprechend erweitern (Phase-1-Datei anpassen)
+- [x] `buildLayoutItems` in `row-layout.ts` entsprechend erweitern (Phase-1-Datei anpassen)
 
 ### `grid.scss` anpassen
 
-- [ ] `.grid__scroll-container` hinzufügen:
+- [x] `.grid__scroll-container` hinzufügen:
   ```scss
   .grid__scroll-container {
     height: 100%;
@@ -190,8 +202,8 @@ Scroll-Container muss ein echtes Element mit `overflow-y: auto` und fixer Höhe 
     // padding aus :host hierher verschieben — :host bekommt kein padding mehr
   }
   ```
-- [ ] `:host { padding: ... }` entfernen (geht ins `.grid__scroll-container`)
-- [ ] `.grid__virtual-row` hinzufügen:
+- [x] `:host { padding: ... }` entfernen (geht ins `.grid__scroll-container`)
+- [x] `.grid__virtual-row` hinzufügen:
   ```scss
   .grid__virtual-row {
     display: flex;
@@ -201,11 +213,11 @@ Scroll-Container muss ein echtes Element mit `overflow-y: auto` und fixer Höhe 
     padding-bottom: 8px; // ersetzt Row-Gap nach unten
   }
   ```
-- [ ] `.grid__sentinel` entfernen (nicht mehr benötigt)
+- [x] `.grid__sentinel` entfernen (nicht mehr benötigt)
 
 ### `galerie.html` — `hasMore` übergeben
 
-- [ ] `[hasMore]="hasMore()"` zu `<pf-galerie-grid>` ergänzen
+- [x] `[hasMore]="hasMore()"` zu `<pf-galerie-grid>` ergänzen
 
 ### Scroll-Container festlegen
 
@@ -232,7 +244,7 @@ oder auf dem Grid-Host — dann vom Grid nach oben referenzieren).
 
 ### Docs
 
-- [ ] `docs/code-map.md` aktualisieren: `row-layout.ts` eintragen, `#loadSentinel` als entfernt markieren
+- [x] `docs/code-map.md` aktualisieren: `row-layout.ts` eintragen, `#loadSentinel` als entfernt markieren
 
 ## 🟡 Risiken
 
@@ -242,3 +254,32 @@ oder auf dem Grid-Host — dann vom Grid nach oben referenzieren).
 - **`assetMap` recomputed bei jeder Page:** O(n) über alle geladenen Assets. Bei 6000 Assets ca. 6000-Entry-Map — akzeptabel, computed wird gecacht.
 
 ## Report-Back
+
+`@tanstack/angular-virtual` installiert, `GalerieGrid` auf flache `assets`-Liste + Virtualizer
+umgebaut, `row-layout.ts` um `assetData`/`faceData` erweitert (Option A). Scroll-Container-Frage
+zugunsten **Option B** entschieden (expliziter `.grid__scroll-container`, kein Window-Scroll) —
+bestätigt durch einen Blick in `shell.scss`: die App scrollt app-weit bereits an
+`.shell__content`, nicht am `window`, Window-Virtualisierung hätte also gar nie gefeuert. Das
+deckt sich mit der in Phase 3 vorbereiteten ADR-Formulierung, die exakt das gleiche sagt.
+
+**Ripple-Effekte über den Checklisten-Scope hinaus** (Chesterton's Fence — direkt mitgezogen,
+da sonst kaputt):
+- `features/favoriten/` ist ein zweiter Consumer von `GalerieGrid`, den der Plan nicht auf dem
+  Schirm hatte — gleiche Input-/Höhenketten-Anpassung wie `galerie.ts`/`.html`/`.scss`.
+- `face-grid.scss` brauchte `:host{height:100%;overflow-y:auto}`, weil es bisher implizit am
+  Shell-Level mitscrollte; durch die neue Höhenkette (`galerie.scss` `:host{height:100%}` →
+  `.galerie__main{flex:1}`) wäre die Gesichter-Ansicht sonst abgeschnitten worden.
+
+**Deviations vom Plan-Text** (Details in FINDINGS.md):
+- `injectVirtualizer` nimmt real `scrollElement: ElementRef` entgegen, nicht
+  `getScrollElement: () => …` (Plan-Snippet war React-Doku-Stil).
+- `useApplicationRefTick: false` ergänzt — Default `true` kollidierte mit dem eigenen
+  Pagination-`effect()` (`NG0101` rekursiver Tick).
+- `facesForAsset` entfernt statt behalten (mit Option A toter Code).
+- `assetMap`/`assetById` gar nicht angelegt (Option A macht sie überflüssig).
+
+**Offen für Phase 3:** „Alle auswählen" hat aktuell keine UI-Stelle mehr (war der
+Gruppen-Header-Button) — Output-Kette funktioniert, nur niemand ruft sie auf. Siehe
+FINDINGS.md.
+
+`tsc --noEmit` und `ng build --configuration development` beide sauber durchgelaufen.

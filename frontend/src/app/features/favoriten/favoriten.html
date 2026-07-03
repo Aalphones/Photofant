@@ -28,9 +28,10 @@
       </div>
     } @else {
       <pf-galerie-grid
-        [groups]="groups()"
+        [assets]="allAssets()"
         [density]="density()"
         [isLoading]="isLoading()"
+        [hasMore]="hasMore()"
         [selectionMode]="selectionMode()"
         [selectedIds]="selectedIds()"
         [isArmed]="false"

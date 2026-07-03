@@ -10,6 +10,8 @@ export interface LayoutItem {
   id: number;
   ratio: number;
   assetId?: number;
+  assetData?: AssetDto;
+  faceData?: FaceGalleryItemDto;
 }
 
 export interface VirtualRow {
@@ -26,9 +28,10 @@ export function buildLayoutItems(
       kind: 'asset',
       id: asset.id,
       ratio: asset.width && asset.height ? asset.width / asset.height : 4 / 3,
+      assetData: asset,
     });
     for (const face of facesMap.get(asset.id) ?? []) {
-      result.push({ kind: 'face', id: face.id, ratio: 1, assetId: asset.id });
+      result.push({ kind: 'face', id: face.id, ratio: 1, assetId: asset.id, faceData: face });
     }
   }
   return result;
