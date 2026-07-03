@@ -460,7 +460,7 @@ interface CaptionPresetDto {
 
 Config wird gegen `caption_mode` des Modells validiert (`caption_config.py`). Default-Setzen löscht bisherigen Default im selben Modell-Scope. `ModelDto` enthält `caption_mode` und `capabilities` (deklarativer UI-Descriptor §12.6, aus Manifest).
 
-## Klassifizierung / Rerun (P5 Phase 5)
+## Klassifizierung / Rerun (P5 Phase 5, CRUD + Filter/Facets in P18)
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
@@ -468,7 +468,7 @@ Config wird gegen `caption_mode` des Modells validiert (`caption_config.py`). De
 | `/galerie` (Rerun alle) | `POST` | `/api/classify/rerun` | `RerunRequest` | `{ job_id: string }` |
 
 ```typescript
-type ClassifyStep = 'tags' | 'caption' | 'embedding' | 'heuristics';
+type ClassifyStep = 'tags' | 'caption' | 'embedding' | 'heuristics' | 'faces' | 'phash' | 'categories';
 
 interface RerunRequest {
   asset_ids: number[] | 'all';   // konkrete IDs oder gesamter Bestand
@@ -482,6 +482,94 @@ Verhalten:
 - Ein einzelner Batch-Job in der Queue; Fortschritt per `/api/jobs/stream` sichtbar.
 - Modell deaktiviert → Schritt wird übersprungen, kein Fehler.
 - Fehler: `422` wenn `steps` leer.
+- **`categories`-Step (P18):** setzt `ProcessingLedger.classified = false` zurück, dann läuft
+  `classification/engine.py:classify_asset()` erneut über die **bereits gespeicherten** Signale
+  (CLIP-Embedding, WD14-Tag-Scores) — kein Modell-Neulauf. Ersetzt atomar alle
+  `asset_classification`-Zeilen des Assets.
+
+### Klassifizierung — Kategorien/Labels CRUD (P18 Phase 3)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| `/einstellungen` (Klassifizierung-Tab) | `GET` | `/api/classification/categories` | — | `ClassificationCategoryDto[]` (je mit `labels[]`) |
+| `/einstellungen` (Kategorie anlegen) | `POST` | `/api/classification/categories` | `{ name, mode, position? }` | `ClassificationCategoryDto` (201; 409 bei Namenskonflikt, 422 bei ungültigem `mode`) |
+| `/einstellungen` (Kategorie bearbeiten) | `PATCH` | `/api/classification/categories/{id}` | `{ name?, mode?, position?, enabled?, min_confidence? }` | `ClassificationCategoryDto` (404 unbekannte ID, 409 Namenskonflikt) |
+| `/einstellungen` (Kategorie löschen) | `DELETE` | `/api/classification/categories/{id}` | — | `204` — löscht abhängige Labels + `asset_classification`-Zeilen explizit (kein DB-Cascade, siehe unten) |
+| `/einstellungen` (Label anlegen) | `POST` | `/api/classification/categories/{id}/labels` | `{ name, clip_prompts?, wd14_tags? }` | `ClassificationLabelDto` (201; 404 Kategorie nicht gefunden, 409 Namenskonflikt in der Kategorie) |
+| `/einstellungen` (Label bearbeiten) | `PATCH` | `/api/classification/labels/{id}` | `{ name?, clip_prompts?, wd14_tags?, position? }` | `ClassificationLabelDto` (404, 409) |
+| `/einstellungen` (Label löschen) | `DELETE` | `/api/classification/labels/{id}` | — | `204` — löscht abhängige `asset_classification`-Zeilen explizit |
+
+```typescript
+interface ClassificationLabelDto {
+  id: number;
+  category_id: number;
+  name: string;
+  position: number;
+  clip_prompts: string[] | null;
+  wd14_tags: string[] | null;
+}
+
+interface ClassificationCategoryDto {
+  id: number;
+  name: string;
+  mode: 'single' | 'multi';
+  position: number;
+  enabled: boolean;
+  builtin: boolean;
+  min_confidence: number | null;
+  labels: ClassificationLabelDto[];
+}
+```
+
+**Explizites Cascade-Delete:** SQLite läuft projektweit ohne `PRAGMA foreign_keys=ON` — die
+deklarierten `ON DELETE CASCADE` auf `classification_label`/`asset_classification` feuern nie
+von selbst. `DELETE /classification/categories/{id}` und `DELETE /classification/labels/{id}`
+räumen deshalb im Code auf (`api/classification.py:_delete_category_cascade`/`_delete_label_cascade`),
+bevor die Zeile selbst gelöscht wird.
+
+### Klassifizierung — Galerie-Filter, Facets, AssetDetailDto (P18 Phase 3/5)
+
+`GET /api/assets` bekommt einen zusätzlichen Filter:
+
+```text
+?classification=<label_id>&classification=<label_id>...
+```
+
+Semantik: **OR** innerhalb derselben Kategorie, **AND** über verschiedene Kategorien hinweg
+(mehrere `label_id`s derselben Kategorie erweitern die Treffermenge, Labels aus
+unterschiedlichen Kategorien schränken sie ein). Freie `q`-Suche (`q_mode=text`) matcht
+zusätzlich `asset_classification`/`classification_label.name` — Union zu Tag-Namen/Caption.
+
+`Facets` bekommt ein neues Feld:
+
+```typescript
+interface ClassificationFacetItem { label_id: number; name: string; count: number; }
+interface ClassificationCategoryFacet { category_id: number; name: string; items: ClassificationFacetItem[]; }
+
+interface Facets {
+  sources: FacetItem[];
+  tags_top: TagFacetItem[];
+  framings: FacetItem[];
+  classifications: ClassificationCategoryFacet[];   // P18 — eine Gruppe je enabled Kategorie
+}
+```
+
+`AssetDetailDto` bekommt:
+
+```typescript
+interface ClassificationDto {
+  category_id: number;
+  category_name: string;
+  label_id: number;
+  label_name: string;
+  confidence: number;
+}
+
+interface AssetDetailDto {
+  // … bestehende Felder (siehe unten) …
+  classifications: ClassificationDto[];   // sortiert nach confidence absteigend
+}
+```
 
 ## Semantische Suche (P5 Phase 4)
 

@@ -65,6 +65,7 @@ Code-Einstieg pro Feature: [code-map.md](code-map.md). Umgesetzte Pläne liegen 
 | 5 | Generativ — Upscale, Flux-Edit, Inpainting; schwere Captioner (Qwen2.5-VL, JoyCaption) |
 | 5 | ComfyUI-Trigger-Integration — Verbindung, Workflow-Registry, Run-Leiste, Import |
 | — | Einstellungen-Shell, `settings.json`-Infrastruktur, Duplikaterkennung (pHash), konfigurierbare Face-Parameter, Design-Angleichung |
+| P18 | Bildklassifizierung — freie Kategorien/Labels, CLIP+WD14-Fusion über gespeicherte Signale (kein Modell-Neulauf), Einstellungen-Tab, Galerie-Filter + Lightbox-Sektion + Suche über Labels ([ADR-010](decisions/010-bildklassifizierung-engine.md)) |
 
 **Backlog** (`docs/planning/`):
 
@@ -73,6 +74,10 @@ Code-Einstieg pro Feature: [code-map.md](code-map.md). Umgesetzte Pläne liegen 
 | P10 | Trainingssets & Export — Statistiken, Caption-Tools, Train/Val-Split, Sidecar-`.txt`-Export |
 | P11 | Duale Duplikaterkennung — zweites Verfahren neben pHash |
 | P13 | Person-Bulk-Import |
+
+> Hinweis: Diese Backlog-Tabelle war zum Zeitpunkt von P18 bereits nicht mehr lückenlos
+> aktuell (mehrere gelistete Pläne sind laut `STATE.md` längst archiviert) — nicht Teil
+> dieser Phase, hier nur P18 als erledigt ergänzt statt die ganze Tabelle zu sanieren.
 
 ## Entscheidungen
 

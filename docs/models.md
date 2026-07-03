@@ -117,7 +117,7 @@ Once-only guarantee per content-hash.
 | `tags_done` | BOOLEAN | (set in P5) |
 | `caption_done` | BOOLEAN | (set in P5) |
 | `embedding_done` | BOOLEAN | CLIP embedding computed (migration 0007, set in P5 Phase 4) |
-| `classified` | BOOLEAN | (set in P5) |
+| `classified` | BOOLEAN | `True` wenn die Klassifizierungs-Kategorien für diesen Content-Hash berechnet sind (WD14+CLIP-Fusion, P18 Phase 2); zurückgesetzt vom Rerun-Step `categories`. Spalte existiert seit Migration 0009, war bis P18 ungenutzt. |
 
 ### `model_registry` (migration 0004)
 
@@ -395,6 +395,65 @@ gezählt, die Gruppen-Identität selbst löst bounded-rekursiv (Tiefe 5) auf.
 | `created_at` | DATETIME | UTC naive |
 
 Seed-Daten (migration 0020): 'Portrait verbessern', 'Anime-Stil', 'Hintergrund entfernen'.
+
+### `classification_category` (migration 0029, P18 Phase 1)
+
+Frei definierbare Klassifizierungs-Kategorie (z.B. "Medium", "Stil", "Franchise").
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `name` | TEXT UNIQUE | nicht null; Anzeigename |
+| `mode` | TEXT | `single` (genau eine Hauptklasse) \| `multi` (mehrere Klassen); nicht null |
+| `position` | INTEGER | Sortierung in Einstellungen-Tab + Galerie-Filter |
+| `enabled` | BOOLEAN | Default `1` |
+| `builtin` | BOOLEAN | Default `0`; `1` = aus dem Konzept-Seed-Katalog (löschbar, nur zur Kennzeichnung) |
+| `min_confidence` | FLOAT | nullable; überschreibt pro Kategorie die globale `classification.min_confidence` (nur für `single`-Modus relevant) |
+
+Seed-Katalog (migration 0029, `builtin=1`): Medium, Stil, Realismus, Motiv, Szene,
+Eigenschaften, Technik, Franchise, Charakter, Künstler, AI-Modell — siehe
+`photofant/classification/seed.py:SEED_CATALOG`.
+
+### `classification_label` (migration 0029, P18 Phase 1)
+
+Eine wählbare Klasse innerhalb einer Kategorie (z.B. "Anime" in "Stil").
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `category_id` | INTEGER FK → `classification_category.id` ON DELETE CASCADE | indexed (`ix_classification_label_category_id`) |
+| `name` | TEXT | nicht null |
+| `position` | INTEGER | Sortierung innerhalb der Kategorie |
+| `clip_prompts` | JSON | nullable; `list[str]` eigene CLIP-Textprompts — leer/NULL → Fallback-Template aus `settings.json` (`classification.clip_prompt_template`) |
+| `wd14_tags` | JSON | nullable; `list[str]` WD14-Tag-Namen, deren gespeicherter Score dieses Label speist |
+
+Unique constraint: `(category_id, name)` (`uq_classification_label_category_name`).
+
+### `asset_classification` (migration 0029, P18 Phase 1)
+
+Ergebnis der Fusion — eine Zeile pro (Asset, zugewiesenem Label).
+
+| Column | Type | Notes |
+|---|---|---|
+| `asset_id` | INTEGER FK → `asset.id` | PK-Teil; indexed (`ix_asset_classification_asset_id`) |
+| `label_id` | INTEGER FK → `classification_label.id` ON DELETE CASCADE | PK-Teil |
+| `category_id` | INTEGER FK → `classification_category.id` | denormalisiert für Filter/Facets; indexed (`ix_asset_classification_category_id`) |
+| `confidence` | FLOAT | nicht null; fusionierter Score |
+| `source` | TEXT | `clip` \| `wd14` \| `fused` — welche(s) Signal(e) den Score getragen haben |
+
+PK: `(asset_id, label_id)`. **Cascade-Deletes sind hier explizit im Code** (`api/classification.py`,
+`_delete_category_cascade`/`_delete_label_cascade`) — SQLite läuft projektweit ohne
+`PRAGMA foreign_keys=ON`, die deklarierten `ON DELETE CASCADE` feuern also nicht von selbst.
+
+**Berechnung:** `photofant/classification/engine.py:classify_asset()` liest ausschließlich
+bereits gespeicherte Signale (`asset.clip_embedding`, `asset_tag.score`) — kein Modell-Neulauf,
+kein Bild-I/O. Pro Kategorie wird je Label ein CLIP-Softmax-Score und/oder ein WD14-Score
+gewichtet fusioniert (`classification.clip_weight`/`wd14_weight` in `settings.json`); `single`
+wählt die Klasse mit dem höchsten Score über `min_confidence`, `multi` alle Klassen über
+`classification.multi_min_confidence`. Persistiert vom Job `jobs/classification_job.py`
+(ersetzt bei jedem Lauf atomar alle Zeilen des Assets), getriggert automatisch nach
+Tagging+Embedding (`jobs/classification_pipeline.py`) oder manuell über den Rerun-Step
+`categories`.
 
 ### ~~`comfyui_workflow`~~ (migration 0019 → **dropped in 0022**)
 

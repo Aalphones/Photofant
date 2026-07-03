@@ -32,7 +32,7 @@ nachträglich klassifizieren.
 | 3 | [Backend-API: CRUD, Retro-Lauf, Filter/Facets/Suche](phase-3-backend-api-suche.md) | standard | complete |
 | 4 | [Einstellungen-Tab (Frontend)](phase-4-einstellungen-tab.md) | standard | complete |
 | 5 | [Galerie-Filter, Lightbox, globale Suche (Frontend)](phase-5-galerie-lightbox-suche.md) | standard | complete |
-| 6 | [Docs & ADR-010](phase-6-docs-adr.md) | mechanisch | pending |
+| 6 | [Docs & ADR-010](phase-6-docs-adr.md) | mechanisch | complete |
 
 ## Kontrakt (Cross-Modul — Drift-Anker über `/clear`-Grenzen)
 
@@ -168,16 +168,45 @@ Action `setClassificationLabelIds`, in `clearAllFilters` zurückgesetzt, in
    ADR-010 vorhanden.
 
 ## Summary
-_(beim Archivieren füllen)_
+
+Bilder lassen sich jetzt gegen frei definierbare Kategorien (Medium, Stil, Franchise,
+Charakter …) klassifizieren, ohne ein zusätzliches Modell laufen zu lassen — die Fusion aus
+CLIP-Embedding und WD14-Tag-Scores liest nur bereits gespeicherte Signale. Ein neuer
+Einstellungen-Tab verwaltet Kategorien/Labels (Konzept-Katalog als editierbarer Seed), ein
+Rerun-Step klassifiziert den Bestand retroaktiv, neue Importe laufen automatisch mit.
+Ergebnis erscheint in der Lightbox, im Galerie-Filter (je Kategorie eine Gruppe) und in der
+globalen Suche.
 
 ## Files touched
-_(beim Archivieren füllen)_
+
+- Backend: `db/models.py` (+3 Tabellen), `alembic/versions/0029_classification.py`,
+  `classification/{engine,scoring,seed}.py`, `jobs/{classification_job,classification_pipeline}.py`,
+  `api/classification.py` (CRUD), `api/classify.py` (+`categories`-Step),
+  `api/assets.py` (Filter/Facets/`AssetDetailDto.classifications`), `jobs/rerun_job.py`.
+- Frontend: `models/classification.model.ts`, `store/classification/*`,
+  `services/classification.service.ts`, `features/einstellungen/klassifizierung/*`,
+  `features/galerie/lightbox/` (Klassifizierungs-Sektion), `features/galerie/filter-rail/`
+  (Kategorie-Gruppen), `store/filters/*` (`classificationLabelIds`), Such-Autocomplete.
+- Docs (Phase 6): `docs/models.md`, `docs/routes.md`, `docs/code-map.md`,
+  `docs/decisions/010-bildklassifizierung-engine.md` (neu), `docs/glossary.md` (neu),
+  `docs/PROJECT.md`.
 
 ## Commits
-_(beim Archivieren füllen)_
+
+Phasen 1–5: siehe Commit-Log (`feat(classification): ...`, `feat(backend): classification
+CRUD, ...`, `feat(frontend): P18 Phase 4 ...`, `feat(frontend): classification filter, ...`).
+Phase 6 (Docs): siehe nachfolgenden Commit in diesem Verlauf.
 
 ## Deviations from plan
-_(beim Archivieren füllen)_
+
+- `docs/glossary.md` existierte im Projekt noch nicht (obwohl Teil der globalen
+  Standard-Doc-Struktur) — in Phase 6 neu angelegt statt einer bestehenden Datei ergänzt.
+- `docs/PROJECT.md`s Backlog-Tabelle war bereits vor P18 nicht mehr durchgängig aktuell
+  (mehrere dort gelistete Pläne sind laut `STATE.md` längst archiviert); in Phase 6 bewusst
+  nur der P18-Eintrag ergänzt, keine Generalüberholung der Tabelle.
+- Ansonsten keine Abweichungen vom README-Kontrakt — Backend-CRUD, Engine-Signatur,
+  HTTP-Kontrakt und Frontend-Typen wurden 1:1 wie spezifiziert umgesetzt (gegen den
+  tatsächlichen Code in Phase 6 verifiziert).
 
 ## Follow-ups
 - Text-getriggerte Smart-Alben (CLIP-Prompt als Smart-Trigger gegen Embeddings).

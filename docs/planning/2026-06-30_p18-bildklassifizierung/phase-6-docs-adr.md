@@ -31,11 +31,20 @@
 
 ## Checkliste
 
-- [ ] `models.md` aktualisiert.
-- [ ] `routes.md` aktualisiert.
-- [ ] `code-map.md` Slice ergänzt.
-- [ ] `decisions/010-bildklassifizierung-engine.md` angelegt.
-- [ ] `glossary.md` Begriffe ergänzt.
-- [ ] `PROJECT.md` Meilenstein/Backlog.
+- [x] `models.md` aktualisiert.
+- [x] `routes.md` aktualisiert.
+- [x] `code-map.md` Slice ergänzt.
+- [x] `decisions/010-bildklassifizierung-engine.md` angelegt.
+- [x] `glossary.md` Begriffe ergänzt.
+- [x] `PROJECT.md` Meilenstein/Backlog.
 
 ## Report-Back
+
+Alle sechs Doc-Ziele umgesetzt, Code-Abgleich (nicht nur Plan-Kontrakt) für jede Datei
+durchgeführt. Eine Abweichung vom vorgezeichneten Soll-Stand: `docs/glossary.md` existierte
+im Projekt **noch gar nicht** (Standard-Struktur laut globalem Docs-Workflow, aber nie
+angelegt) — neu erstellt mit den vier geforderten Begriffen statt einer bestehenden Datei
+ergänzt. `docs/PROJECT.md`s Backlog-Tabelle war bereits vor dieser Phase veraltet (mehrere
+dort gelistete Pläne sind laut `STATE.md` längst archiviert); bewusst nur P18 ergänzt statt
+die ganze Tabelle in dieser mechanischen Phase zu sanieren — als Hinweiszeile im Dokument
+vermerkt.
