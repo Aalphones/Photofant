@@ -42,7 +42,7 @@ aufgerufen. `Editor.onSave` loggt bloß in die Konsole.
   `onDragMove`. Guard, solange `naturalSize` nicht geladen.
 - `editor.scss`: linke Werkzeug-Spalte auf Desktop verbreitern, mehr Innenabstand.
 
-### Phase 3 — Orientierung überschreibt Quelle (Backend, Risiko-Phase) 🔲
+### Phase 3 — Orientierung überschreibt Quelle (Backend, Risiko-Phase) ✅
 
 - `media/ops.py` oder neu: Helfer „ist Schrittliste nur Orientierung?" + bbox-Transform
   für rotate(cw/ccw/180)/mirror(h/v).
@@ -58,6 +58,25 @@ aufgerufen. `Editor.onSave` loggt bloß in die Konsole.
 - Tests: backend Move/Ops-Tests (Pflicht-Ausnahme private), inkl. bbox-Transform &
   Hash-Refresh.
 
+**Umsetzung — Abweichungen von der ursprünglichen Beschreibung (mit User abgestimmt,
+2026-07-03):**
+
+- **Mehrpersonen-Fotos (mehrere `AssetInstance` je `Asset`):** war im Plan nicht bedacht.
+  `Asset.content_hash/width/height/phash` + der Galerie-Thumbnail sind pro `asset_id`
+  geteilt (nicht pro Instanz) — reines Überschreiben der editierten Instanz hätte die
+  Kopien anderer Personen unbemerkt aus dem Takt gebracht. Entscheidung: **alle** aktiven
+  Instanzen eines Assets werden mittransformiert, danach genau einmal aus der editierten
+  Instanz die Asset-Zeile aktualisiert. Details/Begründung: Docstring in
+  `media/orientation_overwrite.py`.
+- **Gesichts-Boxen:** wie geplant rein mathematisch transformiert (kein Neu-Detect).
+  Nur `Face.bbox` (Koordinaten im Foto) wird aktualisiert — die Crop-**Dateien** der
+  betroffenen Faces bleiben unangetastet und zeigen bis zum nächsten Reconcile/Rebuild
+  die alte Ausrichtung. Bewusst außerhalb des Scopes (User-Entscheidung), bekanntes
+  Follow-up bei Bedarf.
+- **Bulk-Edit:** `bulk_edit_job.py` löst pro `asset_id` mehrere `AssetInstance`-Zeilen auf
+  (eine je Person) — bei Orientierung-only wird pro Asset einmal transformiert (dedupe),
+  nicht pro Zeile.
+
 ## Status
 
-Phase 1 + 2 committet. Aktiv: Phase 3 (Backend-Risiko-Phase — Orientierung überschreibt Quelle).
+Phase 1 + 2 + 3 committet. Editor-Basis-Fixes damit fertig. Weiter mit P18 (siehe STATE.md).

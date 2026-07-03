@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { DefaultRunTask, EditorStep, EditorTargetKind, ResolutionRun, SaveMode, VersionDto } from '@photofant/models';
+import type { DefaultRunTask, EditorStep, EditorTargetKind, OrientationOverwriteResponse, ResolutionRun, SaveMode, VersionDto } from '@photofant/models';
 
 export const editorActions = createActionGroup({
   source: 'Editor',
@@ -15,7 +15,7 @@ export const editorActions = createActionGroup({
     // Final-Render + speichern. mode entscheidet overwrite vs. neue Kopie;
     // bei reinen Orientierungs-Sessions überschreibt das Backend die Quelle direkt.
     'Save': props<{ mode: SaveMode }>(),
-    'Save Success': props<{ version: VersionDto }>(),
+    'Save Success': props<{ result: VersionDto | OrientationOverwriteResponse }>(),
     'Save Failure': props<{ error: string }>(),
     // Generativer Run über den Default-Run-Endpunkt (Edit / Inpaint / Upscale).
     // task bestimmt, welcher Default-Workflow aus den Einstellungen verwendet wird.

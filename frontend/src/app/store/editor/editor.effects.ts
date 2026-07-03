@@ -4,7 +4,7 @@ import { Store } from '@ngrx/store';
 import { concatLatestFrom } from '@ngrx/operators';
 import { catchError, EMPTY, filter, map, of, switchMap, concatMap, take } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { ApplyStepResponse, AssetDetailDto, CreateSessionResponse, EditorStep, Job, RollbackResponse, VersionDto } from '@photofant/models';
+import type { ApplyStepResponse, AssetDetailDto, CreateSessionResponse, EditorStep, Job, OrientationOverwriteResponse, RollbackResponse, VersionDto } from '@photofant/models';
 import { AssetService, ComfyUIService, EditSessionService, JobsService } from '@photofant/services';
 import { editorActions } from './editor.actions';
 import { editorSelectors } from './editor.selectors';
@@ -82,7 +82,7 @@ export class EditorEffects {
       concatMap(([{ mode }, sessionKey]) => {
         if (sessionKey == null) { return EMPTY; }
         return this.editSessionService.save(sessionKey, mode).pipe(
-          map((version: VersionDto) => editorActions.saveSuccess({ version })),
+          map((result: VersionDto | OrientationOverwriteResponse) => editorActions.saveSuccess({ result })),
           catchError((error: HttpErrorResponse) =>
             of(editorActions.saveFailure({ error: error.message }))
           ),

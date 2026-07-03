@@ -20,6 +20,12 @@ def compute_phash(path: Path) -> int:
     return value
 
 
+def compute_phash_hex(path: Path) -> str:
+    """Open image at path, compute 64-bit DHash, return as hex string (Face.phash format)."""
+    img = Image.open(path).convert("RGB")
+    return str(imagehash.dhash(img, hash_size=8))
+
+
 def hamming_distance(a: int, b: int) -> int:
     """Count differing bits between two 64-bit hashes."""
     return bin(a ^ b).count("1")

@@ -43,7 +43,8 @@ from photofant.db.cache import (
 from photofant.db.models import Asset, AssetInstance, Face, Person, Version
 from photofant.db.session import SessionLocal as _SessionLocal
 from photofant.db.session import get_session
-from photofant.media.ops import ModelNotAvailableError, apply_op
+from photofant.media.ops import ModelNotAvailableError, apply_op, is_orientation_only
+from photofant.media.orientation_overwrite import overwrite_face, overwrite_instance, overwrite_version
 from photofant.media.person_folders import ensure_person_folder
 from photofant.media.thumbnails import generate_thumbnail
 
@@ -136,6 +137,16 @@ class VersionGalleryDto(BaseModel):
     parent_asset_id: int | None
     width: int | None
     height: int | None
+
+
+class OrientationOverwriteDto(BaseModel):
+    """Response for an orientation-only save on a face/instance target — no Version row exists."""
+
+    kind: Literal["face", "instance"]
+    target_id: int
+    width: int
+    height: int
+    thumbnail_url: str
 
 
 class VersionsPage(BaseModel):
@@ -522,6 +533,57 @@ def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_
             log.exception("pHash-Dedupe: thumbnail failed for face %d", saved_face_id)
 
 
+# ── Orientation-only save (rotate/mirror overwrite the source, Phase 3) ──────
+
+async def _save_orientation_overwrite(
+    session_row: dict[str, Any],  # type: ignore[type-arg]
+    steps: list[dict[str, Any]],  # type: ignore[type-arg]
+    db: Session,
+) -> VersionDto | OrientationOverwriteDto:
+    kind = session_row["kind"]
+    target_id = session_row["target_id"]
+    loop = asyncio.get_event_loop()
+
+    if kind == "version":
+        version = db.get(Version, target_id)
+        if version is None:
+            raise HTTPException(status_code=404, detail="Version not found")
+        result = await loop.run_in_executor(None, overwrite_version, db, version, steps)
+        return _build_version_dto(version, result["width"], result["height"])
+
+    if kind == "face":
+        face = db.get(Face, target_id)
+        if face is None:
+            raise HTTPException(status_code=404, detail="Face not found")
+        result = await loop.run_in_executor(None, overwrite_face, db, face, steps)
+        return OrientationOverwriteDto(
+            kind="face",
+            target_id=face.id,
+            width=result["width"],
+            height=result["height"],
+            thumbnail_url=f"/api/faces/{face.id}/thumbnail",
+        )
+
+    if kind == "instance":
+        # target_id is the asset id (create_session resolves instance targets by
+        # asset), so re-run the same instance resolution save_session already
+        # relies on elsewhere instead of guessing which physical copy to edit.
+        instance_id, _face_id, _parent_version_id, _person_id = _resolve_save_context(session_row, db)
+        instance = db.get(AssetInstance, instance_id) if instance_id is not None else None
+        if instance is None:
+            raise HTTPException(status_code=404, detail="Asset instance not found")
+        result = await loop.run_in_executor(None, overwrite_instance, db, instance, steps)
+        return OrientationOverwriteDto(
+            kind="instance",
+            target_id=result["asset_id"],
+            width=result["width"],
+            height=result["height"],
+            thumbnail_url=f"/api/assets/{result['asset_id']}/thumbnail",
+        )
+
+    raise HTTPException(status_code=422, detail=f"Unsupported session kind: {kind!r}")
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("", response_model=CreateSessionResponse, status_code=201)
@@ -609,9 +671,15 @@ async def get_preview(session_key: str, seq: int) -> Response:
     return Response(content=preview, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
-@router.post("/{session_key}/save", response_model=VersionDto, status_code=201)
-async def save_session(session_key: str, body: SaveRequest, db: DbSession) -> VersionDto:
-    """Final render at original resolution, save to personX/edits/, create version row."""
+@router.post("/{session_key}/save", response_model=VersionDto | OrientationOverwriteDto, status_code=201)
+async def save_session(
+    session_key: str, body: SaveRequest, db: DbSession
+) -> VersionDto | OrientationOverwriteDto:
+    """Final render at original resolution, save to personX/edits/, create version row.
+
+    Orientation-only sessions (rotate/mirror steps exclusively) skip the version
+    pipeline and overwrite the source in place instead — see _save_orientation_overwrite.
+    """
     cache_path = get_cache_db_path()
     session_row = get_edit_session(cache_path, session_key)
     if session_row is None:
@@ -620,6 +688,9 @@ async def save_session(session_key: str, body: SaveRequest, db: DbSession) -> Ve
     steps = get_edit_steps(cache_path, session_key)
     if not steps:
         raise HTTPException(status_code=422, detail="No steps to save — nothing to render")
+
+    if is_orientation_only(steps):
+        return await _save_orientation_overwrite(session_row, steps, db)
 
     source_path = Path(session_row["source_path"])
     instance_id, face_id, parent_version_id, person_id = _resolve_save_context(session_row, db)

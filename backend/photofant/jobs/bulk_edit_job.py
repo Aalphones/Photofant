@@ -19,7 +19,8 @@ from PIL import Image, ImageOps
 from photofant.db.models import AssetInstance, Person, Version
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
-from photofant.media.ops import ModelNotAvailableError, apply_op
+from photofant.media.ops import ModelNotAvailableError, apply_op, is_orientation_only
+from photofant.media.orientation_overwrite import overwrite_instance
 from photofant.media.person_folders import ensure_person_folder
 
 log = logging.getLogger(__name__)
@@ -147,6 +148,30 @@ def _process_one_asset(
     log.info("Bulk-edit version %d created for asset %d (op=%s)", version_id, asset_id, op)
 
 
+# ── Orientation-only overwrite (rotate/mirror skip the version pipeline) ──────
+
+def _process_one_asset_orientation(
+    asset_id: int,
+    instance_id: int,
+    op: str,
+    params: dict[str, Any],
+) -> None:
+    """Overwrite every instance of `asset_id` in place instead of creating a version.
+
+    Mirrors the editor's Phase-3 overwrite (see media.orientation_overwrite) —
+    `overwrite_instance` already fans out to every sibling instance of the
+    asset itself, so this only needs to resolve the one instance row that
+    triggered this asset into the batch.
+    """
+    steps = [{"op": op, "params_dict": params}]
+    with SessionLocal() as session:
+        instance = session.get(AssetInstance, instance_id)
+        if instance is None:
+            raise ValueError(f"AssetInstance {instance_id} not found for asset {asset_id}")
+        overwrite_instance(session, instance, steps)
+    log.info("Bulk-edit orientation overwrite done for asset %d (op=%s)", asset_id, op)
+
+
 def _generate_version_thumbnail(version_id: int, file_path: Path) -> None:
     from photofant.db.cache import get_cache_db_path, init_cache_db, store_thumbnail
     from photofant.media.thumbnails import generate_thumbnail
@@ -177,12 +202,26 @@ async def run_bulk_edit_job(
 
     job_queue.update(status, progress=0.0, state=JobState.RUNNING)
 
+    orientation_only = is_orientation_only([{"op": op, "params_dict": params}])
+    processed_assets: set[int] = set()
+
     for index, (asset_id, instance_id, person_id, source_path) in enumerate(assets):
         try:
-            await asyncio.to_thread(
-                _process_one_asset,
-                asset_id, instance_id, person_id, source_path, op, params,
-            )
+            if orientation_only:
+                # Every AssetInstance row of a multi-person photo resolves to the
+                # same asset_id here — overwrite_instance already transforms all
+                # of them in one go, so later rows for an already-done asset skip.
+                if asset_id not in processed_assets:
+                    await asyncio.to_thread(
+                        _process_one_asset_orientation,
+                        asset_id, instance_id, op, params,
+                    )
+                    processed_assets.add(asset_id)
+            else:
+                await asyncio.to_thread(
+                    _process_one_asset,
+                    asset_id, instance_id, person_id, source_path, op, params,
+                )
         except ModelNotAvailableError as exc:
             error_msg = f"Asset {asset_id}: model unavailable for op '{exc.op}' (role '{exc.role}')"
             errors.append(error_msg)

@@ -1,13 +1,13 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-03_editor-basis-fixes.md`
-**Phase:** 3/3 — Backend-Risiko-Phase: Orientierung (Dreh/Spiegeln) überschreibt die Quelle
-statt neue Version anzulegen.
-**Nächster Schritt:** Plan-Datei lesen, bbox-Transform-Helfer + `save_session`-Zweig für
-Orientierungs-only-Sessions bauen (Details/Risiken stehen im Plan).
+**Aktiver Plan:** P18 (Bildklassifizierung) — Phase 2, siehe
+`docs/planning/` (Backlog, ggf. Plan-Datei erst wiederfinden/neu aufsetzen).
+**Phase:** 2 — pausiert, jetzt fortsetzen.
+**Nächster Schritt:** P18-Phase-2-Stand prüfen (Datenmodell & Seed-Katalog aus Phase 1 sind
+committet) und weitermachen.
 
-**Reihenfolge (kurzfristig eingeschoben, 2026-07-03):** P31 → P32 erledigt, Editor-Basis-Fixes
-zwischengeschoben (Phase 1+2 committet), danach P18 fortsetzen.
+**Reihenfolge (kurzfristig eingeschoben, 2026-07-03):** P31 → P32 → Editor-Basis-Fixes
+(alle 3 Phasen) erledigt, jetzt zurück zu P18.
 
 - P31 (Duplikate: Schwelle fixen, Review paginieren) — archiviert nach
   `docs/archive/2026-07/2026-07-03_p31-duplikate-schwelle-pagination/`. Smoke-Checkliste dort
@@ -17,10 +17,15 @@ zwischengeschoben (Phase 1+2 committet), danach P18 fortsetzen.
   offen (User prüft: Personen-Seite schnell, Counts/Favoriten/Portraits stimmen, Person-Filter
   + Freitextsuche + Tag-Filter schnell, tiefes Scrollen flüssig, semantische Suche + Face-Match
   funktionieren).
-- Editor-Basis-Fixes (Speichern verdrahten, Crop-Ratio, Leisten-Breite) — Phase 1+2 committet,
-  Phase 3 (Backend: Orientierung überschreibt Quelle) jetzt dran.
-- P18 (Bildklassifizierung) — Phase 1 (Datenmodell & Seed-Katalog) committet, Phase 2 pausiert
-  bis Editor-Basis-Fixes durch sind. Rest im Backlog geparkt: p20, p22-p27.
+- Editor-Basis-Fixes (Speichern verdrahten, Crop-Ratio, Leisten-Breite, Orientierung
+  überschreibt Quelle) — **archiviert** nach
+  `docs/archive/2026-07/2026-07-03_editor-basis-fixes.md`. Smoke-Checkliste dort noch offen
+  (User prüft: Speichern schließt den Editor & zeigt das Ergebnis, Crop-Ratio-Buttons treffen
+  das echte Seitenverhältnis, Werkzeug-Leiste ist breiter, Drehen/Spiegeln überschreibt die
+  Datei ohne Modal-Nachfrage — auch bei einem Mehrpersonen-Foto, wo alle beteiligten Personen
+  danach noch die gedrehte Version sehen).
+- P18 (Bildklassifizierung) — Phase 1 (Datenmodell & Seed-Katalog) committet, Phase 2 jetzt
+  dran. Rest im Backlog geparkt: p20, p22-p27.
 
 **Unabhängig im Working Tree liegen gelassen (nicht Teil eines aktiven Plans):** ein fertig
 wirkender „stranded_face"-Reparatur-Fix (Backend + Reconcile-UI + Tests, verirrte

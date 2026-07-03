@@ -297,6 +297,63 @@ def _apply_smart_crop(img: Image.Image, _params: SmartCropParams) -> Image.Image
     return img.crop((int(crop_x1), int(crop_y1), int(crop_x2), int(crop_y2)))
 
 
+# ── Orientation-only detection + bbox transform (Editor Phase 3) ─────────────
+
+def is_orientation_only(steps: list[dict[str, Any]]) -> bool:
+    """True if every step is a rotate(cw/ccw/180)/mirror op — no content edit.
+
+    Free-angle rotation (`dir: "free"`) adds interpolation + fill and is
+    treated as a content edit, not a lossless orientation change.
+    """
+    if not steps:
+        return False
+    for step in steps:
+        op = step["op"]
+        if op == "mirror":
+            continue
+        if op == "rotate" and step["params_dict"].get("dir", "cw") != "free":
+            continue
+        return False
+    return True
+
+
+def transform_bbox(
+    bbox: dict[str, float],
+    steps: list[dict[str, Any]],
+    image_size: tuple[int, int],
+) -> dict[str, float]:
+    """Re-map a pixel bbox {x1,y1,x2,y2} through the same rotate/mirror steps apply_op runs.
+
+    image_size is the (width, height) of the image *before* the first step —
+    i.e. the space the bbox coordinates were recorded in. Only meaningful for
+    orientation-only step lists (see is_orientation_only); crop/pad/etc. are
+    not supported here since content edits already go through the normal
+    Versions pipeline and never touch stored bboxes.
+    """
+    x1, y1, x2, y2 = bbox["x1"], bbox["y1"], bbox["x2"], bbox["y2"]
+    width, height = image_size
+    for step in steps:
+        op = step["op"]
+        params = step["params_dict"]
+        if op == "rotate":
+            direction = params.get("dir", "cw")
+            if direction == "cw":
+                x1, y1, x2, y2 = height - y2, x1, height - y1, x2
+                width, height = height, width
+            elif direction == "ccw":
+                x1, y1, x2, y2 = y1, width - x2, y2, width - x1
+                width, height = height, width
+            elif direction == "180":
+                x1, y1, x2, y2 = width - x2, height - y2, width - x1, height - y1
+        elif op == "mirror":
+            axis = params.get("axis", "h")
+            if axis == "h":
+                x1, y1, x2, y2 = width - x2, y1, width - x1, y2
+            else:
+                x1, y1, x2, y2 = x1, height - y2, x2, height - y1
+    return {"x1": x1, "y1": y1, "x2": x2, "y2": y2}
+
+
 # ── Dispatcher ───────────────────────────────────────────────────────────────
 
 def apply_op(img: Image.Image, op: str, raw_params: dict[str, Any]) -> Image.Image:

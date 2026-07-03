@@ -32,3 +32,13 @@ export interface ApplyStepResponse {
 export interface RollbackResponse {
   seq: number;
 }
+
+// Antwort auf /save für reine Orientierungs-Sessions (rotate/mirror) — das Backend
+// überschreibt die Quelle statt eine Version anzulegen, also existiert kein VersionDto.
+export interface OrientationOverwriteResponse {
+  kind: 'face' | 'instance';
+  target_id: number;
+  width: number;
+  height: number;
+  thumbnail_url: string;
+}

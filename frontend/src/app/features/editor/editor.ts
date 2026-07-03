@@ -18,7 +18,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { Icon } from '@photofant/ui';
 import { comfyuiActions, comfyuiSelectors, editorActions, editorSelectors, modelsActions, modelsSelectors } from '@photofant/store';
-import type { ComfyUIWorkflow, CropRatio, CropRect, DefaultRunTask, EditorTargetKind } from '@photofant/models';
+import type { ComfyUIWorkflow, CropRatio, CropRect, DefaultRunTask, EditorStep, EditorTargetKind } from '@photofant/models';
 import { ZoomStage } from '../galerie/lightbox/zoom-stage';
 import { BasisPanel } from './basis-panel/basis-panel';
 import type { OpEvent } from './basis-panel/basis-panel';
@@ -120,6 +120,21 @@ export class Editor implements OnInit {
 
   protected readonly hasSteps = computed((): boolean => this.steps().length > 0);
 
+  // Reine Orientierungs-Sessions (nur rotate/mirror) überschreiben die Quelle direkt —
+  // das Save-Modal (Überschreiben/Kopie) hat dafür keine sinnvolle Wahl (Backend: media/orientation_overwrite.py).
+  protected readonly isOrientationOnly = computed((): boolean => {
+    const steps = this.steps();
+    if (steps.length === 0) { return false; }
+    return steps.every((step: EditorStep): boolean => {
+      if (step.op === 'mirror') { return true; }
+      if (step.op === 'rotate') {
+        const direction = (step.params['dir'] as string | undefined) ?? 'cw';
+        return direction !== 'free';
+      }
+      return false;
+    });
+  });
+
   ngOnInit(): void {
     if (this.modal()) {
       const kind = this.modalKind();
@@ -154,7 +169,7 @@ export class Editor implements OnInit {
       }
       if ((event.metaKey || event.ctrlKey) && event.key === 's') {
         event.preventDefault();
-        this.showSaveModal.set(true);
+        this.onSaveClick();
       }
       if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
         event.preventDefault();
@@ -238,6 +253,16 @@ export class Editor implements OnInit {
 
   protected onRollback(seq: number): void {
     this.store.dispatch(editorActions.rollback({ toSeq: seq }));
+  }
+
+  protected onSaveClick(): void {
+    if (!this.hasUnsavedSteps() || this.saving()) { return; }
+    if (this.isOrientationOnly()) {
+      // Kein overwrite/new_copy-Choice nötig — die Quelle wird ohnehin überschrieben.
+      this.onSave('overwrite');
+      return;
+    }
+    this.showSaveModal.set(true);
   }
 
   protected onSave(mode: SaveMode): void {
