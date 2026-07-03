@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { Icon } from '@photofant/ui';
+import type { SaveMode } from '@photofant/models';
 
-export type SaveMode = 'overwrite' | 'new_copy';
+export type { SaveMode };
 
 @Component({
   selector: 'pf-save-modal',

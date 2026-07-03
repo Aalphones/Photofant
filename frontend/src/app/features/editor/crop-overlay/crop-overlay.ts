@@ -124,13 +124,25 @@ export class CropOverlay {
       img.src = url;
     });
 
+    // Snap bei Ratio-Wechsel — und nachgeholt, sobald die Bildgröße geladen ist
+    // (beim Klick auf einen Ratio-Button kann das Bild noch laden; effectiveAspect
+    // braucht naturalSize, sonst wird der Snap stillschweigend übersprungen).
     let prevRatio: CropRatio | null = null;
+    let snappedForRatio: CropRatio | null = null;
     effect(() => {
       const ratio = this.ratio();
-      if (prevRatio !== null && ratio !== prevRatio) {
-        this.snapToRatio(ratio);
-      }
+      const natural = this.naturalSize();
+      const ratioChanged = prevRatio !== null && ratio !== prevRatio;
       prevRatio = ratio;
+      if (ratio === 'free') {
+        snappedForRatio = ratio;
+        return;
+      }
+      if (natural.w === 0 || natural.h === 0) { return; }
+      if (ratioChanged || snappedForRatio !== ratio) {
+        this.snapToRatio(ratio);
+        snappedForRatio = ratio;
+      }
     });
 
     afterNextRender(() => {
@@ -159,8 +171,24 @@ export class CropOverlay {
     });
   }
 
+  /**
+   * Ziel-Seitenverhältnis in den Prozent-Raum des Rects umrechnen.
+   *
+   * Rect-Maße (w/h) sind Prozent der gerenderten Bildbreite/-höhe, die je nach
+   * Bild-Seitenverhältnis unterschiedliche Pixel-Skalen haben. Ein echtes Pixel-Ratio
+   * `target` erfordert daher `w%/h% = target × naturalH / naturalW`. Ohne diese
+   * Korrektur stimmt das Verhältnis nur bei quadratischen Bildern.
+   */
+  private effectiveAspect(ratio: CropRatio): number | null {
+    const target = parseRatio(ratio);
+    if (target === null) { return null; }
+    const natural = this.naturalSize();
+    if (natural.w === 0 || natural.h === 0) { return null; }
+    return target * natural.h / natural.w;
+  }
+
   private snapToRatio(ratio: CropRatio): void {
-    const aspect = parseRatio(ratio);
+    const aspect = this.effectiveAspect(ratio);
     if (aspect === null) { return; }
     const crop = this.rect();
     const currentAspect = crop.w / crop.h;
@@ -219,7 +247,7 @@ export class CropOverlay {
     }
 
     let resized = this.computeResize(start, this.dragType, deltaPctX, deltaPctY);
-    const aspect = parseRatio(this.ratio());
+    const aspect = this.effectiveAspect(this.ratio());
     if (aspect !== null) {
       resized = this.applyRatioConstraint(resized, aspect, this.dragType);
     }
