@@ -595,7 +595,7 @@ gedeckelt auf 200). Sortierung: exakte pHash-Treffer zuerst, dann nach `phash_di
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| `/personen` (Liste) | `GET` | `/api/persons` | — | `PersonDto[]` (sortiert: benannt nach Count desc, Unbekannt zuletzt) |
+| `/personen` (Liste) | `GET` | `/api/persons` | — | `PersonDto[]` (sortiert: benannte Personen zuerst nach `id` aufsteigend, Unbekannt zuletzt) |
 | `/personen` (Umbenennen/Gruppe setzen) | `PATCH` | `/api/persons/{id}` | `{ name?: string, group_name?: string }` | `PersonDto` (mind. eines der beiden Felder gesetzt, sonst 422; 400 bei Rename von `is_unknown`, 422 bei leerem Namen; `group_name: ""` löscht die Gruppe) |
 | `/galerie` (Person-Filter) | `GET` | `/api/assets` | `person_id` (int, optional) | `AssetsPage` — filtert auf `AssetInstance.person_id` |
 | `/galerie` (Framing-Filter) | `GET` | `/api/assets` | `framing[]` (repeatable) | `AssetsPage` — filtert auf `Asset.framing` |

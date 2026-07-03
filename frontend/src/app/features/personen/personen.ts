@@ -6,11 +6,10 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import type { Density, PersonDto } from '@photofant/models';
 import { PersonService } from '@photofant/services';
-import { filtersActions, personsActions, personsSelectors } from '@photofant/store';
+import { personsActions, personsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 import { AlphabetRail } from './alphabet-rail/alphabet-rail';
 import { CreatePersonDialog } from './create-person-dialog/create-person-dialog';
@@ -35,7 +34,6 @@ const NO_GROUP = 'Ohne Gruppe';
 })
 export class Personen implements OnInit {
   private readonly store = inject(Store);
-  private readonly router = inject(Router);
   private readonly personService = inject(PersonService);
 
   protected readonly groupColor = groupColor;
@@ -146,11 +144,6 @@ export class Personen implements OnInit {
 
   ngOnInit(): void {
     this.store.dispatch(personsActions.loadPersons());
-  }
-
-  protected onSelect(person: PersonDto): void {
-    this.store.dispatch(filtersActions.setPersonId({ personId: person.id }));
-    void this.router.navigate(['/galerie']);
   }
 
   protected onRename(event: { id: number; name: string }): void {

@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import type { PersonDto, PersonFace } from '@photofant/models';
 import { Icon } from '@photofant/ui';
 import { AssetService, PersonService } from '@photofant/services';
@@ -21,7 +22,7 @@ export type PersonViewMode = 'single' | 'grid4' | 'face';
 @Component({
   selector: 'pf-person-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, FormsModule],
+  imports: [Icon, FormsModule, RouterLink],
   templateUrl: './person-card.html',
   styleUrl: './person-card.scss',
 })
@@ -36,7 +37,6 @@ export class PersonCard {
   readonly person = input.required<PersonDto>();
   readonly viewMode = input<PersonViewMode>('face');
 
-  readonly select = output<void>();
   readonly rename = output<{ id: number; name: string }>();
   readonly setGroup = output<{ id: number; groupName: string }>();
   readonly importFiles = output<{ personId: number; files: File[] }>();
@@ -103,14 +103,16 @@ export class PersonCard {
     return p.name ?? '—';
   }
 
+  protected get canNavigateToGallery(): boolean {
+    return !this.isEditing() && !this.isEditingGroup() && !this.menuOpen();
+  }
+
   protected onCardClick(event: MouseEvent): void {
     if (this.isEditing() || this.isEditingGroup()) { return; }
     if (this.menuOpen()) {
       this.menuOpen.set(false);
       event.stopPropagation();
-      return;
     }
-    this.select.emit();
   }
 
   protected toggleMenu(event: MouseEvent): void {

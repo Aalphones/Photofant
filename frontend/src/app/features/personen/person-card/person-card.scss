@@ -3,10 +3,13 @@
 }
 
 .person-card {
+  display: block;
   position: relative;
   aspect-ratio: 3 / 4;
   overflow: visible;
   background: var(--surface);
+  color: inherit;
+  text-decoration: none;
   cursor: pointer;
   user-select: none;
   transition:

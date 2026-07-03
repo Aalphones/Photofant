@@ -1,13 +1,13 @@
-<div
+<a
   class="person-card"
   [class.person-card--drag-over]="isDragOver()"
   [class.person-card--menu-open]="menuOpen()"
+  [routerLink]="canNavigateToGallery ? ['/galerie'] : null"
+  [queryParams]="{ person: person().id }"
   (click)="onCardClick($event)"
   (dragover)="onDragOver($event)"
   (dragleave)="onDragLeave()"
   (drop)="onDrop($event)"
-  role="button"
-  tabindex="0"
 >
   <!-- Bild-Hintergrund -->
   <div class="person-card__img-wrap">
@@ -124,4 +124,4 @@
       <span class="person-card__count">{{ person().count }} {{ person().count === 1 ? 'Bild' : 'Bilder' }}</span>
     }
   </div>
-</div>
+</a>
