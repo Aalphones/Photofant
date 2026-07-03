@@ -156,12 +156,34 @@ wenn es den Code netto vereinfacht; kein Zwang.
 
 ## Summary
 
-_(beim Archivieren füllen)_
+Vier Performance-Ursachen behoben: zwei fehlende Indexe (`asset_instance.person_id`,
+`asset_tag.tag_id`), N+1 in `GET /persons` (3×N → 3 konstante Queries), Embedding-BLOBs
+per `deferred=True` aus den Standard-Loads genommen.
 
 ## Files touched
 
+- `backend/photofant/db/models.py` — Indexe + `deferred=True`
+- `backend/alembic/versions/0030_*.py` — Migration `ix_asset_instance_person_id`
+- `backend/photofant/api/persons.py` — `list_persons` Aggregat-Umbau
+- `docs/models.md` — Index- und deferred-Hinweise nachgezogen
+
 ## Commits
+
+- `perf(db): add missing person_id/tag_id indexes, defer embedding blobs` (Phase 1)
+- `perf(persons): kill N+1 in GET /persons via grouped aggregate queries` (Phase 2)
 
 ## Deviations from plan
 
+- Phase 1: `ix_asset_tag_tag_id` existierte bereits seit Migration 0028 (Raw-SQL) — Migration 0030
+  legt nur den fehlenden `person_id`-Index an.
+- Phase 2: 2 Aggregat-Queries statt der skizzierten 3 (Count + Fav-Count in einer Query via
+  `func.sum(case(...))`, statt zwei getrennten) — Gesamtzahl Queries pro Request: 3
+  (Persons + Counts + Portraits), nicht 4.
+
 ## Follow-ups
+
+- 🟡 `docs/routes.md` Zeile 598: Sortierungs-Notiz „benannt nach Count desc, Unbekannt zuletzt"
+  ist stale (Ist-Code sortiert `is_unknown ASC, id ASC`, schon vor P32 so) — bei Gelegenheit
+  korrigieren, war explizit nicht Teil dieser Phase.
+- Keyset-Pagination der Galerie, Frontend-Virtualisierung der Personen-Karten,
+  fehlendes Limit bei `GET /persons/{id}/faces` — bewusst nicht im Scope (siehe „Risiken" oben).
