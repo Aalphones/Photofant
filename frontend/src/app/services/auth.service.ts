@@ -11,7 +11,13 @@ interface UnlockResponse {
   success: boolean;
 }
 
-const SESSION_KEY = 'pf-unlocked';
+type AuthBroadcastMessage = { type: 'ping' } | { type: 'pong' } | { type: 'unlocked' };
+
+const CHANNEL_NAME = 'pf-auth';
+// Wie lange eine frische Tab auf Antwort von bereits offenen, entsperrten Tabs wartet,
+// bevor sie die Passwortabfrage zeigt. Nur diese Handshake-Runde entscheidet — es wird
+// nichts persistiert, daher fragt jede neue Tab nach, sobald wirklich keine andere mehr lebt.
+const PING_TIMEOUT_MS = 200;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -19,14 +25,27 @@ export class AuthService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
-  readonly isUnlocked = signal(this.loadFromSession());
+  private readonly channel = this.createChannel();
+
+  readonly isUnlocked = signal(false);
   private readonly hasPasswordState = signal<boolean | null>(null);
 
-  private loadFromSession(): boolean {
-    if (!this.isBrowser) {
-      return false;
+  constructor() {
+    this.channel?.addEventListener('message', (event: MessageEvent<AuthBroadcastMessage>) => {
+      if (event.data.type === 'ping' && this.isUnlocked()) {
+        this.channel?.postMessage({ type: 'pong' } satisfies AuthBroadcastMessage);
+      }
+      if (event.data.type === 'unlocked') {
+        this.isUnlocked.set(true);
+      }
+    });
+  }
+
+  private createChannel(): BroadcastChannel | null {
+    if (!this.isBrowser || typeof BroadcastChannel === 'undefined') {
+      return null;
     }
-    return sessionStorage.getItem(SESSION_KEY) === 'true';
+    return new BroadcastChannel(CHANNEL_NAME);
   }
 
   /** Fetches password status from the backend (result cached in signal). */
@@ -39,6 +58,39 @@ export class AuthService {
       map((response: AuthStatusResponse) => response.has_password),
       tap((hasPassword: boolean) => this.hasPasswordState.set(hasPassword)),
     );
+  }
+
+  /**
+   * Fragt per Broadcast andere offene Tabs, ob sie schon entsperrt sind, und übernimmt
+   * deren Status. Antwortet niemand rechtzeitig (z.B. weil es keine andere Tab gibt),
+   * bleibt die Sperre bestehen.
+   */
+  checkOtherTabs(): Observable<boolean> {
+    const channel = this.channel;
+    if (!channel) {
+      return of(false);
+    }
+    return new Observable<boolean>((subscriber) => {
+      const onMessage = (event: MessageEvent<AuthBroadcastMessage>): void => {
+        if (event.data.type === 'pong') {
+          finish(true);
+        }
+      };
+      const timer = setTimeout(() => finish(false), PING_TIMEOUT_MS);
+      const finish = (result: boolean): void => {
+        clearTimeout(timer);
+        channel.removeEventListener('message', onMessage);
+        if (result) { this.isUnlocked.set(true); }
+        subscriber.next(result);
+        subscriber.complete();
+      };
+      channel.addEventListener('message', onMessage);
+      channel.postMessage({ type: 'ping' } satisfies AuthBroadcastMessage);
+      return () => {
+        clearTimeout(timer);
+        channel.removeEventListener('message', onMessage);
+      };
+    });
   }
 
   /** Sends the password to the backend and marks session as unlocked on success. */
@@ -55,9 +107,7 @@ export class AuthService {
 
   /** Marks the session as unlocked without a password check (used when no password is configured). */
   markUnlocked(): void {
-    if (this.isBrowser) {
-      sessionStorage.setItem(SESSION_KEY, 'true');
-    }
     this.isUnlocked.set(true);
+    this.channel?.postMessage({ type: 'unlocked' } satisfies AuthBroadcastMessage);
   }
 }

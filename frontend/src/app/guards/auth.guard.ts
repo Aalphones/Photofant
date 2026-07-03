@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { map } from 'rxjs';
+import { map, of, switchMap } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 export const authGuard: CanActivateFn = () => {
@@ -12,12 +12,14 @@ export const authGuard: CanActivateFn = () => {
   }
 
   return auth.loadStatusOnce().pipe(
-    map((hasPassword: boolean) => {
+    switchMap((hasPassword: boolean) => {
       if (!hasPassword) {
         auth.markUnlocked();
-        return true;
+        return of(true);
       }
-      return router.createUrlTree(['/entsperren']);
+      // Vor der Passwortabfrage kurz nachfragen: läuft schon eine entsperrte Tab?
+      return auth.checkOtherTabs();
     }),
+    map((unlocked: boolean) => (unlocked ? true : router.createUrlTree(['/entsperren']))),
   );
 };
