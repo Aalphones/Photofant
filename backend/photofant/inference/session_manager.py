@@ -275,7 +275,17 @@ class SessionManager:
         except Exception as error:
             raise RuntimeError(f"Failed to load ONNX model {path.name}: {error}") from error
 
-        log.info("ONNX session ready: %s", path.name)
+        requested_gpu_provider = providers[0] if providers[0] != "CPUExecutionProvider" else None
+        active_providers = session.get_providers()
+        if requested_gpu_provider and requested_gpu_provider not in active_providers:
+            log.warning(
+                "ONNX session %s silently fell back to CPU: requested %s but ONNX Runtime "
+                "loaded %s instead (usually a missing/unreachable CUDA or cuDNN DLL — "
+                "check that the CUDA and cuDNN bin directories are on PATH).",
+                path.name, requested_gpu_provider, active_providers,
+            )
+
+        log.info("ONNX session ready: %s (active providers: %s)", path.name, active_providers)
         return session
 
     def resolve_model_path(self, manifest_id: str, session_factory) -> str | None:
