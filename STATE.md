@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-03_p32-perf-personen-galerie.md`
-**Phase:** 1/2 — noch nicht begonnen
-**Nächster Schritt:** Plan lesen, Phase 1 umsetzen.
+**Phase:** 2/2 — noch nicht begonnen
+**Nächster Schritt:** Phase 2 umsetzen — `GET /persons` ohne N+1 (Aggregat-Umbau in `api/persons.py`).
 
 **Reihenfolge (kurzfristig eingeschoben, 2026-07-03):** P31 → P32 → P18 wird danach fortgesetzt.
 

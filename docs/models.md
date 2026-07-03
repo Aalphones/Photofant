@@ -55,7 +55,7 @@ One row per unique content-hash (canonical image).
 | `caption_preset_id` | INTEGER FK → `caption_preset.id` | provenance: which preset produced the caption (FK added P5 Phase 4, `fk_asset_caption_preset`) |
 | `tagger` | TEXT | model name (filled in P5) |
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
-| `clip_embedding` | BLOB | CLIP ViT-L/14 image embedding, float32 unit-norm bytes (768-dim); source of truth for the vector index (P5 Phase 4) |
+| `clip_embedding` | BLOB | CLIP ViT-L/14 image embedding, float32 unit-norm bytes (768-dim); source of truth for the vector index (P5 Phase 4); `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden |
 | `caption_edited` | BOOLEAN | `1` = Caption wurde manuell editiert; Captioner überspringt den Asset beim nächsten Rerun (P6 Phase 3) |
 | `phash` | INTEGER | 64-Bit DHash-Fingerabdruck (imagehash, `hash_size=8`); NULL bis pHash-Job gelaufen (migration 0014) |
 | `original_id` | INTEGER FK → `asset.id` | gesetzt wenn dieses Asset ein Edit eines anderen ist — bei Review-Entscheidung „A/B ist Original" (migration 0014) |
@@ -91,7 +91,8 @@ target instance and cleans up the source person's instance if no faces remain.
 | `deleted_at` | DATETIME | soft-delete; NULL = active; indexed |
 | `missing_at` | DATETIME | reconcile marker (migration 0003); NULL = present; a timestamp = acknowledged-missing, hidden from the next FS↔DB scan |
 
-Unique constraint: `(asset_id, person_id)`. Index: `ix_asset_instance_deleted_at`.
+Unique constraint: `(asset_id, person_id)`. Indexes: `ix_asset_instance_deleted_at`,
+`ix_asset_instance_person_id` (migration 0030, P32 Phase 1 — Personen-Counts/Galerie-Filter/Namenssuche filtern über `person_id`).
 
 **`path` + `deleted_at` semantics (P5).** `path` always tracks the file's *actual* on-disk
 location and is rewritten on every physical move (favourite, soft-delete, restore).
@@ -342,7 +343,7 @@ Erkannte Gesichter mit Crop-Pfad, Embedding und Provenienz. Ein Face gehört imm
 | `crop_path` | TEXT | Pfad zu `personX/faces/<asset_id>_<idx>.jpg` |
 | `bbox` | JSON | `{x1, y1, x2, y2}` in Original-Bildkoordinaten |
 | `padding` | INTEGER | px Padding um BBox beim Crop |
-| `embedding` | BLOB | ArcFace 512-d float32, L2-normiert |
+| `embedding` | BLOB | ArcFace 512-d float32, L2-normiert; `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden |
 | `phash` | TEXT | DHash des Crops (für Crop-Dedupe) |
 | `score` | REAL | Detection-Confidence (0–1) von buffalo_l |
 | `age` | INTEGER | Altersschätzung aus buffalo_l genderage |

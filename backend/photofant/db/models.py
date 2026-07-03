@@ -54,7 +54,7 @@ class Asset(Base):
     )
     tagger: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
-    clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
     caption_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
     phash: Mapped[int | None] = mapped_column(Integer, nullable=True)
     original_id: Mapped[int | None] = mapped_column(
@@ -71,7 +71,7 @@ class AssetInstance(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
-    person_id: Mapped[int] = mapped_column(ForeignKey("person.id"), nullable=False)
+    person_id: Mapped[int] = mapped_column(ForeignKey("person.id"), nullable=False, index=True)
     path: Mapped[str] = mapped_column(Text, nullable=False)
     favourite: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     fixed_person: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
@@ -123,6 +123,7 @@ class AssetTag(Base):
     __table_args__ = (
         UniqueConstraint("asset_id", "tag_id", name="uq_asset_tag"),
         Index("ix_asset_tag_asset_id", "asset_id"),
+        Index("ix_asset_tag_tag_id", "tag_id"),  # DB-seitig bereits via Migration 0028 angelegt
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -191,7 +192,7 @@ class Face(Base):
     crop_path: Mapped[str] = mapped_column(Text, nullable=False)
     bbox: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     padding: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
     phash: Mapped[str | None] = mapped_column(Text, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)

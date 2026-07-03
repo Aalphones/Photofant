@@ -43,7 +43,7 @@ unkritisch): `api/faces.py:311-314`, `api/review.py:231`, `api/search.py:65-73`,
 
 | Phase | Inhalt | Tier | Status |
 |---|---|---|---|
-| 1 | Indexe + deferred BLOB-Spalten (Migration + models.py) | mechanisch | pending |
+| 1 | Indexe + deferred BLOB-Spalten (Migration + models.py) | mechanisch | complete |
 | 2 | `GET /persons` ohne N+1 (Aggregat-Umbau) | standard | pending |
 
 ---
@@ -56,18 +56,21 @@ unkritisch): `api/faces.py:311-314`, `api/review.py:231`, `api/search.py:65-73`,
 
 **Checkliste:**
 
-- [ ] `db/models.py`: `AssetInstance.person_id` → `index=True`.
-- [ ] `db/models.py`: `AssetTag.__table_args__` → `Index("ix_asset_tag_tag_id", "tag_id")` ergänzen.
-- [ ] `db/models.py`: `Asset.clip_embedding` und `Face.embedding` → `deferred=True`
+- [x] `db/models.py`: `AssetInstance.person_id` → `index=True`.
+- [x] `db/models.py`: `AssetTag.__table_args__` → `Index("ix_asset_tag_tag_id", "tag_id")` ergänzen.
+- [x] `db/models.py`: `Asset.clip_embedding` und `Face.embedding` → `deferred=True`
       (`mapped_column(LargeBinary, nullable=True, deferred=True)`).
-- [ ] Neue Alembic-Migration `perf_person_tag_indexes`: beide Indexe anlegen
-      (`ix_asset_instance_person_id`, `ix_asset_tag_tag_id`), `downgrade` droppt sie.
-      **Nummer = nächste freie zum Umsetzungszeitpunkt prüfen** (Stand heute: `0030` —
-      Lehrgeld P18: Nummer aus dem Plan war beim Umsetzen längst vergeben).
-- [ ] `uv run alembic upgrade head` + einmal `downgrade -1` / `upgrade head` (up/down grün).
-- [ ] `cd backend && uv run ruff check .` grün; bestehende Backend-Tests laufen lassen.
-- [ ] Doc-Update: `docs/models.md` — Index-Spalten bei `asset_instance` und `asset_tag` nachziehen,
-      deferred-Hinweis bei den beiden Embedding-Spalten (ein Halbsatz).
+- [x] Neue Alembic-Migration `perf_person_tag_indexes` (`0030`): **Abweichung vom Plan** —
+      legt nur `ix_asset_instance_person_id` an. `ix_asset_tag_tag_id` existierte bereits seit
+      Migration 0028 (Raw-SQL, nur im ORM-Modell nachgezogen) — beim Umsetzen entdeckt, per
+      `alembic current` verifiziert (DB stand noch bei 0027, 0028+0029 waren committet aber nie
+      angewendet). Erneutes Anlegen hätte beim Upgrade gecrasht.
+- [x] `uv run alembic upgrade head` + einmal `downgrade -1` / `upgrade head` (up/down grün).
+- [x] `cd backend && uv run ruff check .` grün (nur Pre-Existing-Findings in unbeteiligten
+      Dateien); bestehende Backend-Tests laufen lassen (147 passed, 12 pre-existing failures
+      in ComfyUI/Caption-Tests — verifiziert unverändert gegen den Stand vor dieser Phase).
+- [x] Doc-Update: `docs/models.md` — Index-Spalten bei `asset_instance` und `asset_tag` nachgezogen,
+      deferred-Hinweis bei den beiden Embedding-Spalten ergänzt.
 
 **AK Phase 1:**
 
