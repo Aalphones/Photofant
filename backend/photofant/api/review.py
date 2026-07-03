@@ -212,18 +212,21 @@ async def resolve_dupe(item_id: int, body: ResolveRequest, session: DbSession) -
         from photofant.media import moves
         data_root = get_data_root()
         target_asset = asset_a if resolution == "delete_a" else asset_b
-        instance = session.execute(
+        instances = session.execute(
             select(AssetInstance)
             .where(AssetInstance.asset_id == target_asset.id)
             .where(AssetInstance.deleted_at.is_(None))
-        ).scalar_one_or_none()
-        if instance is None:
+        ).scalars().all()
+        if not instances:
             log.info(
                 "resolve_dupe %d (%s): asset %d already in trash — marking resolved without move",
                 item_id, resolution, target_asset.id,
             )
         else:
-            await moves.soft_delete(session, instance, data_root)
+            # An asset can have multiple instances (one per detected face/person),
+            # so all of them need to move to trash together.
+            for instance in instances:
+                await moves.soft_delete(session, instance, data_root)
     # dismiss: no asset modification
 
     item.resolved_at = _now_utc()

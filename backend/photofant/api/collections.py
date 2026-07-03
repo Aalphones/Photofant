@@ -695,14 +695,17 @@ async def resolve_collection_duplicate(
         return Response(status_code=204)
 
     loser_asset_id = body.asset_b_id if body.resolution == "keep_left" else body.asset_a_id
-    instance = (
+    instances = (
         session.query(AssetInstance)
         .filter(AssetInstance.asset_id == loser_asset_id, AssetInstance.deleted_at.is_(None))
-        .first()
+        .all()
     )
-    if instance is not None:
+    if instances:
+        # An asset can have multiple instances (one per detected face/person),
+        # so all of them need to move to trash together.
         data_root = get_data_root()
-        await moves.soft_delete(session, instance, data_root)
+        for instance in instances:
+            await moves.soft_delete(session, instance, data_root)
     return Response(status_code=204)
 
 
