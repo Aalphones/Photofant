@@ -1,8 +1,9 @@
 # STATE
 
-**Aktiver Plan:** P18 (Bildklassifizierung) — `docs/planning/2026-06-30_p18-bildklassifizierung/`
-**Phase:** 6/6 — Docs & ADR-010 (`phase-6-docs-adr.md`)
-**Nächster Schritt:** Phase 6 starten (README-Kontrakt + `phase-6-docs-adr.md` lesen). Danach Plan fertig — Smoke-Checkliste an User, archivieren.
+**Aktiver Plan:** keiner — P18 (Bildklassifizierung) komplett fertig und archiviert nach
+`docs/archive/2026-07/2026-06-30_p18-bildklassifizierung/`.
+**Nächster Schritt:** Rest im Backlog geparkt (p20, p22-p27) — nächsten Plan mit dem User
+abstimmen. Smoke-Checkliste P18 an User (siehe unten).
 
 **Reihenfolge (kurzfristig eingeschoben, 2026-07-03):** P31 → P32 → Editor-Basis-Fixes
 (alle 3 Phasen) erledigt, jetzt zurück zu P18.
@@ -22,12 +23,19 @@
   das echte Seitenverhältnis, Werkzeug-Leiste ist breiter, Drehen/Spiegeln überschreibt die
   Datei ohne Modal-Nachfrage — auch bei einem Mehrpersonen-Foto, wo alle beteiligten Personen
   danach noch die gedrehte Version sehen).
-- P18 (Bildklassifizierung) — Phase 1 (Datenmodell & Seed-Katalog) + Phase 2 (Engine:
-  CLIP+WD14-Fusion, Job, Pipeline-Hook) + Phase 3 (Backend-API: CRUD, Filter/Facets/Suche,
-  explizites Cascade-Delete) + Phase 4 (Einstellungen-Tab Frontend: Shell + Kategorie-Editor,
-  CRUD über store/classification, „Bestehende Bilder klassifizieren" verdrahtet) + Phase 5
-  (Galerie-Filter-Rail je Kategorie, Lightbox-Sektion „Klassifizierung", Such-Autocomplete für
-  Labels) committet, Phase 6 (Docs & ADR-010) jetzt dran. Rest im Backlog geparkt: p20, p22-p27.
+- P18 (Bildklassifizierung) — **fertig, alle 6 Phasen committet, Plan archiviert** nach
+  `docs/archive/2026-07/2026-06-30_p18-bildklassifizierung/`. Phase 1 (Datenmodell &
+  Seed-Katalog) + Phase 2 (Engine: CLIP+WD14-Fusion, Job, Pipeline-Hook) + Phase 3
+  (Backend-API: CRUD, Filter/Facets/Suche, explizites Cascade-Delete) + Phase 4
+  (Einstellungen-Tab Frontend: Shell + Kategorie-Editor, CRUD über store/classification,
+  „Bestehende Bilder klassifizieren" verdrahtet) + Phase 5 (Galerie-Filter-Rail je Kategorie,
+  Lightbox-Sektion „Klassifizierung", Such-Autocomplete für Labels) + Phase 6 (Docs:
+  models.md/routes.md/code-map.md aktualisiert, ADR-010 angelegt, docs/glossary.md neu
+  angelegt — existierte vorher nicht —, PROJECT.md-Meilenstein ergänzt). Smoke-Checkliste
+  noch offen (User prüft: Einstellungen-Tab „Klassifizierung" — Kategorien/Labels
+  anlegen/bearbeiten/löschen; „Bestehende Bilder klassifizieren" läuft durch; Lightbox zeigt
+  Klassifizierungs-Sektion; Galerie-Filter-Rail hat je Kategorie eine Gruppe mit Facet-Counts;
+  Suche findet Bilder über Label-Namen). Rest im Backlog geparkt: p20, p22-p27.
 
 **Unabhängig im Working Tree liegen gelassen (nicht Teil eines aktiven Plans):** ein fertig
 wirkender „stranded_face"-Reparatur-Fix (Backend + Reconcile-UI + Tests, verirrte
