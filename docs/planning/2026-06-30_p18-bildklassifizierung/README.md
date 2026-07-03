@@ -195,7 +195,7 @@ globalen Suche.
 
 Phasen 1–5: siehe Commit-Log (`feat(classification): ...`, `feat(backend): classification
 CRUD, ...`, `feat(frontend): P18 Phase 4 ...`, `feat(frontend): classification filter, ...`).
-Phase 6 (Docs): siehe nachfolgenden Commit in diesem Verlauf.
+Phase 6 (Docs): `ffb7a92` — docs(backend): P18 Phase 6 - Docs & ADR-010 fuer Bildklassifizierung.
 
 ## Deviations from plan
 
