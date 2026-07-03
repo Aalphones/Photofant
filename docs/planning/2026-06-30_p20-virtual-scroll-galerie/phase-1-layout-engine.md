@@ -23,9 +23,9 @@
 
 ### Implementierung
 
-- [ ] Neue Datei anlegen: `frontend/src/app/features/galerie/grid/row-layout.ts`
+- [x] Neue Datei anlegen: `frontend/src/app/features/galerie/grid/row-layout.ts`
 
-- [ ] Konstanten exportieren:
+- [x] Konstanten exportieren:
   ```typescript
   export const GRID_GAP = 8;      // .grid__row { gap: 8px }
   export const GRID_PADDING = 16; // :host { padding: 0 16px } — einseitig, total 32px
@@ -47,7 +47,7 @@
   }
   ```
 
-- [ ] `buildLayoutItems` implementieren:
+- [x] `buildLayoutItems` implementieren:
   ```typescript
   export function buildLayoutItems(
     assets: AssetDto[],
@@ -68,7 +68,7 @@
   }
   ```
 
-- [ ] `computeRows` implementieren:
+- [x] `computeRows` implementieren:
   ```typescript
   export function computeRows(
     items: LayoutItem[],
@@ -104,7 +104,7 @@
 
 ### Docs
 
-- [ ] `docs/code-map.md` prüfen: existiert die Datei? Falls ja, `row-layout.ts` unter Galerie/Grid eintragen.
+- [x] `docs/code-map.md` prüfen: existiert die Datei? Falls ja, `row-layout.ts` unter Galerie/Grid eintragen.
 
 ## 🟡 Risiken
 
@@ -112,3 +112,9 @@
 - **Faces-Interleaving:** Faces erscheinen im DOM nach dem zugehörigen Asset. `buildLayoutItems` repliziert das. Wenn `facesMap` leer ist (mediaType !== 'all'), werden keine Faces eingebaut — das ist korrekt.
 
 ## Report-Back
+
+`row-layout.ts` 1:1 nach Plan-Kontrakt angelegt (Konstanten, `buildLayoutItems`, `computeRows`,
+pure, kein DOM/Angular-Zugriff). `docs/code-map.md` Galerie-Zeile ergänzt. `tsc --noEmit`
+sauber. Keine Abweichungen vom Plan. Keine Unit-Tests (private-Profil, agentenlos) — Testfälle
+A/B/C aus den Abnahmekriterien sind im Code durch die Fallback-Zweige (`items.length === 0`,
+`innerWidth <= 0`) abgedeckt, aber nicht automatisiert geprüft.
