@@ -1,0 +1,104 @@
+<div class="kat-editor__kopf">
+  <h3>{{ category().name }}</h3>
+
+  <div class="kat-editor__modus">
+    <button
+      class="kat-editor__modus-btn"
+      [class.kat-editor__modus-btn--aktiv]="category().mode === 'single'"
+      (click)="setMode('single')"
+      title="Genau eine Hauptklasse pro Bild wird gesetzt (z. B. Medium: entweder Foto ODER Zeichnung)."
+    >
+      Single
+    </button>
+    <button
+      class="kat-editor__modus-btn"
+      [class.kat-editor__modus-btn--aktiv]="category().mode === 'multi'"
+      (click)="setMode('multi')"
+      title="Mehrere passende Labels gleichzeitig möglich (z. B. Stil: Anime UND Wasserfarbe)."
+    >
+      Multi
+    </button>
+    <pf-icon name="info" [size]="13" class="kat-editor__modus-info" title="Single = eine Hauptklasse. Multi = mehrere Klassen gleichzeitig möglich." />
+  </div>
+</div>
+
+<div class="kat-editor__add-row">
+  <input
+    class="kat-editor__add-input"
+    [value]="newLabelName()"
+    (input)="newLabelName.set($any($event.target).value)"
+    (keydown)="onNewLabelKeyDown($event)"
+    placeholder="Neues Label…"
+  />
+  <button class="kat-editor__add-btn" (click)="addLabel()" [disabled]="!newLabelName().trim()">
+    <pf-icon name="plus" [size]="14" />
+    Label
+  </button>
+</div>
+
+@if (sortedLabels().length === 0) {
+  <div class="group-empty">Noch keine Labels in dieser Kategorie.</div>
+} @else {
+  <div class="kat-editor__labels">
+    @for (label of sortedLabels(); track label.id) {
+      <div class="kat-editor__label-row">
+        <div class="kat-editor__label-head">
+          @if (renamingLabelId() === label.id) {
+            <input
+              class="kat-editor__rename-input"
+              [value]="renameDraftText()"
+              (input)="renameDraftText.set($any($event.target).value)"
+              (keydown)="onLabelRenameKeyDown($event)"
+              (blur)="confirmLabelRename()"
+              autofocus
+            />
+          } @else {
+            <span class="kat-editor__label-name" (dblclick)="startLabelRename(label)">{{ label.name }}</span>
+          }
+
+          <button
+            class="kat-editor__label-btn"
+            (click)="toggleExpanded(label)"
+            title="Erweitert: eigene CLIP-Prompts / WD14-Tag-Zuordnung (optional — ohne diese greift automatisch das Standard-Prompt-Template)"
+          >
+            <pf-icon [name]="isExpanded(label) ? 'chevronUp' : 'chevronDown'" [size]="13" />
+            Erweitert
+          </button>
+
+          <button class="kat-editor__label-btn" (click)="deleteLabel(label)" aria-label="Label löschen" title="Label löschen">
+            <pf-icon name="trash" [size]="13" />
+          </button>
+        </div>
+
+        @if (isExpanded(label)) {
+          <div class="kat-editor__advanced">
+            <label class="kat-editor__advanced-field">
+              <span title="Textbeschreibungen, die gegen das Bild-Embedding verglichen werden — leer lässt das Standard-Template greifen">
+                CLIP-Prompts (kommagetrennt)
+              </span>
+              <input
+                class="kat-editor__advanced-input"
+                [value]="clipPromptsDraft()"
+                (input)="clipPromptsDraft.set($any($event.target).value)"
+                (blur)="saveAdvanced(label)"
+                placeholder="a photo of {label}, …"
+              />
+            </label>
+            <label class="kat-editor__advanced-field">
+              <span title="WD14-Tag-Namen, deren Score dieses Label zusätzlich zum CLIP-Signal speist">
+                WD14-Tags (kommagetrennt)
+              </span>
+              <input
+                class="kat-editor__advanced-input"
+                [value]="wd14TagsDraft()"
+                (input)="wd14TagsDraft.set($any($event.target).value)"
+                (blur)="saveAdvanced(label)"
+                placeholder="tag1, tag2, …"
+              />
+            </label>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

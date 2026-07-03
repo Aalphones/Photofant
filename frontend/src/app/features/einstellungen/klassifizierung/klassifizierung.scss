@@ -1,0 +1,36 @@
+@use '../st-shared' as *;
+:host { display: block; max-width: 900px; }
+.klass__kopf { margin-bottom: 18px; }
+.klass__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.klass__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+
+.klass__reclassify {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
+  border-radius: 9px; font-size: 13px; font-weight: 600; background: var(--accent); color: #fff;
+  margin-bottom: 20px; cursor: pointer;
+}
+.klass__reclassify:hover { opacity: .9; }
+.klass__info-icon { opacity: .75; }
+
+.klass__layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
+
+.klass__kategorien { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.klass__add-row { display: flex; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
+.klass__add-input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); font-size: 12.5px; color: var(--text); padding: 5px 8px; outline: none; }
+.klass__add-input:focus { border-color: var(--accent-line); }
+.klass__add-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--radius-s); background: var(--accent); color: #fff; flex-shrink: 0; cursor: pointer; }
+.klass__add-btn:disabled { opacity: .4; cursor: default; }
+
+.klass__kat-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.klass__kat-row:last-child { border-bottom: none; }
+.klass__kat-row:hover { background: var(--surface); }
+.klass__kat-row:hover .klass__kat-delete { opacity: 1; }
+.klass__kat-row--aktiv { background: var(--accent-weak); }
+.klass__kat-name { flex: 1; min-width: 0; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.klass__kat-count { font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+.klass__kat-badge { font-size: 9.5px; font-family: var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+.klass__kat-delete { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; color: var(--text-3); opacity: 0; cursor: pointer; flex-shrink: 0; }
+.klass__kat-delete:hover { background: var(--surface-hover); color: var(--danger); }
+.klass__rename-input { flex: 1; font-size: 13px; color: var(--text); background: var(--surface); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 6px; outline: none; min-width: 0; }
+
+.klass__editor { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; min-height: 200px; }

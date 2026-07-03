@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { routes } from './app.routes';
-import { jobsFeature, JobsEffects, filtersFeature, searchFeature, galleryFeature, GalleryEffects, trashFeature, TrashEffects, maintenanceFeature, MaintenanceEffects, modelsFeature, ModelsEffects, presetsFeature, PresetsEffects, tagsFeature, TagsEffects, collectionsFeature, CollectionsEffects, reviewFeature, ReviewEffects, personsFeature, PersonsEffects, editorFeature, EditorEffects, comfyuiFeature, ComfyUIEffects, promptTemplateFeature, PromptTemplateEffects } from './store';
+import { jobsFeature, JobsEffects, filtersFeature, searchFeature, galleryFeature, GalleryEffects, trashFeature, TrashEffects, maintenanceFeature, MaintenanceEffects, modelsFeature, ModelsEffects, presetsFeature, PresetsEffects, tagsFeature, TagsEffects, collectionsFeature, CollectionsEffects, reviewFeature, ReviewEffects, personsFeature, PersonsEffects, editorFeature, EditorEffects, comfyuiFeature, ComfyUIEffects, promptTemplateFeature, PromptTemplateEffects, classificationFeature, ClassificationEffects } from './store';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -27,7 +27,8 @@ export const appConfig: ApplicationConfig = {
       [editorFeature.name]:      editorFeature.reducer,
       [comfyuiFeature.name]:     comfyuiFeature.reducer,
       [promptTemplateFeature.name]: promptTemplateFeature.reducer,
+      [classificationFeature.name]: classificationFeature.reducer,
     }),
-    provideEffects([JobsEffects, GalleryEffects, TrashEffects, MaintenanceEffects, ModelsEffects, PresetsEffects, TagsEffects, CollectionsEffects, ReviewEffects, PersonsEffects, EditorEffects, ComfyUIEffects, PromptTemplateEffects]),
+    provideEffects([JobsEffects, GalleryEffects, TrashEffects, MaintenanceEffects, ModelsEffects, PresetsEffects, TagsEffects, CollectionsEffects, ReviewEffects, PersonsEffects, EditorEffects, ComfyUIEffects, PromptTemplateEffects, ClassificationEffects]),
   ],
 };

@@ -13,3 +13,4 @@ export * from './review/index';
 export * from './editor/index';
 export * from './comfyui/index';
 export * from './prompt-templates/index';
+export * from './classification/index';

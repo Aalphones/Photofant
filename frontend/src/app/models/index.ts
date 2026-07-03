@@ -118,3 +118,15 @@ export type {
   CreatePromptTemplateRequest,
   UpdatePromptTemplateRequest,
 } from './prompt-template.model';
+
+export type {
+  ClassificationMode,
+  ClassificationLabel,
+  ClassificationCategory,
+  AssetClassification,
+  CategoryCreateRequest,
+  CategoryPatchRequest,
+  LabelCreateRequest,
+  LabelPatchRequest,
+} from './classification.model';
+export { CLASSIFICATION_MODES } from './classification.model';

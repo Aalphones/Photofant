@@ -42,11 +42,29 @@
 
 ## Checkliste
 
-- [ ] `models/classification.model.ts` (Kontrakt-Typen) + Barrel-Export (`@photofant/models`).
-- [ ] `services/classification.service.ts`: CRUD + `reclassifyAll()` (mappt auf `/classify/rerun`).
-- [ ] `store/classification/`: actions/reducer/selectors/effects (load + CRUD), in Root-Store registrieren.
-- [ ] `features/einstellungen/klassifizierung/` Shell + Child-Komponente(n) + scoped SCSS.
-- [ ] `einstellungen.types.ts` `SECTIONS` + `einstellungen.ts` Import/Template.
-- [ ] Tooltip-/Hilfe-Mikrotexte (Affordance) an den oben genannten Stellen.
+- [x] `models/classification.model.ts` (Kontrakt-Typen) + Barrel-Export (`@photofant/models`).
+- [x] `services/classification.service.ts`: CRUD + `reclassifyAll()` (mappt auf `/classify/rerun`).
+- [x] `store/classification/`: actions/reducer/selectors/effects (load + CRUD), in Root-Store registrieren.
+- [x] `features/einstellungen/klassifizierung/` Shell + Child-Komponente(n) + scoped SCSS.
+- [x] `einstellungen.types.ts` `SECTIONS` + `einstellungen.ts` Import/Template.
+- [x] Tooltip-/Hilfe-Mikrotexte (Affordance) an den oben genannten Stellen.
 
 ## Report-Back
+
+**Status:** complete.
+
+- Shell `klassifizierung/klassifizierung.ts` lädt Kategorien, listet sie (inline rename per Doppelklick,
+  Neuanlage, Löschen mit Bestätigung), wählt eine Kategorie aus und rendert den Child
+  `kategorie-editor/kategorie-editor.ts` daneben (zweispaltiges Master-Detail-Layout, kein Mockup —
+  freihändig nach Tags-Tab-Vorbild).
+- `kategorie-editor` verwaltet Labels der ausgewählten Kategorie: anlegen/umbenennen/löschen,
+  Modus-Umschalter single/multi, „Erweitert"-Aufklappung pro Label für eigene CLIP-Prompts /
+  WD14-Tags (Grundfluss funktioniert ohne diese Felder — Prompt-Template greift automatisch).
+- „Bestehende Bilder klassifizieren" dispatcht `reclassifyAll()` → `ClassifyService.rerun` (bestehende
+  Rerun-Route, kein neuer Endpoint) — Fortschritt läuft automatisch ins bestehende Job-Dock, da dessen
+  Polling jobunabhängig ist.
+- Frontend-`ClassifyStep`-Union in `classify.service.ts` um `'categories'` ergänzt (Backend hatte es
+  schon in Phase 3; im Frontend fehlte es noch).
+- Alle Erklärungs-Affordances als `title`-Tooltip umgesetzt (Tastaturkürzel-Tab-Konvention) — kein
+  dediziertes Tooltip-Component im Projekt vorhanden, daher kein neues eingeführt.
+- `npm run lint` (tsc --noEmit) + `npm run build` grün.

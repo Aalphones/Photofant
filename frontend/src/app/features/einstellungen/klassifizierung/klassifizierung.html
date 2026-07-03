@@ -1,0 +1,83 @@
+<div class="klass__kopf">
+  <h2>Klassifizierung</h2>
+  <p>Kategorien wie Medium, Stil oder Franchise definieren; Bilder werden automatisch per KI eingeordnet.</p>
+</div>
+
+<button
+  class="klass__reclassify"
+  (click)="reclassifyAll()"
+  title="Läuft im Hintergrund über alle Bilder — nutzt bereits berechnete Bild-Signale, kein erneuter Modell-Lauf. Kann bei vielen Bildern eine Weile dauern; Fortschritt siehe Job-Anzeige unten rechts."
+>
+  <pf-icon name="refresh" [size]="14" />
+  Bestehende Bilder klassifizieren
+  <pf-icon name="info" [size]="13" class="klass__info-icon" />
+</button>
+
+<div class="klass__layout">
+
+  <!-- ── Kategorien-Liste ─────────────────────────────────── -->
+  <div class="klass__kategorien">
+    <div class="klass__add-row">
+      <input
+        class="klass__add-input"
+        [value]="newCategoryName()"
+        (input)="newCategoryName.set($any($event.target).value)"
+        (keydown)="onNewCategoryKeyDown($event)"
+        placeholder="Neue Kategorie…"
+      />
+      <button class="klass__add-btn" (click)="addCategory()" [disabled]="!newCategoryName().trim()">
+        <pf-icon name="plus" [size]="14" />
+      </button>
+    </div>
+
+    @if (isLoading()) {
+      <div class="group-loading"><span class="spinner"></span> Lade Kategorien…</div>
+    } @else if (categories().length === 0) {
+      <div class="group-empty">Noch keine Kategorien angelegt.</div>
+    } @else {
+      @for (category of categories(); track category.id) {
+        <div
+          class="klass__kat-row"
+          [class.klass__kat-row--aktiv]="selectedCategory()?.id === category.id"
+          (click)="selectCategory(category)"
+        >
+          @if (renamingCategoryId() === category.id) {
+            <input
+              class="klass__rename-input"
+              [value]="renameDraftText()"
+              (input)="renameDraftText.set($any($event.target).value)"
+              (keydown)="onCategoryRenameKeyDown($event)"
+              (blur)="confirmCategoryRename()"
+              (click)="$event.stopPropagation()"
+              autofocus
+            />
+          } @else {
+            <span class="klass__kat-name" (dblclick)="startCategoryRename(category)">{{ category.name }}</span>
+          }
+          <span class="klass__kat-count">{{ category.labels.length }}</span>
+          @if (category.builtin) {
+            <span class="klass__kat-badge" title="Aus dem mitgelieferten Konzept-Katalog — kann bearbeitet oder gelöscht werden">Seed</span>
+          }
+          <button
+            class="klass__kat-delete"
+            (click)="deleteCategory(category); $event.stopPropagation()"
+            aria-label="Kategorie löschen"
+            title="Kategorie löschen"
+          >
+            <pf-icon name="trash" [size]="13" />
+          </button>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ── Kategorie-Editor (Labels) ────────────────────────── -->
+  <div class="klass__editor">
+    @if (selectedCategory(); as category) {
+      <pf-einstellungen-kategorie-editor [category]="category" />
+    } @else {
+      <div class="group-empty">Kategorie links auswählen oder anlegen.</div>
+    }
+  </div>
+
+</div>

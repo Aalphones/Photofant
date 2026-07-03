@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export type ClassifyStep = 'tags' | 'caption' | 'embedding' | 'heuristics' | 'faces' | 'phash';
+export type ClassifyStep = 'tags' | 'caption' | 'embedding' | 'heuristics' | 'faces' | 'phash' | 'categories';
 
 export interface RerunRequest {
   asset_ids: number[] | 'all';
