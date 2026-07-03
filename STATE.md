@@ -1,11 +1,8 @@
 # STATE
 
 **Aktiver Plan:** P18 (Bildklassifizierung) — `docs/planning/2026-06-30_p18-bildklassifizierung/`
-**Phase:** 3/6 — Backend-API: CRUD, Retro-Lauf, Filter/Facets/Suche (`phase-3-backend-api-suche.md`)
-**Nächster Schritt:** Phase 3 starten. Aus FINDINGS.md zu beachten: SQLite fährt
-`ON DELETE CASCADE` nur mit `PRAGMA foreign_keys=ON` (projektweit aktuell aus) — beim Löschen
-einer Kategorie/eines Labels die Kind-Zeilen (`classification_label`, `asset_classification`)
-explizit im Python-Code mitlöschen.
+**Phase:** 4/6 — Einstellungen-Tab (Frontend) (`phase-4-einstellungen-tab.md`)
+**Nächster Schritt:** Phase 4 starten (README-Kontrakt + `phase-4-einstellungen-tab.md` lesen).
 
 **Reihenfolge (kurzfristig eingeschoben, 2026-07-03):** P31 → P32 → Editor-Basis-Fixes
 (alle 3 Phasen) erledigt, jetzt zurück zu P18.
@@ -26,8 +23,9 @@ explizit im Python-Code mitlöschen.
   Datei ohne Modal-Nachfrage — auch bei einem Mehrpersonen-Foto, wo alle beteiligten Personen
   danach noch die gedrehte Version sehen).
 - P18 (Bildklassifizierung) — Phase 1 (Datenmodell & Seed-Katalog) + Phase 2 (Engine:
-  CLIP+WD14-Fusion, Job, Pipeline-Hook) committet, Phase 3 jetzt dran. Rest im Backlog
-  geparkt: p20, p22-p27.
+  CLIP+WD14-Fusion, Job, Pipeline-Hook) + Phase 3 (Backend-API: CRUD, Filter/Facets/Suche,
+  explizites Cascade-Delete) committet, Phase 4 (Einstellungen-Tab Frontend) jetzt dran. Rest
+  im Backlog geparkt: p20, p22-p27.
 
 **Unabhängig im Working Tree liegen gelassen (nicht Teil eines aktiven Plans):** ein fertig
 wirkender „stranded_face"-Reparatur-Fix (Backend + Reconcile-UI + Tests, verirrte

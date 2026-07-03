@@ -34,11 +34,19 @@
 
 ## Checkliste
 
-- [ ] `api/classification.py`: Pydantic-DTOs + CRUD-Endpoints; Router in `main.py` registrieren.
-- [ ] `api/assets.py`: `classification`-Query-Param + Gruppen-Filter-Logik.
-- [ ] `api/assets.py`: `_compute_facets` um Kategorie-Label-Counts erweitern; `Facets`/`CategoryFacet`-Modelle.
-- [ ] `api/assets.py`: q-Suche um Label-Namen-Union erweitern.
-- [ ] `api/assets.py`: `AssetDetailDto.classifications` + Laden in `get_asset` (eine Query mit Joins über `asset_classification` → label → category).
-- [ ] Tests: `backend/tests/test_classification_api.py` (CRUD + Filter-Gruppierung).
+- [x] `api/classification.py`: Pydantic-DTOs + CRUD-Endpoints; Router in `main.py` registrieren.
+- [x] `api/assets.py`: `classification`-Query-Param + Gruppen-Filter-Logik.
+- [x] `api/assets.py`: `_compute_facets` um Kategorie-Label-Counts erweitern; `Facets`/`CategoryFacet`-Modelle.
+- [x] `api/assets.py`: q-Suche um Label-Namen-Union erweitert (im `q_mode=text`-Zweig, gleichrangig zu Tag-/Personen-/Caption-Treffern).
+- [x] `api/assets.py`: `AssetDetailDto.classifications` + Laden in `get_asset` (eine Query mit Joins über `asset_classification` → label → category, sortiert nach `confidence` absteigend).
+- [x] Tests: `backend/tests/test_classification_api.py` (CRUD + explizites Cascade-Delete + OR/AND-Filter + Facet/Detail/Suche).
 
 ## Report-Back
+
+- CRUD: `api/classification.py` — Kategorien/Labels anlegen, ändern, löschen. Da `PRAGMA foreign_keys=ON` projektweit aus ist (FINDINGS.md), löschen `delete_category`/`delete_label` die abhängigen `asset_classification`-/`classification_label`-Zeilen **explizit** im Python-Code, nicht über das deklarierte `ON DELETE CASCADE`. Regressionstest dafür vorhanden.
+- Filter: `GET /assets?classification=<label_id>&...` gruppiert die Label-IDs nach Kategorie (`ClassificationLabel.category_id`) und verkettet je Gruppe einen `Asset.id IN (...)`-Subquery-Filter — OR innerhalb, AND über Kategorien, wie im Kontrakt.
+- Facets: neue `_compute_classification_facets` liefert je aktiver (enabled) Kategorie die Label-Counts über das aktuelle gefilterte Ergebnis — gleiches Muster wie `tags_top`/`framings`.
+- q-Suche: nur der `q_mode=text`-Zweig (die globale Freitextsuche) wurde um einen Label-Namen-Treffer erweitert — `q_mode=tags` bleibt unverändert (reine Tag-Suche laut Kontrakt-Kommentar im Code).
+- Retro-Lauf: kein neuer Code nötig — `steps: ["categories"]` war schon in Phase 2 verdrahtet (`ClassifyStep`, `rerun_job.py`).
+- Abweichung vom Plan: keine.
+- Tests: `uv run pytest` — 189 passed, 13 vorbestehende Fehlschläge in `test_caption_config.py`/`test_comfyui_*` (bestätigt bereits auf `master` rot, nicht Teil dieser Phase). `uv run ruff check .` — nur vorbestehende Fehler in Alembic-Migrationen/`comfyui_run_job.py`/dem alten `File(...)`-B008 in `assets.py`, nichts Neues.

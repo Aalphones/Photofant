@@ -13,6 +13,7 @@ from photofant.api import (
     assets,
     auth,
     caption_presets,
+    classification,
     classify,
     collections,
     comfyui,
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
     app.include_router(search.router, prefix="/api")
     app.include_router(tags.router, prefix="/api")
     app.include_router(classify.router, prefix="/api")
+    app.include_router(classification.router, prefix="/api")
     app.include_router(collections.router, prefix="/api")
     app.include_router(review.router, prefix="/api")
     app.include_router(review_queue.router, prefix="/api")

@@ -22,7 +22,19 @@ from sqlalchemy.orm import Session
 from photofant.config import get_data_root
 from photofant.db import text_index, vector_index
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
-from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Face, Person, Tag, Version
+from photofant.db.models import (
+    Asset,
+    AssetClassification,
+    AssetInstance,
+    AssetTag,
+    ClassificationCategory,
+    ClassificationLabel,
+    CollectionItem,
+    Face,
+    Person,
+    Tag,
+    Version,
+)
 from photofant.db.session import get_session
 from photofant.jobs.collections_job import enqueue_reevaluate_assets
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
@@ -123,6 +135,14 @@ class AssetSummaryDto(BaseModel):
     created_at: datetime | None
 
 
+class ClassificationDto(BaseModel):
+    category_id: int
+    category_name: str
+    label_id: int
+    label_name: str
+    confidence: float
+
+
 class AssetDetailDto(AssetDto):
     path: str | None
     tags: list[TagDto]
@@ -136,6 +156,7 @@ class AssetDetailDto(AssetDto):
     linked_edits: list[AssetSummaryDto] = []
     quality: float | None = None
     framing: str | None = None
+    classifications: list[ClassificationDto] = []
 
 
 class FacetItem(BaseModel):
@@ -149,10 +170,23 @@ class TagFacetItem(BaseModel):
     count: int
 
 
+class CategoryFacetItem(BaseModel):
+    label_id: int
+    name: str
+    count: int
+
+
+class CategoryFacet(BaseModel):
+    category_id: int
+    name: str
+    items: list[CategoryFacetItem]
+
+
 class Facets(BaseModel):
     sources: list[FacetItem]
     tags_top: list[TagFacetItem]
     framings: list[FacetItem] = []
+    classifications: list[CategoryFacet] = []
 
 
 class AssetsPage(BaseModel):
@@ -357,6 +391,39 @@ def _empty_facets() -> Facets:
     return Facets(sources=[], tags_top=[])
 
 
+def _compute_classification_facets(session: Session, asset_id_sub: Any) -> list[CategoryFacet]:
+    """Per-category label counts over the current filtered result (analog `tags_top`)."""
+    rows = (
+        session.query(
+            ClassificationCategory.id,
+            ClassificationCategory.name,
+            ClassificationCategory.position,
+            ClassificationLabel.id,
+            ClassificationLabel.name,
+            ClassificationLabel.position,
+            func.count(AssetClassification.asset_id).label("cnt"),
+        )
+        .join(ClassificationLabel, ClassificationLabel.category_id == ClassificationCategory.id)
+        .join(AssetClassification, AssetClassification.label_id == ClassificationLabel.id)
+        .filter(AssetClassification.asset_id.in_(asset_id_sub))
+        .filter(ClassificationCategory.enabled.is_(True))
+        .group_by(
+            ClassificationCategory.id, ClassificationCategory.name, ClassificationCategory.position,
+            ClassificationLabel.id, ClassificationLabel.name, ClassificationLabel.position,
+        )
+        .order_by(ClassificationCategory.position, ClassificationLabel.position)
+        .all()
+    )
+    categories: dict[int, CategoryFacet] = {}
+    order: list[int] = []
+    for category_id, category_name, _category_pos, label_id, label_name, _label_pos, count in rows:
+        if category_id not in categories:
+            categories[category_id] = CategoryFacet(category_id=category_id, name=category_name, items=[])
+            order.append(category_id)
+        categories[category_id].items.append(CategoryFacetItem(label_id=label_id, name=label_name, count=count))
+    return [categories[category_id] for category_id in order]
+
+
 def _tag_name_match_subquery(session: Session, name_fragment: str) -> Any:
     """Subquery of `asset.id` for assets carrying a tag whose name contains *name_fragment*.
 
@@ -429,7 +496,9 @@ def _compute_facets(session: Session, filtered: OrmQuery[Any]) -> Facets:
         if row.framing is not None
     ]
 
-    return Facets(sources=sources, tags_top=tags_top, framings=framings)
+    classifications = _compute_classification_facets(session, asset_id_sub)
+
+    return Facets(sources=sources, tags_top=tags_top, framings=framings, classifications=classifications)
 
 
 @dataclass
@@ -470,6 +539,7 @@ async def list_assets(
     source: Annotated[list[str] | None, Query()] = None,
     quality_min: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
     tags: Annotated[list[int] | None, Query()] = None,
+    classification: Annotated[list[int] | None, Query()] = None,
     collection_id: int | None = None,
     person_id: int | None = None,
     framing: Annotated[list[str] | None, Query()] = None,
@@ -519,6 +589,25 @@ async def list_assets(
         )
         query = query.filter(Asset.id.in_(tag_sub))
 
+    if classification:
+        # OR within a category, AND across categories (README-Kontrakt): group the
+        # requested label IDs by their category, then chain one IN-subquery per group.
+        label_categories = (
+            session.query(ClassificationLabel.id, ClassificationLabel.category_id)
+            .filter(ClassificationLabel.id.in_(classification))
+            .all()
+        )
+        label_ids_by_category: dict[int, list[int]] = {}
+        for label_id, category_id in label_categories:
+            label_ids_by_category.setdefault(category_id, []).append(label_id)
+        for label_ids in label_ids_by_category.values():
+            classification_sub = (
+                session.query(AssetClassification.asset_id)
+                .filter(AssetClassification.label_id.in_(label_ids))
+                .subquery()
+            )
+            query = query.filter(Asset.id.in_(classification_sub))
+
     # Text / semantic search
     score_map: dict[int, float] = {}
     q_clean = (q or "").strip()
@@ -547,9 +636,16 @@ async def list_assets(
                 .subquery()
             )
 
+            classification_label_match_sub = (
+                session.query(AssetClassification.asset_id)
+                .join(ClassificationLabel, ClassificationLabel.id == AssetClassification.label_id)
+                .filter(ClassificationLabel.name.ilike(f"%{q_clean}%"))
+                .subquery()
+            )
             match_conditions = [
                 Asset.id.in_(tag_match_sub),
                 AssetInstance.person_id.in_(session.query(person_match_sub)),
+                Asset.id.in_(classification_label_match_sub),
             ]
             caption_asset_ids = text_index.search_caption_asset_ids(session, q_clean)
             if caption_asset_ids is None:
@@ -849,6 +945,27 @@ def _load_asset_faces(session: Session, asset_id: int) -> list[FaceDto]:
     ]
 
 
+def _load_asset_classifications(session: Session, asset_id: int) -> list[ClassificationDto]:
+    rows = (
+        session.query(AssetClassification, ClassificationLabel, ClassificationCategory)
+        .join(ClassificationLabel, ClassificationLabel.id == AssetClassification.label_id)
+        .join(ClassificationCategory, ClassificationCategory.id == ClassificationLabel.category_id)
+        .filter(AssetClassification.asset_id == asset_id)
+        .order_by(AssetClassification.confidence.desc())
+        .all()
+    )
+    return [
+        ClassificationDto(
+            category_id=category.id,
+            category_name=category.name,
+            label_id=label.id,
+            label_name=label.name,
+            confidence=asset_classification.confidence,
+        )
+        for asset_classification, label, category in rows
+    ]
+
+
 def _load_linked_edits(session: Session, asset_id: int) -> list[AssetSummaryDto]:
     """Assets whose original_id points back at *asset_id* (excludes soft-deleted)."""
     rows = _base_query(session).filter(Asset.original_id == asset_id).all()
@@ -876,6 +993,7 @@ def _build_asset_detail_dto(session: Session, asset: Asset, instance: AssetInsta
     faces = _load_asset_faces(session, asset.id)
     versions = _load_asset_versions(session, instance.id, asset.id)
     linked_edits = _load_linked_edits(session, asset.id)
+    classifications = _load_asset_classifications(session, asset.id)
     return AssetDetailDto(
         **base.model_dump(),
         path=instance.path,
@@ -890,6 +1008,7 @@ def _build_asset_detail_dto(session: Session, asset: Asset, instance: AssetInsta
         linked_edits=linked_edits,
         quality=asset.quality_score,
         framing=asset.framing,
+        classifications=classifications,
     )
 
 
