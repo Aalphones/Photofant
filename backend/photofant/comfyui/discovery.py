@@ -19,6 +19,7 @@ class WorkflowDiscoveryItem:
     negative_prompt: dict[str, str] | None
     resolution: dict[str, Any] | None  # {node_id, megapixels_field, aspect_field, aspect_default}
     mask: dict[str, str] | None        # {mode, image_node_id}
+    toggles: list[dict[str, Any]]      # [{key, label, node_id, field, default}]
     is_valid: bool
     errors: list[str]
 
@@ -113,6 +114,17 @@ def _to_discovery_item(key: str, introspection: IntrospectionResult) -> Workflow
         if introspection.mask else None
     )
 
+    toggles = [
+        {
+            "key": toggle.key,
+            "label": toggle.label,
+            "node_id": toggle.node_id,
+            "field": toggle.field,
+            "default": toggle.default,
+        }
+        for toggle in introspection.toggles
+    ]
+
     is_valid = introspection.is_api_format and not introspection.errors
 
     return WorkflowDiscoveryItem(
@@ -124,6 +136,7 @@ def _to_discovery_item(key: str, introspection: IntrospectionResult) -> Workflow
         negative_prompt=negative_prompt,
         resolution=resolution,
         mask=mask,
+        toggles=toggles,
         is_valid=is_valid,
         errors=introspection.errors,
     )

@@ -76,6 +76,7 @@ export type {
   WorkflowPromptField,
   WorkflowResolution,
   WorkflowMask,
+  WorkflowToggle,
   ComfyUIWorkflow,
   ResolutionRun,
   NodeInfo,

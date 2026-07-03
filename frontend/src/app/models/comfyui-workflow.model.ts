@@ -26,6 +26,15 @@ export interface WorkflowMask {
   image_node_id: string;
 }
 
+/** Erkannter Switch-Node (z.B. ComfySwitchNode) — Boolean-Widget, Label kommt vom Node-Titel. */
+export interface WorkflowToggle {
+  key: string;
+  label: string;
+  node_id: string;
+  field: string;
+  default: boolean;
+}
+
 export interface ComfyUIWorkflow {
   key: string;
   name: string;
@@ -35,6 +44,7 @@ export interface ComfyUIWorkflow {
   negativePrompt: WorkflowPromptField | null;
   resolution: WorkflowResolution | null;
   mask: WorkflowMask | null;
+  toggles: WorkflowToggle[];
   isValid: boolean;
   errors: string[];
 }
@@ -106,4 +116,5 @@ export interface DefaultRunRequest {
   negative_prompt?: string | null;
   resolution?: ResolutionRun | null;
   mask?: { asset_id: number; mask_data_url: string } | null;
+  toggles?: Record<string, boolean>;
 }

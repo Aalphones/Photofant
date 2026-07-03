@@ -234,6 +234,67 @@
   white-space: nowrap;
 }
 
+// Toggles (z.B. ComfySwitchNode)
+.rleiste__toggles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-left: 4px;
+  border-left: 1px solid var(--line);
+}
+
+.rleiste__toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rleiste__toggle-track {
+  width: 26px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  position: relative;
+  transition: background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+
+.rleiste__toggle-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--text-3);
+  transition: transform 0.12s, background 0.12s;
+}
+
+.rleiste__toggle--on {
+  .rleiste__toggle-track {
+    background: var(--accent-weak);
+    border-color: var(--accent);
+  }
+
+  .rleiste__toggle-thumb {
+    background: var(--accent);
+    transform: translateX(11px);
+  }
+}
+
+.rleiste__toggle-label {
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
 // Fire button + reset
 .rleiste__actions {
   display: flex;

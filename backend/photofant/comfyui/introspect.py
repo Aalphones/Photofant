@@ -91,6 +91,16 @@ class MaskInfo:
 
 
 @dataclass
+class ToggleInfo:
+    key: str
+    label: str
+    node_title: str
+    node_id: str
+    field: str
+    default: bool
+
+
+@dataclass
 class IntrospectionResult:
     nodes: list[NodeInfo] = field(default_factory=list)
     input_suggestions: list[InputSuggestion] = field(default_factory=list)
@@ -101,6 +111,7 @@ class IntrospectionResult:
     negative_prompt: PromptInfo | None = None
     resolution: ResolutionInfo | None = None
     mask: MaskInfo | None = None
+    toggles: list[ToggleInfo] = field(default_factory=list)
     category: str = WorkflowCategory.GENERIC
 
 
@@ -179,6 +190,7 @@ def introspect_template(template: dict[str, Any]) -> IntrospectionResult:
     result.prompt, result.negative_prompt = _detect_prompts(result.nodes)
     result.resolution = _detect_resolution(result.nodes)
     result.mask = _detect_mask(result.nodes, template)
+    result.toggles = _detect_toggles(result.nodes)
     result.category = _detect_category(result.nodes, result.mask)
 
     return result
@@ -272,6 +284,42 @@ def _detect_mask(nodes: list[NodeInfo], template: dict[str, Any]) -> MaskInfo | 
             return MaskInfo(mode="loader", image_node_id=node.node_id)
 
     return None
+
+
+def _detect_toggles(nodes: list[NodeInfo]) -> list[ToggleInfo]:
+    """Detect on/off switch nodes and expose their literal boolean widget as a toggle.
+
+    Heuristic: a node whose class_type contains "switch" (case-insensitive) — the common
+    naming for ComfyUI nodes that route between two branches (e.g. on_true/on_false) based
+    on a plain boolean widget. Only widget values (literal bool, not a link) qualify —
+    links are two-element lists ([node_id, output_index]), never a bare bool.
+    Label comes from the node's `_meta.title` so the run bar shows what the toggle
+    actually does (e.g. "With NSFW Lora"), not the internal field name.
+    """
+    toggles: list[ToggleInfo] = []
+    for node in nodes:
+        if "switch" not in node.class_type.lower():
+            continue
+        safe_title = node.title if not node.title.startswith(node.class_type) else node.class_type
+        used_keys = {toggle.key for toggle in toggles}
+        for field_name, field_value in node.inputs.items():
+            if not isinstance(field_value, bool):
+                continue
+            toggle_key = _title_to_key(safe_title)
+            if toggle_key in used_keys:
+                toggle_key = _title_to_key(f"{safe_title}_{field_name}")
+            used_keys.add(toggle_key)
+            toggles.append(
+                ToggleInfo(
+                    key=toggle_key,
+                    label=safe_title,
+                    node_title=node.title,
+                    node_id=node.node_id,
+                    field=field_name,
+                    default=field_value,
+                )
+            )
+    return toggles
 
 
 def _detect_category(nodes: list[NodeInfo], mask: MaskInfo | None) -> str:

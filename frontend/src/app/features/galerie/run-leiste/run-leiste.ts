@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import type { ComfyUIWorkflow } from '@photofant/models';
+import type { ComfyUIWorkflow, WorkflowToggle } from '@photofant/models';
 import { AssetService } from '@photofant/services';
 import { Icon } from '@photofant/ui';
 
@@ -8,6 +8,12 @@ export interface RunFirePayload {
   inputs: Record<string, number | number[]>;
   faceInputs: Record<string, number | number[]>;
   versionInputs: Record<string, number | number[]>;
+  toggles: Record<string, boolean>;
+}
+
+export interface ToggleChangedEvent {
+  key: string;
+  value: boolean;
 }
 
 @Component({
@@ -25,6 +31,7 @@ export class RunLeiste {
   readonly bindings        = input<Record<string, number | number[]>>({});
   readonly faceBindings    = input<Record<string, number | number[]>>({});
   readonly versionBindings = input<Record<string, number | number[]>>({});
+  readonly toggleBindings  = input<Record<string, boolean>>({});
   readonly hashMap         = input<Record<number, string>>({});
   readonly armedSlotKey = input<string | null>(null);
   readonly batchAxisKey = input<string | null>(null);
@@ -32,6 +39,7 @@ export class RunLeiste {
 
   readonly workflowChanged = output<string | null>();
   readonly slotArmed       = output<string | null>();
+  readonly toggleChanged   = output<ToggleChangedEvent>();
   readonly fire            = output<RunFirePayload>();
   readonly closed          = output<void>();
 
@@ -121,7 +129,17 @@ export class RunLeiste {
       inputs: this.bindings(),
       faceInputs: this.faceBindings(),
       versionInputs: this.versionBindings(),
+      toggles: this.toggleBindings(),
     });
+  }
+
+  protected toggleValue(toggle: WorkflowToggle): boolean {
+    const bound = this.toggleBindings()[toggle.key];
+    return bound ?? toggle.default;
+  }
+
+  protected onToggleClick(toggle: WorkflowToggle): void {
+    this.toggleChanged.emit({ key: toggle.key, value: !this.toggleValue(toggle) });
   }
 
   protected onWorkflowSelect(event: Event): void {

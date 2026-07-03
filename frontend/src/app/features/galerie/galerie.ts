@@ -86,6 +86,7 @@ export class Galerie {
   protected readonly slotBindings         = signal<Record<string, number | number[]>>({});
   protected readonly faceSlotBindings     = signal<Record<string, number | number[]>>({});
   protected readonly versionSlotBindings  = signal<Record<string, number | number[]>>({});
+  protected readonly toggleBindings       = signal<Record<string, boolean>>({});
   protected readonly assetHashMap      = this.store.selectSignal(gallerySelectors.selectHashMap);
   protected readonly armedSlotKey      = signal<string | null>(null);
   protected readonly batchAxisKey      = signal<string | null>(null);
@@ -406,6 +407,7 @@ export class Galerie {
     this.slotBindings.set({});
     this.faceSlotBindings.set({});
     this.versionSlotBindings.set({});
+    this.toggleBindings.set({});
     this.armedSlotKey.set(null);
     this.batchAxisKey.set(null);
   }
@@ -471,10 +473,20 @@ export class Galerie {
     this.batchAxisKey.set(armedKey);
   }
 
+  protected onToggleChanged(event: { key: string; value: boolean }): void {
+    this.toggleBindings.update((current) => ({ ...current, [event.key]: event.value }));
+  }
+
   protected onRunFire(payload: RunFirePayload): void {
     if (this.isFiring()) { return; }
     this.isFiring.set(true);
-    this.comfyuiService.runWorkflow(payload.workflowKey, payload.inputs, payload.faceInputs, {}, payload.versionInputs)
+    this.comfyuiService.runWorkflow(
+      payload.workflowKey,
+      payload.inputs,
+      payload.faceInputs,
+      { toggles: payload.toggles },
+      payload.versionInputs,
+    )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
       next: (response) => {
@@ -497,6 +509,7 @@ export class Galerie {
     this.slotBindings.set({});
     this.faceSlotBindings.set({});
     this.versionSlotBindings.set({});
+    this.toggleBindings.set({});
     this.armedSlotKey.set(null);
     this.batchAxisKey.set(null);
   }

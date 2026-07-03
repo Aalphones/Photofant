@@ -55,6 +55,28 @@
       }
     </div>
 
+    <!-- Toggles (z.B. ComfySwitchNode) -->
+    @if (workflow.toggles.length > 0) {
+      <div class="rleiste__toggles">
+        @for (toggle of workflow.toggles; track toggle.key) {
+          <button
+            type="button"
+            class="rleiste__toggle"
+            [class.rleiste__toggle--on]="toggleValue(toggle)"
+            (click)="onToggleClick(toggle)"
+            [title]="toggle.label"
+            [attr.aria-label]="toggle.label"
+            [attr.aria-pressed]="toggleValue(toggle)"
+          >
+            <span class="rleiste__toggle-track">
+              <span class="rleiste__toggle-thumb"></span>
+            </span>
+            <span class="rleiste__toggle-label">{{ toggle.label }}</span>
+          </button>
+        }
+      </div>
+    }
+
     <!-- Fire + Reset -->
     <div class="rleiste__actions">
       <button

@@ -5,12 +5,13 @@ import type { Observable } from 'rxjs';
 import type { ComfyUIConfig, ComfyUIImportResponse, ComfyUIResultsResponse, ComfyUIWorkflow, DefaultRunRequest, DefaultRunTask, ResolutionRun } from '@photofant/models';
 import { COMFYUI_CONFIG_DEFAULTS } from '@photofant/models';
 
-/** Optionale Run-Parameter, die der Workflow erkannt hat (Prompt/Auflösung/Maske). */
+/** Optionale Run-Parameter, die der Workflow erkannt hat (Prompt/Auflösung/Maske/Toggles). */
 export interface RunExtras {
   prompt?: string | null;
   negativePrompt?: string | null;
   resolution?: ResolutionRun | null;
   mask?: { asset_id: number; mask_data_url: string } | null;
+  toggles?: Record<string, boolean>;
 }
 
 export interface TestConnectionResponse {
@@ -49,6 +50,13 @@ interface WorkflowApi {
     aspect_default: string;
   } | null;
   mask: { mode: string; image_node_id: string } | null;
+  toggles: Array<{
+    key: string;
+    label: string;
+    node_id: string;
+    field: string;
+    default: boolean;
+  }>;
   is_valid: boolean;
   errors: string[];
 }
@@ -93,6 +101,13 @@ function workflowFromApi(raw: WorkflowApi): ComfyUIWorkflow {
     mask: raw.mask
       ? { mode: raw.mask.mode as 'alpha' | 'loader', image_node_id: raw.mask.image_node_id }
       : null,
+    toggles: (raw.toggles ?? []).map((toggle) => ({
+      key: toggle.key,
+      label: toggle.label,
+      node_id: toggle.node_id,
+      field: toggle.field,
+      default: toggle.default,
+    })),
     isValid: raw.is_valid,
     errors: raw.errors ?? [],
   };
@@ -151,6 +166,7 @@ export class ComfyUIService {
         negative_prompt: extras.negativePrompt ?? null,
         resolution: extras.resolution ?? null,
         mask: extras.mask ?? null,
+        toggles: extras.toggles ?? {},
       },
     );
   }
@@ -170,6 +186,7 @@ export class ComfyUIService {
         negative_prompt: payload.negative_prompt ?? null,
         resolution: payload.resolution ?? null,
         mask: payload.mask ?? null,
+        toggles: payload.toggles ?? {},
       },
     );
   }

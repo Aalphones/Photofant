@@ -85,6 +85,14 @@ class WorkflowInputDto(BaseModel):
     kind: str  # image | mask
 
 
+class WorkflowToggleDto(BaseModel):
+    key: str
+    label: str
+    node_id: str
+    field: str
+    default: bool
+
+
 class WorkflowDiscoveryDto(BaseModel):
     key: str
     name: str
@@ -94,6 +102,7 @@ class WorkflowDiscoveryDto(BaseModel):
     negative_prompt: dict[str, str] | None
     resolution: dict[str, Any] | None
     mask: dict[str, str] | None
+    toggles: list[WorkflowToggleDto]
     is_valid: bool
     errors: list[str]
 
@@ -146,6 +155,7 @@ class RunRequest(BaseModel):
     negative_prompt: str | None = None
     resolution: ResolutionRunRequest | None = None
     mask: MaskRunRequest | None = None
+    toggles: dict[str, bool] = {}
 
 
 class DefaultRunRequest(RunRequest):
@@ -172,6 +182,7 @@ def _discovery_to_dto(item: Any) -> WorkflowDiscoveryDto:
         negative_prompt=item.negative_prompt,
         resolution=item.resolution,
         mask=item.mask,
+        toggles=[WorkflowToggleDto(**toggle) for toggle in item.toggles],
         is_valid=item.is_valid,
         errors=item.errors,
     )
@@ -456,6 +467,17 @@ async def run_workflow(key: str, body: RunRequest) -> RunResponse:
         })
         param_values["_resolution_ar"] = body.resolution.aspect_ratio
 
+    for toggle in introspection.toggles:
+        if toggle.key not in body.toggles:
+            continue
+        param_bindings.append({
+            "key": toggle.key,
+            "node_title": "",
+            "node_id": toggle.node_id,
+            "field": toggle.field,
+        })
+        param_values[toggle.key] = body.toggles[toggle.key]
+
     # 8. Expand batch
     try:
         expanded = expand_batch(resolved_inputs, input_bindings, body.face_inputs, body.version_inputs)
@@ -615,6 +637,17 @@ async def run_default_workflow(task: str, body: DefaultRunRequest) -> RunRespons
             "field": resolution.aspect_field,
         })
         param_values["_resolution_ar"] = body.resolution.aspect_ratio
+
+    for toggle in introspection.toggles:
+        if toggle.key not in body.toggles:
+            continue
+        param_bindings.append({
+            "key": toggle.key,
+            "node_title": "",
+            "node_id": toggle.node_id,
+            "field": toggle.field,
+        })
+        param_values[toggle.key] = body.toggles[toggle.key]
 
     try:
         expanded = expand_batch(resolved_inputs, input_bindings, body.face_inputs, body.version_inputs)
