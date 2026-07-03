@@ -18,12 +18,15 @@ import type { PersonDto } from '@photofant/models';
 })
 export class MergeDialog {
   readonly persons = input.required<PersonDto[]>();
+  readonly preselectedFrom = input<PersonDto | null>(null);
   readonly close = output<void>();
   readonly merge = output<{ fromId: number; intoId: number }>();
 
-  protected readonly fromPerson = signal<PersonDto | null>(null);
+  protected readonly fromPerson = signal<PersonDto | null>(this.preselectedFrom());
   protected readonly intoPerson = signal<PersonDto | null>(null);
-  protected readonly step = signal<'select-from' | 'select-into' | 'confirm'>('select-from');
+  protected readonly step = signal<'select-from' | 'select-into' | 'confirm'>(
+    this.preselectedFrom() ? 'select-into' : 'select-from',
+  );
   protected readonly searchQuery = signal('');
 
   protected readonly filteredPersons = computed((): PersonDto[] => {

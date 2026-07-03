@@ -112,6 +112,7 @@
                     (setGroup)="onSetGroup($event)"
                     (importFiles)="onImportFiles($event)"
                     (splitClick)="onSplitClick(person)"
+                    (mergeClick)="onMergeClick(person)"
                     (dupeCheck)="onDupeCheck(person)"
                     (revealInFileBrowser)="onRevealInFileBrowser(person)"
                     (deleteClick)="onDeleteClick(person)"
@@ -132,6 +133,7 @@
                 (setGroup)="onSetGroup($event)"
                 (importFiles)="onImportFiles($event)"
                 (splitClick)="onSplitClick(person)"
+                (mergeClick)="onMergeClick(person)"
                 (dupeCheck)="onDupeCheck(person)"
                 (revealInFileBrowser)="onRevealInFileBrowser(person)"
                 (deleteClick)="onDeleteClick(person)"
@@ -152,7 +154,8 @@
 @if (showMergeDialog()) {
   <pf-merge-dialog
     [persons]="persons()"
-    (close)="showMergeDialog.set(false)"
+    [preselectedFrom]="mergePreselectedFrom()"
+    (close)="closeMergeDialog()"
     (merge)="onMerge($event)"
   />
 }

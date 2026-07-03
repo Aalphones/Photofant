@@ -41,6 +41,7 @@ export class PersonCard {
   readonly setGroup = output<{ id: number; groupName: string }>();
   readonly importFiles = output<{ personId: number; files: File[] }>();
   readonly splitClick = output<void>();
+  readonly mergeClick = output<void>();
   readonly dupeCheck = output<void>();
   readonly revealInFileBrowser = output<void>();
   readonly deleteClick = output<void>();
@@ -181,6 +182,12 @@ export class PersonCard {
     event.stopPropagation();
     this.menuOpen.set(false);
     this.splitClick.emit();
+  }
+
+  protected onMergeClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpen.set(false);
+    this.mergeClick.emit();
   }
 
   protected onDupeCheckClick(event: MouseEvent): void {

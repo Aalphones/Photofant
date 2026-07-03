@@ -22,6 +22,12 @@
     outline-offset: -2px;
     background: var(--accent-weak);
   }
+
+  /* Offenes Menü braucht einen eigenen Stacking Context über den Nachbarkarten,
+     sonst gewinnt bei z-index-Gleichstand die spätere Karte im DOM (Tie-Break nach Tree Order). */
+  &--menu-open {
+    z-index: 10;
+  }
 }
 
 .person-card__link {

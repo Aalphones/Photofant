@@ -68,6 +68,10 @@
             <pf-icon name="tag" [size]="13" />
             <span>Gruppe zuweisen</span>
           </button>
+          <button class="person-card__menu-item" (click)="onMergeClick($event)">
+            <pf-icon name="merge" [size]="13" />
+            <span>Zusammenführen…</span>
+          </button>
           <button class="person-card__menu-item" (click)="onDupeCheckClick($event)">
             <pf-icon name="compare" [size]="13" />
             <span>Duplikate suchen</span>

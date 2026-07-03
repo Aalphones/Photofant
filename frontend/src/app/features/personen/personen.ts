@@ -48,6 +48,7 @@ export class Personen implements OnInit {
   protected readonly isLoading = this.store.selectSignal(personsSelectors.selectIsLoading);
   protected readonly isClustering = this.store.selectSignal(personsSelectors.selectIsClustering);
   protected readonly showMergeDialog = signal(false);
+  protected readonly mergePreselectedFrom = signal<PersonDto | null>(null);
   protected readonly showCreateDialog = signal(false);
   protected readonly splitPerson = signal<PersonDto | null>(null);
   protected readonly dupeCheckPerson = signal<PersonDto | null>(null);
@@ -166,9 +167,19 @@ export class Personen implements OnInit {
     this.personService.revealPersonFolder(person.id).subscribe();
   }
 
+  protected onMergeClick(person: PersonDto): void {
+    this.mergePreselectedFrom.set(person);
+    this.showMergeDialog.set(true);
+  }
+
   protected onMerge(event: { fromId: number; intoId: number }): void {
     this.store.dispatch(personsActions.mergePersons(event));
+    this.closeMergeDialog();
+  }
+
+  protected closeMergeDialog(): void {
     this.showMergeDialog.set(false);
+    this.mergePreselectedFrom.set(null);
   }
 
   protected onSplitClick(person: PersonDto): void {
