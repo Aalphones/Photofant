@@ -108,7 +108,7 @@ und ADR-011.
 
 - `c612681` feat(galerie): row-breaking engine for virtual scroll (P20 phase 1)
 - `76347ba` feat(frontend): virtualize gallery grid with @tanstack/angular-virtual (Phase 2/3 Ripple-Effekte)
-- Phase-3-Commit: siehe `git log` (Polish, ADR-011, Gruppierung-Cleanup) — direkt nach diesem Archivieren
+- `9bbec41` fix(galerie): polish virtual grid, close select-all and dead-toggle gaps (Phase 3)
 
 ### Deviations from plan
 
