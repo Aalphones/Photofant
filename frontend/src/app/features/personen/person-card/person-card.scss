@@ -8,9 +8,6 @@
   aspect-ratio: 3 / 4;
   overflow: visible;
   background: var(--surface);
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
   user-select: none;
   transition:
     transform 0.12s ease,
@@ -25,6 +22,15 @@
     outline-offset: -2px;
     background: var(--accent-weak);
   }
+}
+
+.person-card__link {
+  display: block;
+  position: absolute;
+  inset: 0;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .person-card__img-wrap {

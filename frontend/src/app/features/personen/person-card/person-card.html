@@ -1,41 +1,55 @@
-<a
+<div
   class="person-card"
   [class.person-card--drag-over]="isDragOver()"
   [class.person-card--menu-open]="menuOpen()"
-  [routerLink]="canNavigateToGallery ? ['/galerie'] : null"
-  [queryParams]="{ person: person().id }"
-  (click)="onCardClick($event)"
   (dragover)="onDragOver($event)"
   (dragleave)="onDragLeave()"
   (drop)="onDrop($event)"
 >
-  <!-- Bild-Hintergrund -->
-  <div class="person-card__img-wrap">
-    @if (viewMode() === 'grid4' && gridImageUrls.length > 1) {
-      <div class="person-card__img person-card__img--grid4">
-        @for (url of gridImageUrls; track url) {
-          <img [src]="url" alt="" loading="lazy" />
+  <a
+    class="person-card__link"
+    [routerLink]="canNavigateToGallery ? ['/galerie'] : null"
+    [queryParams]="{ person: person().id }"
+    (click)="onCardClick($event)"
+  >
+    <!-- Bild-Hintergrund -->
+    <div class="person-card__img-wrap">
+      @if (viewMode() === 'grid4' && gridImageUrls.length > 1) {
+        <div class="person-card__img person-card__img--grid4">
+          @for (url of gridImageUrls; track url) {
+            <img [src]="url" alt="" loading="lazy" />
+          }
+        </div>
+      } @else if (viewMode() === 'single' && singleImageUrl) {
+        <img class="person-card__img" [src]="singleImageUrl" alt="" loading="lazy" />
+      } @else if (avatarUrl) {
+        <img class="person-card__img" [src]="avatarUrl" alt="" loading="lazy" />
+      } @else {
+        <div class="person-card__img person-card__img--placeholder">
+          <pf-icon name="user" [size]="40" />
+        </div>
+      }
+    </div>
+
+    <div class="person-card__veil"></div>
+
+    <!-- ID (oben links) -->
+    <div class="person-card__id-badge" title="Personen-ID">#{{ person().id }}</div>
+
+    @if (!isEditing() && !isEditingGroup()) {
+      <div class="person-card__meta">
+        @if (person().group_name) {
+          <span class="person-card__group" [style.--chip-color]="groupColor(person().group_name!)">{{ person().group_name }}</span>
         }
-      </div>
-    } @else if (viewMode() === 'single' && singleImageUrl) {
-      <img class="person-card__img" [src]="singleImageUrl" alt="" loading="lazy" />
-    } @else if (avatarUrl) {
-      <img class="person-card__img" [src]="avatarUrl" alt="" loading="lazy" />
-    } @else {
-      <div class="person-card__img person-card__img--placeholder">
-        <pf-icon name="user" [size]="40" />
+        <span class="person-card__name">{{ displayName }}</span>
+        <span class="person-card__count">{{ person().count }} {{ person().count === 1 ? 'Bild' : 'Bilder' }}</span>
       </div>
     }
-  </div>
+  </a>
 
-  <div class="person-card__veil"></div>
-
-  <!-- ID (oben links) -->
-  <div class="person-card__id-badge" title="Personen-ID">#{{ person().id }}</div>
-
-  <!-- Aktionen: Punkte-Button + Dropdown (oben rechts) -->
+  <!-- Aktionen: Punkte-Button + Dropdown (oben rechts) — bewusst außerhalb des <a>, sonst schluckt der Link-Klick den Menü-Klick -->
   @if (!person().is_unknown) {
-    <div class="person-card__menu" (click)="$event.stopPropagation()">
+    <div class="person-card__menu">
       <button
         class="person-card__menu-toggle"
         (click)="toggleMenu($event)"
@@ -75,10 +89,10 @@
     </div>
   }
 
-  <!-- Meta (unten, im Verlauf) -->
-  <div class="person-card__meta">
-    @if (isEditing()) {
-      <div class="person-card__editor" (click)="$event.stopPropagation()">
+  <!-- Inline-Editoren: ebenfalls außerhalb des <a>, gleicher Grund -->
+  @if (isEditing()) {
+    <div class="person-card__meta">
+      <div class="person-card__editor">
         <input
           #nameInput
           class="person-card__name-input"
@@ -96,8 +110,10 @@
           </button>
         </div>
       </div>
-    } @else if (isEditingGroup()) {
-      <div class="person-card__editor" (click)="$event.stopPropagation()">
+    </div>
+  } @else if (isEditingGroup()) {
+    <div class="person-card__meta">
+      <div class="person-card__editor">
         <input
           #groupInput
           class="person-card__name-input"
@@ -116,12 +132,6 @@
           </button>
         </div>
       </div>
-    } @else {
-      @if (person().group_name) {
-        <span class="person-card__group" [style.--chip-color]="groupColor(person().group_name!)">{{ person().group_name }}</span>
-      }
-      <span class="person-card__name">{{ displayName }}</span>
-      <span class="person-card__count">{{ person().count }} {{ person().count === 1 ? 'Bild' : 'Bilder' }}</span>
-    }
-  </div>
-</a>
+    </div>
+  }
+</div>
