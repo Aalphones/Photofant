@@ -6,7 +6,7 @@ rest of the import pipeline continues unaffected.
 
 Output:
   - Crop file: <data_root>/_unknown/faces/<asset_id>_<index>.jpg
-  - Face row in DB (crop_path, bbox, embedding, phash, score, age)
+  - Face row in DB (crop_path, bbox, embedding, score, age)
   - Thumbnail in cache DB (target_kind='face')
   - ProcessingLedger.faces_done = True
 """
@@ -81,18 +81,6 @@ def _store_face_thumbnail(face_id: int, data: bytes) -> None:
     db_path = get_cache_db_path()
     init_cache_db(db_path)
     store_thumbnail(db_path, face_id, size=256, data=data, target_kind="face")
-
-
-def _compute_crop_phash(crop_path: Path) -> str | None:
-    try:
-        import imagehash
-        from PIL import Image as PILImage
-
-        img = PILImage.open(crop_path).convert("RGB")
-        return str(imagehash.dhash(img, hash_size=8))
-    except Exception:
-        log.exception("pHash failed for face crop %s", crop_path)
-        return None
 
 
 def _embedding_to_bytes(embedding: np.ndarray | None) -> bytes | None:
@@ -194,7 +182,6 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
             log.exception("Failed to save face crop for asset %d index %d", asset_id, face_index)
             continue
 
-        crop_phash = _compute_crop_phash(crop_path)
         resolution = crop_np.shape[0] * crop_np.shape[1]
 
         # Only the best-scoring face (index 0) gets the fixed-person override.
@@ -208,7 +195,6 @@ def _run_face_job(asset_id: int, asset_path: str) -> None:
                 bbox={"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3]},
                 padding=padding,
                 embedding=_embedding_to_bytes(embedding),
-                phash=crop_phash,
                 score=score,
                 age=age,
                 origin="derived",

@@ -96,7 +96,7 @@ def test_overwrite_version_rotates_file_and_updates_params(
 # ── overwrite_face ──────────────────────────────────────────────────────────
 
 
-def test_overwrite_face_rotates_crop_and_refreshes_resolution_phash(
+def test_overwrite_face_rotates_crop_and_refreshes_resolution(
     db_session: Session, tmp_path: Path, monkeypatch: object,
 ) -> None:
     _patch_cache_path(monkeypatch, tmp_path)
@@ -109,18 +109,16 @@ def test_overwrite_face_rotates_crop_and_refreshes_resolution_phash(
     _make_test_image(crop_path, dims=(20, 20))
     face = Face(
         asset_id=asset.id, person_id=person.id, crop_path=str(crop_path),
-        bbox={"x1": 0, "y1": 0, "x2": 20, "y2": 20}, resolution=400, phash="old",
+        bbox={"x1": 0, "y1": 0, "x2": 20, "y2": 20}, resolution=400,
     )
     db_session.add(face)
     db_session.commit()
 
-    old_phash = face.phash
     steps = [{"op": "mirror", "params_dict": {"axis": "h"}}]
     result = oo.overwrite_face(db_session, face, steps)
 
     assert result == {"width": 20, "height": 20}
     assert face.resolution == 400
-    assert face.phash != old_phash
 
 
 # ── overwrite_instance: single instance ─────────────────────────────────────

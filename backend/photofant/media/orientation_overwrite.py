@@ -6,7 +6,7 @@ The source file (instance/face/version target) is transformed in place at full
 resolution and dependent data is refreshed to match.
 
 Multi-instance rationale (kind="instance" only): AssetInstance.path is a
-per-person physical copy, but Asset.{content_hash,width,height,phash,file_size,
+per-person physical copy, but Asset.{content_hash,width,height,file_size,
 format} and the gallery thumbnail cache (db.cache, target_kind="asset") are
 keyed by asset_id and shared across every instance of a multi-person photo
 (see api/assets.py:_active_row, which arbitrarily picks one instance to
@@ -29,7 +29,6 @@ from photofant.db.cache import delete_thumbnails, get_cache_db_path, init_cache_
 from photofant.db.models import Asset, AssetInstance, Face, ProcessingLedger, Version
 from photofant.media.meta import compute_hash
 from photofant.media.ops import apply_op, transform_bbox
-from photofant.media.phash import compute_phash, compute_phash_hex
 from photofant.media.thumbnails import generate_thumbnail
 
 log = logging.getLogger(__name__)
@@ -98,17 +97,13 @@ def overwrite_version(db: Session, version: Version, steps: list[dict[str, Any]]
 # ── kind="face" ───────────────────────────────────────────────────────────────
 
 def overwrite_face(db: Session, face: Face, steps: list[dict[str, Any]]) -> dict[str, Any]:
-    """Overwrite a Face crop file in place; refresh resolution/phash + thumbnail."""
+    """Overwrite a Face crop file in place; refresh resolution + thumbnail."""
     path = Path(face.crop_path)
     img, _pre_size, pil_format = _render_in_place(path, steps)
     _save_in_place(img, path, pil_format)
     width, height = img.size
 
     face.resolution = width * height
-    try:
-        face.phash = compute_phash_hex(path)
-    except Exception:
-        log.exception("overwrite_face: phash computation failed for face %d", face.id)
     db.commit()
 
     cache_path = get_cache_db_path()
@@ -164,10 +159,6 @@ def overwrite_instance(db: Session, instance: AssetInstance, steps: list[dict[st
     asset.height = height
     asset.file_size = target_path.stat().st_size
     asset.format = target_pil_format.lower()
-    try:
-        asset.phash = compute_phash(target_path)
-    except Exception:
-        log.exception("overwrite_instance: asset phash computation failed for asset %d", asset.id)
 
     _rekey_processing_ledger(db, old_content_hash, new_content_hash)
 

@@ -89,16 +89,6 @@ def _import_face_file(
 
     engine = resolve_buffalo_l()
 
-    # pHash
-    face_phash: str | None = None
-    try:
-        import imagehash
-
-        img_ph = PILImage.open(file_path).convert("RGB")
-        face_phash = str(imagehash.dhash(img_ph, hash_size=8))
-    except Exception:
-        log.debug("pHash failed for %s", file_path)
-
     # Embedding
     embedding_bytes: bytes | None = None
     if engine is not None:
@@ -117,7 +107,6 @@ def _import_face_file(
             person_id=person_id,
             crop_path=str(file_path.resolve()),
             embedding=embedding_bytes,
-            phash=face_phash,
             origin="manual_original",
             created_at=_now_utc(),
         )

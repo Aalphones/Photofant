@@ -346,39 +346,34 @@ def _resolve_save_context(
     raise HTTPException(status_code=422, detail=f"Unsupported session kind: {kind!r}")
 
 
-# ── pHash-Dedupe nach Version-Save (§8.3) ────────────────────────────────────
+# ── Face-Dedupe nach Version-Save (§8.3) ─────────────────────────────────────
 
-_PHASH_QUASI_IDENTICAL_THRESHOLD = 10  # Hamming distance (64-bit dhash)
 _FACE_PADDING_VERSION = 40  # px, same as face_job default
 _FACE_CROP_QUALITY = 92
 
 
-def _phash_hamming(h1: str, h2: str) -> int:
-    """Hamming distance between two hex dhash strings."""
-    try:
-        import imagehash
-        return imagehash.hex_to_hash(h1) - imagehash.hex_to_hash(h2)
-    except Exception:
-        return 999
-
-
-def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_src: int | None) -> None:
-    """Detect faces in a newly saved version, skip quasi-duplicates via pHash (§8.3).
+def _run_version_face_dedupe(version_id: int, instance_id: int | None, face_id_src: int | None) -> None:
+    """Detect faces in a newly saved version, skip quasi-duplicates via face embeddings (§8.3).
 
     Runs in a thread after save so the HTTP response is already sent.
     No-op when buffalo_l is unavailable; logged at INFO level.
 
     P9-Upscale note: is_upscale_source flag is always False here — upscale ops
-    (§8.3 step 5: keep even if pHash-similar when resolution is clearly higher)
+    (§8.3 step 5: keep even if quasi-identical when resolution is clearly higher)
     are gated in P9. The infrastructure is wired up; only the caller sets the flag.
     """
+    import numpy as np
+
     from photofant.config import get_data_root
     from photofant.inference.adapters.buffalo_l import resolve_buffalo_l
+    from photofant.settings import load_settings
 
     engine = resolve_buffalo_l()
     if engine is None:
-        log.info("pHash-Dedupe skipped for version %d — buffalo_l not available", version_id)
+        log.info("Face-Dedupe skipped for version %d — buffalo_l not available", version_id)
         return
+
+    similarity_threshold = load_settings()["face_dedupe_similarity_threshold"]
 
     with _SessionLocal() as session:
         version = session.get(Version, version_id)
@@ -386,11 +381,11 @@ def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_
             return
         version_path = Path(version.path)
         if not version_path.exists():
-            log.warning("pHash-Dedupe: version %d file not found at %s", version_id, version.path)
+            log.warning("Face-Dedupe: version %d file not found at %s", version_id, version.path)
             return
 
-        # Collect existing phashes for lineage comparison
-        existing_phashes: list[str] = []
+        # Collect existing embeddings for lineage comparison (L2-normalized, ADR-001)
+        existing_embeddings: list[np.ndarray] = []
         if instance_id is not None:
             asset_id_row = (
                 session.query(AssetInstance)
@@ -398,42 +393,41 @@ def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_
                 .first()
             )
             if asset_id_row is not None:
-                existing_phashes = [
-                    face.phash
+                existing_embeddings = [
+                    np.frombuffer(bytes(face.embedding), dtype=np.float32)
                     for face in session.query(Face).filter(
                         Face.asset_id == asset_id_row.asset_id,
-                        Face.phash.isnot(None),
+                        Face.embedding.isnot(None),
                     ).all()
                 ]
         elif face_id_src is not None:
             source_face = session.get(Face, face_id_src)
-            if source_face is not None and source_face.phash:
-                existing_phashes = [source_face.phash]
+            if source_face is not None and source_face.embedding:
+                existing_embeddings = [np.frombuffer(bytes(source_face.embedding), dtype=np.float32)]
 
         unknown_person = session.query(Person).filter_by(is_unknown=True).first()
         if unknown_person is None:
-            log.error("pHash-Dedupe: _unknown person row missing")
+            log.error("Face-Dedupe: _unknown person row missing")
             return
         unknown_person_id = unknown_person.id
 
-    import numpy as np
     from PIL import Image as PILImage
 
     try:
         image_pil = PILImage.open(version_path).convert("RGB")
         image_np = np.array(image_pil, dtype=np.uint8)
     except Exception:
-        log.exception("pHash-Dedupe: failed to open version image %s", version_path)
+        log.exception("Face-Dedupe: failed to open version image %s", version_path)
         return
 
     try:
         faces_detected = engine.detect(image_np)
     except Exception:
-        log.exception("pHash-Dedupe: buffalo_l detection failed for version %d", version_id)
+        log.exception("Face-Dedupe: buffalo_l detection failed for version %d", version_id)
         return
 
     if not faces_detected:
-        log.info("pHash-Dedupe: no faces in version %d", version_id)
+        log.info("Face-Dedupe: no faces in version %d", version_id)
         return
 
     data_root = Path(get_data_root())
@@ -460,31 +454,21 @@ def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_
             from PIL import Image as _PILImage
             _PILImage.fromarray(crop_np).save(str(crop_path), "JPEG", quality=_FACE_CROP_QUALITY)
         except Exception:
-            log.exception("pHash-Dedupe: failed to save face crop for version %d idx %d", version_id, face_index)
+            log.exception("Face-Dedupe: failed to save face crop for version %d idx %d", version_id, face_index)
             continue
-
-        # Compute pHash
-        try:
-            import imagehash
-            crop_pil = PILImage.fromarray(crop_np).convert("RGB")
-            new_phash = str(imagehash.dhash(crop_pil, hash_size=8))
-        except Exception:
-            log.exception("pHash-Dedupe: pHash computation failed for version %d idx %d", version_id, face_index)
-            new_phash = None
 
         # P9-Upscale flag (always False in P8 — upscale ops are P9-gated)
         is_upscale_source = False
 
-        # Check quasi-identity against lineage faces
-        if new_phash and not is_upscale_source:
+        # Check quasi-identity against lineage faces (cosine via dot product, L2-normalized)
+        if embedding is not None and not is_upscale_source:
             is_duplicate = any(
-                _phash_hamming(new_phash, existing) <= _PHASH_QUASI_IDENTICAL_THRESHOLD
-                for existing in existing_phashes
-                if existing
+                float(np.dot(embedding, existing)) >= similarity_threshold
+                for existing in existing_embeddings
             )
             if is_duplicate:
                 log.info(
-                    "pHash-Dedupe: face %d of version %d is quasi-identical — skipped",
+                    "Face-Dedupe: face %d of version %d is quasi-identical — skipped",
                     face_index, version_id,
                 )
                 crop_path.unlink(missing_ok=True)
@@ -503,7 +487,6 @@ def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_
                 bbox={"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3]},
                 padding=_FACE_PADDING_VERSION,
                 embedding=embedding_bytes,
-                phash=new_phash,
                 score=score,
                 age=age,
                 origin="derived",
@@ -517,7 +500,7 @@ def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_
             saved_face_id = face_row.id
 
         log.info(
-            "pHash-Dedupe: new face %d for version %d (score=%.3f)",
+            "Face-Dedupe: new face %d for version %d (score=%.3f)",
             saved_face_id, version_id, score or 0.0,
         )
 
@@ -530,7 +513,7 @@ def _run_version_phash_dedupe(version_id: int, instance_id: int | None, face_id_
             thumb = generate_thumbnail(crop_path, size=256)
             store_thumbnail(cache_path, saved_face_id, size=256, data=thumb, target_kind="face")
         except Exception:
-            log.exception("pHash-Dedupe: thumbnail failed for face %d", saved_face_id)
+            log.exception("Face-Dedupe: thumbnail failed for face %d", saved_face_id)
 
 
 # ── Orientation-only save (rotate/mirror overwrite the source, Phase 3) ──────
@@ -731,7 +714,7 @@ async def save_session(
             await _generate_version_thumbnail(current_version.id, new_path)
             loop.run_in_executor(
                 None,
-                _run_version_phash_dedupe,
+                _run_version_face_dedupe,
                 current_version.id,
                 instance_id,
                 face_id,
@@ -760,11 +743,11 @@ async def save_session(
 
     await _generate_version_thumbnail(version.id, edit_path)
 
-    # Kick off pHash-Dedupe as a background task (§8.3) — non-blocking
+    # Kick off Face-Dedupe as a background task (§8.3) — non-blocking
     loop = asyncio.get_event_loop()
     loop.run_in_executor(
         None,
-        _run_version_phash_dedupe,
+        _run_version_face_dedupe,
         version.id,
         instance_id,
         face_id,

@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Literal
 
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -33,7 +34,6 @@ from photofant.db.session import get_session
 from photofant.jobs.collections_job import (
     enqueue_reevaluate_collection,
 )
-from photofant.media.phash import hamming_distance
 
 router = APIRouter(prefix="/collections")
 
@@ -177,7 +177,7 @@ class CollectionExportRequest(BaseModel):
 
 DupeResolution = Literal["keep_left", "keep_right", "keep_both"]
 
-_DUPE_MAX_THRESHOLD = 32
+_DUPE_MAX_THRESHOLD = 0.5  # CLIP distance cap (1 - cosine similarity)
 
 
 class CaptionActionRequest(BaseModel):
@@ -190,7 +190,7 @@ class CollectionDupePairDto(BaseModel):
     asset_b_id: int
     asset_a_content_hash: str
     asset_b_content_hash: str
-    phash_distance: int
+    clip_distance: float
     similarity_pct: int
 
 
@@ -626,12 +626,12 @@ async def apply_caption_action_to_set(
 
 @router.get("/{collection_id}/duplicates", response_model=list[CollectionDupePairDto])
 async def list_collection_duplicates(
-    collection_id: int, session: DbSession, threshold: int | None = None
+    collection_id: int, session: DbSession, threshold: float | None = None
 ) -> list[CollectionDupePairDto]:
-    """Near-dupe pairs (pHash) among active set members, for the Links-Rechts-Review.
+    """Near-dupe pairs (CLIP) among active set members, for the Links-Rechts-Review.
 
     Computed live, same reasoning as `compute_training_set_stats`: at training-set sizes
-    (bis niedrige Hunderte) the O(n²) pHash comparison is well under a second, so a
+    (bis niedrige Hunderte) the O(n²) CLIP pairwise comparison is well under a second, so a
     persisted review queue (like the library-wide `review_item` table) would be
     overengineering here.
     """
@@ -639,43 +639,50 @@ async def list_collection_duplicates(
 
     _get_collection_or_404(session, collection_id)
     settings = load_settings()
-    effective_threshold = threshold if threshold is not None else settings["dupe_threshold"]
-    effective_threshold = max(0, min(effective_threshold, _DUPE_MAX_THRESHOLD))
+    effective_threshold = (
+        threshold if threshold is not None else settings["training_near_dupe_clip_threshold"]
+    )
+    effective_threshold = max(0.0, min(effective_threshold, _DUPE_MAX_THRESHOLD))
 
     rows = (
-        session.query(Asset.id, Asset.phash, Asset.content_hash)
+        session.query(Asset.id, Asset.clip_embedding, Asset.content_hash)
         .join(CollectionItem, CollectionItem.asset_id == Asset.id)
         .join(AssetInstance, AssetInstance.asset_id == Asset.id)
         .filter(
             CollectionItem.collection_id == collection_id,
             AssetInstance.deleted_at.is_(None),
-            Asset.phash.is_not(None),
+            Asset.clip_embedding.is_not(None),
         )
         .distinct()
         .all()
     )
-    assets = [(row[0], row[1], row[2]) for row in rows]
+    assets = [(row[0], bytes(row[1]), row[2]) for row in rows]
 
     pairs: list[CollectionDupePairDto] = []
-    for i in range(len(assets)):
-        for j in range(i + 1, len(assets)):
-            id_a, phash_a, hash_a = assets[i]
-            id_b, phash_b, hash_b = assets[j]
-            distance = hamming_distance(phash_a, phash_b)
-            if distance > effective_threshold:
-                continue
-            similarity_pct = round((1.0 - distance / 64.0) * 100)
-            pairs.append(
-                CollectionDupePairDto(
-                    asset_a_id=id_a,
-                    asset_b_id=id_b,
-                    asset_a_content_hash=hash_a,
-                    asset_b_content_hash=hash_b,
-                    phash_distance=distance,
-                    similarity_pct=similarity_pct,
+    if len(assets) >= 2:
+        asset_ids = [asset_id for asset_id, _, _ in assets]
+        content_hashes = [content_hash for _, _, content_hash in assets]
+        vectors = np.stack([np.frombuffer(blob, dtype=np.float32) for _, blob, _ in assets])
+        similarities = vectors @ vectors.T
+        distances = 1.0 - similarities
+
+        for i in range(len(assets)):
+            for j in range(i + 1, len(assets)):
+                distance = float(distances[i, j])
+                if distance > effective_threshold:
+                    continue
+                similarity_pct = round((1.0 - distance) * 100)
+                pairs.append(
+                    CollectionDupePairDto(
+                        asset_a_id=asset_ids[i],
+                        asset_b_id=asset_ids[j],
+                        asset_a_content_hash=content_hashes[i],
+                        asset_b_content_hash=content_hashes[j],
+                        clip_distance=distance,
+                        similarity_pct=similarity_pct,
+                    )
                 )
-            )
-    pairs.sort(key=lambda pair: pair.phash_distance)
+    pairs.sort(key=lambda pair: pair.clip_distance)
     return pairs
 
 

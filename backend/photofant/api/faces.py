@@ -401,16 +401,6 @@ async def import_faces_direct(
             except Exception:
                 log.exception("embed_crop failed for %s", dest.name)
 
-        # pHash for the crop
-        face_phash: str | None = None
-        try:
-            import imagehash
-            from PIL import Image as PILImage
-            img_ph = PILImage.open(dest).convert("RGB")
-            face_phash = str(imagehash.dhash(img_ph, hash_size=8))
-        except Exception:
-            pass
-
         from photofant.db.models import Face as FaceModel
 
         face_row = FaceModel(
@@ -418,7 +408,6 @@ async def import_faces_direct(
             person_id=resolved_person_id,
             crop_path=str(dest.resolve()),
             embedding=embedding_bytes,
-            phash=face_phash,
             origin="manual_original",
             created_at=datetime.now(UTC).replace(tzinfo=None),
         )

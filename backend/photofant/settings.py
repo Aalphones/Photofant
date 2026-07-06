@@ -55,11 +55,12 @@ class AppSettings(TypedDict):
     blur_threshold: float
     trash_auto_days: int
     keyboard_shortcuts: dict[str, Any] | None
-    dupe_threshold: int  # deprecated — still read by collections.py pHash search (P33 Phase 2 removes it)
     dupe_clip_enabled: bool
     dupe_clip_threshold: float
     dupe_search_limit: int
     similar_clip_threshold: float
+    training_near_dupe_clip_threshold: float
+    face_dedupe_similarity_threshold: float
     face_det_conf_threshold: float
     face_det_iou_threshold: float
     face_crop_padding: int
@@ -91,11 +92,12 @@ SETTINGS_DEFAULTS: AppSettings = {
     "blur_threshold": 200.0,
     "trash_auto_days": 30,
     "keyboard_shortcuts": None,
-    "dupe_threshold": 10,
     "dupe_clip_enabled": True,
     "dupe_clip_threshold": 0.03,
     "dupe_search_limit": 20,
     "similar_clip_threshold": 0.15,
+    "training_near_dupe_clip_threshold": 0.05,
+    "face_dedupe_similarity_threshold": 0.9,
     "face_det_conf_threshold": 0.5,
     "face_det_iou_threshold": 0.45,
     "face_crop_padding": 40,
@@ -148,11 +150,12 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "blur_threshold": (float, int),
     "trash_auto_days": int,
     "keyboard_shortcuts": (dict, type(None)),
-    "dupe_threshold": int,
     "dupe_clip_enabled": bool,
     "dupe_clip_threshold": (float, int),
     "dupe_search_limit": int,
     "similar_clip_threshold": (float, int),
+    "training_near_dupe_clip_threshold": (float, int),
+    "face_dedupe_similarity_threshold": (float, int),
     "face_det_conf_threshold": (float, int),
     "face_det_iou_threshold": (float, int),
     "face_crop_padding": int,

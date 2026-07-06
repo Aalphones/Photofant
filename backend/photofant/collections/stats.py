@@ -2,7 +2,7 @@
 
 Framing-/Tag-/Qualitäts-Verteilung, AR-Bucket-Verteilung (Kohya-Style) und Near-Dupe-
 Quote für ein Trainingsset. Wird live pro Request berechnet — kein persistenter Cache:
-bei den hier üblichen Set-Größen (bis niedrige Hunderte) ist der O(n²) pHash-Paarlauf
+bei den hier üblichen Set-Größen (bis niedrige Hunderte) ist der O(n²) CLIP-Paarlauf
 unter einer Sekunde, eine Cache-Schicht wäre für diese Größenordnung Overengineering.
 
 AR-Buckets orientieren sich an den SDXL/Kohya-Basisauflösungen (512/768/1024²) — jedes
@@ -14,11 +14,11 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass, field
 
+import numpy as np
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from photofant.db.models import Asset, AssetTag, CollectionItem, Tag
-from photofant.media.phash import hamming_distance
 
 _BUCKET_BASES = (512, 768, 1024)
 
@@ -32,9 +32,6 @@ _AR_STEPS: tuple[tuple[str, float], ...] = (
     ("16:9", 16 / 9),
     ("9:16", 9 / 16),
 )
-
-_NEAR_DUPE_THRESHOLD = 8  # Hamming-Distanz — konsistent mit dupe_scan_job Default
-
 
 @dataclass
 class DistItem:
@@ -88,25 +85,35 @@ def _quality_bucket_label(index: int) -> str:
     return f"{low}-{high}%"
 
 
-def _near_dupe_rate(phashes: list[int]) -> float:
-    """Fraction of images that have at least one near-dupe partner in the set."""
-    total = len(phashes)
+def _near_dupe_rate(embeddings: list[bytes], threshold: float) -> float:
+    """Fraction of images that have at least one near-dupe partner in the set.
+
+    Embeddings are already L2-normalized (ADR-001), so cosine similarity is a
+    plain dot product; distance = 1 - similarity.
+    """
+    total = len(embeddings)
     if total < 2:
         return 0.0
+    vectors = np.stack([np.frombuffer(blob, dtype=np.float32) for blob in embeddings])
+    distances = 1.0 - (vectors @ vectors.T)
     has_partner = [False] * total
     for i in range(total):
         if has_partner[i]:
             continue
         for j in range(i + 1, total):
-            if hamming_distance(phashes[i], phashes[j]) <= _NEAR_DUPE_THRESHOLD:
+            if distances[i, j] <= threshold:
                 has_partner[i] = True
                 has_partner[j] = True
     return sum(has_partner) / total
 
 
 def compute_training_set_stats(session: Session, collection_id: int) -> TrainingSetStats:
+    from photofant.settings import load_settings
+
     rows = (
-        session.query(Asset.id, Asset.framing, Asset.quality_score, Asset.width, Asset.height, Asset.phash)
+        session.query(
+            Asset.id, Asset.framing, Asset.quality_score, Asset.width, Asset.height, Asset.clip_embedding
+        )
         .join(CollectionItem, CollectionItem.asset_id == Asset.id)
         .filter(CollectionItem.collection_id == collection_id)
         .all()
@@ -146,8 +153,9 @@ def compute_training_set_stats(session: Session, collection_id: int) -> Training
     )
     tag_frequencies = [TagFrequency(name=row.name, count=row.cnt) for row in tag_rows]
 
-    phashes = [row.phash for row in rows if row.phash is not None]
-    near_dupe_rate = _near_dupe_rate(phashes)
+    embeddings = [bytes(row.clip_embedding) for row in rows if row.clip_embedding is not None]
+    near_dupe_threshold = load_settings()["training_near_dupe_clip_threshold"]
+    near_dupe_rate = _near_dupe_rate(embeddings, near_dupe_threshold)
 
     return TrainingSetStats(
         total=total,
