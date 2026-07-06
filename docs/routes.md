@@ -468,7 +468,7 @@ Config wird gegen `caption_mode` des Modells validiert (`caption_config.py`). De
 | `/galerie` (Rerun alle) | `POST` | `/api/classify/rerun` | `RerunRequest` | `{ job_id: string }` |
 
 ```typescript
-type ClassifyStep = 'tags' | 'caption' | 'embedding' | 'heuristics' | 'faces' | 'phash' | 'categories';
+type ClassifyStep = 'tags' | 'caption' | 'embedding' | 'heuristics' | 'faces' | 'categories';
 
 interface RerunRequest {
   asset_ids: number[] | 'all';   // konkrete IDs oder gesamter Bestand
@@ -638,17 +638,13 @@ interface AssetSummaryDto {
   imported_at: string | null;
 }
 
-// Duale Duplikaterkennung (ADR-007, P11): pHash + CLIP laufen als OR-Logik parallel,
-// Nullable-Felder markieren, welche Methode das Paar gefunden hat.
+// Duplikaterkennung CLIP-only (ADR-018 löst ADR-007/ADR-006 ab, P33 Phase 1).
 interface DupePairDto {
   id: number;
   asset_a: AssetSummaryDto;
   asset_b: AssetSummaryDto;
-  phash_distance: number | null;       // Hamming-Distanz (0–64); NULL wenn nur CLIP ausgelöst hat
-  phash_similarity_pct: number | null;
-  clip_distance: number | null;        // Cosine-Distance (0.0–1.0); NULL wenn nur pHash ausgelöst hat
-  clip_similarity_pct: number | null;
-  triggered_by: 'phash' | 'clip' | 'both';
+  clip_distance: number;        // Cosine-Distance (0.0–1.0)
+  clip_similarity_pct: number;
   created_at: string;
 }
 
@@ -659,7 +655,6 @@ interface DupePageDto {
 }
 
 interface SimilarAssetDto extends AssetSummaryDto {
-  phash_distance: number | null;
   clip_distance: number | null;
   clip_similarity_pct: number | null;
 }
@@ -676,8 +671,9 @@ Aktions-Semantik (`PATCH /api/review/dupes/{id}`):
 `POST /api/jobs/dupe-scan` mit `scope='selection'` erfordert `asset_ids` (sonst `422`).
 
 `GET /api/review/dupes` — Query-Params: `offset` (Default 0), `limit` (Default 50, hart
-gedeckelt auf 200). Sortierung: exakte pHash-Treffer zuerst, dann nach `phash_distance`,
-`clip_distance`, `id`. Auto-Resolve (Papierkorb-Paare) läuft vor jeder Seite als Bulk-UPDATE.
+gedeckelt auf 200). Sortierung: nach `clip_distance`, `id` (engste Ähnlichkeit zuerst).
+Unresolved pHash-only Altbestand (`clip_distance IS NULL`) wird ausgeblendet, bis Phase 4
+ihn bereinigt. Auto-Resolve (Papierkorb-Paare) läuft vor jeder Seite als Bulk-UPDATE.
 
 ## Personen (P7 Phase 4)
 
@@ -821,7 +817,7 @@ interface PersonFaceDto {
 |---|---|---|---|---|
 | `/personen` (Bilder importieren) | `POST` | `/api/persons/{id}/import` | `multipart/form-data; files[]` | `{ job_id: string }` — IMPORT-Job mit `fixed_person=True` |
 | `/personen` (Face-Import) | `POST` | `/api/faces/import` | `multipart/form-data; files[], person_id? (Form-Feld)` | `FaceImportResult[]` |
-| `/personen` (Duplikate suchen) | `POST` | `/api/duplicates/search` | `{ person_id, threshold?, clip_threshold? }` | `PersonDupePair[]` |
+| `/personen` (Duplikate suchen) | `POST` | `/api/duplicates/search` | `{ person_id, clip_threshold? }` | `PersonDupePair[]` |
 
 ```typescript
 interface FaceImportResult {
@@ -830,18 +826,15 @@ interface FaceImportResult {
   has_embedding: boolean;
 }
 
-// Duale Duplikaterkennung (ADR-007, P11): pHash + CLIP als OR-Logik, wie DupePairDto oben.
+// Duplikaterkennung CLIP-only (ADR-018 löst ADR-007/ADR-006 ab, P33 Phase 1).
 interface PersonDupePair {
   asset_a_id: number;
   asset_b_id: number;
   asset_a_content_hash: string;
   asset_b_content_hash: string;
-  phash_distance: number | null;
-  phash_similarity_pct: number | null;
-  clip_distance: number | null;
-  clip_similarity_pct: number | null;
-  similarity_pct: number;  // vom Backend vorberechnet: max(phash_similarity_pct, clip_similarity_pct)
-  triggered_by: 'phash' | 'clip' | 'both';
+  clip_distance: number;
+  clip_similarity_pct: number;
+  similarity_pct: number;  // == clip_similarity_pct
 }
 ```
 
@@ -849,7 +842,7 @@ interface PersonDupePair {
 
 **`POST /api/faces/import`:** Das Bild IST der Face-Crop (`origin = manual_original`, `asset_id = NULL`). ArcFace berechnet das Embedding direkt (kein Detection-Schritt). Vollständig matchbar und nie durch Face-Rebuild überschreibbar.
 
-**`POST /api/duplicates/search`:** pHash- + CLIP-Vergleich aller Instanzen einer Person, OR-Logik (ADR-007). `threshold` (default 10, max 32) = maximale Hamming-Distanz (64 Bit); `clip_threshold` (default 0.15, Range 0.05–0.30) = maximale CLIP-Cosine-Distance. `similarity_pct = max(phash_similarity_pct, clip_similarity_pct)`.
+**`POST /api/duplicates/search`:** CLIP-Vergleich aller Instanzen einer Person (ADR-018). `clip_threshold` (default: aktueller `dupe_clip_threshold`-Setting, Range 0.01–0.30) = maximale CLIP-Cosine-Distance.
 
 **Rebuild-Target `faces`:** `POST /api/maintenance/rebuild` mit `{ target: "faces" }` re-extrahiert alle abgeleiteten Face-Crops aus den Quell-Bildern (BBox + Padding). Faces mit `origin = manual_original` bleiben unberührt.
 

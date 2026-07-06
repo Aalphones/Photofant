@@ -309,8 +309,8 @@ Zwei Review-Typen teilen sich die Tabelle: offene Duplikat-Paare (`dupe_candidat
 | `type` | TEXT | `dupe_candidate` · `face_suggestion` |
 | `asset_a_id` | INTEGER FK → `asset.id` | dupe_candidate: kleinere ID. face_suggestion: gleiche Asset-ID wie `asset_b_id` (Hack, siehe unten) |
 | `asset_b_id` | INTEGER FK → `asset.id` | dupe_candidate: größere ID. face_suggestion: = `asset_a_id` |
-| `phash_distance` | INTEGER | nullable; Hamming-Distanz (0–64) — NULL wenn das Paar nur per CLIP gefunden wurde, oder bei `face_suggestion` immer 0 |
-| `clip_distance` | REAL | nullable; CLIP Cosine-Distance (0.0–1.0) — NULL wenn das Paar nur per pHash gefunden wurde |
+| `phash_distance` | INTEGER | nullable; **deprecated** (P33 Phase 1) — kein Code schreibt sie mehr, nur noch auf Alt-Zeilen aus der pHash-Ära gesetzt; Spalte fällt in Phase 4 |
+| `clip_distance` | REAL | nullable; CLIP Cosine-Distance (0.0–1.0) — bei `dupe_candidate` seit P33 Phase 1 die einzige Distanz; NULL nur bei Alt-Zeilen aus der pHash-Ära |
 | `created_at` | DATETIME | UTC naive; nicht null |
 | `resolved_at` | DATETIME | nullable; gesetzt bei Entscheidung |
 | `resolution` | TEXT | nullable: `a_is_original` · `b_is_original` · `delete_a` · `delete_b` · `dismiss` (dupe_candidate); `confirmed` · `rejected` · `reassigned:<id>` (face_suggestion) |

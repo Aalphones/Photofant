@@ -8,7 +8,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -16,10 +15,9 @@ from photofant.comfyui.client import ComfyUIClient, ComfyUIError
 from photofant.comfyui.introspect import SAVE_IMAGE_CLASSES
 from photofant.config import get_data_root
 from photofant.db.cache import get_cache_db_path, init_cache_db, store_thumbnail
-from photofant.db.models import Asset, AssetInstance, Person, ProcessingLedger, ReviewItem
+from photofant.db.models import Asset, AssetInstance, Person, ProcessingLedger
 from photofant.media.meta import read_meta
 from photofant.media.person_folders import ensure_person_folder
-from photofant.media.phash import compute_phash, find_similar
 from photofant.media.thumbnails import generate_thumbnail
 
 log = logging.getLogger(__name__)
@@ -135,10 +133,11 @@ def import_comfyui_output(
 ) -> ImportedComfyUIAsset:
     """Import a ComfyUI result as a full new Asset, linked via `original_id` (ADR-013).
 
-    Runs the same pipeline steps as a normal photo import (hash, `ProcessingLedger`,
-    pHash + dupe review) but stays synchronous — the caller (async context) must
-    additionally await `enqueue_post_import_pipeline([(asset_id, path)])` since job
-    enqueueing is async and this function is also invoked from worker threads.
+    Runs the same pipeline steps as a normal photo import (hash, `ProcessingLedger`)
+    but stays synchronous — the caller (async context) must additionally await
+    `enqueue_post_import_pipeline([(asset_id, path)])` since job enqueueing is async
+    and this function is also invoked from worker threads. Dupe detection happens
+    later, after the embedding job runs (Phase 1, ADR-018).
     """
     source_instance = (
         session.query(AssetInstance)
@@ -193,31 +192,6 @@ def import_comfyui_output(
         session.rollback()
         destination.unlink(missing_ok=True)
         raise ValueError("ComfyUI-Ergebnis wurde bereits parallel importiert") from None
-
-    try:
-        phash_val = compute_phash(destination)
-        new_asset.phash = phash_val
-        session.commit()
-
-        from photofant.settings import load_settings
-
-        dupe_threshold = load_settings()["dupe_threshold"]
-        similar = find_similar(session, phash_val, new_asset.id, dupe_threshold)
-        for other_id, distance in similar:
-            asset_a_id, asset_b_id = min(new_asset.id, other_id), max(new_asset.id, other_id)
-            stmt = sqlite_insert(ReviewItem).values(
-                type="dupe_candidate",
-                asset_a_id=asset_a_id,
-                asset_b_id=asset_b_id,
-                phash_distance=distance,
-                created_at=_now_utc(),
-            ).on_conflict_do_nothing()
-            session.execute(stmt)
-        if similar:
-            session.commit()
-    except Exception:
-        log.exception("pHash/dupe-detection failed for ComfyUI import %s", destination)
-        session.rollback()
 
     generate_asset_thumbnails(new_asset.id, destination)
     log.info(

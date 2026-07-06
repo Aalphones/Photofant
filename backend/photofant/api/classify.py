@@ -10,7 +10,7 @@ from photofant.jobs.queue import JobStatus
 
 router = APIRouter(prefix="/classify")
 
-ClassifyStep = Literal["tags", "caption", "embedding", "heuristics", "faces", "phash", "categories"]
+ClassifyStep = Literal["tags", "caption", "embedding", "heuristics", "faces", "categories"]
 
 
 class RerunRequest(BaseModel):

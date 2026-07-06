@@ -8,7 +8,7 @@ zweiten, schwächeren Vergleichsweg. Supersedes ADR-006, baut auf ADR-007 auf.
 
 | Phase | Thema | Komplexität | Status |
 |---|---|---|---|
-| 1 | Dupe-Pipeline Backend (Embedding-Hook, Scan, APIs) | standard | pending |
+| 1 | Dupe-Pipeline Backend (Embedding-Hook, Scan, APIs) | standard | complete |
 | 2 | Trainingssets + Face-Dedupe Backend | standard | pending |
 | 3 | Frontend-Anpassung | mechanisch | pending |
 | 4 | Ausbau: DB-Migration, Modul-Löschung, Docs, ADR-018 | mechanisch | pending |

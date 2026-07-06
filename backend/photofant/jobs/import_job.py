@@ -8,15 +8,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import select
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 
 from photofant.config import get_data_root
-from photofant.db.models import Asset, AssetInstance, Person, ProcessingLedger, ReviewItem
+from photofant.db.models import Asset, AssetInstance, Person, ProcessingLedger
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.media.meta import SUPPORTED_EXTENSIONS, ImageMeta, read_meta
-from photofant.media.phash import compute_phash, find_similar
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +29,7 @@ def _dest_path(data_root: Path, meta: ImageMeta, source_path: Path) -> Path:
     return data_root / "_unknown" / "photos" / filename
 
 
-def _import_single(source_path: Path, dupe_threshold: int) -> tuple[int, str] | None:
+def _import_single(source_path: Path) -> tuple[int, str] | None:
     """Import one file; return (asset_id, dest_path) if newly imported, None if duplicate."""
     meta = read_meta(source_path)
 
@@ -94,36 +92,6 @@ def _import_single(source_path: Path, dupe_threshold: int) -> tuple[int, str] | 
             log.info("Duplicate detected on commit for %s — skipped", source_path.name)
             return None
 
-        # --- pHash + dupe detection (separate commit so import stays intact on failure) ---
-        try:
-            phash_val = compute_phash(dest)
-            asset.phash = phash_val
-            session.commit()
-
-            similar = find_similar(session, phash_val, asset.id, dupe_threshold)
-            for other_id, distance in similar:
-                asset_a_id = min(asset.id, other_id)
-                asset_b_id = max(asset.id, other_id)
-                stmt = sqlite_insert(ReviewItem).values(
-                    type="dupe_candidate",
-                    asset_a_id=asset_a_id,
-                    asset_b_id=asset_b_id,
-                    phash_distance=distance,
-                    created_at=_now_utc(),
-                ).on_conflict_do_nothing()
-                session.execute(stmt)
-            if similar:
-                session.commit()
-                log.info(
-                    "pHash: %d similar asset(s) found for %s (threshold=%d)",
-                    len(similar),
-                    source_path.name,
-                    dupe_threshold,
-                )
-        except Exception:
-            log.exception("pHash/dupe-detection failed for %s — continuing", source_path.name)
-            session.rollback()
-
         return asset.id, str(dest.resolve())
 
 
@@ -155,11 +123,6 @@ def _expand_paths(raw_paths: list[str]) -> list[Path]:
 
 
 async def run_import_job(status: JobStatus, paths: list[str]) -> None:
-    from photofant.settings import load_settings
-
-    settings = load_settings()
-    dupe_threshold = settings["dupe_threshold"]
-
     files = _expand_paths(paths)
     total = len(files)
     imported = 0
@@ -178,7 +141,7 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
             log.info("Skipping unsupported format: %s", source_path.suffix)
             skipped += 1
         else:
-            result = await asyncio.to_thread(_import_single, source_path, dupe_threshold)
+            result = await asyncio.to_thread(_import_single, source_path)
             if result is not None:
                 imported_items.append(result)
                 imported += 1
@@ -214,7 +177,6 @@ def _is_scannable(file_path: Path, data_root: Path) -> bool:
 def _import_to_person(
     source_path: Path,
     person_id: int,
-    dupe_threshold: int,
 ) -> tuple[int, str] | None:
     """Import a file dropped into a person folder (FS-Drop, §6.1a).
 
@@ -298,29 +260,6 @@ def _import_to_person(
             log.info("FS-Drop: duplicate on commit for %s — skipped", source_path.name)
             return None
 
-        try:
-            phash_val = compute_phash(source_path)
-            asset.phash = phash_val
-            session.commit()
-
-            similar = find_similar(session, phash_val, asset.id, dupe_threshold)
-            for other_id, distance in similar:
-                asset_a_id = min(asset.id, other_id)
-                asset_b_id = max(asset.id, other_id)
-                stmt = sqlite_insert(ReviewItem).values(
-                    type="dupe_candidate",
-                    asset_a_id=asset_a_id,
-                    asset_b_id=asset_b_id,
-                    phash_distance=distance,
-                    created_at=_now_utc(),
-                ).on_conflict_do_nothing()
-                session.execute(stmt)
-            if similar:
-                session.commit()
-        except Exception:
-            log.exception("pHash/dupe-detection failed for FS-Drop %s", source_path.name)
-            session.rollback()
-
         log.info("FS-Drop: new asset %d from %s → person %d", asset.id, source_path.name, person_id)
         return asset.id, str(source_path.resolve())
 
@@ -333,10 +272,6 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     Supports both legacy person_{id}/ folders and current named-person folders.
     """
     from photofant.media.person_folders import is_importable_person_subfolder, person_id_from_path
-    from photofant.settings import load_settings
-
-    settings = load_settings()
-    dupe_threshold = settings["dupe_threshold"]
 
     candidates: list[Path] = []
     for extension in SUPPORTED_EXTENSIONS:
@@ -368,9 +303,9 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     total = len(path_assignments)
     for index, (file_path, pid) in enumerate(path_assignments):
         if pid is not None:
-            result = await asyncio.to_thread(_import_to_person, file_path, pid, dupe_threshold)
+            result = await asyncio.to_thread(_import_to_person, file_path, pid)
         else:
-            result = await asyncio.to_thread(_import_single, file_path, dupe_threshold)
+            result = await asyncio.to_thread(_import_single, file_path)
         if result is not None:
             imported_items.append(result)
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
@@ -381,17 +316,12 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
 
 async def run_person_import_job(status: JobStatus, person_id: int, paths: list[str]) -> None:
     """Import files that were uploaded directly to a person's folder (fixed_person)."""
-    from photofant.settings import load_settings
-
-    settings = load_settings()
-    dupe_threshold = settings["dupe_threshold"]
-
     total = len(paths)
     imported_items: list[tuple[int, str]] = []
 
     for index, path_str in enumerate(paths):
         file_path = Path(path_str)
-        result = await asyncio.to_thread(_import_to_person, file_path, person_id, dupe_threshold)
+        result = await asyncio.to_thread(_import_to_person, file_path, person_id)
         if result is not None:
             imported_items.append(result)
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)

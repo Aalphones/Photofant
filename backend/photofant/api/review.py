@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, cast
 
@@ -18,7 +17,6 @@ from photofant.config import get_data_root
 from photofant.db import vector_index
 from photofant.db.models import Asset, AssetInstance, ReviewItem
 from photofant.db.session import get_session
-from photofant.media.phash import find_similar
 
 log = logging.getLogger(__name__)
 
@@ -49,12 +47,8 @@ class DupePairDto(BaseModel):
     id: int
     asset_a: AssetSummaryDto
     asset_b: AssetSummaryDto
-    # Nullable: pairs found by only one method have no distance from the other.
-    phash_distance: int | None
-    phash_similarity_pct: int | None
-    clip_distance: float | None
-    clip_similarity_pct: int | None
-    triggered_by: Literal["phash", "clip", "both"]
+    clip_distance: float
+    clip_similarity_pct: int
     created_at: datetime
 
 
@@ -64,7 +58,6 @@ class DupePageDto(BaseModel):
 
 
 class SimilarAssetDto(AssetSummaryDto):
-    phash_distance: int | None = None
     clip_distance: float | None = None
     clip_similarity_pct: int | None = None
 
@@ -88,26 +81,19 @@ def _to_summary(asset: Asset) -> AssetSummaryDto:
 
 
 def _to_pair_dto(item: ReviewItem, asset_a: Asset, asset_b: Asset) -> DupePairDto:
-    phash_similarity_pct = (
-        round((1.0 - item.phash_distance / 64.0) * 100) if item.phash_distance is not None else None
-    )
-    clip_similarity_pct = (
-        round((1.0 - item.clip_distance) * 100) if item.clip_distance is not None else None
-    )
-    triggered_by: Literal["phash", "clip", "both"] = (
-        "both"  if item.phash_distance is not None and item.clip_distance is not None else
-        "phash" if item.phash_distance is not None else
-        "clip"
-    )
+    if item.clip_distance is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Legacy pHash-only Duplikat ohne CLIP-Distanz — wird mit der naechsten "
+            "Duplikat-Bereinigung entfernt (ADR-018)",
+        )
+    clip_similarity_pct = round((1.0 - item.clip_distance) * 100)
     return DupePairDto(
         id=item.id,
         asset_a=_to_summary(asset_a),
         asset_b=_to_summary(asset_b),
-        phash_distance=item.phash_distance,
-        phash_similarity_pct=phash_similarity_pct,
         clip_distance=item.clip_distance,
         clip_similarity_pct=clip_similarity_pct,
-        triggered_by=triggered_by,
         created_at=item.created_at,
     )
 
@@ -148,7 +134,7 @@ def _auto_resolve_trashed_pairs(session: Session) -> None:
 async def list_dupe_pairs(session: DbSession, offset: int = 0, limit: int = 50) -> DupePageDto:
     """Return a page of unresolved dupe-candidate pairs with full asset data on both sides.
 
-    Actionable-first sort: exact pHash matches before CLIP-only matches, then by distance.
+    Sorted by CLIP distance ascending (closest match first).
     """
     offset = max(offset, 0)
     limit = min(max(limit, 1), 200)
@@ -160,6 +146,9 @@ async def list_dupe_pairs(session: DbSession, offset: int = 0, limit: int = 50) 
     base_filters = (
         ReviewItem.type == "dupe_candidate",
         ReviewItem.resolved_at.is_(None),
+        # Legacy pHash-only candidates (clip_distance IS NULL) are pre-migration
+        # leftovers — Phase 4 purges them once the phash columns drop (ADR-018).
+        ReviewItem.clip_distance.is_not(None),
     )
     # INNER JOIN on both sides: a review_item whose asset_b (or asset_a) no longer
     # exists is silently excluded, instead of the former warn-and-skip in Python.
@@ -176,12 +165,7 @@ async def list_dupe_pairs(session: DbSession, offset: int = 0, limit: int = 50) 
 
     rows = session.execute(
         joined
-        .order_by(
-            ReviewItem.phash_distance.is_(None),
-            ReviewItem.phash_distance,
-            ReviewItem.clip_distance,
-            ReviewItem.id,
-        )
+        .order_by(ReviewItem.clip_distance, ReviewItem.id)
         .offset(offset)
         .limit(limit)
     ).all()
@@ -239,16 +223,9 @@ async def resolve_dupe(item_id: int, body: ResolveRequest, session: DbSession) -
     return _to_pair_dto(item, asset_a, asset_b)
 
 
-@dataclass
-class _SimilarMatch:
-    """Per-asset distances found by each method — UNION merge, like the scan job."""
-    phash_distance: int | None = None
-    clip_distance: float | None = None
-
-
 @router.get("/assets/{asset_id}/similar", response_model=list[SimilarAssetDto])
 async def get_similar_assets(asset_id: int, session: DbSession) -> list[SimilarAssetDto]:
-    """Return assets similar to the given one (ad-hoc pHash + CLIP search, for Lightbox)."""
+    """Return assets similar to the given one (ad-hoc CLIP search, for Lightbox)."""
     from photofant.settings import load_settings
 
     asset = session.get(Asset, asset_id)
@@ -256,15 +233,10 @@ async def get_similar_assets(asset_id: int, session: DbSession) -> list[SimilarA
         raise HTTPException(status_code=404, detail="Asset not found")
 
     settings = load_settings()
-    phash_enabled: bool = settings["dupe_phash_enabled"]
     clip_enabled: bool = settings["dupe_clip_enabled"]
     clip_threshold: float = settings["similar_clip_threshold"]
 
-    matches: dict[int, _SimilarMatch] = {}
-
-    if phash_enabled and asset.phash is not None:
-        for similar_id, distance in find_similar(session, asset.phash, asset_id, 0):
-            matches.setdefault(similar_id, _SimilarMatch()).phash_distance = distance
+    matches: dict[int, float] = {}
 
     if clip_enabled and asset.clip_embedding is not None:
         query_embedding = np.frombuffer(asset.clip_embedding, dtype=np.float32)
@@ -274,34 +246,19 @@ async def get_similar_assets(asset_id: int, session: DbSession) -> list[SimilarA
             clip_distance = 1.0 - cosine_similarity
             if clip_distance > clip_threshold:
                 continue
-            matches.setdefault(similar_id, _SimilarMatch()).clip_distance = clip_distance
+            matches[similar_id] = clip_distance
 
     result: list[SimilarAssetDto] = []
-    for similar_id, match in matches.items():
+    for similar_id, clip_distance in matches.items():
         similar_asset = session.get(Asset, similar_id)
         if similar_asset is None:
             continue
-        clip_similarity_pct = (
-            round((1.0 - match.clip_distance) * 100) if match.clip_distance is not None else None
-        )
+        clip_similarity_pct = round((1.0 - clip_distance) * 100)
         result.append(SimilarAssetDto(
             **_to_summary(similar_asset).model_dump(),
-            phash_distance=match.phash_distance,
-            clip_distance=match.clip_distance,
+            clip_distance=clip_distance,
             clip_similarity_pct=clip_similarity_pct,
         ))
 
-    def _best_score(dto: SimilarAssetDto) -> float:
-        # Normalize pHash (0-64) onto the same 0-1 scale as CLIP cosine-distance
-        # so the UNION can be sorted by "best" match regardless of which method found it.
-        candidates = [
-            value for value in (
-                dto.phash_distance / 64 if dto.phash_distance is not None else None,
-                dto.clip_distance,
-            )
-            if value is not None
-        ]
-        return min(candidates) if candidates else 1.0
-
-    result.sort(key=_best_score)
+    result.sort(key=lambda dto: dto.clip_distance if dto.clip_distance is not None else 1.0)
     return result
