@@ -580,15 +580,10 @@ interface AssetDetailDto {
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
 | — (kein Frontend-Aufrufer, siehe unten) | `POST` | `/api/search/semantic` | `SemanticSearchRequest` | `SemanticSearchResponse` |
-| `pf-search-box` (jede Route, sobald `query` nicht leer, 600ms-Debounce, `SearchService.warmSemantic`) | `POST` | `/api/search/warm` | — | `204 No Content` |
 
-**`POST /api/search/warm` (P28 Phase 3):** Prewarm-Endpoint gegen den Kaltstart der CLIP-Textsession
-(`session_manager` evictet nach 5 Min. Idle, Neuladen kostete gemessen **~9.4s kalt** vs. **~18ms warm**).
-Lädt/hält die Text-Session per `CLIPEmbedder.warm_text()` warm, **ohne** eine echte Embedding-Berechnung
-auszulösen — kein Suchtreffer, kein DB-Zugriff. No-op (still `204`), wenn das CLIP-Modell deaktiviert ist.
-Die Suchleiste feuert ihn fire-and-forget, sobald ein Semantik-Vorschlag im Dropdown erscheinen könnte,
-mit großzügigerem Debounce als die Tag-/Personen-Vorschläge (300ms), damit nicht jeder Tastendruck einen
-Warm-Request auslöst.
+Der frühere `POST /api/search/warm`-Prewarm (P28 Phase 3) wurde entfernt: er lud beim Tippen die
+CLIP-Textsession (~9s kalt) und blockierte damit den Personen-/Tag-Klick, obwohl der gar kein CLIP
+braucht. Die semantische Suche zahlt den Kaltstart jetzt einmalig beim ersten Aufruf.
 
 `POST /api/search/semantic` ist ein eigenständiger Endpoint aus P5, bevor die Suchleiste existierte
 („bis dahin API"). Er wird **von keiner Frontend-Stelle aufgerufen** (verifiziert per Grep,
@@ -1013,3 +1008,22 @@ invalid.
 comfyui.result_poll_interval_seconds = 1.0
 comfyui.result_wait_timeout_seconds = 1800
 ```
+
+## MCP-Schnittstelle (ADR-019 · Plan `2026-07-06_mcp-schnittstelle`)
+
+Kein REST-Router, sondern ein ASGI-Mount unter **`/mcp`** (Streamable-HTTP, offizielles
+`mcp`-SDK). Ein lokaler MCP-Client verbindet sich auth-frei gegen
+`http://127.0.0.1:<backend-port>/mcp`. Zugriff nur bei `mcp.enabled=true` (sonst 404,
+live per Middleware, ohne Neustart) und nur mit Loopback-`Host`/`Origin` (sonst 403).
+
+Die Einstellungen (`mcp`-Block) laufen über den generischen `PATCH /api/config` — keine
+eigene Route. Werkzeuge (Tools) statt Endpunkte; sie rufen intern die vorhandenen
+`api/*.py`-Funktionen über `mcp/adapter.py:run_endpoint()` auf.
+
+| Tool | Phase | Wirkung |
+|---|---|---|
+| `ping` | 1 | Erreichbarkeits-Check — gibt Bildzahl + DB-Pfad zurück (beweist den Tool→Endpoint-Adapter) |
+
+> Weitere Tools kommen phasenweise dazu (Phase 2: Finden & Ansehen inkl. `view_photo`;
+> Phase 3: Metadaten & Tags; Phase 4: Personen & Faces; Phase 5: Import/Organisieren/Duplikate;
+> Phase 6: Wartung). Destruktive Tools verlangen `confirm=true` (`mcp.require_confirm`).

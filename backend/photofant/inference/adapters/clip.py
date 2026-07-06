@@ -103,18 +103,6 @@ class CLIPEmbedder:
         embedding = _pick_embedding(outputs, "image_embeds")[0]
         return _l2_normalize(embedding)
 
-    def warm_text(self) -> None:
-        """Force-load the text encoder session without running inference.
-
-        Used to prewarm the session in the background (e.g. while the user is
-        still typing) so the actual `embed_text` call later hits an already
-        loaded session instead of paying the multi-second cold-load cost.
-        """
-        from photofant.inference.session_manager import session_manager
-
-        session_manager.acquire_session(self._text_path)
-        session_manager.release_session(self._text_path)
-
     def embed_text(self, text: str) -> np.ndarray:
         from photofant.inference.session_manager import session_manager
 

@@ -85,22 +85,6 @@ def _active_asset_ids(session: Session, asset_ids: list[int]) -> set[int]:
     return {row[0] for row in rows}
 
 
-@router.post("/warm", status_code=204)
-async def warm_semantic_search() -> None:
-    """Prewarm the CLIP text encoder session in the background.
-
-    Fired by the search box as soon as a semantic suggestion could be chosen
-    (P28 Phase 3) so the session is already loaded once the user actually
-    picks it — no-op if the CLIP model isn't enabled.
-    """
-    from photofant.inference.adapters.clip import resolve_clip_embedder
-
-    embedder = resolve_clip_embedder()
-    if embedder is None:
-        return
-    await asyncio.to_thread(embedder.warm_text)
-
-
 @router.post("/semantic", response_model=SemanticSearchResponse)
 async def semantic_search(body: SemanticSearchRequest, session: DbSession) -> SemanticSearchResponse:
     has_query = bool(body.query and body.query.strip())
