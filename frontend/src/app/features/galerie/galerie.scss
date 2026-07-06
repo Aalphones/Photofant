@@ -43,6 +43,11 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
+  // Body ist align-items: flex-start (damit die Filter-Rail nicht streckt) —
+  // main MUSS aber auf volle Body-Höhe strecken, sonst wächst es mit dem Inhalt
+  // und der height:100%-Scroll-Container im Grid scrollt nie (→ Virtualizer hält
+  // alles für sichtbar → Auto-Nachladen rattert die ganze Bibliothek durch).
+  align-self: stretch;
   display: flex;
   flex-direction: column;
 }

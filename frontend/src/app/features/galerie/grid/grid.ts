@@ -99,7 +99,15 @@ export class GalerieGrid {
     effect(() => {
       const range = this.virtualizer.range();
       const totalRows = this.rows().length;
+      // Harte Bremse: nur nachladen, wenn der Container tatsächlich scrollbaren
+      // Überhang hat. Ohne diese Prüfung feuert der Effekt nach jeder geladenen
+      // Seite erneut, solange der Virtualizer-Range am Listenende klebt (z.B. wenn
+      // die Höhenkette bricht und der Container nie scrollt) — und lädt so ohne
+      // Zutun die ganze Bibliothek Seite für Seite durch.
+      const scrollContainer = this.scrollEl().nativeElement;
+      const hasScrollableOverflow = scrollContainer.scrollHeight > scrollContainer.clientHeight;
       if (
+        hasScrollableOverflow &&
         range !== null &&
         totalRows > 0 &&
         range.endIndex >= totalRows - OVERSCAN - 3 &&
