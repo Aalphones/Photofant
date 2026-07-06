@@ -1,15 +1,17 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-06-30_p20-virtual-scroll-galerie/`
-**Phase:** 3/3 — Polish & ADR (fertig, `9bbec41` committet)
-**Nächster Schritt:** Smoke-Checkliste (README.md) vom User prüfen lassen, danach
-Doc-Abgleich + Archivieren nach `docs/archive/2026-07/`.
+**Aktiver Plan:** (kein aktiver Plan)
+**Nächster Schritt:** Nächstes Item aus dem Backlog wählen — Kandidaten:
+`docs/planning/2026-07-01_p22-knowledge-engine/` … `p27-gemma-integration/`
+(Wissensbasis-Kette, sequenziell) oder `docs/planning/2026-07-03_p33-phash-abloesung/`
+(alle Phasen noch `pending`).
 
-P20 (Virtual Scroll Galerie) komplett umgesetzt: `tsc`/`ng build` sauber. Zusätzlich zum
+P20 (Virtual Scroll Galerie) fertig, Smoketest vom User bestanden, archiviert nach
+`docs/archive/2026-07/2026-06-30_p20-virtual-scroll-galerie/`. Zusätzlich zum
 Plan-Scope wurden zwei aus dem Umbau entstandene tote UI-Stellen gefixt/entfernt
-(„Alle auswählen" unerreichbar, „Gruppierung"-Button wirkungslos) — mit User abgestimmt,
-Details in FINDINGS.md/ADR-011.
+(„Alle auswählen" unerreichbar, „Gruppierung"-Button wirkungslos) — Details in
+FINDINGS.md/ADR-011 im Archiv-Ordner.
 
 P18 (Bildklassifizierung) komplett fertig und archiviert nach
 `docs/archive/2026-07/2026-06-30_p18-bildklassifizierung/`. Smoke-Checkliste P18 an User
-noch offen. Rest im Backlog: p22-p27 (Wissensbasis-Kette, sequenziell).
+noch offen.

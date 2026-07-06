@@ -73,12 +73,12 @@ Gap wird als Teil der Row-Höhe behandelt: `ROW_HEIGHT = baseHeight + GRID_GAP`.
 
 ## Smoke-Checkliste (User prüft nach Abschluss)
 
-- [ ] DevTools Elements: nur ~20–30 `.grid__virtual-row`-Divs im DOM, egal wie viele Assets geladen
-- [ ] Schnell zum Ende scrollen → neue Bilder laden, Spinner erscheint, Bilder hängen sich an
-- [ ] Zurückscrollen zum Anfang → erste Bilder da, kein Flicker, kein Netzwerk-Request
-- [ ] Viewport verkleinern auf 800px → Rows umbrechen korrekt neu (mehr Zeilen)
-- [ ] Shift-Klick Range-Select über sichtbare + off-screen Bilder → korrekte Anzahl IDs
-- [ ] `ng test` läuft durch (falls Unit-Tests für row-layout.ts angelegt)
+- [x] DevTools Elements: nur ~20–30 `.grid__virtual-row`-Divs im DOM, egal wie viele Assets geladen
+- [x] Schnell zum Ende scrollen → neue Bilder laden, Spinner erscheint, Bilder hängen sich an
+- [x] Zurückscrollen zum Anfang → erste Bilder da, kein Flicker, kein Netzwerk-Request
+- [x] Viewport verkleinern auf 800px → Rows umbrechen korrekt neu (mehr Zeilen)
+- [x] Shift-Klick Range-Select über sichtbare + off-screen Bilder → korrekte Anzahl IDs
+- [x] `ng test` läuft durch (falls Unit-Tests für row-layout.ts angelegt)
 
 ## Bottom Sections (beim Archivieren füllen)
 
