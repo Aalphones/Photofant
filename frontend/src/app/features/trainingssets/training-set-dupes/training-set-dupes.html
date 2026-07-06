@@ -9,17 +9,24 @@
 </div>
 
 <div class="threshold-row">
-  <label class="rules-block__label" for="ts-dupe-threshold">Schwelle (Hamming-Distanz)</label>
+  <label class="rules-block__label" for="ts-dupe-threshold">
+    Ähnlichkeit ≥
+    <span class="mono">{{ similarityPct() }}</span> %
+    <i
+      class="ts-dupe-info"
+      title="100 % = praktisch identisch, 95 % = sehr ähnlich"
+      aria-label="100 % = praktisch identisch, 95 % = sehr ähnlich"
+    >ⓘ</i>
+  </label>
   <div class="threshold-control">
     <input
       id="ts-dupe-threshold"
       type="range"
-      min="0"
-      max="24"
-      [value]="threshold()"
-      (input)="onThresholdChange(+$any($event.target).value)"
+      min="50"
+      max="99"
+      [value]="similarityPct()"
+      (input)="onSimilarityPctChange(+$any($event.target).value)"
     />
-    <span class="mono">{{ threshold() }}</span>
   </div>
   <button class="pbtn pbtn--ghost" (click)="fetch()">
     <pf-icon name="refresh" [size]="13" /> Neu suchen

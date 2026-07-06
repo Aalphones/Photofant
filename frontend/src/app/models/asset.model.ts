@@ -85,7 +85,7 @@ export interface AssetDto {
   favourite: boolean;
   version_count: number;
   generation_meta: Record<string, unknown> | null;
-  has_phash: boolean;
+  has_embedding: boolean;
   // P21 — Stapel: Original + Editor-Dialog-Versionen + ComfyUI-original_id-Kinder
   kind: 'asset' | 'version';
   version_id: number | null;
@@ -113,7 +113,6 @@ export interface SimilarAsset {
   file_size: number | null;
   created_at: string | null;
   imported_at: string | null;
-  phash_distance: number | null;
   clip_distance: number | null;
   clip_similarity_pct: number | null;
 }

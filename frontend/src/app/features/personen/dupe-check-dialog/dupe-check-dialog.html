@@ -65,14 +65,6 @@
                     ></div>
                   </div>
                   <span class="dupe-check-dialog__pct">{{ pair.similarity_pct }}% ähnlich</span>
-                  <div class="dupe-check-dialog__scores">
-                    @if (pair.phash_similarity_pct !== null) {
-                      <span class="dupe-check-dialog__score-line">Pixel-Ähnlichkeit: {{ pair.phash_similarity_pct }}%</span>
-                    }
-                    @if (pair.clip_similarity_pct !== null) {
-                      <span class="dupe-check-dialog__score-line">Inhalts-Ähnlichkeit: {{ pair.clip_similarity_pct }}%</span>
-                    }
-                  </div>
                   <span class="dupe-check-dialog__ids">
                     #{{ pair.asset_a_id }} · #{{ pair.asset_b_id }}
                   </span>

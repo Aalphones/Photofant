@@ -15,7 +15,7 @@ import numpy as np
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
-from sqlalchemy import asc, desc, func, or_
+from sqlalchemy import asc, desc, func, or_, select
 from sqlalchemy.orm import Query as OrmQuery
 from sqlalchemy.orm import Session
 
@@ -81,7 +81,7 @@ class AssetDto(BaseModel):
     favourite: bool
     version_count: int
     generation_meta: dict | None  # type: ignore[type-arg]
-    has_phash: bool
+    has_embedding: bool
     # P21 — Stapel (Original + Editor-Dialog-Versionen + ComfyUI-original_id-Kinder):
     kind: str = "asset"  # "asset" | "version" — pseudo-entry for a version row
     version_id: int | None = None  # set when kind == "version"
@@ -225,7 +225,15 @@ def build_asset_dto(
     *,
     stack_size: int = 1,
     stack_group_id: int | None = None,
+    has_embedding: bool | None = None,
 ) -> AssetDto:
+    # `clip_embedding` is a deferred BLOB column (see db/models.py) — touching it per
+    # instance in a list loop would trigger one extra SELECT per row. Callers that build
+    # many DTOs at once (list_assets) pass a pre-batched value; single-asset call sites
+    # fall back to the ORM attribute (one cheap extra query).
+    resolved_has_embedding = (
+        has_embedding if has_embedding is not None else asset.clip_embedding is not None
+    )
     return AssetDto(
         id=asset.id,
         content_hash=asset.content_hash,
@@ -239,7 +247,7 @@ def build_asset_dto(
         favourite=instance.favourite,
         version_count=version_count,
         generation_meta=asset.generation_meta,
-        has_phash=asset.phash is not None,
+        has_embedding=resolved_has_embedding,
         stack_size=stack_size,
         stack_group_id=stack_group_id,
     )
@@ -252,6 +260,7 @@ def _build_version_pseudo_dto(
     *,
     stack_size: int,
     stack_group_id: int | None,
+    has_embedding: bool | None = None,
 ) -> AssetDto:
     """A version row (Editor-Dialog-Edit) shown as its own gallery entry (P21).
 
@@ -262,6 +271,9 @@ def _build_version_pseudo_dto(
     params = version.params or {}
     width = params.get("width") or asset.width
     height = params.get("height") or asset.height
+    resolved_has_embedding = (
+        has_embedding if has_embedding is not None else asset.clip_embedding is not None
+    )
     return AssetDto(
         id=asset.id,
         content_hash=asset.content_hash,
@@ -275,7 +287,7 @@ def _build_version_pseudo_dto(
         favourite=instance.favourite,
         version_count=0,
         generation_meta=asset.generation_meta,
-        has_phash=asset.phash is not None,
+        has_embedding=resolved_has_embedding,
         kind="version",
         version_id=version.id,
         stack_size=stack_size,
@@ -728,21 +740,33 @@ async def list_assets(
         session, [entry.instance.id for entry in page_entries if entry.kind == "asset"],
     )
 
+    # `clip_embedding` ist eine deferred BLOB-Spalte — ein Zugriff pro Zeile würde pro
+    # Galerie-Seite bis zu `page_size` Extra-SELECTs auslösen. Stattdessen einmalig als
+    # ID-Set laden.
+    embedding_ids: set[int] = set(
+        session.execute(
+            select(Asset.id).where(
+                Asset.id.in_(asset_ids_on_page), Asset.clip_embedding.is_not(None),
+            )
+        ).scalars()
+    )
+
     items: list[AssetDto] = []
     for entry in page_entries:
         root = roots.get(entry.asset.id, entry.asset.id)
         size = stack_sizes.get(root, 1)
         group_id = root if size > 1 else None
+        has_embedding = entry.asset.id in embedding_ids
         if entry.kind == "asset":
             items.append(build_asset_dto(
                 entry.asset, entry.instance, version_counts.get(entry.instance.id, 0),
-                stack_size=size, stack_group_id=group_id,
+                stack_size=size, stack_group_id=group_id, has_embedding=has_embedding,
             ))
         else:
             assert entry.version is not None
             items.append(_build_version_pseudo_dto(
                 entry.version, entry.instance, entry.asset,
-                stack_size=size, stack_group_id=group_id,
+                stack_size=size, stack_group_id=group_id, has_embedding=has_embedding,
             ))
 
     return AssetsPage(items=items, total=total, page=page, page_size=page_size, facets=facets)

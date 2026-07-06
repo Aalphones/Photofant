@@ -13,18 +13,9 @@ export interface ReviewState extends EntityState<DupePair> {
   faceQueueLoading: boolean;
 }
 
-// Normalize pHash (0-64) onto the same 0-1 scale as CLIP cosine-distance so pairs
-// found by either method sort together, best (lowest distance) first.
-function bestDistance(pair: DupePair): number {
-  const candidates: number[] = [];
-  if (pair.phash_distance !== null) candidates.push(pair.phash_distance / 64);
-  if (pair.clip_distance !== null) candidates.push(pair.clip_distance);
-  return candidates.length > 0 ? Math.min(...candidates) : 1;
-}
-
 const adapter: EntityAdapter<DupePair> = createEntityAdapter<DupePair>({
   selectId: (pair: DupePair) => pair.id,
-  sortComparer: (a: DupePair, b: DupePair) => bestDistance(a) - bestDistance(b),
+  sortComparer: (a: DupePair, b: DupePair) => a.clip_distance - b.clip_distance,
 });
 
 const initialState: ReviewState = adapter.getInitialState({

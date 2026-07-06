@@ -14,15 +14,14 @@ interface StepOption {
   desc: string;
 }
 
-const DEFAULT_STEPS: readonly ClassifyStep[] = ['faces', 'heuristics', 'embedding', 'phash'];
+const DEFAULT_STEPS: readonly ClassifyStep[] = ['faces', 'heuristics', 'embedding'];
 
 const ALL_STEPS: StepOption[] = [
   { key: 'faces',      label: 'Gesichter',   desc: 'Gesichtserkennung neu starten — löscht vorhandene Erkennungen' },
   { key: 'heuristics', label: 'Qualität',    desc: 'Auflösung + Schärfe → quality_score' },
   { key: 'tags',       label: 'Tags',        desc: 'WD14-Tagger (auto-Tags mit Konfidenz)' },
   { key: 'caption',    label: 'Caption',     desc: 'Florence-2 Bildbeschreibung' },
-  { key: 'embedding',  label: 'Embedding',   desc: 'CLIP-Vektor für Ähnlichkeitssuche' },
-  { key: 'phash',      label: 'Ähnlichkeit', desc: 'Bild-Fingerabdruck berechnen — ermöglicht „Ähnliche Bilder" und Duplikat-Erkennung' },
+  { key: 'embedding',  label: 'Embedding',   desc: 'CLIP-Vektor für Ähnlichkeitssuche, Ähnliche Bilder und Duplikat-Erkennung' },
 ];
 
 @Component({

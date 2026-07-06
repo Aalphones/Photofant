@@ -28,8 +28,6 @@ export interface ProcessingConfig {
   minProbability: number;
   maxTags: number;
   blurThreshold: number;
-  dupeThreshold: number;
-  dupePhashEnabled: boolean;
   dupeClipEnabled: boolean;
   dupeClipThreshold: number;
   faceDetConfThreshold: number;
@@ -50,8 +48,6 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   minProbability: 0.5,
   maxTags: 30,
   blurThreshold: 200.0,
-  dupeThreshold: 10,
-  dupePhashEnabled: true,
   dupeClipEnabled: true,
   dupeClipThreshold: 0.03,
   faceDetConfThreshold: 0.5,

@@ -111,9 +111,9 @@
           </button>
           <button
             class="pbtn pbtn--ghost"
-            [class.pbtn--disabled]="!hasPHash()"
-            [disabled]="!hasPHash()"
-            [title]="hasPHash() ? 'Ähnliche Bilder suchen' : 'Noch nicht analysiert'"
+            [class.pbtn--disabled]="!hasEmbedding()"
+            [disabled]="!hasEmbedding()"
+            [title]="hasEmbedding() ? 'Ähnliche Bilder suchen' : 'Noch nicht analysiert'"
             (click)="openSimilarOverlay()"
           >
             <pf-icon name="compare" [size]="15" />

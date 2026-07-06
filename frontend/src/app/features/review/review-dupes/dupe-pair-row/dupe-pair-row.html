@@ -9,28 +9,15 @@
 
 <div class="dupe-pair__info">
   <div class="dupe-pair__scores">
-    @if (pair().phash_similarity_pct; as phashPct) {
-      <div class="dupe-pair__score">
-        <span class="dupe-pair__score-label">Pixel-Ähnlichkeit</span>
-        <span
-          class="dupe-pair__score-value"
-          [class.dupe-pair__score-value--high]="scoreClass(phashPct) === 'high'"
-          [class.dupe-pair__score-value--mid]="scoreClass(phashPct) === 'mid'"
-          [class.dupe-pair__score-value--low]="scoreClass(phashPct) === 'low'"
-        >{{ phashPct }}%</span>
-      </div>
-    }
-    @if (pair().clip_similarity_pct; as clipPct) {
-      <div class="dupe-pair__score">
-        <span class="dupe-pair__score-label">Inhalts-Ähnlichkeit</span>
-        <span
-          class="dupe-pair__score-value"
-          [class.dupe-pair__score-value--high]="scoreClass(clipPct) === 'high'"
-          [class.dupe-pair__score-value--mid]="scoreClass(clipPct) === 'mid'"
-          [class.dupe-pair__score-value--low]="scoreClass(clipPct) === 'low'"
-        >{{ clipPct }}%</span>
-      </div>
-    }
+    <div class="dupe-pair__score">
+      <span class="dupe-pair__score-label">Ähnlichkeit</span>
+      <span
+        class="dupe-pair__score-value"
+        [class.dupe-pair__score-value--high]="scoreClass(pair().clip_similarity_pct) === 'high'"
+        [class.dupe-pair__score-value--mid]="scoreClass(pair().clip_similarity_pct) === 'mid'"
+        [class.dupe-pair__score-value--low]="scoreClass(pair().clip_similarity_pct) === 'low'"
+      >{{ pair().clip_similarity_pct }}%</span>
+    </div>
   </div>
   <div class="dupe-pair__ids">
     <span>#{{ pair().asset_a.id }} · {{ pair().asset_a.width }}×{{ pair().asset_a.height }}</span>

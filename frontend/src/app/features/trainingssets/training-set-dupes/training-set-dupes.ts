@@ -19,7 +19,8 @@ export class TrainingSetDupes {
   readonly close = output<void>();
   readonly resolved = output<void>();
 
-  protected readonly threshold = signal(10);
+  // Ähnlichkeit in % (UI) — beim Request auf CLIP-Distanz umgerechnet (1 - %/100).
+  protected readonly similarityPct = signal(95);
   protected readonly isLoading = signal(false);
   protected readonly pairs = signal<CollectionDupePair[]>([]);
   protected readonly comparePair = signal<CollectionDupePair | null>(null);
@@ -28,13 +29,14 @@ export class TrainingSetDupes {
     this.fetch();
   }
 
-  protected onThresholdChange(value: number): void {
-    this.threshold.set(value);
+  protected onSimilarityPctChange(value: number): void {
+    this.similarityPct.set(value);
   }
 
   protected fetch(): void {
     this.isLoading.set(true);
-    this.collectionService.getDuplicates(this.collectionId(), this.threshold())
+    const clipDistance = (100 - this.similarityPct()) / 100;
+    this.collectionService.getDuplicates(this.collectionId(), clipDistance)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((pairs: CollectionDupePair[]) => {
         this.pairs.set(pairs);

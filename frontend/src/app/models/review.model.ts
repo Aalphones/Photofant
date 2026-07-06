@@ -14,11 +14,8 @@ export interface DupePair {
   id: number;
   asset_a: AssetSummary;
   asset_b: AssetSummary;
-  phash_distance: number | null;
-  phash_similarity_pct: number | null;
-  clip_distance: number | null;
-  clip_similarity_pct: number | null;
-  triggered_by: 'phash' | 'clip' | 'both';
+  clip_distance: number;
+  clip_similarity_pct: number;
   created_at: string;
 }
 

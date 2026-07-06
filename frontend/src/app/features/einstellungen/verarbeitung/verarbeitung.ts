@@ -110,10 +110,6 @@ export class Verarbeitung {
     this.patchProcessingConfig({ blurThreshold: clamped });
   }
 
-  onDupePhashEnabledToggle(): void {
-    this.patchProcessingConfig({ dupePhashEnabled: !this.processingConfig().dupePhashEnabled });
-  }
-
   onDupeClipEnabledToggle(): void {
     this.patchProcessingConfig({ dupeClipEnabled: !this.processingConfig().dupeClipEnabled });
   }
