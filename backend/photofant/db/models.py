@@ -56,7 +56,6 @@ class Asset(Base):
     generation_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
     caption_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
-    phash: Mapped[int | None] = mapped_column(Integer, nullable=True)
     original_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("asset.id"), nullable=True, index=True,
     )  # index: migration 0023 (P21 Phase 1 — Stapel-Query)
@@ -193,7 +192,6 @@ class Face(Base):
     bbox: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     padding: Mapped[int | None] = mapped_column(Integer, nullable=True)
     embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
-    phash: Mapped[str | None] = mapped_column(Text, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     origin: Mapped[str | None] = mapped_column(Text, nullable=True)   # derived | manual_original
@@ -303,7 +301,6 @@ class ReviewItem(Base):
     type: Mapped[str] = mapped_column(Text, nullable=False)  # dupe_candidate | face_suggestion
     asset_a_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
     asset_b_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
-    phash_distance: Mapped[int | None] = mapped_column(Integer, nullable=True)
     clip_distance: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

@@ -1,6 +1,6 @@
 # Phase 4 — Ausbau: DB-Migration, Modul-Löschung, Docs, ADR-018
 
-**Komplexität:** mechanisch · **Status:** pending
+**Komplexität:** mechanisch · **Status:** complete
 **Voraussetzung:** Phasen 1–3 committet (kein Code liest die Spalten mehr).
 
 ## Kontext (vor Arbeitsbeginn lesen)
@@ -21,16 +21,24 @@
 
 ## Checkliste
 
-- [ ] **Alembic-Migration** (eine Datei, zwei Schritte in dieser Reihenfolge):
+- [x] **Alembic-Migration** (`0031_drop_phash.py`, zwei Schritte in dieser Reihenfolge):
   1. `DELETE FROM review_item WHERE type='dupe_candidate' AND resolved_at IS NULL AND clip_distance IS NULL`
   2. `batch_alter_table`-Drops: `asset.phash`, `face.phash`, `review_item.phash_distance`.
-  Downgrade: Spalten nullable wieder anlegen (Daten sind nicht wiederherstellbar — im Docstring vermerken).
-- [ ] **`db/models.py`:** die drei Spalten-Definitionen entfernen.
-- [ ] **`media/phash.py` löschen**; letzter Grep-Sweep `grep -ri "phash\|imagehash" backend/photofant/ frontend/src/` → 0 Treffer (Alembic-Historie ausgenommen).
-- [ ] **`pyproject.toml`:** `imagehash>=4.3` raus; `uv lock` (bzw. `uv sync`) ausführen.
-- [ ] **ADR-018** `docs/decisions/018-clip-only-duplikaterkennung.md` (~10 Zeilen): Kontext (pHash-Trefferqualität schlecht, vier Trägerfunktionen inventarisiert), Optionen (behalten als Import-Tripwire vs. komplett ersetzen), Entscheidung (CLIP-only; Import-Check wandert hinter den Embedding-Job; Face-Dedupe auf buffalo_l-Cosine), Konsequenzen (kein modellfreier Dupe-Pfad mehr; Kandidaten-Latenz = Embedding-Job; drei neue Settings-Keys). Supersedes ADR-006.
-- [ ] **ADR-006/007:** Kopfzeile ergänzen: „**Superseded by ADR-018**" (006) bzw. „**Ergänzt durch ADR-018** — pHash-Zweig entfernt" (007).
-- [ ] **Docs:** `models.md` (drei Spalten raus), `routes.md` (Restabgleich duplicates/classify/collections), `code-map.md` (Review-Queue-Zeile: `media/phash.py` raus; Suche-Zeile prüfen), `glossary.md` (pHash-Eintrag: entfernt/historisch markieren oder streichen).
-- [ ] **CI-Gate:** `cd backend && uv run ruff check .` + `uv run pytest` · `cd frontend && npm run lint && npm run build`.
+  Downgrade: Spalten nullable wieder anlegen (Daten sind nicht wiederherstellbar — im Docstring vermerkt).
+  Gegen eine isolierte Kopie der echten Dev-DB getestet (54 unresolved Alt-Kandidaten gelöscht, 1824→1770 `dupe_candidate`-Rows, alle drei Spalten weg, `alembic_version` auf `0031`) — die Live-DB selbst wurde nicht angefasst; `alembic upgrade head` läuft der User im Rahmen des normalen App-Starts.
+- [x] **`db/models.py`:** die drei Spalten-Definitionen entfernt.
+- [x] **`media/phash.py` gelöscht**; Grep-Sweep `grep -ri "phash\|imagehash" backend/photofant/ frontend/src/` → 0 Treffer.
+- [x] **`pyproject.toml`:** `imagehash>=4.3` raus; `uv lock` ausgeführt (entfernt auch die transitive `pywavelets`-Abhängigkeit).
+- [x] **ADR-018** `docs/decisions/018-clip-only-duplikaterkennung.md` angelegt. Supersedes ADR-006.
+- [x] **ADR-006/007:** Kopfzeile ergänzt: „**Superseded by ADR-018**" (006) bzw. „**Ergänzt durch ADR-018** — DHash-Zweig entfernt, CLIP-Teil bleibt gültig" (007).
+- [x] **Docs:** `models.md` (drei Spalten raus, Flow-Beschreibung auf CLIP-only), `routes.md` (Legacy-Hinweis entfernt), `code-map.md` (Review-Queue-Zeile bereinigt). `glossary.md` hatte nie einen pHash-Eintrag — nichts zu tun.
+- [x] **CI-Gate:** `ruff check` (nur berührte Dateien grün — 6 Alt-Fehler in unberührten Dateien bestätigt vorbestehend via Stash-Vergleich) · `pytest` 189 grün, 13 vorbestehende Alt-Fehler deselected (bestätigt vorbestehend) · `npm run lint` grün · `npm run build` grün (nur vorbestehende Bundle-Budget-Warnungen).
+
+### Chesterton's-Fence-Fund (nicht im Plan erfasst)
+
+`clustering/engine.py` legte beim Face-Pre-Matching einen `face_suggestion`-ReviewItem mit
+`phash_distance=0` an — reiner Pflichtfeld-Ballast, das Pendant in `jobs/clustering_job.py`
+setzt das Feld gar nicht erst. Wäre nach dem Spalten-Drop ein `TypeError` (unbekanntes
+Kwarg) gewesen. Entfernt.
 
 ## Report-Back

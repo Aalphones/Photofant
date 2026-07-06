@@ -1,6 +1,6 @@
 # ADR-007 — Duale Duplikaterkennung: DHash + CLIP parallel
 
-**Status:** Angenommen
+**Status:** Ergänzt durch ADR-018 — DHash-Zweig entfernt, CLIP-Teil bleibt gültig
 **Datum:** 2026-07-02
 **Betrifft:** Plan `2026-06-22_p11-duale-duplikaterkennung`, ergänzt ADR-006
 

@@ -84,8 +84,8 @@ def _to_pair_dto(item: ReviewItem, asset_a: Asset, asset_b: Asset) -> DupePairDt
     if item.clip_distance is None:
         raise HTTPException(
             status_code=409,
-            detail="Legacy pHash-only Duplikat ohne CLIP-Distanz — wird mit der naechsten "
-            "Duplikat-Bereinigung entfernt (ADR-018)",
+            detail="Legacy-Duplikat ohne CLIP-Distanz aus der Vor-ADR-018-Aera — "
+            "kann nicht mehr angezeigt werden",
         )
     clip_similarity_pct = round((1.0 - item.clip_distance) * 100)
     return DupePairDto(
@@ -146,8 +146,8 @@ async def list_dupe_pairs(session: DbSession, offset: int = 0, limit: int = 50) 
     base_filters = (
         ReviewItem.type == "dupe_candidate",
         ReviewItem.resolved_at.is_(None),
-        # Legacy pHash-only candidates (clip_distance IS NULL) are pre-migration
-        # leftovers — Phase 4 purges them once the phash columns drop (ADR-018).
+        # Defensive: excludes resolved-and-reopened legacy rows without a CLIP score
+        # from the Vor-ADR-018-Aera. New dupe_candidate rows always carry clip_distance.
         ReviewItem.clip_distance.is_not(None),
     )
     # INNER JOIN on both sides: a review_item whose asset_b (or asset_a) no longer

@@ -28,7 +28,7 @@ Pfade unten relativ zu `frontend/src/app/` bzw. `backend/photofant/`.
 | Feature | Frontend | Backend |
 |---|---|---|
 | **Personen & Faces** | `features/personen/` (personen, person-card, merge/split/dupe-check/delete-person-dialog, alphabet-rail, group-color.util.ts) · `features/galerie/face-cell/`, `face-grid/` · `store/persons/` · `services/person.service.ts` · `models/person.model.ts` | `api/faces.py`, `api/persons.py`, `api/assets.py` (`PATCH /assets/{id}/assign-person`, P30 — Person ohne Face zuordnen) · `jobs/face_job.py`, `jobs/clustering_job.py` · `clustering/engine.py` · `inference/adapters/buffalo_l.py` · `db/face_vector_index.py` · `media/person_folders.py` (inkl. `delete_person()`, `_resolve_person_smart_triggers()`) |
-| **Review-Queue** (Faces + Dupes) | `features/review/` (review, review-faces, review-dupes[+dupe-compare, dupe-pair-row]) · `store/review/` · `services/review.service.ts` · `models/review.model.ts` | `api/review.py`, `api/review_queue.py`, `api/duplicates.py` · `jobs/dupe_scan_job.py` (CLIP-only seit P33 Phase 1; `media/phash.py` nicht mehr beteiligt) |
+| **Review-Queue** (Faces + Dupes) | `features/review/` (review, review-faces, review-dupes[+dupe-compare, dupe-pair-row]) · `store/review/` · `services/review.service.ts` · `models/review.model.ts` | `api/review.py`, `api/review_queue.py`, `api/duplicates.py` · `jobs/dupe_scan_job.py` (CLIP-only, ADR-018) |
 
 ## Editor & Generativ
 

@@ -672,8 +672,7 @@ Aktions-Semantik (`PATCH /api/review/dupes/{id}`):
 
 `GET /api/review/dupes` — Query-Params: `offset` (Default 0), `limit` (Default 50, hart
 gedeckelt auf 200). Sortierung: nach `clip_distance`, `id` (engste Ähnlichkeit zuerst).
-Unresolved pHash-only Altbestand (`clip_distance IS NULL`) wird ausgeblendet, bis Phase 4
-ihn bereinigt. Auto-Resolve (Papierkorb-Paare) läuft vor jeder Seite als Bulk-UPDATE.
+Auto-Resolve (Papierkorb-Paare) läuft vor jeder Seite als Bulk-UPDATE.
 
 ## Personen (P7 Phase 4)
 

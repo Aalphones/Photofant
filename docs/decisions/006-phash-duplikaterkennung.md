@@ -1,6 +1,6 @@
 # ADR-006 — pHash (DHash) als Ähnlichkeits-Metrik für Duplikaterkennung
 
-**Status:** Angenommen  
+**Status:** Superseded by ADR-018
 **Datum:** 2026-06-19  
 **Betrifft:** Plan `2026-06-19_duplikaterkennung`, Phase 1
 

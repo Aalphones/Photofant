@@ -26,7 +26,7 @@ def _now_utc() -> datetime:
 
 
 def _check_for_dupes(session: Session, asset_id: int, embedding: np.ndarray) -> None:
-    """Post-embedding dupe check via sqlite-vec (replaces the former pHash import-time check).
+    """Post-embedding dupe check via sqlite-vec (P33: runs after the embedding job, not at import time).
 
     Own try/except + own commit — a failure here must not roll back the embedding
     result that was already committed by the caller.

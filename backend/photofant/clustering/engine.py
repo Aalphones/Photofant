@@ -173,7 +173,6 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
                     type="face_suggestion",
                     asset_a_id=asset_id,
                     asset_b_id=asset_id,
-                    phash_distance=0,
                     face_id=face_id,
                     suggested_person_id=result.person_id,
                     score=result.score,

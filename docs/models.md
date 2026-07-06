@@ -57,7 +57,6 @@ One row per unique content-hash (canonical image).
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
 | `clip_embedding` | BLOB | CLIP ViT-L/14 image embedding, float32 unit-norm bytes (768-dim); source of truth for the vector index (P5 Phase 4); `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden |
 | `caption_edited` | BOOLEAN | `1` = Caption wurde manuell editiert; Captioner überspringt den Asset beim nächsten Rerun (P6 Phase 3) |
-| `phash` | INTEGER | 64-Bit DHash-Fingerabdruck (imagehash, `hash_size=8`); NULL bis pHash-Job gelaufen (migration 0014) |
 | `original_id` | INTEGER FK → `asset.id` | gesetzt wenn dieses Asset ein Edit eines anderen ist — bei Review-Entscheidung „A/B ist Original" (migration 0014) |
 | `created_at` | DATETIME | EXIF capture date; UTC naive |
 | `imported_at` | DATETIME | import timestamp; UTC naive; indexed |
@@ -309,8 +308,7 @@ Zwei Review-Typen teilen sich die Tabelle: offene Duplikat-Paare (`dupe_candidat
 | `type` | TEXT | `dupe_candidate` · `face_suggestion` |
 | `asset_a_id` | INTEGER FK → `asset.id` | dupe_candidate: kleinere ID. face_suggestion: gleiche Asset-ID wie `asset_b_id` (Hack, siehe unten) |
 | `asset_b_id` | INTEGER FK → `asset.id` | dupe_candidate: größere ID. face_suggestion: = `asset_a_id` |
-| `phash_distance` | INTEGER | nullable; **deprecated** (P33 Phase 1) — kein Code schreibt sie mehr, nur noch auf Alt-Zeilen aus der pHash-Ära gesetzt; Spalte fällt in Phase 4 |
-| `clip_distance` | REAL | nullable; CLIP Cosine-Distance (0.0–1.0) — bei `dupe_candidate` seit P33 Phase 1 die einzige Distanz; NULL nur bei Alt-Zeilen aus der pHash-Ära |
+| `clip_distance` | REAL | nullable; CLIP Cosine-Distance (0.0–1.0) — bei `dupe_candidate` die einzige Distanz-Metrik (P33/ADR-018); `NULL` bleibt nur bei resolved Alt-Zeilen aus der Vor-ADR-018-Aera möglich |
 | `created_at` | DATETIME | UTC naive; nicht null |
 | `resolved_at` | DATETIME | nullable; gesetzt bei Entscheidung |
 | `resolution` | TEXT | nullable: `a_is_original` · `b_is_original` · `delete_a` · `delete_b` · `dismiss` (dupe_candidate); `confirmed` · `rejected` · `reassigned:<id>` (face_suggestion) |
@@ -324,7 +322,7 @@ Zwei partielle Unique-Indizes (migration 0027 — ersetzt den ursprünglichen, z
 
 Grund für die Aufteilung: `face_suggestion`-Zeilen setzen `asset_a_id == asset_b_id` (kein "Paar", nur ein Gesicht) — ein Foto mit mehreren Gesichtern, die alle zur Review anstehen, konnte sonst nur die erste Zeile einfügen (UNIQUE-Verletzung auf `(type, asset_a_id, asset_b_id)` ab dem zweiten Gesicht desselben Fotos).
 
-Flow Duplikate (ADR-007, OR-Logik): Import berechnet pHash + CLIP-Embedding → pHash-Scan (nur `distance == 0`) und CLIP-Scan (Cosine-Distance ≤ Schwelle) laufen unabhängig → ein `review_item` pro Paar wird angelegt, sobald **eine** Methode anschlägt (UNION-Merge) → User entscheidet im Review-Tab, sieht beide Scores getrennt.
+Flow Duplikate (ADR-018, CLIP-only): Embedding-Job berechnet `clip_embedding` → Post-Embedding-Check via sqlite-vec-Suche (Cosine-Distance ≤ `dupe_clip_threshold`) legt bei Treffer ein `review_item` an → User entscheidet im Review-Tab.
 
 Flow Gesichts-Vorschläge: Clustering/inkrementelles Matching (`photofant/clustering/engine.py`, `photofant/jobs/clustering_job.py`) legt für ein Gesicht mit `band == "review"` eine Zeile an → User entscheidet in der Review-Queue (`photofant/api/review_queue.py`: confirm/reject/reassign).
 
@@ -343,8 +341,7 @@ Erkannte Gesichter mit Crop-Pfad, Embedding und Provenienz. Ein Face gehört imm
 | `crop_path` | TEXT | Pfad zu `personX/faces/<asset_id>_<idx>.jpg` |
 | `bbox` | JSON | `{x1, y1, x2, y2}` in Original-Bildkoordinaten |
 | `padding` | INTEGER | px Padding um BBox beim Crop |
-| `embedding` | BLOB | ArcFace 512-d float32, L2-normiert; `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden |
-| `phash` | TEXT | DHash des Crops (für Crop-Dedupe) |
+| `embedding` | BLOB | ArcFace 512-d float32, L2-normiert; `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden; Basis für Face-Crop-Dedupe (Cosine, ADR-018) |
 | `score` | REAL | Detection-Confidence (0–1) von buffalo_l |
 | `age` | INTEGER | Altersschätzung aus buffalo_l genderage |
 | `origin` | TEXT | `derived` (aus Import) \| `manual_original` (direkt importiert) |
