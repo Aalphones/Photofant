@@ -41,6 +41,7 @@ from photofant.inference.session_manager import session_manager
 from photofant.jobs.download_job import scan_models_dir
 from photofant.jobs.face_folder_scan_job import enqueue_face_folder_scan
 from photofant.jobs.queue import job_queue
+from photofant.mcp.server import mcp_server, mount_mcp
 from photofant.models.loader import load_manifest
 from photofant.settings import ensure_settings_file
 
@@ -76,7 +77,13 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await enqueue_face_folder_scan(get_data_root())
 
     eviction_task = asyncio.create_task(_idle_eviction_loop())
-    yield
+
+    # Den Streamable-HTTP-Session-Manager der MCP-Sub-App im selben Lifespan
+    # mitlaufen lassen — ein gemounteter Sub-App-Lifespan wird sonst nie gestartet
+    # und der MCP-Teil würde beim ersten Request scheitern (ADR-019, Phase-1-Risiko).
+    async with mcp_server.session_manager.run():
+        yield
+
     log.info("Shutting down Photofant backend")
     eviction_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
@@ -120,6 +127,7 @@ def create_app() -> FastAPI:
     app.include_router(comfyui.comfyui_router, prefix="/api")
     app.include_router(prompt_templates.router, prefix="/api")
     app.include_router(export.router, prefix="/api")
+    mount_mcp(app)
     return app
 
 

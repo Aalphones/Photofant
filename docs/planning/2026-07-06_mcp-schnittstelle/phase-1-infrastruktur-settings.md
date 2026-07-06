@@ -1,6 +1,6 @@
 # Phase 1 — MCP-Infrastruktur + Settings-Toggle + Warnhinweis-UI
 
-**Komplexität:** heikel (neue Library, ASGI-Mount + Lifespan, Security, Laufzeit-Toggle) · **Status:** pending
+**Komplexität:** heikel (neue Library, ASGI-Mount + Lifespan, Security, Laufzeit-Toggle) · **Status:** complete
 
 ## Kontext (vor dem Bauen lesen)
 
@@ -72,15 +72,42 @@
 
 ## Umsetzung — Checkliste
 
-- [ ] Dependency `mcp` aufnehmen, `uv lock`, Import-Smoke.
-- [ ] `mcp`-Settings-Block (Backend + Frontend-Typ) nach README-Spec.
-- [ ] `mcp/server.py`: FastMCP-Instanz, `streamable_http_app()`-Mount, Lifespan-Verkettung in `main.py`.
-- [ ] Flag-Guard- + Host-Check-Middleware vor dem Mount.
-- [ ] `mcp/adapter.py:run_endpoint()` + Smoke-Tool `ping`.
-- [ ] `mcp/gate.py:confirmation_required()`.
-- [ ] Frontend-Sektion inkl. Warn-Banner, URL-Copy, Tooltips.
-- [ ] ADR-019 schreiben.
-- [ ] Doc: `docs/code-map.md` (neue Zeile `mcp/`), `docs/routes.md` (neuer MCP-Abschnitt, Grundgerüst),
-      `AGENTS.md` (ADR-Liste um 019 ergänzen).
+- [x] Dependency `mcp` aufnehmen, `uv lock`, Import-Smoke. (mcp 1.28.1; FastMCP-API + Modul-Import verifiziert)
+- [x] `mcp`-Settings-Block (Backend + Frontend-Typ) nach README-Spec.
+- [x] `mcp/server.py`: FastMCP-Instanz, `streamable_http_app()`-Mount, Lifespan-Verkettung in `main.py`.
+- [x] Flag-Guard- + Host-Check-Middleware vor dem Mount (pure ASGI, kein BaseHTTPMiddleware).
+- [x] `mcp/adapter.py:run_endpoint()` + Smoke-Tool `ping`.
+- [x] `mcp/gate.py:confirmation_required()`.
+- [x] Frontend-Sektion inkl. Warn-Banner, URL-Copy, JSON-Config-Blöcke, Tooltips.
+- [x] ADR-019 schreiben.
+- [x] Doc: `docs/code-map.md` (neue Zeile `mcp/`), `docs/routes.md` (neuer MCP-Abschnitt),
+      `AGENTS.md` (ADR-Liste um 019 ergänzt).
 
 ## Report-Back
+
+**Umgesetzt (Backend):** Neues Modul `backend/photofant/mcp/` — `server.py` (FastMCP-Instanz
+`Photofant`, `streamable_http_path="/"`, Mount unter `/mcp`, `ping`-Tool, `McpGuardMiddleware`
+= pure ASGI mit Live-`mcp.enabled`-404-Gate + Loopback-`Host`/`Origin`-403), `adapter.py`
+(`run_endpoint()` + `db_session()`-Brücke zur bestehenden Session-Factory), `gate.py`
+(`confirmation_required()` inkl. `mcp.require_confirm`-Kill-Switch). `main.py`: `mount_mcp(app)`
+am Ende von `create_app()`, Session-Manager im `_lifespan` (`mcp_server.session_manager.run()`).
+`settings.py`: `McpSettings`-TypedDict + Defaults + `_EXPECTED_TYPES["mcp"]=dict`. Dependency
+`mcp>=1.2`. ruff + mypy grün, Modul-Import + Tool-Registrierung (`ping`) verifiziert.
+
+**Umgesetzt (Frontend):** `features/einstellungen/mcp/` (Component + Warn-Banner + 5 Settings +
+kopierbare Verbindungs-URL aus `window.location.origin` + zwei kopierbare Client-Config-Blöcke
+[HTTP-Default + stdio-Bridge] + `info`-Tooltips je Option), NgRx-Slice `store/mcp/`,
+`services/mcp.service.ts` (liest/schreibt `mcp`-Block über `/api/config`), `McpConfig` in
+`config.model.ts`, Registrierung in `app.config.ts` + `einstellungen`-Nav/Switch. `npm run build`
+grün (Template-Typecheck).
+
+**Abweichung vom Plan:** MCP-Settings laufen über das generische `/api/config` statt einer
+dedizierten `/api/settings/mcp`-Route (wie bei ComfyUI) — weniger Backend-Fläche, keine
+Doppel-Logik, konform zum README-Kontrakt (der nur den settings.json-Block fixiert). Als
+Nav-Icon `link` statt `plug` (`plug` existiert nicht im Icon-Set).
+
+**Offen für User-Smoke (nicht im Private-Profil live testbar):** Der eigentliche MCP-Handshake
+gegen `/mcp` (MCP Inspector / Claude Desktop) und der Laufzeit-Toggle (404 bei aus → Handshake
+bei an, ohne Neustart) sind Code-seitig gebaut und statisch verifiziert (FastMCP-API bestätigt),
+aber der Live-Handshake wurde nicht ausgeführt. Das ist die oberste Wackelstelle → Smoke-Checkliste
+am Plan-Ende / spätestens vor Phase-2-Nutzung.

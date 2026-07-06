@@ -37,6 +37,14 @@ class ClassificationSettings(TypedDict):
     clip_prompt_template: str
 
 
+class McpSettings(TypedDict):
+    enabled: bool               # MCP-Schnittstelle an/aus (Default aus)
+    return_images: bool         # view_photo liefert Bild-Content; false = nur Metadaten
+    max_search_results: int     # harter Deckel je Listen-Tool (Token-Schutz)
+    thumbnail_size: int         # Kantenlänge der von view_photo gelieferten Thumbnails
+    require_confirm: bool        # Confirmation-Gate für destruktive Tools
+
+
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
@@ -72,6 +80,7 @@ class AppSettings(TypedDict):
     display: DisplaySettings
     comfyui: ComfyUISettings
     classification: ClassificationSettings
+    mcp: McpSettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -129,6 +138,13 @@ SETTINGS_DEFAULTS: AppSettings = {
         "multi_min_confidence": 0.45,
         "clip_prompt_template": "a photo of {label}",
     },
+    "mcp": {
+        "enabled": False,
+        "return_images": True,
+        "max_search_results": 50,
+        "thumbnail_size": 256,
+        "require_confirm": True,
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -167,6 +183,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "display": dict,
     "comfyui": dict,
     "classification": dict,
+    "mcp": dict,
 }
 
 

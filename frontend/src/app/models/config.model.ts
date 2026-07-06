@@ -20,6 +20,22 @@ export const COMFYUI_CONFIG_DEFAULTS: ComfyUIConfig = {
   defaultInpaint: '',
 };
 
+export interface McpConfig {
+  enabled: boolean;
+  returnImages: boolean;
+  maxSearchResults: number;
+  thumbnailSize: number;
+  requireConfirm: boolean;
+}
+
+export const MCP_CONFIG_DEFAULTS: McpConfig = {
+  enabled: false,
+  returnImages: true,
+  maxSearchResults: 50,
+  thumbnailSize: 256,
+  requireConfirm: true,
+};
+
 export interface ProcessingConfig {
   autoTag: boolean;
   autoCaption: boolean;

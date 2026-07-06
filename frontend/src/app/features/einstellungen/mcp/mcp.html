@@ -1,0 +1,165 @@
+<div class="mcp__kopf">
+  <h2>MCP-Schnittstelle</h2>
+  <p>Öffnet Photofant für einen lokalen KI-Agenten (z. B. Claude Desktop). Der Agent kann dann
+     deinen Bestand durchsuchen, ansehen und organisieren — praktisch alles, was diese Oberfläche kann.</p>
+</div>
+
+<!-- ── Unübersehbares Warn-Banner ─────────────────────────── -->
+<div class="mcp__warnung">
+  <pf-icon name="alertTriangle" [size]="20" />
+  <div>
+    <strong>Nur mit lokal laufenden Agenten nutzen.</strong>
+    Verbindest du einen Cloud-Agenten, landen deine Bilder und Metadaten beim Cloud-Anbieter.
+    Es gibt bewusst keine Passwort-Abfrage — der Schutz ist allein dieser Schalter, und dass die
+    Schnittstelle nur auf diesem Rechner (127.0.0.1) erreichbar ist.
+  </div>
+</div>
+
+<!-- ── Zugriff ────────────────────────────────────────────── -->
+<div class="mcp__gruppen-label">Zugriff</div>
+<div class="mcp__gruppe">
+
+  <div class="mcp__zeile mcp__zeile--oben">
+    <div class="mcp__zeile-inhalt">
+      <div class="mcp__zeile-titel">
+        Schnittstelle aktivieren
+        <span class="mcp__hint" title="Ist der Schalter aus, ist unter der Verbindungs-URL nichts erreichbar. Das Umschalten wirkt sofort — kein Neustart nötig.">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="mcp__zeile-sub">Standardmäßig aus. Nur einschalten, wenn gerade ein lokaler Agent zugreifen soll.</div>
+    </div>
+    <div class="mcp__zeile-steuerung">
+      <button class="mcp__schalter" [class.mcp__schalter--an]="draftEnabled()" role="switch"
+              [attr.aria-checked]="draftEnabled()" (click)="toggleEnabled()"><i></i></button>
+    </div>
+  </div>
+
+  <div class="mcp__zeile mcp__zeile--oben">
+    <div class="mcp__zeile-inhalt">
+      <div class="mcp__zeile-titel">
+        Rückfrage vor dem endgültigen Löschen
+        <span class="mcp__hint" title="Bei nicht umkehrbaren Aktionen (endgültig löschen, Personen zusammenführen, Reparaturen) muss der Agent erst ausdrücklich bestätigen. Papierkorb & Favoriten laufen immer ohne Rückfrage.">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="mcp__zeile-sub">Empfohlen an. Schützt vor versehentlich zerstörerischen Agenten-Aktionen.</div>
+    </div>
+    <div class="mcp__zeile-steuerung">
+      <button class="mcp__schalter" [class.mcp__schalter--an]="draftRequireConfirm()" role="switch"
+              [attr.aria-checked]="draftRequireConfirm()" (click)="toggleRequireConfirm()"><i></i></button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Verhalten ──────────────────────────────────────────── -->
+<div class="mcp__gruppen-label mcp__gruppen-label--mt">Verhalten</div>
+<div class="mcp__gruppe">
+
+  <div class="mcp__zeile mcp__zeile--oben">
+    <div class="mcp__zeile-inhalt">
+      <div class="mcp__zeile-titel">
+        Bilder an den Agenten liefern
+        <span class="mcp__hint" title="An: Der Agent bekommt ein echtes Vorschaubild und sieht den Bildinhalt. Aus: Er bekommt nur Metadaten (Tags, Beschreibung, Pfad).">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="mcp__zeile-sub">Aus lassen, wenn du dem Agenten die Bildinhalte nicht zeigen willst.</div>
+    </div>
+    <div class="mcp__zeile-steuerung">
+      <button class="mcp__schalter" [class.mcp__schalter--an]="draftReturnImages()" role="switch"
+              [attr.aria-checked]="draftReturnImages()" (click)="toggleReturnImages()"><i></i></button>
+    </div>
+  </div>
+
+  <div class="mcp__zeile mcp__zeile--oben">
+    <div class="mcp__zeile-inhalt">
+      <div class="mcp__zeile-titel">
+        Treffer pro Suche (max.)
+        <span class="mcp__hint" title="Obergrenze, wie viele Ergebnisse ein Such-Werkzeug auf einmal zurückgibt. Schützt den Agenten davor, mit zu vielen Daten überflutet zu werden.">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="mcp__zeile-sub">1–500. Der Agent kann bei Bedarf weiterblättern.</div>
+    </div>
+    <div class="mcp__zeile-steuerung">
+      <input class="mcp__zahleneingabe" type="number" min="1" max="500"
+             [value]="draftMaxSearchResults()" (change)="onMaxSearchResultsChange($any($event.target))">
+    </div>
+  </div>
+
+  <div class="mcp__zeile mcp__zeile--oben">
+    <div class="mcp__zeile-inhalt">
+      <div class="mcp__zeile-titel">
+        Vorschaugröße (px)
+        <span class="mcp__hint" title="Kantenlänge der Bilder, die der Agent bekommt. Kleiner = weniger Daten pro Bild. 256 px ist ein guter Kompromiss.">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="mcp__zeile-sub">64–1024 px. Größer heißt schärfer, aber deutlich mehr Datenverbrauch.</div>
+    </div>
+    <div class="mcp__zeile-steuerung">
+      <input class="mcp__zahleneingabe" type="number" min="64" max="1024"
+             [value]="draftThumbnailSize()" (change)="onThumbnailSizeChange($any($event.target))">
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Speichern ──────────────────────────────────────────── -->
+<div class="mcp__aktionen">
+  <button class="mcp__btn mcp__btn--akzent" [disabled]="!isDirty() || isSaving()" (click)="save()">
+    @if (isSaving()) {
+      <span class="spinner"></span> Speichern …
+    } @else {
+      <pf-icon name="check" [size]="15" /> Speichern
+    }
+  </button>
+</div>
+
+@if (error()) {
+  <div class="error-banner">{{ error() }}</div>
+}
+
+<!-- ── Verbindung einrichten ──────────────────────────────── -->
+<div class="mcp__gruppen-label mcp__gruppen-label--mt">So verbindest du einen lokalen Agenten</div>
+
+<div class="mcp__verbindung">
+  <p class="mcp__verbindung-text">
+    Trage in deinem MCP-Client (z. B. Claude Desktop) diese Adresse ein — sie zeigt auf die
+    Schnittstelle dieser laufenden App:
+  </p>
+
+  <div class="mcp__url-zeile">
+    <pf-icon name="link" [size]="15" />
+    <code class="mcp__url">{{ connectionUrl() }}</code>
+    <button class="mcp__btn mcp__btn--rahmen mcp__btn--klein" (click)="copy('url', connectionUrl())">
+      @if (copiedKey() === 'url') { <pf-icon name="check" [size]="13" /> Kopiert } @else { Kopieren }
+    </button>
+  </div>
+
+  <p class="mcp__verbindung-text">
+    Oder die fertige Konfiguration direkt in die <code>mcpServers</code>-Datei deines Clients kopieren:
+  </p>
+
+  <div class="mcp__code">
+    <div class="mcp__code-kopf">
+      <span>Standard (Streamable-HTTP)</span>
+      <button class="mcp__btn mcp__btn--rahmen mcp__btn--klein" (click)="copy('http', clientConfigUrl())">
+        @if (copiedKey() === 'http') { <pf-icon name="check" [size]="13" /> Kopiert } @else { Kopieren }
+      </button>
+    </div>
+    <pre class="mcp__code-block">{{ clientConfigUrl() }}</pre>
+  </div>
+
+  <div class="mcp__code">
+    <div class="mcp__code-kopf">
+      <span>Alternative für Clients ohne HTTP-Unterstützung (stdio-Bridge)</span>
+      <button class="mcp__btn mcp__btn--rahmen mcp__btn--klein" (click)="copy('bridge', clientConfigBridge())">
+        @if (copiedKey() === 'bridge') { <pf-icon name="check" [size]="13" /> Kopiert } @else { Kopieren }
+      </button>
+    </div>
+    <pre class="mcp__code-block">{{ clientConfigBridge() }}</pre>
+  </div>
+</div>

@@ -12,5 +12,6 @@ export * from './collections/index';
 export * from './review/index';
 export * from './editor/index';
 export * from './comfyui/index';
+export * from './mcp/index';
 export * from './prompt-templates/index';
 export * from './classification/index';

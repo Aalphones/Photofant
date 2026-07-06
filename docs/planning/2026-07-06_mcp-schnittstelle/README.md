@@ -19,7 +19,7 @@
 
 | Phase | Thema | Komplexität | Status |
 |---|---|---|---|
-| 1 | MCP-Infrastruktur + Settings-Toggle + Warnhinweis-UI | heikel | pending |
+| 1 | MCP-Infrastruktur + Settings-Toggle + Warnhinweis-UI | heikel | complete |
 | 2 | Finden & Ansehen (Read-Tools inkl. Bild-Content, Job-Status) | standard | pending |
 | 3 | Metadaten & Tag-Vokabular (Write, non-destruktiv) | standard | pending |
 | 4 | Personen & Faces | standard | pending |

@@ -18,6 +18,7 @@ export { PersonService } from './person.service';
 export { EditSessionService } from './edit-session.service';
 export { ComfyUIService } from './comfyui.service';
 export type { TestConnectionResponse, RunExtras } from './comfyui.service';
+export { McpService } from './mcp.service';
 export { PromptTemplateService } from './prompt-template.service';
 export { ExportService } from './export.service';
 export type { ExportFilterParams, ExportRandomParams, CollectionExportParams, SidecarMode, ExportJobStarted } from './export.service';
