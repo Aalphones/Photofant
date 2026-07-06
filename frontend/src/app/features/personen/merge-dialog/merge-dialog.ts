@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   input,
+  OnInit,
   output,
   signal,
 } from '@angular/core';
@@ -16,24 +17,36 @@ import type { PersonDto } from '@photofant/models';
   styleUrl: './merge-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MergeDialog {
+export class MergeDialog implements OnInit {
   readonly persons = input.required<PersonDto[]>();
   readonly preselectedFrom = input<PersonDto | null>(null);
   readonly close = output<void>();
   readonly merge = output<{ fromId: number; intoId: number }>();
 
-  protected readonly fromPerson = signal<PersonDto | null>(this.preselectedFrom());
+  protected readonly fromPerson = signal<PersonDto | null>(null);
   protected readonly intoPerson = signal<PersonDto | null>(null);
-  protected readonly step = signal<'select-from' | 'select-into' | 'confirm'>(
-    this.preselectedFrom() ? 'select-into' : 'select-from',
-  );
+  protected readonly step = signal<'select-from' | 'select-into' | 'confirm'>('select-from');
   protected readonly searchQuery = signal('');
+
+  // Signal-Inputs sind erst nach dem Konstruktor gebunden — die Vorauswahl darf
+  // deshalb nicht im Field-Initializer gelesen werden, sonst ist sie immer null.
+  ngOnInit(): void {
+    const preselected = this.preselectedFrom();
+    if (preselected) {
+      this.fromPerson.set(preselected);
+      this.step.set('select-into');
+    }
+  }
 
   protected readonly filteredPersons = computed((): PersonDto[] => {
     const query = this.searchQuery().toLowerCase();
     const from = this.fromPerson();
+    const isTargetSearch = this.step() === 'select-into';
     return this.persons().filter((person: PersonDto) => {
       if (person.is_unknown) return false;
+      // Ziel einer Zusammenführung ist fast immer eine benannte Person — unbenannte
+      // Cluster (name=null) würden nur als „—" die Zielliste zumüllen.
+      if (isTargetSearch && !person.name) return false;
       if (from && person.id === from.id) return false;
       if (!query) return true;
       return (person.name ?? '').toLowerCase().includes(query);

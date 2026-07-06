@@ -58,7 +58,7 @@ export class Personen implements OnInit {
   protected readonly sortKey = signal<PersonSortKey>('group');
   protected readonly groupFilter = signal<Set<string>>(new Set());
   protected readonly viewMode = signal<PersonViewMode>('face');
-  protected readonly cardSize = signal<Density>('sm');
+  protected readonly cardSize = signal<Density>('md');
 
   protected readonly SIZES: { key: Density; iconSize: number }[] = [
     { key: 'sm', iconSize: 13 },

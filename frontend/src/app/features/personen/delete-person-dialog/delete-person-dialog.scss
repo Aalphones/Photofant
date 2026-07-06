@@ -118,9 +118,9 @@
     color: var(--text);
   }
 
-  &--danger {
-    background: var(--danger);
-    color: #fff;
+  &--confirm {
+    background: var(--accent);
+    color: var(--on-accent);
   }
 
   &:hover {
