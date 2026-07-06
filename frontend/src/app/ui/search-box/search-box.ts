@@ -202,34 +202,34 @@ export class SearchBox {
   }
 
   protected selectSuggestion(item: AutocompleteItem): void {
+    // WICHTIG: hier NICHT queryInput$.next('') aufrufen. Der Subject speist die
+    // debounced setQuery-Subscription (300ms) — ein '' würde nach der Auswahl
+    // setQuery({ q: '' }) feuern und damit mode auf 'text' zurücksetzen und q
+    // leeren. Bei einer Semantik-Auswahl killt das den gerade gesetzten Filter
+    // („kurz gesetzt, dann Reload auf ungefiltert"). Aufräumen läuft daher
+    // synchron und pro Zweig über den Store, nicht über den Eingabe-Stream.
     if (item.type === 'person') {
+      this.store.dispatch(searchActions.clear());
       this.store.dispatch(filtersActions.setPersonId({ personId: item.id! }));
-      this.localQuery.set('');
-      this.queryInput$.next('');
     } else if (item.type === 'semantic') {
       this.store.dispatch(searchActions.setSemanticQuery({ q: item.text }));
       this.saveRecentSearch(item.text, 'semantic');
-      this.localQuery.set('');
-      this.queryInput$.next('');
     } else if (item.type === 'class' && item.id != null) {
+      this.store.dispatch(searchActions.clear());
       this.store.dispatch(filtersActions.setClassificationLabelIds({ classificationLabelIds: [item.id] }));
       this.saveRecentSearch(item.text, 'class', item.id);
-      this.localQuery.set('');
-      this.queryInput$.next('');
     } else if (item.id != null) {
       // Tag exakt filtern (statt als freien q-Text zu schicken) — sonst liefern
       // mehrdeutige Tag-Namen falsche Treffer (ADR-015).
+      this.store.dispatch(searchActions.clear());
       this.store.dispatch(filtersActions.setTagIds({ tagIds: [item.id] }));
       this.saveRecentSearch(item.text, 'tag', item.id);
-      this.localQuery.set('');
-      this.queryInput$.next('');
     } else {
       // Alte, vor diesem Fix gemerkte Tag-Suche ohne ID (Altbestand in
       // localStorage) — als Freitext statt als kaputten Tag-Filter ausführen.
       this.store.dispatch(searchActions.setQuery({ q: item.text }));
-      this.localQuery.set('');
-      this.queryInput$.next('');
     }
+    this.localQuery.set('');
     this.isOpen.set(false);
     this.navigateToGalleryIfNeeded();
   }

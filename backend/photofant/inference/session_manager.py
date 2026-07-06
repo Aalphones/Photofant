@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -29,6 +30,17 @@ log = logging.getLogger(__name__)
 
 IDLE_TIMEOUT_SECONDS: float = 300.0
 _EXECUTOR_WORKERS: int = 1  # single-threaded: onnxruntime is not re-entrant per session
+
+# Substrings that mark a CUDA out-of-memory / poisoned-context failure raised by
+# ONNX Runtime. Matched against the exception message because ORT surfaces all of
+# these as the same generic `Fail` type. "CUBLAS failure" catches the cascade
+# ("the library was not initialized") that follows the first OOM on a device.
+_OOM_ERROR_MARKERS: tuple[str, ...] = (
+    "out of memory",
+    "CUDA failure 2",
+    "CUBLAS failure",
+    "cublasCreate",
+)
 
 
 @dataclass
@@ -156,7 +168,10 @@ class SessionManager:
         Intended to be called periodically (e.g. from a background task).
         Sessions with active references (refcount > 0) are never evicted.
         """
+        import gc
+
         now = time.monotonic()
+        freed = 0
         with self._lock:
             to_evict = [
                 path
@@ -166,6 +181,7 @@ class SessionManager:
             for path in to_evict:
                 del self._sessions[path]
                 log.info("Evicted idle ONNX session: %s", path)
+            freed += len(to_evict)
 
         with self._pool_condition:
             for model_path, state in self._pools.items():
@@ -179,6 +195,43 @@ class SessionManager:
                 state.entries = kept
                 if evicted_count:
                     log.info("Evicted %d idle exclusive ONNX session(s): %s", evicted_count, model_path)
+                freed += evicted_count
+
+        # Force the C++ session destructors to run now so the VRAM is actually
+        # returned — a dropped dict entry alone leaves it to the GC's whim.
+        if freed:
+            gc.collect()
+
+    def evict_unused(self) -> int:
+        """Force-evict every session not currently in use, ignoring the idle timeout.
+
+        Called on CUDA OOM to reclaim the VRAM held by warm-but-unused models so
+        the in-flight inference can be retried. Sessions with an active reference
+        (refcount > 0) or checked out of the exclusive pool (in_use) belong to a
+        live caller and are never touched — only the *other* lanes' idle warm
+        models are dropped. Returns the number of sessions freed.
+        """
+        import gc
+
+        with self._lock:
+            to_evict = [path for path, entry in self._sessions.items() if entry.refcount == 0]
+            for path in to_evict:
+                del self._sessions[path]
+            singleton_freed = len(to_evict)
+
+        pool_freed = 0
+        with self._pool_condition:
+            for state in self._pools.values():
+                kept = [entry for entry in state.entries if entry.in_use]
+                pool_freed += len(state.entries) - len(kept)
+                state.entries = kept
+            self._pool_condition.notify_all()
+
+        total = singleton_freed + pool_freed
+        if total:
+            gc.collect()
+            log.info("OOM eviction: freed %d unused ONNX session(s)", total)
+        return total
 
     def evict_all(self) -> None:
         """Force-evict all sessions — called at shutdown."""
@@ -308,3 +361,36 @@ class SessionManager:
 
 # Singleton — imported by adapters and job code.
 session_manager = SessionManager()
+
+
+def _is_cuda_oom(error: BaseException) -> bool:
+    """True if *error* is an ONNX Runtime CUDA out-of-memory / poisoned-context failure."""
+    message = str(error)
+    return any(marker in message for marker in _OOM_ERROR_MARKERS)
+
+
+def run_with_oom_retry[T](run_callable: Callable[[], T], *, description: str) -> T:
+    """Run an ONNX inference callable; on CUDA OOM, free unused sessions and retry once.
+
+    The warm-session cache keeps every recently used model resident, so under a
+    heavy mixed workload (face + caption + tagging firing at once) the combined
+    VRAM footprint can exceed the GPU. When that happens ONNX Runtime raises an
+    out-of-memory `Fail`; we evict every session not currently in use — reclaiming
+    the VRAM of the *other* lanes' warm models — and retry the run exactly once.
+    A second failure, or any non-OOM error, propagates unchanged.
+    """
+    try:
+        return run_callable()
+    except Exception as error:
+        # Broad catch is deliberate: ORT surfaces OOM as a generic `Fail`, so we
+        # gate on the message and re-raise anything that isn't an OOM immediately.
+        if not _is_cuda_oom(error):
+            raise
+        log.warning("CUDA OOM during %s — evicting unused sessions and retrying once", description)
+        freed = session_manager.evict_unused()
+        if freed == 0:
+            log.warning(
+                "OOM during %s but no unused sessions were free to evict — retry may fail too",
+                description,
+            )
+        return run_callable()

@@ -60,8 +60,12 @@ def _log_softmax(logits: np.ndarray) -> np.ndarray:
 
 def _run(session: ort.InferenceSession, feeds: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     """Run a session, returning outputs keyed by their declared names."""
+    from photofant.inference.session_manager import run_with_oom_retry
+
     output_names = [output.name for output in session.get_outputs()]
-    results = session.run(output_names, feeds)
+    results = run_with_oom_retry(
+        lambda: session.run(output_names, feeds), description="Florence-2 inference"
+    )
     return dict(zip(output_names, results, strict=True))
 
 
