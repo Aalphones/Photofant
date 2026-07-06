@@ -65,20 +65,41 @@ zweiten, schwächeren Vergleichsweg. Supersedes ADR-006, baut auf ADR-007 auf.
 
 ## Summary
 
-_(beim Archivieren füllen)_
+pHash (DHash) vollständig entfernt, alle vier Funktionen (Import-Dupe-Check, Dupe-Scan,
+Trainingsset-Dupes/-Quote, Face-Crop-Dedupe) laufen jetzt auf CLIP bzw. Face-Embeddings.
+Backend, Frontend, DB-Schema und Docs synchron; `imagehash`-Dependency weg. ADR-018
+dokumentiert die Entscheidung, ADR-006/007 als superseded/ergänzt markiert.
 
 ## Files touched
 
-_(beim Archivieren füllen)_
+Backend: `db/models.py`, `api/duplicates.py`, `api/review.py`, `api/collections.py`,
+`api/edit_sessions.py`, `api/classify.py`, `jobs/dupe_scan_job.py`, `jobs/embedding_job.py`,
+`jobs/import_job.py`, `jobs/rerun_job.py`, `clustering/engine.py`, `collections/stats.py`,
+`settings.py`, `settings.example.json`, `pyproject.toml`, `uv.lock`,
+`alembic/versions/0031_drop_phash.py` (neu), `media/phash.py` (gelöscht).
+Frontend: `review.model.ts`, `person.model.ts`, Review-Dupes-UI, Personen-Dupe-Check,
+Rerun-Dialog, Einstellungen, Trainingsset-Dupes-Slider, Lightbox.
+Docs: `models.md`, `routes.md`, `code-map.md`, ADR-006/007/018.
 
 ## Commits
 
-_(beim Archivieren füllen)_
+- `e78c3b0` Phase 1 — Dupe-Pipeline Backend (Embedding-Hook, Scan, APIs)
+- `67868bd` Phase 2 — Trainingssets + Face-Dedupe Backend
+- `392c6a6` Phase 3 — Frontend-Anpassung
+- `ac59778` Phase 4 — DB-Migration, Modul-Löschung, Docs, ADR-018
 
 ## Deviations from plan
 
-_(beim Archivieren füllen)_
+- Phase 3 fand einen Backend-Nebenfund (`AssetDto.has_phash` lieferte seit Phase 1 für
+  jedes neue Asset `false`) und behob ihn mit — Umbenennung auf `has_embedding`, inkl.
+  Batch-Query gegen N+1. Kein Kontraktbruch (Feld war nicht Teil der Plan-DTOs).
+- Phase 4 fand zusätzlich einen toten `phash_distance=0`-Pflichtfeld-Ballast in
+  `clustering/engine.py` (Face-Pre-Matching), der beim Spalten-Drop gecrasht wäre —
+  entfernt (Pendant in `jobs/clustering_job.py` setzte das Feld nie).
+- Migration wurde nicht gegen die Live-Dev-DB gefahren, sondern gegen eine isolierte
+  Kopie verifiziert (54 Alt-Kandidaten korrekt gelöscht, alle drei Spalten weg) — der
+  User führt `alembic upgrade head` im normalen App-Start-Flow selbst aus.
 
 ## Follow-ups
 
-_(beim Archivieren füllen)_
+Keine offenen.
