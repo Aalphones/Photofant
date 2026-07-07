@@ -1,12 +1,14 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-07_p36-reverse-image-search/` — Phase 2 (Globale Suche: Drag & Drop /
-Upload → Reverse-Filter) **fertig**. Nächster Schritt: Phase 3 (Lightbox „Ähnliche Bilder" als p26-kompatible
-Related-Rail + „mehr"-Sprung in die Reverse-Search). **Vor Phase 3:** Design-Lage — es gibt **kein** Reverse-/
-Lightbox-Mockup in `docs/design/` (nur der generelle Look ist verbindlich), daher freihändig nach
-p26-Kartenkonzept (README-Kontrakt so freigegeben). Die Endpoint-Überschneidung mit dem alten Duplikat-Overlay
-ist entschieden — Related-Rail ersetzt es komplett; Details + „mehr"-Wiederverwendung der Phase-2-Mechanik in
-`phase-3-lightbox-aehnliche.md` + `FINDINGS.md`.
+**Aktiver Plan:** `docs/planning/2026-07-07_p36-reverse-image-search/` — Phase 3 (Lightbox „Ähnliche Bilder" als
+p26-kompatible Related-Rail + „mehr"-Sprung, ersetzt das alte Similar-Overlay komplett) **fertig**, lint+build
+grün. Nächster Schritt: Phase 4 (toter `POST /api/search/semantic`-Text-Pfad → Frontend verdrahten). Danach
+Plan komplett → archivieren, STATE auf nächsten Plan setzen.
+
+**Follow-up aus Phase 3 (🟡 nicht blockierend):** `AssetService.setAssetOriginal()` + Backend-Endpoint
+`PATCH /assets/{id}/original` sind seit der Overlay-Entfernung ohne Aufrufer (weder Frontend noch MCP) —
+bewusst nicht mitentfernt (außerhalb des Phase-3-AK), bei Gelegenheit eigener kleiner Cleanup. Details:
+`phase-3-lightbox-aehnliche.md` Report-Back.
 
 **Backlog danach (User-Reihenfolge, 2026-07-07):** `2026-07-07_p37-dinov2-reranking` →
 `2026-07-01_p22-knowledge-engine` bis `p26-recommendation-engine` (in Nummernreihenfolge) →

@@ -21,4 +21,13 @@ export class SearchService {
     }
     return this.http.post<SemanticSearchResponse>('/api/search/by-image', form, { params });
   }
+
+  // „Ähnlich zu Asset X" — Lightbox-Rail und der „mehr"-Sprung in die Reverse-Search.
+  semanticByAsset(likeAssetId: number, limit?: number): Observable<SemanticSearchResponse> {
+    const body: { like_asset_id: number; limit?: number } = { like_asset_id: likeAssetId };
+    if (limit != null) {
+      body.limit = limit;
+    }
+    return this.http.post<SemanticSearchResponse>('/api/search/semantic', body);
+  }
 }

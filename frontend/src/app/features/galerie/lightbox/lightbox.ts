@@ -9,18 +9,30 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
-import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, type Observable } from 'rxjs';
+import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, startWith, type Observable } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, AssetSummary, ComfyUIImportResponse, ComfyUIWorkflow, DupePair, DupeResolution, FaceDto, FaceMatch, Framing, PersonDto, SimilarAsset, TagDto, TagListItem, VersionDto } from '@photofant/models';
-import { AssetService, ClassifyService, ComfyUIService, PersonService, TagService } from '@photofant/services';
+import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, FaceDto, FaceMatch, Framing, PersonDto, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import { AssetService, ClassifyService, ComfyUIService, PersonService, SearchService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
-import { comfyuiActions, comfyuiSelectors, galleryActions, gallerySelectors, jobsSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { comfyuiActions, comfyuiSelectors, filtersActions, galleryActions, gallerySelectors, jobsSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
-import { DupeCompare } from '../../review/review-dupes/dupe-compare/dupe-compare';
+import { RelatedRail } from './related-rail/related-rail';
 import { Editor } from '../../editor/editor';
+
+// Anzahl Vorschläge in der Lightbox-Rail — spiegelt `reverseSearch.similarLimit` (Default
+// 10, `backend/photofant/settings.py`). Kein Frontend-Config-Read nötig: der „mehr"-Sprung
+// nutzt bewusst den größeren Server-Default (`SemanticSearchRequest.limit` = 24), die Rail
+// bleibt kompakt.
+const RELATED_RAIL_LIMIT = 10;
+
+interface RelatedRailData {
+  items: RelatedRailItem[];
+  loading: boolean;
+  emptyMessage: string | null;
+}
 
 interface GenMetaEntry { key: string; value: string }
 
@@ -106,7 +118,7 @@ function formatDate(dateStr: string | null): string {
 @Component({
   selector: 'pf-lightbox',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ZoomStage, Icon, RerunDialog, DupeCompare, ComfyuiImportDialog, Editor],
+  imports: [ZoomStage, Icon, RerunDialog, RelatedRail, ComfyuiImportDialog, Editor],
   templateUrl: './lightbox.html',
   styleUrl: './lightbox.scss',
 })
@@ -119,6 +131,7 @@ export class Lightbox {
   private readonly comfyuiService     = inject(ComfyUIService);
   private readonly document           = inject(DOCUMENT);
   private readonly personService      = inject(PersonService);
+  private readonly searchService      = inject(SearchService);
   private readonly destroyRef         = inject(DestroyRef);
 
   protected readonly showRerunDialog = signal(false);
@@ -261,12 +274,18 @@ export class Lightbox {
   protected readonly editingCaption  = signal(false);
   protected readonly captionDraft    = signal('');
 
-  // ── Similar assets overlay ────────────────────────────────────────────────
-
-  protected readonly showSimilarOverlay  = signal(false);
-  protected readonly similarLoading      = signal(false);
-  protected readonly similarAssets       = signal<SimilarAsset[]>([]);
-  protected readonly selectedSimilarPair = signal<DupePair | null>(null);
+  // ── Related-Rail „Ähnliche Bilder" (P36, ersetzt das alte Similar-Overlay) ─
+  // Läuft an derselben Reload-Pipeline wie `detail`/`lineage`; im Gesichter-Modus liefert
+  // `selectLightboxAsset` null (lightboxId ist dort null), die Rail bleibt entsprechend leer.
+  protected readonly relatedRail = toSignal(
+    combineLatest([
+      this.store.select(gallerySelectors.selectLightboxAsset),
+      toObservable(this.reloadTrigger),
+    ]).pipe(
+      switchMap(([asset]: [AssetDto | null, number]) => this.loadRelatedRail(asset)),
+    ),
+    { initialValue: { items: [], loading: false, emptyMessage: null } as RelatedRailData },
+  );
 
   // ── Face matches (PersonPicker-Modal) ─────────────────────────────────────
   // Nur die faceId wird gebraucht (Zuweisen/Vergleich mit Löschziel) — funktioniert
@@ -631,10 +650,6 @@ export class Lightbox {
       this.tagInputValue.set('');
       this.editingCaption.set(false);
       this.hiddenTagIds.set([]);
-      // Reset similar overlay when navigating to a different asset
-      this.showSimilarOverlay.set(false);
-      this.similarAssets.set([]);
-      this.selectedSimilarPair.set(null);
       // Reset PersonPicker-Modal state
       this.showPersonPicker.set(false);
       this.selectedFaceId.set(null);
@@ -1013,77 +1028,65 @@ export class Lightbox {
     return `vc-tag ${COMPARE_TAG_META[tag].className}`;
   }
 
-  protected similarBadgePercent(similar: SimilarAsset): number {
-    return similar.clip_similarity_pct ?? 0;
+  // ── Related-Rail „Ähnliche Bilder" (P36) ──────────────────────────────────
+
+  private loadRelatedRail(asset: AssetDto | null): Observable<RelatedRailData> {
+    if (asset == null) {
+      return of({ items: [], loading: false, emptyMessage: null });
+    }
+    if (!asset.has_embedding) {
+      return of({ items: [], loading: false, emptyMessage: 'Für dieses Bild liegt noch kein Embedding vor.' });
+    }
+    return this.searchService.semanticByAsset(asset.id, RELATED_RAIL_LIMIT).pipe(
+      map((response: SemanticSearchResponse): RelatedRailData => ({
+        items: response.hits.map((hit): RelatedRailItem => ({ assetId: hit.asset_id, score: hit.score, reasons: null })),
+        loading: false,
+        emptyMessage: response.hits.length === 0 ? 'Keine ähnlichen Bilder gefunden.' : null,
+      })),
+      startWith({ items: [], loading: true, emptyMessage: null } as RelatedRailData),
+      catchError((err: unknown) => {
+        console.error('[Lightbox] Ähnliche Bilder konnten nicht geladen werden:', err);
+        return of({ items: [], loading: false, emptyMessage: this.relatedRailErrorMessage(err) });
+      }),
+    );
   }
 
-  protected openSimilarOverlay(): void {
+  // Backend liefert 409 mit { detail: { code, message } } (deutsche Meldung) für
+  // SEMANTIC_SEARCH_UNAVAILABLE/NO_EMBEDDING — sonst eine generische Meldung.
+  private relatedRailErrorMessage(err: unknown): string {
+    const detail: unknown = (err as { error?: { detail?: unknown } } | null)?.error?.detail;
+    if (detail != null && typeof detail === 'object' && 'message' in detail) {
+      const message: unknown = (detail as { message?: unknown }).message;
+      if (typeof message === 'string') { return message; }
+    }
+    return 'Ähnliche Bilder konnten nicht geladen werden.';
+  }
+
+  protected openRelatedAsset(assetId: number): void {
+    this.openSourceAsset(assetId);
+  }
+
+  // „mehr" — öffnet die Galerie im Reverse-Modus (Phase 2) zu genau diesem Bild. Nutzt
+  // dieselbe Semantik-Suche wie die Rail, aber ohne Limit (Server-Default 24 statt 10),
+  // damit die Reverse-Galerie mehr als die Rail-Vorschau zeigt.
+  protected openMoreSimilar(): void {
     const asset: AssetDto | null = this.asset();
-    if (asset == null || !asset.has_embedding) { return; }
-    this.showSimilarOverlay.set(true);
-    this.similarLoading.set(true);
-    this.assetService.getSimilarAssets(asset.id)
+    if (asset == null) { return; }
+    this.searchService.semanticByAsset(asset.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (assets: SimilarAsset[]) => {
-          this.similarAssets.set(assets);
-          this.similarLoading.set(false);
+        next: (response: SemanticSearchResponse) => {
+          const similarIds = response.hits.map((hit) => hit.asset_id);
+          if (similarIds.length === 0) { return; }
+          this.store.dispatch(filtersActions.setReverseSearch({
+            reverseSearch: { thumbnailDataUrl: this.assetService.thumbnailUrl(asset.id, 256), similarIds },
+          }));
+          this.close();
         },
-        error: () => { this.similarLoading.set(false); },
+        error: (err: unknown) => {
+          console.error('[Lightbox] Reverse-Suche (mehr) fehlgeschlagen:', err);
+        },
       });
-  }
-
-  protected closeSimilarOverlay(): void {
-    this.showSimilarOverlay.set(false);
-    this.selectedSimilarPair.set(null);
-  }
-
-  protected openSimilarCompare(similar: SimilarAsset): void {
-    const asset: AssetDto | null = this.asset();
-    if (asset == null || similar.clip_distance == null || similar.clip_similarity_pct == null) { return; }
-    const assetAsSummary: AssetSummary = {
-      id: asset.id,
-      content_hash: asset.content_hash,
-      width: asset.width,
-      height: asset.height,
-      format: asset.format,
-      source: asset.source,
-      file_size: asset.file_size,
-      created_at: asset.created_at,
-      imported_at: asset.imported_at,
-    };
-    const pair: DupePair = {
-      id: 0,
-      asset_a: assetAsSummary,
-      asset_b: similar,
-      clip_distance: similar.clip_distance,
-      clip_similarity_pct: similar.clip_similarity_pct,
-      created_at: new Date().toISOString(),
-    };
-    this.selectedSimilarPair.set(pair);
-  }
-
-  protected onSimilarResolve(event: { pair: DupePair; resolution: DupeResolution }): void {
-    const { pair, resolution } = event;
-    if (resolution === 'dismiss') {
-      this.selectedSimilarPair.set(null);
-      return;
-    }
-    if (resolution === 'delete_a') {
-      this.store.dispatch(galleryActions.deleteAsset({ id: pair.asset_a.id }));
-    } else if (resolution === 'delete_b') {
-      this.store.dispatch(galleryActions.deleteAsset({ id: pair.asset_b.id }));
-    } else if (resolution === 'a_is_original') {
-      this.assetService.setAssetOriginal(pair.asset_b.id, pair.asset_a.id)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe();
-    } else if (resolution === 'b_is_original') {
-      this.assetService.setAssetOriginal(pair.asset_a.id, pair.asset_b.id)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe();
-    }
-    this.selectedSimilarPair.set(null);
-    this.showSimilarOverlay.set(false);
   }
 
   // ── Face deletion ─────────────────────────────────────────────────────────

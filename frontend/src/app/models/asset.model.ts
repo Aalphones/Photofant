@@ -103,20 +103,6 @@ export interface AssetLinkSummary {
   created_at: string | null;
 }
 
-export interface SimilarAsset {
-  id: number;
-  content_hash: string;
-  width: number | null;
-  height: number | null;
-  format: string | null;
-  source: string | null;
-  file_size: number | null;
-  created_at: string | null;
-  imported_at: string | null;
-  clip_distance: number | null;
-  clip_similarity_pct: number | null;
-}
-
 export interface TagDto {
   id: number;
   name: string;

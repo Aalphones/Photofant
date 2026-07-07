@@ -1,6 +1,6 @@
 # Phase 3 — Lightbox „Ähnliche Bilder" (Related-Rail, p26-kompatibel) + „mehr"-Sprung
 
-**Komplexität:** standard · **Status:** pending
+**Komplexität:** standard · **Status:** done
 
 ## Kontext (vor dem Bauen lesen)
 - `frontend/src/app/features/galerie/lightbox/` — die Lightbox (Screen-Eigentümer P15). Hier kommt die Sektion rein.
@@ -20,24 +20,35 @@ Nebeneinander. Der bestehende Duplikat-Abgleich als eigener Workflow bleibt unan
 Klick-Overlay entfällt.
 
 ## AK der Phase
-- [ ] Neue, wiederverwendbare Rail-Komponente (`features/galerie/lightbox/related-rail/` o.ä.), rendert Karten aus
+- [x] Neue, wiederverwendbare Rail-Komponente (`features/galerie/lightbox/related-rail/` o.ä.), rendert Karten aus
       `{ assetId, score, reasons }` — Vorschaubild + Ähnlichkeits-Prozent; `reasons` (wenn gesetzt) als Begründungs-
       Checkliste, sonst weggelassen. **Struktur so, dass P26 dieselbe Komponente mit gefüllten `reasons` nutzt.**
-- [ ] In der Lightbox unter dem Detail-Bereich zeigt die Rail bis zu `reverseSearch.similarLimit` (10) Ähnliche
+- [x] In der Lightbox unter dem Detail-Bereich zeigt die Rail bis zu `reverseSearch.similarLimit` (10) Ähnliche
       zum offenen Bild (`like_asset_id`); Klick auf eine Karte öffnet dieses Bild in der Lightbox.
-- [ ] „mehr"-Button unter der Rail öffnet die Galerie im **Reverse-Modus** (Phase 2) zu genau dem offenen Bild
+- [x] „mehr"-Button unter der Rail öffnet die Galerie im **Reverse-Modus** (Phase 2) zu genau dem offenen Bild
       (`similar_ids` aus dem `like_asset_id`-Ergebnis; Quell-Thumbnail = das offene Bild).
-- [ ] Leerer/Fehlerfall (kein Embedder, keine Ähnlichen) zeigt einen dezenten Hinweis statt einer leeren Fläche.
-- [ ] **Altes Overlay entfernen:** `openSimilarOverlay()`/`closeSimilarOverlay()`/`showSimilarOverlay`/
+- [x] Leerer/Fehlerfall (kein Embedder, keine Ähnlichen) zeigt einen dezenten Hinweis statt einer leeren Fläche.
+- [x] **Altes Overlay entfernen:** `openSimilarOverlay()`/`closeSimilarOverlay()`/`showSimilarOverlay`/
       `similarAssets`/`similarLoading`/`openSimilarCompare()`/`onSimilarResolve()`/`selectedSimilarPair` +
       das `similar-scrim`/`similar-overlay`-Markup (`lightbox.html:868-909`) und den alten „Ähnliche Bilder"-
       Button (`lightbox.html:112-121`) aus `lightbox.ts`/`lightbox.html` entfernen — die neue Rail übernimmt
       den Slot. `AssetService.getSimilarAssets()` (`asset.service.ts:143`) + `SimilarAsset`-Modell nur entfernen,
       falls wirklich kein anderer Aufrufer mehr existiert (kurz grep'en, `DupeCompare` hängt evtl. noch dran).
-- [ ] `npm run lint` + `npm run build` grün.
+- [x] `npm run lint` + `npm run build` grün.
 
 ## Doc-Updates
-- [ ] `docs/code-map.md` — Galerie/Lightbox-Zeile um die Related-Rail ergänzen (Hinweis: von P26 mitbenutzt).
-- [ ] STATE.md/Archiv: Plan nach `docs/archive/2026-07/` verschieben, STATE auf nächsten Plan/`(kein aktiver Plan)`.
+- [x] `docs/code-map.md` — Galerie/Lightbox-Zeile um die Related-Rail ergänzen (Hinweis: von P26 mitbenutzt).
+- [ ] STATE.md/Archiv: Plan nach `docs/archive/2026-07/` verschieben, STATE auf nächsten Plan/`(kein aktiver Plan)` —
+      erst nach Phase 4 (Text-Semantiksuche), P36 ist noch nicht komplett.
 
 ## Report-Back
+- **Abweichung vom AK:** `AssetService.getSimilarAssets()` + `SimilarAsset`-Modell entfernt (kein anderer Frontend-
+  Aufrufer mehr, `DupeCompare` hing nicht daran — nutzt `DupePair`/`AssetSummary`). Backend-Endpoint
+  `GET /api/assets/{id}/similar` bleibt bestehen, wird noch von `mcp/tools/library.py` aufgerufen.
+- **Nicht in dieser Phase entfernt (🟡 Follow-up, nicht blockierend):** `AssetService.setAssetOriginal()`
+  (`asset.service.ts`) war ausschließlich vom jetzt entfernten `onSimilarResolve()` aufgerufen — nach dieser
+  Phase ohne Frontend-Caller. Ebenso der Backend-Endpoint `PATCH /assets/{id}/original` (kein MCP-Aufrufer).
+  Nicht Teil des AK, daher stehen gelassen statt eigenmächtig mitentfernt — bei Bedarf eigener kleiner Cleanup.
+- „mehr"-Sprung ruft `semanticByAsset()` ohne explizites `limit` auf (Server-Default 24 aus
+  `SemanticSearchRequest.limit`) statt der Rail-Limit (10) — bewusst, damit die Reverse-Galerie mehr zeigt als
+  die Rail-Vorschau.

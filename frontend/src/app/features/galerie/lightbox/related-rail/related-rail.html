@@ -1,0 +1,27 @@
+@if (loading()) {
+  <div class="rr-rail__empty">Suche läuft…</div>
+} @else if (items().length === 0) {
+  <div class="rr-rail__empty">{{ emptyMessage() ?? 'Keine ähnlichen Bilder gefunden.' }}</div>
+} @else {
+  <div class="rr-rail__strip">
+    @for (item of items(); track item.assetId) {
+      <div class="rr-rail__card">
+        <button
+          class="rr-rail__thumb"
+          (click)="cardClick.emit(item.assetId)"
+          [attr.aria-label]="'Asset #' + item.assetId + ' öffnen'"
+        >
+          <img class="rr-rail__img" [src]="thumbnailUrl(item.assetId)" alt="" />
+          <span class="rr-rail__badge">{{ scorePercent(item) }}%</span>
+        </button>
+        @if (item.reasons != null && item.reasons.length > 0) {
+          <ul class="rr-rail__reasons">
+            @for (reason of item.reasons; track reason.label) {
+              <li>{{ reason.label }}</li>
+            }
+          </ul>
+        }
+      </div>
+    }
+  </div>
+}
