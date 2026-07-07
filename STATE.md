@@ -1,10 +1,11 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-07_p36-reverse-image-search/` — Phase 1 (Backend: Upload-Embed-Endpoint
-+ Galerie-`similar_ids`) fertig. Nächster Schritt: Phase 2 (Globale Suche: Drag & Drop / Upload →
-Reverse-Filter). **Vor Phase 2/3:** Design-Lage klären (`docs/design/` auf Such-/Lightbox-Mockup prüfen,
-README-Vorgabe). Die Endpoint-Überschneidung mit dem bestehenden Duplikat-Overlay in der Lightbox ist
-bereits entschieden — Related-Rail (Phase 3) ersetzt das alte Overlay komplett, Details in
+**Aktiver Plan:** `docs/planning/2026-07-07_p36-reverse-image-search/` — Phase 2 (Globale Suche: Drag & Drop /
+Upload → Reverse-Filter) **fertig**. Nächster Schritt: Phase 3 (Lightbox „Ähnliche Bilder" als p26-kompatible
+Related-Rail + „mehr"-Sprung in die Reverse-Search). **Vor Phase 3:** Design-Lage — es gibt **kein** Reverse-/
+Lightbox-Mockup in `docs/design/` (nur der generelle Look ist verbindlich), daher freihändig nach
+p26-Kartenkonzept (README-Kontrakt so freigegeben). Die Endpoint-Überschneidung mit dem alten Duplikat-Overlay
+ist entschieden — Related-Rail ersetzt es komplett; Details + „mehr"-Wiederverwendung der Phase-2-Mechanik in
 `phase-3-lightbox-aehnliche.md` + `FINDINGS.md`.
 
 **Backlog danach (User-Reihenfolge, 2026-07-07):** `2026-07-07_p37-dinov2-reranking` →

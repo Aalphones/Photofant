@@ -6,7 +6,7 @@ import { collectionsSelectors, filtersActions, filtersSelectors, gallerySelector
 import { Icon } from '@photofant/ui';
 
 interface FilterChip {
-  kind: 'source' | 'qualityMin' | 'tag' | 'collection' | 'person' | 'framing' | 'hasFaces' | 'semantic';
+  kind: 'source' | 'qualityMin' | 'tag' | 'collection' | 'person' | 'framing' | 'hasFaces' | 'semantic' | 'reverse';
   chipKey: string;
   label: string;
   id?: number;
@@ -49,6 +49,7 @@ export class SubToolbar {
   protected readonly facets       = this.store.selectSignal(gallerySelectors.selectFacets);
   protected readonly searchQuery  = this.store.selectSignal(searchSelectors.selectQ);
   protected readonly searchMode   = this.store.selectSignal(searchSelectors.selectMode);
+  protected readonly reverseSearch = this.store.selectSignal(filtersSelectors.reverseSearch);
 
   protected readonly mediaType = this.store.selectSignal(filtersSelectors.mediaType);
 
@@ -73,6 +74,10 @@ export class SubToolbar {
 
   protected readonly chips = computed((): FilterChip[] => {
     const result: FilterChip[] = [];
+    const reverse = this.reverseSearch();
+    if (reverse != null) {
+      result.push({ kind: 'reverse', chipKey: 'Ähnliche zu', label: 'diesem Bild', thumbnailUrl: reverse.thumbnailDataUrl });
+    }
     if (this.searchMode() === 'semantic' && this.searchQuery()) {
       result.push({ kind: 'semantic', chipKey: 'Suche', label: this.searchQuery() });
     }
@@ -142,6 +147,8 @@ export class SubToolbar {
       this.store.dispatch(filtersActions.setPersonId({ personId: null }));
     } else if (chip.kind === 'semantic') {
       this.store.dispatch(searchActions.clear());
+    } else if (chip.kind === 'reverse') {
+      this.store.dispatch(filtersActions.clearReverseSearch());
     }
   }
 

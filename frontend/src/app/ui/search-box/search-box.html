@@ -1,6 +1,11 @@
 <div
   class="search-box"
   [class.search-box--open]="isOpen() && suggestions().length > 0"
+  [class.search-box--drop]="isDropTarget()"
+  (dragenter)="onDragEnter($event)"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)"
 >
   <pf-icon name="search" [size]="16" />
 
@@ -30,7 +35,36 @@
       <pf-icon name="x" [size]="14" />
     </button>
   }
+
+  <!-- Reverse Image Search: Bild ablegen oder wählen → ähnliche Bilder finden -->
+  <button
+    class="search-box__upload"
+    [class.search-box__upload--busy]="isReverseSearching()"
+    type="button"
+    (click)="onUploadClick()"
+    [disabled]="isReverseSearching()"
+    title="Bild ablegen oder wählen, um ähnliche zu finden"
+    aria-label="Ähnliche Bilder per Bild suchen"
+  >
+    <pf-icon name="scan" [size]="16" />
+  </button>
+  <input
+    #fileInput
+    class="search-box__file"
+    type="file"
+    accept="image/*"
+    (change)="onFilePicked($event)"
+    hidden
+  />
+
+  @if (isDropTarget()) {
+    <div class="search-box__drop-hint">Bild ablegen → Ähnliche finden</div>
+  }
 </div>
+
+@if (reverseError()) {
+  <div class="search-box__error" role="alert">{{ reverseError() }}</div>
+}
 
 <!-- Autocomplete dropdown -->
 @if (isOpen() && suggestions().length > 0) {

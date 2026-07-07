@@ -14,6 +14,7 @@ const {
   selectHasFaces,
   selectMediaType,
   selectClassificationLabelIds,
+  selectReverseSearch,
 } = filtersFeature;
 
 export const filtersSelectors = {
@@ -30,4 +31,5 @@ export const filtersSelectors = {
   hasFaces:     selectHasFaces,
   mediaType:    selectMediaType,
   classificationLabelIds: selectClassificationLabelIds,
+  reverseSearch: selectReverseSearch,
 };

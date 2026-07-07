@@ -20,6 +20,12 @@
     border-color: var(--accent-line);
     box-shadow: 0 0 0 3px var(--accent-weak);
   }
+
+  &--drop {
+    border-color: var(--accent);
+    border-style: dashed;
+    box-shadow: 0 0 0 3px var(--accent-weak);
+  }
 }
 
 .search-box__input {
@@ -51,6 +57,61 @@
   padding: 0;
 
   &:hover { color: var(--text); background: var(--surface-hover); }
+}
+
+// Reverse-Image-Suche: Bild-Upload-Button (immer sichtbar) + Drop-Overlay + Fehler-Toast
+
+.search-box__upload {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-3);
+  cursor: pointer;
+  flex: none;
+  padding: 0;
+
+  &:hover { color: var(--accent); background: var(--surface-2); }
+
+  &:disabled { cursor: default; opacity: .6; }
+
+  &--busy { animation: reverse-pulse 1s ease-in-out infinite; }
+}
+
+.search-box__drop-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--accent-weak);
+  border-radius: 9px;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.search-box__error {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 8px 12px;
+  z-index: 100;
+}
+
+@keyframes reverse-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .45; }
 }
 
 // --- Autocomplete dropdown ---
@@ -123,4 +184,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .search-box__dropdown { animation: none; }
+  .search-box__upload--busy { animation: none; }
 }

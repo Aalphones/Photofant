@@ -95,6 +95,10 @@ export class Shell {
       event.preventDefault();
       depth = 0;
       this.isDraggingFiles.set(false);
+      // Drop auf die Suchbox ist Reverse-Image-Suche (P36) — die Suchbox handhabt ihn
+      // selbst; hier nicht zusätzlich den Import-Dialog öffnen.
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('pf-search-box') != null) { return; }
       const files = event.dataTransfer?.files;
       if (files && files.length > 0) {
         const images = Array.from(files).filter((file: File) =>

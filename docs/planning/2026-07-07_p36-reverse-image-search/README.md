@@ -43,7 +43,7 @@ so freigegeben: „gleich p26-kompatibel bauen").
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | Backend: Upload-Embed-Endpoint + Galerie-`similar_ids` | standard | done |
-| 2 | Globale Suche: Drag & Drop / Upload → Reverse-Filter | heikel (UI-Fluss + Filter-Modus) | pending |
+| 2 | Globale Suche: Drag & Drop / Upload → Reverse-Filter | heikel (UI-Fluss + Filter-Modus) | done |
 | 3 | Lightbox „Ähnliche Bilder" (Related-Rail, p26-kompatibel) + „mehr"-Sprung | standard | pending |
 | 4 | Text-Semantiksuche verdrahten (toter `/semantic`-Text-Pfad → Frontend) | standard | pending |
 

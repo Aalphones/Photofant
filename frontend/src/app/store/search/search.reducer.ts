@@ -1,5 +1,6 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
 import type { SearchMode } from '@photofant/models';
+import { filtersActions } from '../filters/filters.actions';
 import { searchActions } from './search.actions';
 
 interface SearchState {
@@ -23,5 +24,10 @@ export const searchFeature = createFeature({
     on(searchActions.setMode,           (state: SearchState, { mode }) => ({ ...state, mode, q: '' })),
     on(searchActions.setSemanticQuery,  (state: SearchState, { q })    => ({ ...state, mode: 'semantic' as const, q })),
     on(searchActions.clear,             (state: SearchState)            => ({ ...state, q: '', mode: 'text' as const })),
+    // Reverse-Image-Suche ist der exklusive Gegenspieler zur Text-/Semantiksuche:
+    // aktiviert sie sich, wird eine laufende Textsuche geleert, damit kein alter
+    // Such-Chip neben dem Reverse-Chip stehen bleibt (Gegenstück zur Exklusivität
+    // im filters-Reducer).
+    on(filtersActions.setReverseSearch, (state: SearchState)            => ({ ...state, q: '', mode: 'text' as const })),
   ),
 });

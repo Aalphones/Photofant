@@ -76,6 +76,8 @@ export class GalleryEffects {
         filtersActions.setHasFaces,
         filtersActions.setMediaType,
         filtersActions.setClassificationLabelIds,
+        filtersActions.setReverseSearch,
+        filtersActions.clearReverseSearch,
         filtersActions.clearAllFilters,
         searchActions.setQuery,
         searchActions.setMode,
@@ -111,6 +113,12 @@ export class GalleryEffects {
           );
         }
 
+        // Reverse-Image-Filter (P36) ist exklusiv zur Textsuche: liegen ähnliche IDs an,
+        // laden wir genau diese (in Reihenfolge) und ignorieren die Freitextsuche.
+        const searchParams = params.similarIds?.length
+          ? { similarIds: params.similarIds }
+          : (params.q ? { q: params.q, qMode: params.qMode } : {});
+
         const assetFetch$ = this.assetService.listAssets({
           page: params.page,
           page_size: params.pageSize,
@@ -125,7 +133,7 @@ export class GalleryEffects {
           framings: params.framings,
           hasFaces: params.hasFaces,
           classificationLabelIds: params.classificationLabelIds,
-          ...(params.q ? { q: params.q, qMode: params.qMode } : {}),
+          ...searchParams,
         }).pipe(
           map((result: AssetsPage) => galleryActions.loadPageSuccess({
             items: result.items,

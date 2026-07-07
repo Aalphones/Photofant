@@ -43,9 +43,9 @@ const selectFetchParams = createSelector(
   filtersFeature.selectSources, filtersFeature.selectQualityMin, filtersFeature.selectTagIds,
   filtersFeature.selectCollectionId, filtersFeature.selectPersonId, filtersFeature.selectFramings,
   filtersFeature.selectHasFaces, filtersFeature.selectMediaType, filtersFeature.selectClassificationLabelIds,
-  searchFeature.selectQ, searchFeature.selectMode,
-  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, hasFaces, mediaType, classificationLabelIds, q, qMode) =>
-    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, hasFaces, mediaType, classificationLabelIds, q, qMode })
+  filtersFeature.selectReverseSearch, searchFeature.selectQ, searchFeature.selectMode,
+  (page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, hasFaces, mediaType, classificationLabelIds, reverseSearch, q, qMode) =>
+    ({ page, pageSize, sort, order, favourite, sources, qualityMin, tagIds, collectionId, personId, framings, hasFaces, mediaType, classificationLabelIds, similarIds: reverseSearch?.similarIds ?? null, q, qMode })
 );
 
 const FACE_PAGE_SIZE = 500;

@@ -1,18 +1,22 @@
+import { DOCUMENT } from '@angular/common';
+import type { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
-import type { PersonDto, TagListItem } from '@photofant/models';
-import { TagService } from '@photofant/services';
+import type { PersonDto, SemanticSearchResponse, TagListItem } from '@photofant/models';
+import { SearchService, TagService } from '@photofant/services';
 import { classificationSelectors, filtersActions, personsActions, personsSelectors, searchActions } from '@photofant/store';
 import { Icon } from '../icon/icon';
 
@@ -43,8 +47,12 @@ const MAX_RECENT = 5;
 export class SearchBox {
   private readonly store         = inject(Store);
   private readonly tagService    = inject(TagService);
+  private readonly searchService = inject(SearchService);
   private readonly router        = inject(Router);
   private readonly destroyRef    = inject(DestroyRef);
+  private readonly document      = inject(DOCUMENT);
+
+  private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   private readonly queryInput$ = new Subject<string>();
   private readonly allPersons  = this.store.selectSignal(personsSelectors.selectAll);
@@ -54,6 +62,12 @@ export class SearchBox {
   protected readonly localQuery  = signal('');
   protected readonly isOpen      = signal(false);
   protected readonly activeIndex = signal(-1);
+
+  // Reverse Image Search (P36): Drop/Upload eines Bildes → ähnliche Bibliotheks-Bilder.
+  protected readonly isDropTarget       = signal(false);
+  protected readonly isReverseSearching = signal(false);
+  protected readonly reverseError       = signal<string | null>(null);
+  private reverseErrorTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly tagSuggestions = toSignal(
     this.queryInput$.pipe(
@@ -220,6 +234,125 @@ export class SearchBox {
     this.localQuery.set('');
     this.isOpen.set(false);
     this.navigateToGalleryIfNeeded();
+  }
+
+  // --- Reverse Image Search (P36) ---
+
+  protected onUploadClick(): void {
+    this.fileInput()?.nativeElement.click();
+  }
+
+  protected onFilePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.runReverseSearch(input.files?.[0]);
+    // Zurücksetzen, damit dasselbe Bild direkt nochmal wählbar ist (change feuert sonst nicht).
+    input.value = '';
+  }
+
+  protected onDragEnter(event: DragEvent): void {
+    if (!event.dataTransfer?.types.includes('Files')) { return; }
+    event.preventDefault();
+    this.isDropTarget.set(true);
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    if (!event.dataTransfer?.types.includes('Files')) { return; }
+    event.preventDefault();
+  }
+
+  protected onDragLeave(): void {
+    this.isDropTarget.set(false);
+  }
+
+  // Kein stopPropagation: der Drop darf zur globalen Shell durchperlen, die ihr
+  // Drag-Overlay zurücksetzt und den Import überspringt, wenn das Ziel die Suchbox
+  // ist (Guard in shell.ts) — sonst würde ein Suchbox-Drop zusätzlich den Import öffnen.
+  protected onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDropTarget.set(false);
+    this.runReverseSearch(event.dataTransfer?.files?.[0]);
+  }
+
+  private runReverseSearch(file: File | null | undefined): void {
+    if (file == null) { return; }
+    if (!file.type.startsWith('image/')) {
+      this.setReverseError('Bitte ein Bild ablegen oder auswählen.');
+      return;
+    }
+    this.reverseError.set(null);
+    this.isReverseSearching.set(true);
+    void this.performReverseSearch(file);
+  }
+
+  private async performReverseSearch(file: File): Promise<void> {
+    let thumbnailDataUrl = '';
+    try {
+      thumbnailDataUrl = await this.buildThumbnail(file);
+    } catch {
+      // Vorschau ist optional — die Suche läuft auch ohne Thumbnail weiter.
+      thumbnailDataUrl = '';
+    }
+
+    this.searchService.searchByImage(file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response: SemanticSearchResponse) => {
+          this.isReverseSearching.set(false);
+          const similarIds = response.hits.map((hit): number => hit.asset_id);
+          if (similarIds.length === 0) {
+            this.setReverseError('Keine ähnlichen Bilder gefunden.');
+            return;
+          }
+          this.store.dispatch(filtersActions.setReverseSearch({
+            reverseSearch: { thumbnailDataUrl, similarIds },
+          }));
+          this.localQuery.set('');
+          this.isOpen.set(false);
+          this.navigateToGalleryIfNeeded();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.isReverseSearching.set(false);
+          this.setReverseError(this.extractErrorMessage(error));
+        },
+      });
+  }
+
+  // Kleines Vorschau-Thumbnail (max. 96px) als Data-URL für den Filter-Chip — statt das
+  // volle Upload-Bild (bis 15 MB) in den Store zu legen.
+  private async buildThumbnail(file: File, maxSize = 96): Promise<string> {
+    const bitmap = await createImageBitmap(file);
+    try {
+      const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = this.document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (context == null) { return ''; }
+      context.drawImage(bitmap, 0, 0, width, height);
+      return canvas.toDataURL('image/jpeg', 0.7);
+    } finally {
+      bitmap.close();
+    }
+  }
+
+  // Backend liefert Fehler als { detail: { code, message } } (deutsche Meldung) oder als
+  // String — beides auf eine anzeigbare Meldung reduzieren.
+  private extractErrorMessage(error: HttpErrorResponse): string {
+    const detail: unknown = (error.error as { detail?: unknown } | null)?.detail;
+    if (detail != null && typeof detail === 'object' && 'message' in detail) {
+      const message: unknown = (detail as { message?: unknown }).message;
+      if (typeof message === 'string') { return message; }
+    }
+    if (typeof detail === 'string') { return detail; }
+    return 'Reverse-Suche fehlgeschlagen.';
+  }
+
+  private setReverseError(message: string): void {
+    if (this.reverseErrorTimer != null) { clearTimeout(this.reverseErrorTimer); }
+    this.reverseError.set(message);
+    this.reverseErrorTimer = setTimeout(() => this.reverseError.set(null), 5000);
   }
 
   private navigateToGalleryIfNeeded(): void {

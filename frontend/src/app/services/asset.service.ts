@@ -17,6 +17,7 @@ export interface ListAssetsParams {
   framings?: string[];
   hasFaces?: boolean | null;
   classificationLabelIds?: number[];
+  similarIds?: number[];
   q?: string;
   qMode?: SearchMode;
 }
@@ -64,6 +65,11 @@ export class AssetService {
     if (params.classificationLabelIds?.length) {
       for (const labelId of params.classificationLabelIds) {
         httpParams = httpParams.append('classification', String(labelId));
+      }
+    }
+    if (params.similarIds?.length) {
+      for (const similarId of params.similarIds) {
+        httpParams = httpParams.append('similar_ids', String(similarId));
       }
     }
     if (params.q) {

@@ -21,3 +21,13 @@ Erkenntnisse während der Umsetzung, getaggt nach Phase. Format:
   `phase-3-lightbox-aehnliche.md` (Abschnitt „Entscheidung"). Der eigenständige Duplikat-Abgleich
   im Review-Tab (`/api/review/dupes`) ist davon nicht betroffen, nur der Lightbox-Klick-Shortcut
   entfällt.
+
+- [ ] → Phase 3: Der **„mehr"-Sprung** kann die in Phase 2 gebaute Reverse-Mechanik **direkt wiederverwenden**:
+  `POST /api/search/semantic` mit `like_asset_id` aufrufen, `hits → similarIds` mappen und
+  `filtersActions.setReverseSearch({ reverseSearch: { thumbnailDataUrl, similarIds } })` dispatchen — genau
+  dieselbe Galerie-Filter-Bahn wie beim Upload. Für die Chip-Vorschau reicht die Thumbnail-**URL** des Quell-Assets
+  (`ReverseSearchState.thumbnailDataUrl` ist nur ein `string`, muss keine Data-URL sein). Die neue Methode gehört
+  in den bestehenden `SearchService` (`services/search.service.ts`, z.B. `semanticByAsset(likeAssetId)`).
+- [ ] → Phase 3: Die **Related-Rail-Karte** rendert `{ assetId, score, reasons }` — P36 gibt `reasons = null`.
+  Backend dafür ist `POST /api/search/semantic` mit `like_asset_id` (existiert, liefert `{hits:[{asset_id,score}]}`,
+  schließt das Quell-Asset selbst aus → AK „Bild taucht nicht unter seinen eigenen Ähnlichen auf" ist schon erfüllt).
