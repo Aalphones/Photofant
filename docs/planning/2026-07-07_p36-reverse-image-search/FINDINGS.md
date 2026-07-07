@@ -16,3 +16,8 @@ Erkenntnisse während der Umsetzung, getaggt nach Phase. Format:
   (Frontend auf `like_asset_id`-Pfad umstellen, alten Endpoint ggf. auf Sicht behalten/entfernen),
   oder bleiben beide nebeneinander bestehen (dann eindeutige Beschriftung nötig, damit klar ist,
   welche Liste was zeigt)?
+
+  **Entschieden (2026-07-07):** Related-Rail ersetzt das Overlay komplett — Details/AK in
+  `phase-3-lightbox-aehnliche.md` (Abschnitt „Entscheidung"). Der eigenständige Duplikat-Abgleich
+  im Review-Tab (`/api/review/dupes`) ist davon nicht betroffen, nur der Lightbox-Klick-Shortcut
+  entfällt.

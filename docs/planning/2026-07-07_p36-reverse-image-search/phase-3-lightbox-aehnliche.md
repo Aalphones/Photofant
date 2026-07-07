@@ -10,6 +10,15 @@
   `{ assetId: number; score: number; reasons: Reason[] | null }`. P36 übergibt `reasons: null`.
 - Konventionen: `docs/conventions/angular.md`.
 
+## Entscheidung (2026-07-07, während Phase 1 gefunden, siehe FINDINGS.md)
+Es existiert bereits ein „Ähnliche Bilder"-Button in der Lightbox (`lightbox.html:112-121`), der ein
+Klick-Overlay öffnet (`lightbox.html:868-893`, `openSimilarOverlay()` → `GET /api/assets/{id}/similar`,
+Schwellenwert-basiert, Teil der Duplikat-Erkennung — Klick auf ein Treffer-Thumbnail öffnet den
+Dupe-Resolve-Dialog). **Entschieden: die neue Related-Rail ersetzt dieses Overlay komplett**, kein
+Nebeneinander. Der bestehende Duplikat-Abgleich als eigener Workflow bleibt unangetastet im Review-Tab
+(`/api/review/dupes`, unabhängig von der Lightbox) — nur der Lightbox-spezifische Schnellzugriff per
+Klick-Overlay entfällt.
+
 ## AK der Phase
 - [ ] Neue, wiederverwendbare Rail-Komponente (`features/galerie/lightbox/related-rail/` o.ä.), rendert Karten aus
       `{ assetId, score, reasons }` — Vorschaubild + Ähnlichkeits-Prozent; `reasons` (wenn gesetzt) als Begründungs-
@@ -19,6 +28,12 @@
 - [ ] „mehr"-Button unter der Rail öffnet die Galerie im **Reverse-Modus** (Phase 2) zu genau dem offenen Bild
       (`similar_ids` aus dem `like_asset_id`-Ergebnis; Quell-Thumbnail = das offene Bild).
 - [ ] Leerer/Fehlerfall (kein Embedder, keine Ähnlichen) zeigt einen dezenten Hinweis statt einer leeren Fläche.
+- [ ] **Altes Overlay entfernen:** `openSimilarOverlay()`/`closeSimilarOverlay()`/`showSimilarOverlay`/
+      `similarAssets`/`similarLoading`/`openSimilarCompare()`/`onSimilarResolve()`/`selectedSimilarPair` +
+      das `similar-scrim`/`similar-overlay`-Markup (`lightbox.html:868-909`) und den alten „Ähnliche Bilder"-
+      Button (`lightbox.html:112-121`) aus `lightbox.ts`/`lightbox.html` entfernen — die neue Rail übernimmt
+      den Slot. `AssetService.getSimilarAssets()` (`asset.service.ts:143`) + `SimilarAsset`-Modell nur entfernen,
+      falls wirklich kein anderer Aufrufer mehr existiert (kurz grep'en, `DupeCompare` hängt evtl. noch dran).
 - [ ] `npm run lint` + `npm run build` grün.
 
 ## Doc-Updates
