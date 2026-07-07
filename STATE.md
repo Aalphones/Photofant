@@ -1,9 +1,15 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-07_p35-siglip2-swap/`
-**Phase:** noch nicht gestartet
-**Nächster Schritt:** Plan lesen (README + Phase-1-Datei), Freigabe-Stand prüfen, dann Phase 1
-starten.
+**Phase:** 2/3 — Vektor-Dimension-Migration (768 → 1024) (pending)
+**Nächster Schritt:** Phase 2 starten — `vector_index.EMBEDDING_DIM` auf 1024, `vec0`-Tabelle
+migrieren, Übergangs-Invariante (alle `clip_embedding` NULL + `embedding_done=False`) herstellen.
+Phase-2-Datei + FINDINGS (Phase-2-Tag zum Dim-Guard) lesen. **Modell für Phase 2: `opusplan`**
+(heikel — Migration + Übergangs-Invariante).
+
+_Phase 1 (Austausch-Naht + SigLIP2-Adapter + Manifest) ✅ complete, committet. Naht steht,
+alle 5 Konsumenten model-agnostisch, ADR-021/022 + code-map aktualisiert. Offen für User-Smoke:
+SigLIP2-Preprocessing/Text gegen echte Config-Dateien verifizieren (Modell erst herunterladen)._
 
 **Backlog danach (User-Reihenfolge, 2026-07-07):** `2026-07-07_p36-reverse-image-search` →
 `2026-07-07_p37-dinov2-reranking` → `2026-07-01_p22-knowledge-engine` bis `p26-recommendation-engine`

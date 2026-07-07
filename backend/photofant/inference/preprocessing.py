@@ -69,7 +69,8 @@ def normalize_imagenet(image: np.ndarray) -> np.ndarray:
     """Normalize uint8 RGB (H, W, 3) to float32 (3, H, W) with ImageNet stats.
 
     Converts HWC → CHW, scales to [0, 1], applies mean/std.
-    Used by CLIP, SigLIP, and most ViT-based embedders.
+    Used by Florence-2 and most ViT-based models. CLIP and SigLIP each ship
+    their own stats (`normalize_clip` / `normalize_siglip`) — don't use this for them.
     """
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
@@ -82,10 +83,24 @@ def normalize_clip(image: np.ndarray) -> np.ndarray:
     """Normalize uint8 RGB (H, W, 3) to float32 (3, H, W) with CLIP's own stats.
 
     CLIP does NOT use ImageNet mean/std — it ships its own (OpenAI CLIP) values.
-    Used by the CLIP/SigLIP image encoder; distinct from `normalize_imagenet`.
+    Used by the CLIP image encoder only; SigLIP uses `normalize_siglip`.
     """
     mean = np.array([0.48145466, 0.4578275, 0.40821073], dtype=np.float32)
     std = np.array([0.26862954, 0.26130258, 0.27577711], dtype=np.float32)
+    arr = image.astype(np.float32) / 255.0
+    arr = (arr - mean) / std
+    return arr.transpose(2, 0, 1)  # HWC → CHW
+
+
+def normalize_siglip(image: np.ndarray) -> np.ndarray:
+    """Normalize uint8 RGB (H, W, 3) to float32 (3, H, W) with SigLIP's stats.
+
+    SigLIP2 uses mean/std 0.5 on every channel — a plain rescale to [-1, 1] —
+    NOT CLIP's or ImageNet's stats. Verify against the model's
+    preprocessor_config.json (`image_mean` / `image_std`) after download.
+    """
+    mean = np.array([0.5, 0.5, 0.5], dtype=np.float32)
+    std = np.array([0.5, 0.5, 0.5], dtype=np.float32)
     arr = image.astype(np.float32) / 255.0
     arr = (arr - mean) / std
     return arr.transpose(2, 0, 1)  # HWC → CHW
@@ -108,9 +123,21 @@ def preprocess_for_wd14(image: np.ndarray, size: int = 448) -> np.ndarray:
 
 
 def preprocess_for_clip(image: np.ndarray, size: int = 224) -> np.ndarray:
-    """Full CLIP/SigLIP preprocessing: 224² center-crop → CLIP-normalized NCHW."""
+    """Full CLIP preprocessing: 224² center-crop → CLIP-normalized NCHW."""
     cropped = resize_center_crop(image, size)
     normalized = normalize_clip(cropped)
+    return normalized[np.newaxis, ...]  # NCHW
+
+
+def preprocess_for_siglip(image: np.ndarray, size: int = 384) -> np.ndarray:
+    """Full SigLIP2 preprocessing: squash-resize to size² → [-1,1]-normalized NCHW.
+
+    SigLIP2 resizes directly to a square (do_center_crop = false) at 384×384 and
+    normalizes with mean/std 0.5 — distinct from CLIP's 224² center-crop contract.
+    Verify size + resize mode against the model's preprocessor_config.json after download.
+    """
+    resized = resize_squash(image, size)
+    normalized = normalize_siglip(resized)
     return normalized[np.newaxis, ...]  # NCHW
 
 

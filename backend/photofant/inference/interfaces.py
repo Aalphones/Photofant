@@ -53,6 +53,16 @@ class Captioner(Protocol):
 class Embedder(Protocol):
     """Produces a feature embedding in a shared image/text space (CLIP-style)."""
 
+    @property
+    def dim(self) -> int:
+        """Dimensionality of the vectors this embedder produces (e.g. 768, 1024).
+
+        The vector index is typed to one dimension; the resolver's startup guard
+        compares this against it so a model swap that changes the dimension is
+        caught loudly instead of corrupting the index.
+        """
+        ...
+
     def embed(self, image: np.ndarray) -> np.ndarray:
         """Return a 1-D float32 unit-norm image embedding.
 

@@ -1,8 +1,9 @@
-"""Semantic search endpoint — text→image and image→image over the CLIP vector index.
+"""Semantic search endpoint — text→image and image→image over the embedding vector index.
 
 `POST /api/search/semantic` accepts either a free-text `query` (embedded on the
-fly via the CLIP text encoder) or a `like_asset_id` (reuses that asset's stored
-embedding). Returns the most similar *active* assets with cosine scores (ADR-001).
+fly via the active image embedder's text encoder) or a `like_asset_id` (reuses
+that asset's stored embedding). Returns the most similar *active* assets with
+cosine scores (ADR-001). The concrete model is resolved by capability (ADR-022).
 """
 from __future__ import annotations
 
@@ -44,15 +45,15 @@ class SemanticSearchResponse(BaseModel):
 
 
 def _embed_query_text(query: str) -> np.ndarray:
-    from photofant.inference.adapters.clip import resolve_clip_embedder
+    from photofant.inference.image_embedder import resolve_image_embedder
 
-    embedder = resolve_clip_embedder()
+    embedder = resolve_image_embedder()
     if embedder is None:
         raise HTTPException(
             status_code=409,
             detail={
                 "code": "SEMANTIC_SEARCH_UNAVAILABLE",
-                "message": "CLIP-Modell ist nicht aktiv — Textsuche nicht möglich.",
+                "message": "Kein Bild-Embedder aktiv — Textsuche nicht möglich.",
             },
         )
     return embedder.embed_text(query)

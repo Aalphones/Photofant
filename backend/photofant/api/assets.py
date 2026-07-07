@@ -459,14 +459,14 @@ def _tag_name_match_subquery(session: Session, name_fragment: str) -> Any:
 
 
 async def _embed_semantic(query: str) -> np.ndarray:
-    """Embed *query* via CLIP text encoder. Raises 409 if model unavailable."""
-    from photofant.inference.adapters.clip import resolve_clip_embedder
+    """Embed *query* via the active image embedder's text encoder. Raises 409 if unavailable."""
+    from photofant.inference.image_embedder import resolve_image_embedder
 
-    embedder = resolve_clip_embedder()
+    embedder = resolve_image_embedder()
     if embedder is None:
         raise HTTPException(
             status_code=409,
-            detail={"code": "SEMANTIC_SEARCH_UNAVAILABLE", "message": "CLIP-Modell ist nicht aktiv."},
+            detail={"code": "SEMANTIC_SEARCH_UNAVAILABLE", "message": "Kein Bild-Embedder aktiv."},
         )
     return await asyncio.to_thread(embedder.embed_text, query)
 

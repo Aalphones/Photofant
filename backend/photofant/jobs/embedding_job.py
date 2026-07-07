@@ -1,8 +1,9 @@
-"""Embedding job — runs CLIP inference and persists the image embedding + index row.
+"""Embedding job — runs the active image embedder and persists the embedding + index row.
 
 One job per asset; controlled by ProcessingLedger.embedding_done (run exactly once).
-The canonical embedding lives on `asset.clip_embedding` (float32 BLOB); the searchable
-copy goes into the sqlite-vec index (ADR-001).
+The embedder is resolved by capability (ADR-022), so this job names no model. The
+canonical embedding lives on `asset.clip_embedding` (float32 BLOB — the column name
+stays for continuity); the searchable copy goes into the sqlite-vec index (ADR-001).
 """
 from __future__ import annotations
 
@@ -64,15 +65,15 @@ def _check_for_dupes(session: Session, asset_id: int, embedding: np.ndarray) -> 
 
 
 def _run_embedding(asset_id: int, asset_path: str) -> None:
-    """Blocking: run CLIP inference + persist the embedding for one asset."""
+    """Blocking: run the active image embedder + persist the embedding for one asset."""
     from PIL import Image as PILImage
 
-    from photofant.inference.adapters.clip import resolve_clip_embedder
+    from photofant.inference.image_embedder import resolve_image_embedder
     from photofant.jobs.classification_pipeline import classification_pipeline
 
-    embedder = resolve_clip_embedder()
+    embedder = resolve_image_embedder()
     if embedder is None:
-        log.info("CLIP not enabled — skipping embedding for asset %d", asset_id)
+        log.info("No image embedder enabled — skipping embedding for asset %d", asset_id)
         classification_pipeline.signal(asset_id)
         return
 

@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from photofant.classification.scoring import score_label_wd14, score_labels_clip
 from photofant.db.models import Asset, AssetTag, ClassificationCategory, ClassificationLabel, Tag
-from photofant.inference.adapters.clip import resolve_clip_embedder
+from photofant.inference.image_embedder import resolve_image_embedder
 from photofant.settings import load_settings
 
 log = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ def classify_asset(session: Session, asset_id: int) -> list[ClassificationResult
     prompt_template = settings["clip_prompt_template"]
 
     image_embedding: np.ndarray | None = None
-    if asset.clip_embedding is not None and resolve_clip_embedder() is not None:
+    if asset.clip_embedding is not None and resolve_image_embedder() is not None:
         image_embedding = np.frombuffer(asset.clip_embedding, dtype=np.float32)
 
     tag_scores = _stored_tag_scores(session, asset_id)

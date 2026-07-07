@@ -14,18 +14,18 @@ import numpy as np
 
 @lru_cache(maxsize=2048)
 def _embed_prompt_cached(prompt: str) -> np.ndarray:
-    """Text-embed one CLIP prompt; cached process-wide by the prompt string.
+    """Text-embed one classification prompt; cached process-wide by the prompt string.
 
-    Caller must guard that CLIP is active (`resolve_clip_embedder()` is not
-    None) before calling this — it re-resolves the embedder on every cache
-    miss (cheap: a single ModelRegistry row lookup, see `resolve_clip_embedder`),
+    Caller must guard that an image embedder is active (`resolve_image_embedder()`
+    is not None) before calling this — it re-resolves the embedder on every cache
+    miss (cheap: a single ModelRegistry row lookup, see `resolve_image_embedder`),
     the expensive ONNX session itself is cached separately by `session_manager`.
     """
-    from photofant.inference.adapters.clip import resolve_clip_embedder
+    from photofant.inference.image_embedder import resolve_image_embedder
 
-    embedder = resolve_clip_embedder()
+    embedder = resolve_image_embedder()
     if embedder is None:
-        raise RuntimeError("CLIP embedder unavailable — caller must guard before calling")
+        raise RuntimeError("Image embedder unavailable — caller must guard before calling")
     return embedder.embed_text(prompt)
 
 

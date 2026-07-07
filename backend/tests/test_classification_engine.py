@@ -91,7 +91,7 @@ def test_single_category_argmax_wins_above_threshold(
 ) -> None:
     """Single-mode category picks the highest-fused label once it clears min_confidence."""
     _patch_settings(monkeypatch)
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: object())
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: object())
     monkeypatch.setattr(engine, "score_labels_clip", lambda image_embedding, prompts: [0.2, 0.7, 0.1])
     monkeypatch.setattr(engine, "score_label_wd14", lambda wd14_tags, tag_scores: None)
 
@@ -110,7 +110,7 @@ def test_single_category_below_threshold_yields_no_result(
     db_session: Session, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_settings(monkeypatch, min_confidence=0.8)
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: object())
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: object())
     monkeypatch.setattr(engine, "score_labels_clip", lambda image_embedding, prompts: [0.2, 0.7, 0.1])
     monkeypatch.setattr(engine, "score_label_wd14", lambda wd14_tags, tag_scores: None)
 
@@ -124,7 +124,7 @@ def test_multi_category_selects_all_labels_above_threshold(
     db_session: Session, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_settings(monkeypatch)  # multi_min_confidence = 0.45
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: object())
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: object())
     monkeypatch.setattr(engine, "score_labels_clip", lambda image_embedding, prompts: [0.5, 0.3, 0.9])
     monkeypatch.setattr(engine, "score_label_wd14", lambda wd14_tags, tag_scores: None)
 
@@ -142,7 +142,7 @@ def test_missing_wd14_tag_falls_back_to_clip_only(
 ) -> None:
     """Label has wd14_tags configured but no matching stored score — clip carries it alone."""
     _patch_settings(monkeypatch)
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: object())
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: object())
     monkeypatch.setattr(engine, "score_labels_clip", lambda image_embedding, prompts: [0.6])
     monkeypatch.setattr(engine, "score_label_wd14", lambda wd14_tags, tag_scores: None)
 
@@ -160,7 +160,7 @@ def test_wd14_signal_present_produces_fused_score(
     db_session: Session, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_settings(monkeypatch)
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: object())
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: object())
     monkeypatch.setattr(engine, "score_labels_clip", lambda image_embedding, prompts: [0.6])
     monkeypatch.setattr(engine, "score_label_wd14", lambda wd14_tags, tag_scores: 0.8)
 
@@ -177,9 +177,9 @@ def test_wd14_signal_present_produces_fused_score(
 def test_clip_inactive_falls_back_to_wd14_only(
     db_session: Session, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """resolve_clip_embedder() -> None: no crash, clip scoring is skipped entirely."""
+    """resolve_image_embedder() -> None: no crash, clip scoring is skipped entirely."""
     _patch_settings(monkeypatch)
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: None)
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: None)
     monkeypatch.setattr(
         engine, "score_labels_clip",
         lambda image_embedding, prompts: pytest.fail("must not be called when CLIP is inactive"),
@@ -204,7 +204,7 @@ def test_no_stored_embedding_falls_back_to_wd14_only(
 ) -> None:
     """asset.clip_embedding is None (e.g. auto_embed was off) — same fallback as CLIP-inactive."""
     _patch_settings(monkeypatch)
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: object())
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: object())
     monkeypatch.setattr(
         engine, "score_labels_clip",
         lambda image_embedding, prompts: pytest.fail("must not be called without a stored embedding"),
@@ -227,7 +227,7 @@ def test_per_category_min_confidence_overrides_global_default(
     db_session: Session, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_settings(monkeypatch, min_confidence=0.3)
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: object())
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: object())
     monkeypatch.setattr(engine, "score_labels_clip", lambda image_embedding, prompts: [0.4])
     monkeypatch.setattr(engine, "score_label_wd14", lambda wd14_tags, tag_scores: None)
 
@@ -243,7 +243,7 @@ def test_end_to_end_uses_real_stored_wd14_score(
 ) -> None:
     """No mocking of score_label_wd14 — exercises the real DB tag-score lookup."""
     _patch_settings(monkeypatch)
-    monkeypatch.setattr(engine, "resolve_clip_embedder", lambda: None)
+    monkeypatch.setattr(engine, "resolve_image_embedder", lambda: None)
 
     asset = _make_asset(db_session)
     tag = Tag(name="cat")

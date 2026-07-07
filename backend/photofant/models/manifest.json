@@ -117,6 +117,27 @@
       "_download_note": "Multi-file HuggingFace repo — hf_allow_patterns begrenzt den Download auf fp32-ONNX + Tokenizer (~1.75 GB); ohne allow_patterns würde snapshot_download alle Quantisierungsvarianten (~8.7 GB) ziehen"
     },
     {
+      "id": "siglip2-large-patch16-384",
+      "role": "semantic_search",
+      "name": "SigLIP2 Large patch16-384",
+      "variant": "default",
+      "format": "onnx_folder",
+      "hf_repo": "onnx-community/siglip2-large-patch16-384-ONNX",
+      "hf_allow_patterns": [
+        "onnx/vision_model.onnx",
+        "onnx/text_model.onnx",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "config.json",
+        "preprocessor_config.json"
+      ],
+      "files": [],
+      "size_bytes": 1600000000,
+      "license_note": "Apache 2.0",
+      "tier": "core",
+      "_download_note": "Multi-file HuggingFace repo — hf_allow_patterns begrenzt den Download auf fp32-ONNX (vision + text) + Tokenizer/Config; size_bytes ist eine Schätzung, vor Download-Verifikation gegen das echte Repo prüfen"
+    },
+    {
       "id": "rembg-u2net",
       "role": "rembg",
       "name": "rembg u2net",

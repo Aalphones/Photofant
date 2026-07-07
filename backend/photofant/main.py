@@ -72,6 +72,11 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         log.debug("Auto-scan: no matching models found in %s", models_dir)
 
+    # Warn loudly if the enabled embedder's vector width doesn't match the index
+    # (a model swap that changed the dimension needs a migration + re-embed, ADR-022).
+    from photofant.inference.image_embedder import warn_on_embedding_dim_mismatch
+    warn_on_embedding_dim_mismatch()
+
     # Scan person face folders for manually placed images not yet in the DB.
     from photofant.config import get_data_root
     await enqueue_face_folder_scan(get_data_root())
