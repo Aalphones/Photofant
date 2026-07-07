@@ -23,7 +23,7 @@
 | 2 | Finden & Ansehen (Read-Tools inkl. Bild-Content, Job-Status) | standard | complete |
 | 3 | Metadaten & Tag-Vokabular (Write, non-destruktiv) | standard | complete |
 | 4 | Personen & Faces | standard | pending |
-| 5 | Import, Organisieren, Duplikate | standard | pending |
+| 5 | Import, Organisieren, Duplikate | standard | complete |
 | 6 | Wartung + Confirmation-Gate scharfstellen | standard | pending |
 
 Phase 1 ist der heikle Kern (neue Library, ASGI-Mount, Lifespan, Security). 2–6 sind gleichförmige

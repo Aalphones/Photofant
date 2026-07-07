@@ -1055,6 +1055,29 @@ eigene Route. Werkzeuge (Tools) statt Endpunkte; sie rufen intern die vorhandene
 | `recluster` | 4 | HDBSCAN-Neuclustering über alle Gesichts-Embeddings anstoßen, liefert `job_id` |
 | `list_face_review` | 4 | Offene Einträge der Face-Review-Queue auflisten |
 | `resolve_face_review` | 4 | Review-Eintrag bestätigen/ablehnen/umhängen |
+| `import_paths` | 5 | Fotos von Server-Pfaden importieren, liefert `job_id` |
+| `scan_library` | 5 | Datenordner nach neuen/geänderten Dateien scannen, liefert `job_id` |
+| `run_processing` | 5 | Klassifizierungs-Pipeline für Fotos/`"all"` anstoßen (Steps wählbar), liefert `job_id` |
+| `favourite_photo` | 5 | Favoriten-Status eines Fotos setzen/entfernen |
+| `trash_photo` | 5 | Foto in den Papierkorb werfen (Soft-Delete, reversibel) |
+| `bulk_trash` | 5 | Mehrere Fotos auf einmal in den Papierkorb werfen |
+| `restore_photo` | 5 | Foto aus dem Papierkorb zurückholen |
+| `list_trash` | 5 | Fotos im Papierkorb auflisten, gedeckelt |
+| `empty_trash` | 5 | Papierkorb endgültig leeren — **Gate** |
+| `list_collections` | 5 | Alben/Smart-Alben/Trainingssets auflisten, gedeckelt |
+| `create_collection` | 5 | Neues Album/Smart-Album/Trainingsset anlegen |
+| `update_collection` | 5 | Name/Art/Match-Modus/Beschreibung/Cover einer Collection patchen |
+| `delete_collection` | 5 | Collection löschen (Fotos bleiben unangetastet) — **Gate** |
+| `add_to_collection` | 5 | Fotos manuell in eine Collection aufnehmen |
+| `remove_from_collection` | 5 | Foto aus einer Collection entfernen |
+| `manage_collection_triggers` | 5 | Smart-Album-Trigger CRUD (list/create/update/delete) in einem Tool |
+| `training_set_stats` | 5 | Trainingsset-Statistiken (Framing/Tags/Qualität/Near-Dupe-Rate) |
+| `training_set_captions` | 5 | Set-weites Caption-Werkzeug (trigger_word/prefix/suffix/find_replace), liefert `job_id` |
+| `export_collection` | 5 | Collection in einen Export-Ordner kopieren (Trainingssets: Sidecar + Split), liefert `job_id` |
+| `scan_duplicates` | 5 | Bibliotheksweiten oder auswahlbeschränkten Duplikat-Scan anstoßen, liefert `job_id` |
+| `list_duplicates` | 5 | Offene Duplikat-Paare der Review-Queue auflisten, gedeckelt |
+| `resolve_duplicate` | 5 | Duplikat-Paar auflösen — **Gate nur bei `delete_a`/`delete_b`** |
+| `find_person_duplicates` | 5 | Ad-hoc-Duplikatsuche innerhalb der Fotos einer Person per CLIP |
 
-> Weitere Tools kommen phasenweise dazu (Phase 5: Import/Organisieren/Duplikate; Phase 6:
-> Wartung). Destruktive Tools verlangen `confirm=true` (`mcp.require_confirm`).
+> Weitere Tools kommen phasenweise dazu (Phase 6: Wartung). Destruktive Tools verlangen
+> `confirm=true` (`mcp.require_confirm`).
