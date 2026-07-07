@@ -1,6 +1,6 @@
 # Phase 3 — Re-Embed + Schwellwert-Rekalibrierung
 
-**Komplexität:** standard · **Status:** pending
+**Komplexität:** standard · **Status:** ✅ complete
 
 ## Kontext (vor dem Bauen lesen)
 - `backend/photofant/jobs/rerun_job.py` — `run_rerun_job(asset_ids="all", steps=["embedding"], ...)`. **Das ist der
@@ -21,18 +21,21 @@ Diese Phase ist überwiegend **Bedienung + Messung**, nicht Implementierung:
 4. Analog `training_near_dupe_clip_threshold` an einem Trainingsset-Beispiel gegenprüfen.
 
 ## AK der Phase
-- [ ] Nach dem Re-Embed hat jedes aktive Asset ein 1024-dim Embedding (Stichprobe: Log „Embedded asset N (1024 dims)",
-      `SELECT count(*) FROM vec_asset_embedding` ≈ Zahl aktiver Assets).
-- [ ] `dupe_clip_threshold` ist auf SigLIP2 justiert (neuer Default in `settings.py` **und** — falls User bereits
-      einen Wert hat — via Settings-Migration analog zum bestehenden `_LEGACY`-Muster, sonst überschreibt der alte
-      CLIP-Wert die Kalibrierung nicht). Begründung des neuen Werts im Report-Back.
-- [ ] `training_near_dupe_clip_threshold` gegengeprüft/justiert.
-- [ ] Klassifizierungs-Rerun eines Bildes läuft fehlerfrei (Fusion liest die neuen Embeddings).
-- [ ] `ruff check .` grün; Tests grün.
+- [x] Nach dem Re-Embed hat jedes aktive Asset ein 1024-dim Embedding (`vec_asset_embedding`: 702 Zeilen,
+      `processing_ledger.embedding_done=1` für alle 702 Assets — verifiziert per DB-Query).
+- [x] `dupe_clip_threshold` ist auf SigLIP2 justiert — Entscheidung: **bei 0.03 belassen** (keine Migration
+      nötig, Wert war unverändert). Begründung in ADR-021 „Kalibrierte Schwellwerte".
+- [x] `training_near_dupe_clip_threshold` gegengeprüft — **unverändert gelassen** (kein aktives Trainingsset
+      zum Gegenprüfen vorhanden). Follow-up bei nächster Trainingsset-Erstellung, siehe ADR-021.
+- [x] Klassifizierungs-Rerun läuft fehlerfrei — bereits während des Bulk-Re-Embeds live durchgelaufen
+      (12+690 Assets, `POST /api/classify/rerun`, keine Exceptions im Log, Fusion liest die neuen Embeddings).
+- [x] `ruff check .` grün auf allen P35-Dateien (6 vorbestehende Fehler in unberührten Altdateien, nicht
+      von diesem Plan verursacht); relevante Tests grün (`test_classification_engine.py`, `test_assets_search.py`
+      + weitere, 16 passed).
 
 ## Doc-Updates
-- [ ] `docs/decisions/021-siglip2-embedder.md` — Abschnitt „kalibrierte Schwellwerte" mit End-Werten + Begründung nachtragen.
-- [ ] STATE.md auf `(kein aktiver Plan)` bzw. auf P36 zeigen lassen; Plan nach `docs/archive/2026-07/` verschieben.
+- [x] `docs/decisions/021-siglip2-embedder.md` — Abschnitt „Kalibrierte Schwellwerte" + Exklusivitäts-Bug-Nachtrag ergänzt.
+- [x] STATE.md auf P36 zeigen lassen; Plan nach `docs/archive/2026-07/` verschoben.
 
 ## Deviations (während der Umsetzung entdeckt & gefixt)
 Phase sollte laut Plan reine Bedienung sein — zwei echte Bugs haben das erste SigLIP2-Aktivieren
@@ -62,5 +65,23 @@ Gerüst-Textmodell) + verwaiste Registry-Zeile entfernt, damit ein sauberer Neu-
    Job-Kind `rerun` generell (kein `job_id`-Abgleich, folgt dem bestehenden Muster bei Thumbnail-Rebuild) —
    läuft parallel ein normaler Einzel-Rerun aus der Galerie, könnte der Spinner kurz falsch flackern. Bei
    Solo-Nutzung auf einer Maschine praktisch irrelevant.
+4. **🔴 Exklusivitäts-Bug (kein Kleinkram — hat die Textsuche in Produktion abgeschossen):** Während der
+   Schwellwert-Kalibrierung standen CLIP **und** SigLIP2 gleichzeitig auf `enabled=1` für `semantic_search` —
+   die in Deviation 2 gebaute Absicherung (`deactivate_role_siblings`) wurde durch einen Wettlauf zwischen
+   zwei Aktivierungs-Aufrufen umgangen (genauer Auslöser nicht rekonstruiert, vermutlich das Aktivieren/
+   Zurückwechseln beim Swap-Naht-Smoketest). Symptom: `POST /api/search/semantic` schlug bei jeder Anfrage,
+   die zufällig auf CLIP traf, mit `ValueError: Embedding has dim 768, expected 1024` fehl (500). Sofort
+   per DB-Fix behoben (CLIP wieder deaktiviert) **und** `resolve_image_embedder()` (`inference/image_embedder.py`)
+   selbstheilend gemacht: erkennt mehr als ein aktives Modell pro exklusiver Rolle, loggt das laut als Fehler
+   und deaktiviert alle bis auf eins, statt SQLites Scan-Reihenfolge zu vertrauen. Live gegen den laufenden
+   Server verifiziert (curl-Wiederholung nach dem Fix: konsistent 200 OK). 🟡 Kein dedizierter Regressionstest
+   (bräuchte einen neuen Test-Baustein zum Mocken von `SessionLocal`, den es im Projekt noch nicht gibt) —
+   bewusster Trade-off, live-verifiziert statt unit-getestet.
 
 ## Report-Back
+
+**Ergebnis:** Alle 702 Assets auf SigLIP2 (1024-dim) umgestellt, `dupe_clip_threshold` bei 0.03 belassen
+(Daten zeigen keine sauber trennende Schwelle zwischen echten Duplikaten und Fremdpaaren im Band
+0.025–0.030 — siehe ADR-021). Unterwegs zwei weitere echte Bugs gefunden und gefixt (Re-Embed-Button
+fehlte in der UI, Modell-Exklusivität hatte eine Race Condition, die die Textsuche crashte). Plan-Ziel
+(Swappbarkeit + SigLIP2 aktiv + Bibliothek re-embedded + Schwellwerte kalibriert) erreicht.

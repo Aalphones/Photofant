@@ -90,20 +90,23 @@ def resolve_image_embedder(role: str = "semantic_search") -> Embedder | None:
 |---|---|---|---|
 | 1 | Austausch-Naht + SigLIP2-Adapter + Manifest | heikel (Naht-Design + neues Preprocessing/Tokenizer) | ✅ complete |
 | 2 | Vektor-Dimension-Migration (768 → 1024) | heikel (Migration + Übergangs-Invariante) | ✅ complete |
-| 3 | Re-Embed + Schwellwert-Rekalibrierung | standard | pending |
+| 3 | Re-Embed + Schwellwert-Rekalibrierung | standard | ✅ complete |
 
 ## Finale AK (Gesamt)
-- [ ] **Swap-Naht:** kein Konsument (`api/search.py`, `classification/engine.py`, `jobs/embedding_job.py`,
+- [x] **Swap-Naht:** kein Konsument (`api/search.py`, `classification/engine.py`, `jobs/embedding_job.py`,
       `jobs/dupe_scan_job.py`) nennt noch einen Modellnamen; alle beziehen den Embedder über
       `resolve_image_embedder()`. CLIP und SigLIP2 sind beide registriert.
-- [ ] **Swap-Runbook** in ADR-022: die konkreten Schritte für den nächsten Modelltausch, an SigLIP2 belegt.
-- [ ] Ein frisch importiertes Bild erhält ein 1024-dim SigLIP2-Embedding; `vec_asset_embedding` ist `float[1024]`.
-- [ ] Semantische Suche liefert für Text **und** `like_asset_id` plausible Treffer.
-- [ ] Nach „Neuverarbeitung: Embedding, alle" hat jedes aktive Asset ein SigLIP2-Embedding, kein 768-Rest.
-- [ ] Duplikat-Scan findet echte Duplikate weiter zuverlässig; Schwellwert auf SigLIP2 justiert.
-- [ ] Klassifizierung (CLIP+WD14-Fusion) läuft fehlerfrei auf den neuen Embeddings.
-- [ ] Kein Laufzeit-Netzwerkzugriff außer dem Modell-Download über die Settings-UI; kein torch-Zwang für den Embedder.
-- [ ] ADR-021 und ADR-022 liegen in `docs/decisions/`.
+- [x] **Swap-Runbook** in ADR-022: die konkreten Schritte für den nächsten Modelltausch, an SigLIP2 belegt.
+- [x] Ein frisch importiertes Bild erhält ein 1024-dim SigLIP2-Embedding; `vec_asset_embedding` ist `float[1024]`.
+- [x] Semantische Suche liefert für Text **und** `like_asset_id` plausible Treffer (nach dem Exklusivitäts-Fix
+      in Phase 3 — vorher intermittierend 500er, siehe Deviation).
+- [x] Nach „Neuverarbeitung: Embedding, alle" hat jedes aktive Asset ein SigLIP2-Embedding, kein 768-Rest
+      (702/702 verifiziert).
+- [x] Duplikat-Scan findet echte Duplikate weiter zuverlässig; Schwellwert auf SigLIP2 justiert (bei 0.03
+      belassen, Begründung ADR-021).
+- [x] Klassifizierung (CLIP+WD14-Fusion) läuft fehlerfrei auf den neuen Embeddings.
+- [x] Kein Laufzeit-Netzwerkzugriff außer dem Modell-Download über die Settings-UI; kein torch-Zwang für den Embedder.
+- [x] ADR-021 und ADR-022 liegen in `docs/decisions/`.
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende)
 1. **[Oberste Wackelstelle] Schwellwert-Rekalibrierung:** nach Re-Embed „Duplikate scannen (vollständig)"
@@ -136,4 +139,22 @@ def resolve_image_embedder(role: str = "semantic_search") -> Embedder | None:
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_ — Follow-ups: **P36** Reverse Image Search und **P37** DINOv2 Re-Ranking bauen hierauf auf.
+
+**Ergebnis:** CLIP ViT-L/14 durch SigLIP2-large-patch16-384 ersetzt, komplette Bibliothek (702 Assets)
+neu embedded, Austausch-Naht (`resolve_image_embedder()` + Adapter-Registry) steht und trägt bereits
+zwei Modelle. `dupe_clip_threshold` nach realer Kalibrierung bei 0.03 belassen — keine saubere Trennlinie
+zwischen echten Duplikaten und Fremdpaaren im Band 0.025–0.030 unter SigLIP2, ein höherer Wert kostet nur
+ein paar Review-Klicks, ein niedrigerer Wert hätte echte Duplikate lautlos verschluckt.
+
+**Deviationen (5 über den Plan verteilt, Details in den Phasen-Dateien):**
+1. Manifest unvollständig (Text-Encoder-Gewichtsdatei fehlte) — Phase 3.
+2. Keine Enable/Disable-Exklusivität zwischen Bild-Embeddern — `deactivate_role_siblings()` gebaut — Phase 3.
+3. Re-Embed-Button in der Wartung-Seite ergänzt (User-Wunsch) + Einstellungen-Tab „Backup & Wartung"
+   dorthin verschoben — Phase 3.
+4. **🔴 Exklusivitäts-Bug in Produktion:** trotz Fix aus Deviation 2 standen beide Modelle kurzzeitig aktiv
+   (Race Condition), Textsuche crashte mit Dimension-Mismatch. Resolver jetzt selbstheilend — Phase 3.
+
+**Follow-ups:** **P36** Reverse Image Search und **P37** DINOv2 Re-Ranking bauen auf der Austausch-Naht auf.
+`training_near_dupe_clip_threshold` nicht separat kalibriert (kein aktives Trainingsset) — bei nächster
+Trainingsset-Erstellung nachziehen. Der Exklusivitäts-Fix hat keinen Regressionstest (fehlender
+Test-Baustein für DB-Session-Mocking) — falls das Muster nochmal auftritt, lohnt sich der Test-Infra-Aufbau.

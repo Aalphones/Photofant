@@ -49,3 +49,38 @@ läuft auf dem bestehenden ONNX-Runtime-Kern — kein torch-Zwang).
   anders. An realem Set neu kalibriert, über die Einstellungen justierbar (keine neuen Keys).
 - DB-Spalten `clip_embedding`/`clip_distance` und die `dupe_clip_*`-Settings behalten ihre Namen
   (inert — Speicher bleibt Speicher; Umbenennen brächte Migrations-Risiko ohne Swap-Nutzen).
+
+## Kalibrierte Schwellwerte (Phase 3, 2026-07-07)
+
+Nach vollständigem Re-Embed (702/702 Assets, 1024-dim) und manueller Durchsicht der
+Duplikat-Kandidaten an echten Bildpaaren:
+
+| Distanz | Paar | Urteil |
+|---|---|---|
+| 0.0018 – 0.0297 | 4 Paare | ✅ echtes Duplikat |
+| 0.0250 – 0.0295 | 3 Paare | ❌ kein Duplikat (verworfen) |
+
+**`dupe_clip_threshold` bleibt bei 0.03** (unverändert vom CLIP-Ära-Default) — keine Migration
+nötig. Befund: echte Duplikate und Fremdpaare überlappen sich im Band 0.025–0.030 unter SigLIP2;
+es gibt keine Distanz, die beide sauber trennt (ein Fremdpaar liegt sogar unter einem echten
+Duplikat). Ein niedrigerer Schwellwert würde echte Treffer aus der Kandidatenliste werfen, ohne
+dass der User sie je zu sehen bekäme — das kostet mehr als die paar zusätzlichen „Verwerfen"-Klicks
+eines zu hohen Schwellwerts. Da der Schwellwert nur die Kandidatenliste für die manuelle Review
+speist (kein Auto-Löschen), ist das die risikoärmere Seite.
+
+`training_near_dupe_clip_threshold` (0.05) unverändert — nicht separat gegen ein Trainingsset
+kalibriert (kein akutes Trainingsset zum Gegenprüfen vorhanden). Bei Bedarf bei der nächsten
+Trainingsset-Erstellung nachziehen.
+
+## Nachtrag: Exklusivitäts-Bug beim Modellwechsel (Phase 3, 2026-07-07)
+
+Während der Kalibrierung liefen kurzzeitig **beide** Bild-Embedder (CLIP und SigLIP2) gleichzeitig
+mit `enabled=1` — ein Wettlauf zwischen zwei Aktivierungs-Aufrufen hat die in ADR-022 vorgesehene
+Exklusivitäts-Sicherung (`deactivate_role_siblings`) umgangen. Symptom: semantische Textsuche
+schlug bei jeder zweiten Anfrage mit `ValueError: Embedding has dim 768, expected 1024` fehl, weil
+`resolve_image_embedder()` ohne definierte Reihenfolge zwischen beiden aktiven Modellen wählte.
+Behoben in `inference/image_embedder.py`: der Resolver erkennt eine Exklusivitäts-Verletzung jetzt,
+loggt sie laut und repariert sich selbst (deaktiviert alle bis auf ein Modell), statt lautlos zu
+raten. 🟡 Ohne dedizierten Regressionstest (bräuchte einen neuen DB-Session-Mocking-Baustein für
+Tests, der im Projekt noch nicht existiert) — Fix ist live gegen den laufenden Server verifiziert,
+nicht nur per Unit-Test.

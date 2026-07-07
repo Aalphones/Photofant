@@ -40,11 +40,29 @@ def resolve_image_embedder(role: str = "semantic_search") -> Embedder | None:
     from photofant.db.session import SessionLocal
 
     with SessionLocal() as session:
-        entry = (
+        entries = (
             session.query(ModelRegistry)
             .filter_by(role=role, enabled=True)
-            .first()
+            .order_by(ModelRegistry.id.desc())
+            .all()
         )
+        if len(entries) > 1:
+            # Exclusivity invariant broken (should be impossible — deactivate_role_siblings
+            # runs on every activate path — but a race between two concurrent activations
+            # can still land both enabled=True). Silently picking SQLite's scan order here
+            # crashed semantic search with a dim mismatch in the wild (2026-07-07): self-heal
+            # instead of trusting query order, and log loud enough to notice next time.
+            kept, *stale = entries
+            log.error(
+                "Exclusivity violated for role %r — %d models enabled (%s); keeping %r, disabling the rest",
+                role, len(entries), [entry.manifest_id for entry in entries], kept.manifest_id,
+            )
+            for entry in stale:
+                entry.enabled = False
+            session.commit()
+            entry = kept
+        else:
+            entry = entries[0] if entries else None
         if entry is None or not entry.path:
             log.info("No enabled image embedder for role %r — skipping", role)
             return None
