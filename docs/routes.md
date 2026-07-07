@@ -1023,7 +1023,17 @@ eigene Route. Werkzeuge (Tools) statt Endpunkte; sie rufen intern die vorhandene
 | Tool | Phase | Wirkung |
 |---|---|---|
 | `ping` | 1 | Erreichbarkeits-Check — gibt Bildzahl + DB-Pfad zurück (beweist den Tool→Endpoint-Adapter) |
+| `search_photos` | 2 | Sucht/filtert die Bibliothek (Text/Tag/Person/Klassifizierung/Qualität/Framing/Favorit), gedeckelt auf `mcp.max_search_results` |
+| `get_photo` | 2 | Alle Metadaten eines Fotos (Tags, Caption, Gesichter, Versionen, Klassifizierung, Pfad) |
+| `view_photo` | 2 | Liefert das Foto als Bild-Content (JPEG, `mcp.thumbnail_size`), genau eins pro Aufruf; Text-Hinweis statt Bild bei `mcp.return_images=false` |
+| `list_facets` | 2 | Verfügbare Filter (Tags/Quellen/Framings/Klassifizierungen) mit Zählern, ohne Item-Liste |
+| `find_similar` | 2 | CLIP-ähnliche Fotos zu einem Asset |
+| `get_lineage` | 2 | Ableitungs-Baum (Editor-Versionen + extrahierte Gesichter + deren Versionen) |
+| `get_capabilities` | 2 | Aktive Modell-Fähigkeiten (Faces/Tagging/Captioning/Semantik/Rembg/Heavy-Caption) |
+| `list_persons` | 2 | Alle Personen mit Namen/Gruppe/Anzahl/Portrait-Gesicht (nur Lesen) |
+| `get_job_status` | 2 | Status/Fortschritt/Fehler eines einzelnen Jobs (Polling) |
+| `list_jobs` | 2 | Laufende/fertige Jobs, optional nach Status gefiltert, gedeckelt |
 
-> Weitere Tools kommen phasenweise dazu (Phase 2: Finden & Ansehen inkl. `view_photo`;
-> Phase 3: Metadaten & Tags; Phase 4: Personen & Faces; Phase 5: Import/Organisieren/Duplikate;
-> Phase 6: Wartung). Destruktive Tools verlangen `confirm=true` (`mcp.require_confirm`).
+> Weitere Tools kommen phasenweise dazu (Phase 3: Metadaten & Tags; Phase 4: Personen &
+> Faces; Phase 5: Import/Organisieren/Duplikate; Phase 6: Wartung). Destruktive Tools
+> verlangen `confirm=true` (`mcp.require_confirm`).

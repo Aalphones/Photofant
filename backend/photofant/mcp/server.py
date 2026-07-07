@@ -31,6 +31,11 @@ log = logging.getLogger(__name__)
 # externe Pfad "/mcp" (statt "/mcp/mcp" beim Default-Pfad "/mcp").
 mcp_server = FastMCP("Photofant", streamable_http_path="/")
 
+# Tool-Module registrieren ihre Tools per @mcp_server.tool()-Decorator als Import-
+# Nebeneffekt — muss nach der mcp_server-Definition stehen (sonst zirkulärer Import),
+# daher hier statt im obigen Import-Block (FINDINGS.md Phase 2).
+from photofant.mcp.tools import library  # noqa: E402,F401
+
 
 @mcp_server.tool()
 async def ping() -> dict[str, object]:
