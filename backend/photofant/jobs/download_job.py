@@ -25,6 +25,36 @@ log = logging.getLogger(__name__)
 _CHUNK_SIZE = 512 * 1024  # 512 KB per read
 _HTTP_TIMEOUT = httpx.Timeout(connect=30.0, read=3600.0, write=60.0, pool=30.0)
 
+# Roles resolved by capability (photofant.inference.image_embedder.resolve_image_embedder)
+# need exactly one enabled model — a coherent vector space can't average two embedders
+# (ADR-022). Roles resolved by a fixed manifest_id (face, tagger, captioner) don't hit this
+# ambiguity today; heavy_captioner explicitly keeps several models enabled on purpose (the
+# caller picks one per request), so it must stay out of this set.
+EXCLUSIVE_ROLES: frozenset[str] = frozenset({"semantic_search"})
+
+
+def deactivate_role_siblings(session: Session, role: str, keep_manifest_id: str) -> None:
+    """For an exclusive role, disable every other enabled model sharing *role*.
+
+    Without this, activating a second model of the same exclusive role (e.g. downloading
+    SigLIP2 while CLIP is still enabled) leaves both `enabled=True` — the role-based
+    resolver then picks whichever row SQLite returns first, silently and unpredictably.
+    """
+    if role not in EXCLUSIVE_ROLES:
+        return
+    siblings = (
+        session.query(ModelRegistry)
+        .filter(
+            ModelRegistry.role == role,
+            ModelRegistry.manifest_id != keep_manifest_id,
+            ModelRegistry.enabled == True,  # noqa: E712
+        )
+        .all()
+    )
+    for sibling in siblings:
+        sibling.enabled = False
+        log.info("Deactivated %s (role=%s) — %s takes over", sibling.manifest_id, role, keep_manifest_id)
+
 
 class ScanResult(TypedDict):
     manifest_id: str
@@ -155,6 +185,7 @@ def _upsert_registry_row(
             capabilities=entry.capabilities,
         )
         session.add(row)
+    deactivate_role_siblings(session, entry.role, entry.id)
     log.info("Registered model %s at %s (managed=%s)", entry.id, model_path, managed)
 
 

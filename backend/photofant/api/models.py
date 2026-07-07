@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from photofant.config import get_models_dir
 from photofant.db.models import ModelRegistry
 from photofant.db.session import get_session
-from photofant.jobs.download_job import ScanResult, enqueue_download, scan_models_dir
+from photofant.jobs.download_job import ScanResult, deactivate_role_siblings, enqueue_download, scan_models_dir
 from photofant.models.loader import ManifestEntry, get_manifest_entry, load_manifest
 from photofant.models.validation import (
     ModelErrorCode,
@@ -258,6 +258,7 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Comp
         row.enabled = True
         row.caption_mode = entry.caption_mode
         row.capabilities = entry.capabilities
+        deactivate_role_siblings(session, entry.role, entry.id)
         session.commit()
         session.refresh(row)
 
@@ -301,6 +302,7 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Comp
         row.enabled = True
         row.caption_mode = entry.caption_mode
         row.capabilities = entry.capabilities
+        deactivate_role_siblings(session, entry.role, entry.id)
         session.commit()
         session.refresh(row)
 

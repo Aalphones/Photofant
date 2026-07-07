@@ -34,4 +34,21 @@ Diese Phase ist überwiegend **Bedienung + Messung**, nicht Implementierung:
 - [ ] `docs/decisions/021-siglip2-embedder.md` — Abschnitt „kalibrierte Schwellwerte" mit End-Werten + Begründung nachtragen.
 - [ ] STATE.md auf `(kein aktiver Plan)` bzw. auf P36 zeigen lassen; Plan nach `docs/archive/2026-07/` verschieben.
 
+## Deviations (während der Umsetzung entdeckt & gefixt)
+Phase sollte laut Plan reine Bedienung sein — zwei echte Bugs haben das erste SigLIP2-Aktivieren
+blockiert, beide gefixt:
+1. **Manifest unvollständig:** `manifest.json` (`siglip2-large-patch16-384`) listete `onnx/text_model.onnx`
+   nicht aber das zugehörige `onnx/text_model.onnx_data` (2.26 GB, ONNX-External-Data — der Text-Encoder
+   war nur ein 533-KB-Graph-Gerüst ohne Gewichte). Gegen die echte HF-Dateiliste verifiziert und ergänzt.
+2. **Keine Enable/Disable-Exklusivität:** Es gab keinen Mechanismus, der beim Aktivieren eines Modells
+   Geschwister-Modelle derselben Rolle deaktiviert — CLIP und SigLIP2 standen nach dem Download beide auf
+   `enabled=1` für `semantic_search`, der Resolver zog ungeordnet den ersten Treffer (CLIP). Neue Funktion
+   `deactivate_role_siblings()` (`backend/photofant/jobs/download_job.py`) mit `EXCLUSIVE_ROLES = {"semantic_search"}`
+   — an allen drei Registry-Schreibpfaden eingehängt (Managed-Download, Component-Register-Local,
+   In-Place-Register-Local). `heavy_captioner` bewusst ausgenommen (mehrere Modelle gleichzeitig aktiv ist
+   dort Absicht). ruff + mypy auf beiden geänderten Dateien grün (mypy-Fehler in `download_job.py:121`
+   vorbestehend, nicht von diesem Fix verursacht — per `git stash` gegengeprüft).
+Kaputter Halb-Download (`D:\Models\_Photofant\siglip2-large-patch16-384`, nur `vision_model.onnx` +
+Gerüst-Textmodell) + verwaiste Registry-Zeile entfernt, damit ein sauberer Neu-Download möglich ist.
+
 ## Report-Back

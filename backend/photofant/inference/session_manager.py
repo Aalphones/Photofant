@@ -329,8 +329,20 @@ class SessionManager:
         # each session's arena to a worst-case size that is never returned while
         # the session lives. Also the prerequisite for per-run arena shrinkage
         # (see `arena_shrink_run_options`).
+        #
+        # cudnn_conv_algo_search=HEURISTIC: steer cuDNN away from the exhaustive
+        # (autotuned) conv algorithm path. On this box the exhaustive path selects
+        # a fused cuDNN-frontend kernel for Florence-2's depthwise convs that the
+        # driver rejects at launch (CUDNN_BACKEND_API_FAILED / cuLaunchKernel
+        # "invalid argument") — a cuDNN/CUDA version skew, not a model bug. The
+        # heuristic path picks a different, launchable kernel. Revert if the stack
+        # versions get realigned.
+        cuda_provider_options: dict[str, str] = {
+            "arena_extend_strategy": "kSameAsRequested",
+            "cudnn_conv_algo_search": "HEURISTIC",
+        }
         provider_args: list[str | tuple[str, dict[str, str]]] = [
-            ("CUDAExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"})
+            ("CUDAExecutionProvider", cuda_provider_options)
             if name == "CUDAExecutionProvider"
             else name
             for name in providers

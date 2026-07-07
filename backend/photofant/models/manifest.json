@@ -126,16 +126,17 @@
       "hf_allow_patterns": [
         "onnx/vision_model.onnx",
         "onnx/text_model.onnx",
+        "onnx/text_model.onnx_data",
         "tokenizer.json",
         "tokenizer_config.json",
         "config.json",
         "preprocessor_config.json"
       ],
       "files": [],
-      "size_bytes": 1600000000,
+      "size_bytes": 3550000000,
       "license_note": "Apache 2.0",
       "tier": "core",
-      "_download_note": "Multi-file HuggingFace repo — hf_allow_patterns begrenzt den Download auf fp32-ONNX (vision + text) + Tokenizer/Config; size_bytes ist eine Schätzung, vor Download-Verifikation gegen das echte Repo prüfen"
+      "_download_note": "Multi-file HuggingFace repo — hf_allow_patterns begrenzt den Download auf fp32-ONNX (vision + text) + Tokenizer/Config. text_model.onnx ist nur der Graph (533 KB); die eigentlichen Gewichte liegen extern in text_model.onnx_data (2.26 GB, ONNX-External-Data wegen Protobuf-2GB-Limit) — beide Dateien sind Pflicht. vision_model.onnx ist mit 1.27 GB selbstständig (kein External-Data). Verifiziert gegen die echte HF-Dateiliste am 2026-07-07."
     },
     {
       "id": "rembg-u2net",
