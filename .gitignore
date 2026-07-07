@@ -26,6 +26,7 @@ Data/
 *.safetensors
 *.gguf
 *.onnx
+.mcp.json
 
 # OS
 Thumbs.db
