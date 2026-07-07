@@ -1042,7 +1042,19 @@ eigene Route. Werkzeuge (Tools) statt Endpunkte; sie rufen intern die vorhandene
 | `rename_tag` | 3 | Kanonischen Tag umbenennen (409 bei Namenskonflikt) |
 | `merge_tags` | 3 | Mehrere Tags in einen kanonischen Tag mergen (Quell-Tags werden Aliase) |
 | `set_tag_aliases` | 3 | Vollständige Alias-Liste eines kanonischen Tags setzen |
+| `create_person` | 4 | Neue benannte Person anlegen, optional mit Gruppe |
+| `rename_person` | 4 | Person umbenennen und/oder Gruppe setzen |
+| `assign_person` | 4 | Foto oder einzelnes Gesicht einer Person zuordnen (physischer Move) |
+| `bulk_assign_person` | 4 | Mehrere Fotos auf einmal einer Person zuordnen, liefert `job_id` |
+| `merge_persons` | 4 | Person in eine andere mergen — **Gate** (`confirm=true`) |
+| `split_person` | 4 | Gesichter aus einer Person heraustrennen, neue Person anlegen |
+| `delete_person` | 4 | Person endgültig löschen (Fotos wandern zu „Unbekannt") — **Gate** |
+| `list_faces` | 4 | Face-Galerie durchsuchen, optional nach Person gefiltert, gedeckelt |
+| `get_face_matches` | 4 | Top-10 Personen-Vorschläge für ein Gesicht per Cosine-Similarity |
+| `delete_face` | 4 | Gesicht endgültig löschen (DB-Zeile, Crop, Vektor-Index) — **Gate** |
+| `recluster` | 4 | HDBSCAN-Neuclustering über alle Gesichts-Embeddings anstoßen, liefert `job_id` |
+| `list_face_review` | 4 | Offene Einträge der Face-Review-Queue auflisten |
+| `resolve_face_review` | 4 | Review-Eintrag bestätigen/ablehnen/umhängen |
 
-> Weitere Tools kommen phasenweise dazu (Phase 4: Personen & Faces; Phase 5:
-> Import/Organisieren/Duplikate; Phase 6: Wartung). Destruktive Tools verlangen
-> `confirm=true` (`mcp.require_confirm`).
+> Weitere Tools kommen phasenweise dazu (Phase 5: Import/Organisieren/Duplikate; Phase 6:
+> Wartung). Destruktive Tools verlangen `confirm=true` (`mcp.require_confirm`).
