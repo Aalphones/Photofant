@@ -100,7 +100,7 @@ export class SearchBox {
         type: recent.type,
         text: recent.text,
         ...(recent.id != null ? { id: recent.id } : {}),
-        ...(recent.type === 'semantic' ? { badge: 'CLIP' } : {}),
+        ...(recent.type === 'semantic' ? { badge: 'Semantisch' } : {}),
       }));
     }
     const persons = this.personSuggestions().map((person: PersonDto): AutocompleteItem => ({
@@ -116,7 +116,7 @@ export class SearchBox {
       count: tag.count,
     }));
     const classifications = this.classificationSuggestions();
-    const semantic: AutocompleteItem = { type: 'semantic', text: query, badge: 'CLIP' };
+    const semantic: AutocompleteItem = { type: 'semantic', text: query, badge: 'Semantisch' };
     return [...persons, ...tags, ...classifications, semantic];
   });
 

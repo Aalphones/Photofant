@@ -21,7 +21,7 @@ const ALL_STEPS: StepOption[] = [
   { key: 'heuristics', label: 'Qualität',    desc: 'Auflösung + Schärfe → quality_score' },
   { key: 'tags',       label: 'Tags',        desc: 'WD14-Tagger (auto-Tags mit Konfidenz)' },
   { key: 'caption',    label: 'Caption',     desc: 'Florence-2 Bildbeschreibung' },
-  { key: 'embedding',  label: 'Embedding',   desc: 'CLIP-Vektor für Ähnlichkeitssuche, Ähnliche Bilder und Duplikat-Erkennung' },
+  { key: 'embedding',  label: 'Embedding',   desc: 'Semantischer Vektor für Ähnlichkeitssuche, Ähnliche Bilder und Duplikat-Erkennung' },
 ];
 
 @Component({

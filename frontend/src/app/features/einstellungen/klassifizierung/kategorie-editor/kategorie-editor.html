@@ -59,7 +59,7 @@
           <button
             class="kat-editor__label-btn"
             (click)="toggleExpanded(label)"
-            title="Erweitert: eigene CLIP-Prompts / WD14-Tag-Zuordnung (optional — ohne diese greift automatisch das Standard-Prompt-Template)"
+            title="Erweitert: eigene Text-Prompts / WD14-Tag-Zuordnung (optional — ohne diese greift automatisch das Standard-Prompt-Template)"
           >
             <pf-icon [name]="isExpanded(label) ? 'chevronUp' : 'chevronDown'" [size]="13" />
             Erweitert
@@ -74,7 +74,7 @@
           <div class="kat-editor__advanced">
             <label class="kat-editor__advanced-field">
               <span title="Textbeschreibungen, die gegen das Bild-Embedding verglichen werden — leer lässt das Standard-Template greifen">
-                CLIP-Prompts (kommagetrennt)
+                Text-Prompts (kommagetrennt)
               </span>
               <input
                 class="kat-editor__advanced-input"
@@ -85,7 +85,7 @@
               />
             </label>
             <label class="kat-editor__advanced-field">
-              <span title="WD14-Tag-Namen, deren Score dieses Label zusätzlich zum CLIP-Signal speist">
+              <span title="WD14-Tag-Namen, deren Score dieses Label zusätzlich zum Embedding-Signal speist">
                 WD14-Tags (kommagetrennt)
               </span>
               <input

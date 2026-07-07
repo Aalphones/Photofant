@@ -95,6 +95,11 @@ export const MODEL_ENRICHMENT: Record<string, { tier: ModelTier; desc: string; l
     licenseNc: false,
   },
   'clip-vit-l-14': {
+    tier: 'optional',
+    desc: 'Deprecated — abgelöst durch SigLIP2 (P35). Nur als Rollback registriert, für neue Setups nicht mehr empfohlen.',
+    licenseNc: false,
+  },
+  'siglip2-large-patch16-384': {
     tier: 'core',
     desc: 'Semantische Bild-Einbettungen für die thematische Suche.',
     licenseNc: false,
