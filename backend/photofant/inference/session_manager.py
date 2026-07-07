@@ -35,11 +35,16 @@ _EXECUTOR_WORKERS: int = 1  # single-threaded: onnxruntime is not re-entrant per
 # ONNX Runtime. Matched against the exception message because ORT surfaces all of
 # these as the same generic `Fail` type. "CUBLAS failure" catches the cascade
 # ("the library was not initialized") that follows the first OOM on a device.
+# "CUDNN failure" / "CUDNN_FE failure" (CUDNN_BACKEND_API_FAILED) is how cuDNN
+# reports an internal allocation failure under VRAM pressure — it never says
+# "out of memory", but eviction + retry is the right response all the same.
 _OOM_ERROR_MARKERS: tuple[str, ...] = (
     "out of memory",
     "CUDA failure 2",
     "CUBLAS failure",
     "cublasCreate",
+    "CUDNN failure",
+    "CUDNN_FE failure",
 )
 
 
