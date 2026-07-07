@@ -10,6 +10,7 @@ it — the index is created by raw SQL in the migration, mirroring how
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -163,3 +164,41 @@ async def test_text_search_fts_ignores_special_syntax_characters(
 
     ids = await _search_text(app, '"black" OR cat*')
     assert ids == []
+
+
+@pytest.mark.asyncio
+async def test_similar_ids_returns_assets_in_given_order(app_with_db: tuple[Any, Session]) -> None:
+    """P36: `similar_ids` is a pre-ranked id list (from /api/search/by-image or
+    /api/search/semantic) — list_assets must preserve that order, not fall back
+    to date/size sort."""
+    app, session = app_with_db
+    first = _seed_asset(session, content_hash="similar-1")
+    second = _seed_asset(session, content_hash="similar-2")
+    third = _seed_asset(session, content_hash="similar-3")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/assets", params={"similar_ids": [second.id, third.id, first.id]},
+        )
+
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()["items"]]
+    assert ids == [second.id, third.id, first.id]
+
+
+@pytest.mark.asyncio
+async def test_similar_ids_excludes_soft_deleted_assets(app_with_db: tuple[Any, Session]) -> None:
+    app, session = app_with_db
+    live = _seed_asset(session, content_hash="similar-live")
+    deleted = _seed_asset(session, content_hash="similar-deleted")
+    session.query(AssetInstance).filter_by(asset_id=deleted.id).update({"deleted_at": datetime.now(UTC)})
+    session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/assets", params={"similar_ids": [deleted.id, live.id]},
+        )
+
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()["items"]]
+    assert ids == [live.id]

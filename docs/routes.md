@@ -2,7 +2,7 @@
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable), `collection_id` (Mitglied einer Sammlung), `q` (Suchtext), `q_mode` (`tags\|caption\|semantic\|text`, `text` = Fuzzy-Freitextsuche über Tag-Name+Caption+Personen-Name via rapidfuzz, ADR-015, Default der Suchleiste seit P28) | `AssetsPage { items, total, page, page_size, facets }` — `items[]` sind P21 flache Einzeleinträge (Asset **oder** Version-Pseudo-Eintrag), je mit `kind` (`asset\|version`), `version_id`, `stack_size` (1 = kein Stapel), `stack_group_id` (ADR-012) |
+| `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable), `collection_id` (Mitglied einer Sammlung), `q` (Suchtext), `q_mode` (`tags\|caption\|semantic\|text`, `text` = Fuzzy-Freitextsuche über Tag-Name+Caption+Personen-Name via rapidfuzz, ADR-015, Default der Suchleiste seit P28), `similar_ids[]` (geordnete Asset-ID-Liste, P36 — überschreibt Datum/Größe-Sortierung mit dieser Reihenfolge, respektiert weiterhin Soft-Delete + andere Filter) | `AssetsPage { items, total, page, page_size, facets }` — `items[]` sind P21 flache Einzeleinträge (Asset **oder** Version-Pseudo-Eintrag), je mit `kind` (`asset\|version`), `version_id`, `stack_size` (1 = kein Stapel), `stack_group_id` (ADR-012) |
 | `/galerie` (cell thumbnail) | `GET` | `/api/assets/{id}/thumbnail` | `size` (256\|512\|1024) | JPEG blob — `ETag: "{hash}-{size}"`, `Cache-Control: immutable` |
 | `/galerie` (lightbox) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
 | `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`, `tags`, `faces`, `versions`, `original_id`, `linked_edits`, `quality`, `framing`) |
@@ -580,6 +580,7 @@ interface AssetDetailDto {
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
 | — (kein Frontend-Aufrufer, siehe unten) | `POST` | `/api/search/semantic` | `SemanticSearchRequest` | `SemanticSearchResponse` |
+| Globale Suche (Reverse-Upload, P36 Phase 2) | `POST` | `/api/search/by-image` | `multipart/form-data; file` + optional `?limit=` (1–100, Default `reverseSearch.similarLimit`) | `SemanticSearchResponse` |
 
 Der frühere `POST /api/search/warm`-Prewarm (P28 Phase 3) wurde entfernt: er lud beim Tippen die
 CLIP-Textsession (~9s kalt) und blockierte damit den Personen-/Tag-Klick, obwohl der gar kein CLIP
@@ -610,6 +611,25 @@ Fehler-Codes (strukturiert im `detail`-Feld):
 - `404` — `like_asset_id` existiert nicht
 - `409 { code: "SEMANTIC_SEARCH_UNAVAILABLE" }` — CLIP-Modell nicht aktiv (Textsuche nicht möglich)
 - `409 { code: "NO_EMBEDDING" }` — `like_asset_id` hat noch kein Embedding
+
+### Reverse Image Search — Upload-Embed (P36 Phase 1)
+
+`POST /api/search/by-image` dekodiert den Upload im Speicher (PIL, `convert("RGB")`) und embedded ihn über
+`resolve_image_embedder()` — **der Upload wird nie gespeichert oder importiert**. Response ist dieselbe
+`SemanticSearchResponse`-Form wie `/api/search/semantic`. Zusammen mit dem `similar_ids`-Parameter von
+`GET /api/assets` (oben) trägt das den Reverse-Filter der globalen Suche (Phase 2).
+
+Fehler-Codes (strukturiert im `detail`-Feld):
+- `413 { code: "UPLOAD_TOO_LARGE" }` — Datei größer als `reverseSearch.maxUploadBytes`
+- `422 { code: "INVALID_IMAGE" }` — Datei ist kein von PIL lesbares Bild
+- `409 { code: "SEMANTIC_SEARCH_UNAVAILABLE" }` — kein Bild-Embedder aktiv
+
+`reverseSearch.minScore` (Default 0.0 = aus) filtert Treffer mit Cosine-Ähnlichkeit unter dem Floor heraus.
+
+🟡 **Bekannte Überschneidung:** `GET /api/assets/{id}/similar` (Duplikaterkennung, siehe Abschnitt unten)
+zeigt in der Lightbox bereits eine schwellenwert-basierte „Ähnliche Bilder"-Liste. P36 Phase 3 baut dort
+eine *zweite*, Top-N-basierte Related-Rail — vor Phase 3 klären, ob beide nebeneinander bestehen oder
+konsolidiert werden (siehe FINDINGS.md).
 
 ## Duplikaterkennung — Review-API (erweitert um duale Erkennung, ADR-007, Plan `2026-06-22_p11-duale-duplikaterkennung`)
 

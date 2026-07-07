@@ -1,7 +1,11 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-07_p36-reverse-image-search/` (nächster in der User-Reihenfolge —
-noch nicht begonnen, freigeben/bestätigen vor Phase 1)
+**Aktiver Plan:** `docs/planning/2026-07-07_p36-reverse-image-search/` — Phase 1 (Backend: Upload-Embed-Endpoint
++ Galerie-`similar_ids`) fertig. Nächster Schritt: Phase 2 (Globale Suche: Drag & Drop / Upload →
+Reverse-Filter). **Vor Phase 2/3:** Design-Lage klären (`docs/design/` auf Such-/Lightbox-Mockup prüfen,
+README-Vorgabe) UND den neuen FINDINGS.md-Eintrag lesen — Lightbox hat bereits eine
+schwellenwert-basierte „Ähnliche Bilder"-Funktion (`/api/assets/{id}/similar`), P36 Phase 3 baut eine
+zweite Top-10-Rail — vor Phase 3 klären, ob konsolidiert wird.
 
 **Backlog danach (User-Reihenfolge, 2026-07-07):** `2026-07-07_p37-dinov2-reranking` →
 `2026-07-01_p22-knowledge-engine` bis `p26-recommendation-engine` (in Nummernreihenfolge) →

@@ -45,6 +45,12 @@ class McpSettings(TypedDict):
     require_confirm: bool        # Confirmation-Gate für destruktive Tools
 
 
+class ReverseSearchSettings(TypedDict):
+    similar_limit: int          # Anzahl Vorschläge in der Lightbox-Related-Rail
+    max_upload_bytes: int       # Obergrenze für /api/search/by-image-Uploads
+    min_score: float            # optionaler Ähnlichkeits-Floor (0.0 = aus)
+
+
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
@@ -81,6 +87,7 @@ class AppSettings(TypedDict):
     comfyui: ComfyUISettings
     classification: ClassificationSettings
     mcp: McpSettings
+    reverse_search: ReverseSearchSettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -145,6 +152,11 @@ SETTINGS_DEFAULTS: AppSettings = {
         "thumbnail_size": 256,
         "require_confirm": True,
     },
+    "reverse_search": {
+        "similar_limit": 10,
+        "max_upload_bytes": 15 * 1024 * 1024,
+        "min_score": 0.0,
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -184,6 +196,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "comfyui": dict,
     "classification": dict,
     "mcp": dict,
+    "reverse_search": dict,
 }
 
 

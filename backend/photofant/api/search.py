@@ -1,23 +1,30 @@
-"""Semantic search endpoint — text→image and image→image over the embedding vector index.
+"""Semantic search endpoints — text→image, image→image and upload→image over the
+embedding vector index.
 
 `POST /api/search/semantic` accepts either a free-text `query` (embedded on the
 fly via the active image embedder's text encoder) or a `like_asset_id` (reuses
-that asset's stored embedding). Returns the most similar *active* assets with
-cosine scores (ADR-001). The concrete model is resolved by capability (ADR-022).
+that asset's stored embedding). `POST /api/search/by-image` embeds an *uploaded*
+image (P36 reverse image search) — the upload is never saved/imported, only
+embedded. Both return the most similar *active* assets with cosine scores
+(ADR-001). The concrete model is resolved by capability (ADR-022).
 """
 from __future__ import annotations
 
 import asyncio
+import io
 from typing import Annotated
 
 import numpy as np
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from photofant.db import vector_index
 from photofant.db.models import Asset, AssetInstance
 from photofant.db.session import get_session
+from photofant.inference.interfaces import Embedder
+from photofant.settings import load_settings
 
 router = APIRouter(prefix="/search")
 
@@ -44,19 +51,33 @@ class SemanticSearchResponse(BaseModel):
     hits: list[SearchHit]
 
 
-def _embed_query_text(query: str) -> np.ndarray:
+def _require_embedder(unavailable_message: str) -> Embedder:
     from photofant.inference.image_embedder import resolve_image_embedder
 
     embedder = resolve_image_embedder()
     if embedder is None:
         raise HTTPException(
             status_code=409,
-            detail={
-                "code": "SEMANTIC_SEARCH_UNAVAILABLE",
-                "message": "Kein Bild-Embedder aktiv — Textsuche nicht möglich.",
-            },
+            detail={"code": "SEMANTIC_SEARCH_UNAVAILABLE", "message": unavailable_message},
         )
+    return embedder
+
+
+def _embed_query_text(query: str) -> np.ndarray:
+    embedder = _require_embedder("Kein Bild-Embedder aktiv — Textsuche nicht möglich.")
     return embedder.embed_text(query)
+
+
+def _decode_upload(content: bytes) -> np.ndarray:
+    """Decode raw upload bytes into a uint8 RGB array. Raises 422 if unreadable."""
+    try:
+        with Image.open(io.BytesIO(content)) as raw:
+            return np.array(raw.convert("RGB"), dtype=np.uint8)
+    except (UnidentifiedImageError, OSError) as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "INVALID_IMAGE", "message": "Datei ist kein lesbares Bild."},
+        ) from error
 
 
 def _embedding_for_asset(session: Session, asset_id: int) -> np.ndarray:
@@ -116,6 +137,52 @@ async def semantic_search(body: SemanticSearchRequest, session: DbSession) -> Se
             continue
         hits.append(SearchHit(asset_id=asset_id, score=score))
         if len(hits) == body.limit:
+            break
+
+    return SemanticSearchResponse(hits=hits)
+
+
+@router.post("/by-image", response_model=SemanticSearchResponse)
+async def search_by_image(
+    session: DbSession,
+    file: Annotated[UploadFile, File()],
+    limit: Annotated[int | None, Query(ge=1, le=100)] = None,
+) -> SemanticSearchResponse:
+    """Embed an uploaded image and return the most similar library assets (P36).
+
+    The upload is decoded in memory and embedded — never written to disk or
+    imported. `limit` defaults to `reverseSearch.similarLimit`.
+    """
+    reverse_search = load_settings()["reverse_search"]
+    effective_limit = limit or reverse_search["similar_limit"]
+    max_bytes = reverse_search["max_upload_bytes"]
+
+    content = await file.read()
+    if len(content) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "code": "UPLOAD_TOO_LARGE",
+                "message": f"Bild ist zu groß (max. {max_bytes // (1024 * 1024)} MB).",
+            },
+        )
+
+    embedder = _require_embedder("Kein Bild-Embedder aktiv — Reverse-Suche nicht möglich.")
+    image = _decode_upload(content)
+    query_embedding = await asyncio.to_thread(embedder.embed, image)
+
+    min_score = reverse_search["min_score"]
+    candidate_count = max(effective_limit * _CANDIDATE_FACTOR, effective_limit + _CANDIDATE_FLOOR)
+    candidates = vector_index.search(session, query_embedding, candidate_count)
+    candidate_ids = [asset_id for asset_id, _ in candidates]
+    active = _active_asset_ids(session, candidate_ids)
+
+    hits: list[SearchHit] = []
+    for asset_id, score in candidates:
+        if asset_id not in active or score < min_score:
+            continue
+        hits.append(SearchHit(asset_id=asset_id, score=score))
+        if len(hits) == effective_limit:
             break
 
     return SemanticSearchResponse(hits=hits)

@@ -558,6 +558,7 @@ async def list_assets(
     has_faces: bool | None = None,
     q: str | None = None,
     q_mode: SearchMode = SearchMode.TAGS,
+    similar_ids: Annotated[list[int] | None, Query()] = None,
 ) -> AssetsPage:
     query = _base_query(session)
 
@@ -666,6 +667,14 @@ async def list_assets(
                 match_conditions.append(Asset.id.in_(caption_asset_ids))
 
             query = query.filter(or_(*match_conditions))
+
+    # Reverse-Image-Filter (P36): geordnete id-Liste aus /api/search/by-image bzw.
+    # /api/search/semantic (like_asset_id) — score_map trägt die Reihenfolge in den
+    # bestehenden Sort-Mechanismus, statt Datum/Größe zu sortieren.
+    if similar_ids:
+        query = query.filter(Asset.id.in_(similar_ids))
+        for rank, asset_id in enumerate(similar_ids):
+            score_map.setdefault(asset_id, float(len(similar_ids) - rank))
 
     facets = _compute_facets(session, query) if page == 1 else _empty_facets()
     version_query = _version_candidates_query(session, query)
