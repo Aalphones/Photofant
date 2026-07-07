@@ -34,7 +34,8 @@ mcp_server = FastMCP("Photofant", streamable_http_path="/")
 # Tool-Module registrieren ihre Tools per @mcp_server.tool()-Decorator als Import-
 # Nebeneffekt — muss nach der mcp_server-Definition stehen (sonst zirkulärer Import),
 # daher hier statt im obigen Import-Block (FINDINGS.md Phase 2).
-from photofant.mcp.tools import library  # noqa: E402,F401
+from photofant.mcp.tools import library  # noqa: E402,F401,I001
+from photofant.mcp.tools import metadata  # noqa: E402,F401,I001
 
 
 @mcp_server.tool()

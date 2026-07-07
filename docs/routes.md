@@ -1033,7 +1033,16 @@ eigene Route. Werkzeuge (Tools) statt Endpunkte; sie rufen intern die vorhandene
 | `list_persons` | 2 | Alle Personen mit Namen/Gruppe/Anzahl/Portrait-Gesicht (nur Lesen) |
 | `get_job_status` | 2 | Status/Fortschritt/Fehler eines einzelnen Jobs (Polling) |
 | `list_jobs` | 2 | Laufende/fertige Jobs, optional nach Status gefiltert, gedeckelt |
+| `edit_tags` | 3 | Tags eines Fotos hinzufügen/entfernen, gibt die neue Tag-Liste zurück |
+| `bulk_edit_tags` | 3 | Tags auf mehreren Fotos gleichzeitig hinzufügen/entfernen |
+| `set_caption` | 3 | Bildunterschrift manuell setzen (`caption_edited=true`) |
+| `set_photo_meta` | 3 | Quelle/Framing/Original-Zuordnung eines Fotos patchen (`clear_original` löscht die Zuordnung) |
+| `set_classification` | 3 | Klassifizierungs-Rerun anstoßen (Default `categories`), liefert `job_id` |
+| `list_tags` | 3 | Tag-Vokabular durchsuchen (Name, Foto-Anzahl, Aliase), gedeckelt |
+| `rename_tag` | 3 | Kanonischen Tag umbenennen (409 bei Namenskonflikt) |
+| `merge_tags` | 3 | Mehrere Tags in einen kanonischen Tag mergen (Quell-Tags werden Aliase) |
+| `set_tag_aliases` | 3 | Vollständige Alias-Liste eines kanonischen Tags setzen |
 
-> Weitere Tools kommen phasenweise dazu (Phase 3: Metadaten & Tags; Phase 4: Personen &
-> Faces; Phase 5: Import/Organisieren/Duplikate; Phase 6: Wartung). Destruktive Tools
-> verlangen `confirm=true` (`mcp.require_confirm`).
+> Weitere Tools kommen phasenweise dazu (Phase 4: Personen & Faces; Phase 5:
+> Import/Organisieren/Duplikate; Phase 6: Wartung). Destruktive Tools verlangen
+> `confirm=true` (`mcp.require_confirm`).

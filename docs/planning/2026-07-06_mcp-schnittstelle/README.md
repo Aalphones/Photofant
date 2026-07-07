@@ -21,7 +21,7 @@
 |---|---|---|---|
 | 1 | MCP-Infrastruktur + Settings-Toggle + Warnhinweis-UI | heikel | complete |
 | 2 | Finden & Ansehen (Read-Tools inkl. Bild-Content, Job-Status) | standard | complete |
-| 3 | Metadaten & Tag-Vokabular (Write, non-destruktiv) | standard | pending |
+| 3 | Metadaten & Tag-Vokabular (Write, non-destruktiv) | standard | complete |
 | 4 | Personen & Faces | standard | pending |
 | 5 | Import, Organisieren, Duplikate | standard | pending |
 | 6 | Wartung + Confirmation-Gate scharfstellen | standard | pending |
