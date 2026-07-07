@@ -1,5 +1,6 @@
 # Maschinenlokale Tool-Konfiguration
 .claude/settings.local.json
+.continue/*
 
 # Python
 .venv/

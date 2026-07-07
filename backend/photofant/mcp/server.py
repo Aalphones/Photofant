@@ -104,6 +104,19 @@ class McpGuardMiddleware:
             await _reject(send, 403, "Forbidden: non-loopback Origin header")
             return
 
+        # `app.mount("/mcp", ...)` matcht die Sub-App erst ab "/mcp/..." — ein
+        # Request auf genau "/mcp" (ohne Slash) faellt bei Starlette durch und
+        # wird per 307 auf "/mcp/" umgeleitet. Viele MCP-Clients folgen POST-
+        # Redirects nicht (Streamable-HTTP erwartet eine einzige feste Session-
+        # URL) und lesen das als Verbindungsabbruch. Deshalb hier intern
+        # normalisieren, bevor der Request den Router erreicht — kein fuer den
+        # Client sichtbarer Redirect noetig.
+        if scope["path"] == "/mcp":
+            scope = dict(scope, path="/mcp/")
+            raw_path = scope.get("raw_path")
+            if raw_path is not None:
+                scope["raw_path"] = raw_path + b"/"
+
         await self.app(scope, receive, send)
 
 
