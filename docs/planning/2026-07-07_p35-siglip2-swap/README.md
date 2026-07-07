@@ -37,14 +37,18 @@ _IMAGE_EMBEDDER_ADAPTERS: dict[str, type[Embedder]] = {
     "siglip2-large-patch16-384":  SigLIPEmbedder,
 }
 
-def resolve_image_embedder() -> Embedder | None:
-    # 1. finde in ModelRegistry das *aktivierte* Modell mit manifest role == "semantic_search"
+def resolve_image_embedder(role: str = "semantic_search") -> Embedder | None:
+    # 1. finde in ModelRegistry das *aktivierte* Modell mit manifest role == <role>
     # 2. schlage die Adapter-Klasse per manifest_id in der Registry nach
     # 3. instanziiere mit dem registry-Pfad; None wenn keins aktiv
 ```
 - **CLIP bleibt registriert** (nicht gelöscht): beweist, dass die Naht trägt (zwei Adapter koexistieren),
   und dient als Rollback. Aktiv ist, welches `semantic_search`-Modell in der Modelle-UI aktiviert ist —
   kohärenter Vektorraum ⇒ genau eins aktiv.
+- **`role` ist Parameter, nicht hart verdrahtet** (forward-compat für P37): Konsumenten rufen ohne Argument
+  (`semantic_search` = Default). P37 fügt einen zweiten, rein visuellen Embedder (DINOv2) mit
+  `role="visual_rerank"` hinzu und ruft `resolve_image_embedder(role="visual_rerank")` — **ohne** die Naht
+  aufzureißen. Eine Zeile Weitsicht jetzt spart den Sweep später.
 - **Jeder Adapter besitzt seinen Kontrakt selbst:** Preprocessing, Text-Tokenisierung **und** `dim`.
   Kein Konsument und kein zentrales Preprocessing kennt Modell-Interna.
 - **Konsumenten rufen nur `resolve_image_embedder()`.** Modellname fällt aus Such-/Klassifizierungs-/
@@ -71,8 +75,10 @@ def resolve_image_embedder() -> Embedder | None:
 ## Kontrakt (Cross-Modul-Anker)
 - **`Embedder`-Protokoll** (`inference/interfaces.py`): `embed(image) -> np.ndarray` (L2-normalisiert),
   `embed_text(text) -> np.ndarray`, **neu** `dim: int` (property). Alle Adapter erfüllen es.
-- **Resolver:** `resolve_image_embedder() -> Embedder | None` (`inference/image_embedder.py`) ist die
-  **einzige** Bezugsquelle für Konsumenten. `resolve_clip_embedder()` entfällt.
+- **Resolver:** `resolve_image_embedder(role="semantic_search") -> Embedder | None`
+  (`inference/image_embedder.py`) ist die **einzige** Bezugsquelle für Konsumenten. `resolve_clip_embedder()`
+  entfällt. Der `role`-Parameter (Default `semantic_search`) hält die Naht offen für weitere Modell-Rollen
+  (P37: `visual_rerank`).
 - **Dimension:** `vector_index.EMBEDDING_DIM` = Schema-Wahrheit der Tabelle (1024 nach Phase 2).
   Startup-Guard: `EMBEDDING_DIM == resolve_image_embedder().dim` sonst laute Warnung.
 - **Übergangs-Invariante:** Zwischen Migration (Phase 2) und Abschluss des Re-Embeds (Phase 3) sind **alle**
@@ -130,4 +136,4 @@ def resolve_image_embedder() -> Embedder | None:
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_ — Follow-up: **P36** Reverse Image Search baut hierauf auf.
+_(beim Archivieren)_ — Follow-ups: **P36** Reverse Image Search und **P37** DINOv2 Re-Ranking bauen hierauf auf.

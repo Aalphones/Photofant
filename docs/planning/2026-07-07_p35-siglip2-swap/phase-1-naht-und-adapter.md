@@ -21,8 +21,10 @@
 - [ ] `Embedder`-Protokoll hat `dim: int` (property); `CLIPEmbedder` und `SigLIPEmbedder` liefern es (768 bzw. 1024).
 - [ ] **`inference/image_embedder.py`** existiert: `_IMAGE_EMBEDDER_ADAPTERS: dict[str, type[Embedder]]`
       (`"clip-vit-l-14": CLIPEmbedder`, `"siglip2-large-patch16-384": SigLIPEmbedder`) +
-      `resolve_image_embedder() -> Embedder | None`, das das aktivierte `ModelRegistry`-Modell mit Manifest-`role`
-      `"semantic_search"` sucht, die Adapter-Klasse per `manifest_id` nachschlägt und mit `entry.path` instanziiert.
+      `resolve_image_embedder(role: str = "semantic_search") -> Embedder | None`, das das aktivierte
+      `ModelRegistry`-Modell mit Manifest-`role` == `<role>` sucht, die Adapter-Klasse per `manifest_id`
+      nachschlägt und mit `entry.path` instanziiert. **Der `role`-Parameter ist Pflicht** (Default
+      `semantic_search`) — forward-compat für P37 (`visual_rerank`); nicht auf `"semantic_search"` hart verdrahten.
 - [ ] **`inference/adapters/siglip.py`** existiert: `SigLIPEmbedder`, Muster 1:1 wie `CLIPEmbedder`, aber
       `_MANIFEST_ID = "siglip2-large-patch16-384"`, `dim = 1024`, SigLIP-Preprocessing + SigLIP-Text-Kontrakt (unten).
 - [ ] **`preprocess_for_siglip(image, size=384)`** in `preprocessing.py`: `resize_squash(image, 384)` +
