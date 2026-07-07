@@ -54,7 +54,11 @@ class WD14Tagger:
 
     def tag(self, image: np.ndarray) -> list[TagScore]:
         from photofant.inference.preprocessing import preprocess_for_wd14
-        from photofant.inference.session_manager import run_with_oom_retry, session_manager
+        from photofant.inference.session_manager import (
+            arena_shrink_run_options,
+            run_with_oom_retry,
+            session_manager,
+        )
         from photofant.settings import load_settings
 
         labels = _load_labels(self._csv_path)
@@ -64,8 +68,10 @@ class WD14Tagger:
         session = session_manager.acquire_exclusive_session(self._model_path, pool_size)
         try:
             input_name = session.get_inputs()[0].name
+            run_options = arena_shrink_run_options(session)
             raw_outputs = run_with_oom_retry(
-                lambda: session.run(None, {input_name: input_array}), description="WD14 tagging"
+                lambda: session.run(None, {input_name: input_array}, run_options),
+                description="WD14 tagging",
             )
         finally:
             session_manager.release_exclusive_session(self._model_path, session)

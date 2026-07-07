@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+from contextlib import ExitStack
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -60,11 +61,12 @@ def _log_softmax(logits: np.ndarray) -> np.ndarray:
 
 def _run(session: ort.InferenceSession, feeds: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     """Run a session, returning outputs keyed by their declared names."""
-    from photofant.inference.session_manager import run_with_oom_retry
+    from photofant.inference.session_manager import arena_shrink_run_options, run_with_oom_retry
 
     output_names = [output.name for output in session.get_outputs()]
+    run_options = arena_shrink_run_options(session)
     results = run_with_oom_retry(
-        lambda: session.run(output_names, feeds), description="Florence-2 inference"
+        lambda: session.run(output_names, feeds, run_options), description="Florence-2 inference"
     )
     return dict(zip(output_names, results, strict=True))
 
@@ -122,11 +124,24 @@ class Florence2Captioner:
         pixel_values = preprocess_for_florence(image)
 
         pool_size = load_settings()["captioning_workers"]
-        embed_session = session_manager.acquire_exclusive_session(self._embed_path, pool_size)
-        vision_session = session_manager.acquire_exclusive_session(self._vision_path, pool_size)
-        encoder_session = session_manager.acquire_exclusive_session(self._encoder_path, pool_size)
-        decoder_session = session_manager.acquire_exclusive_session(self._decoder_path, pool_size)
-        try:
+
+        # ExitStack so a failed acquire (e.g. load error on session 3 of 4) still
+        # releases the sessions already checked out — otherwise their pool slots
+        # stay in_use forever and every later caption call blocks on the pool.
+        with ExitStack() as borrowed_sessions:
+
+            def borrow(model_path: str) -> ort.InferenceSession:
+                session = session_manager.acquire_exclusive_session(model_path, pool_size)
+                borrowed_sessions.callback(
+                    session_manager.release_exclusive_session, model_path, session
+                )
+                return session
+
+            embed_session = borrow(self._embed_path)
+            vision_session = borrow(self._vision_path)
+            encoder_session = borrow(self._encoder_path)
+            decoder_session = borrow(self._decoder_path)
+
             encoder_hidden, encoder_mask = self._encode(
                 embed_session, vision_session, encoder_session, tokenizer, prompt, pixel_values
             )
@@ -138,11 +153,6 @@ class Florence2Captioner:
                 num_beams=max(1, num_beams),
                 max_new_tokens=max_new_tokens,
             )
-        finally:
-            session_manager.release_exclusive_session(self._embed_path, embed_session)
-            session_manager.release_exclusive_session(self._vision_path, vision_session)
-            session_manager.release_exclusive_session(self._encoder_path, encoder_session)
-            session_manager.release_exclusive_session(self._decoder_path, decoder_session)
 
         text: str = tokenizer.decode(token_ids, skip_special_tokens=True)
         return text.strip()

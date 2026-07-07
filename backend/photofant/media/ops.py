@@ -207,7 +207,7 @@ def _apply_rembg(img: Image.Image, _params: RembgParams) -> Image.Image:
     """Remove background via u2net ONNX. Returns RGBA image with alpha mask."""
     import numpy as np
 
-    from photofant.inference.session_manager import session_manager
+    from photofant.inference.session_manager import arena_shrink_run_options, session_manager
 
     model_path = _resolve_rembg_model_path()
     if model_path is None:
@@ -228,7 +228,8 @@ def _apply_rembg(img: Image.Image, _params: RembgParams) -> Image.Image:
         try:
             input_name = session.get_inputs()[0].name
             output_name = session.get_outputs()[0].name
-            raw_output = session.run([output_name], {input_name: blob})[0]
+            run_options = arena_shrink_run_options(session)
+            raw_output = session.run([output_name], {input_name: blob}, run_options)[0]
         finally:
             session_manager.release_session(model_path)
     except RuntimeError as exc:
@@ -253,7 +254,7 @@ def _apply_smart_crop(img: Image.Image, _params: SmartCropParams) -> Image.Image
         _decode_scrfd_outputs,
         _make_scrfd_blob,
     )
-    from photofant.inference.session_manager import session_manager
+    from photofant.inference.session_manager import arena_shrink_run_options, session_manager
 
     buffalo_dir = _resolve_buffalo_l_dir()
     if buffalo_dir is None:
@@ -268,7 +269,8 @@ def _apply_smart_crop(img: Image.Image, _params: SmartCropParams) -> Image.Image
         try:
             input_name = sess.get_inputs()[0].name
             out_names = [output.name for output in sess.get_outputs()]
-            raw = sess.run(out_names, {input_name: blob})
+            run_options = arena_shrink_run_options(sess)
+            raw = sess.run(out_names, {input_name: blob}, run_options)
             det_outputs = dict(zip(out_names, raw, strict=True))
         finally:
             session_manager.release_session(det_path)

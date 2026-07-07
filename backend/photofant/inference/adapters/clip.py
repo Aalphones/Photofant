@@ -126,11 +126,12 @@ class CLIPEmbedder:
 
     @staticmethod
     def _run(session: ort.InferenceSession, feeds: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
-        from photofant.inference.session_manager import run_with_oom_retry
+        from photofant.inference.session_manager import arena_shrink_run_options, run_with_oom_retry
 
         output_names = [output.name for output in session.get_outputs()]
+        run_options = arena_shrink_run_options(session)
         results = run_with_oom_retry(
-            lambda: session.run(output_names, feeds), description="CLIP inference"
+            lambda: session.run(output_names, feeds, run_options), description="CLIP inference"
         )
         return {name: value.astype(np.float32) for name, value in zip(output_names, results, strict=True)}
 

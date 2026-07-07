@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-IDLE_TIMEOUT_SECONDS: float = 300.0
+IDLE_TIMEOUT_SECONDS: float = 120.0
 _EXECUTOR_WORKERS: int = 1  # single-threaded: onnxruntime is not re-entrant per session
 
 # Substrings that mark a CUDA out-of-memory / poisoned-context failure raised by
@@ -323,8 +323,21 @@ class SessionManager:
         providers = self.detect_providers(provider_override)
         log.info("Loading ONNX session: %s (providers: %s)", path.name, providers)
 
+        # kSameAsRequested: grow the CUDA arena only by what a run actually needs.
+        # The default (kNextPowerOfTwo) doubles the arena on every extension and,
+        # combined with the varying tensor shapes of beam-search decoding, balloons
+        # each session's arena to a worst-case size that is never returned while
+        # the session lives. Also the prerequisite for per-run arena shrinkage
+        # (see `arena_shrink_run_options`).
+        provider_args: list[str | tuple[str, dict[str, str]]] = [
+            ("CUDAExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"})
+            if name == "CUDAExecutionProvider"
+            else name
+            for name in providers
+        ]
+
         try:
-            session = ort.InferenceSession(str(path), providers=providers)
+            session = ort.InferenceSession(str(path), providers=provider_args)
         except Exception as error:
             raise RuntimeError(f"Failed to load ONNX model {path.name}: {error}") from error
 
@@ -361,6 +374,28 @@ class SessionManager:
 
 # Singleton — imported by adapters and job code.
 session_manager = SessionManager()
+
+_shrink_run_options: ort.RunOptions | None = None
+
+
+def arena_shrink_run_options(session: ort.InferenceSession) -> ort.RunOptions | None:
+    """RunOptions that hand unused CUDA arena chunks back to the driver after a run.
+
+    Without this, a session's arena stays at its high-water mark until the session
+    is evicted — with many warm sessions that pins the GPU at peak usage long after
+    the jobs finished. Returns None for sessions not running on the CUDA provider:
+    requesting a gpu:0 shrink on a CPU/DirectML session fails the whole run.
+    """
+    if "CUDAExecutionProvider" not in session.get_providers():
+        return None
+    global _shrink_run_options
+    if _shrink_run_options is None:
+        import onnxruntime as ort
+
+        run_options = ort.RunOptions()
+        run_options.add_run_config_entry("memory.enable_memory_arena_shrinkage", "gpu:0")
+        _shrink_run_options = run_options
+    return _shrink_run_options
 
 
 def _is_cuda_oom(error: BaseException) -> bool:

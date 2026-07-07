@@ -318,7 +318,11 @@ class BuffaloLEngine:
         """
         from PIL import Image as PILImage
 
-        from photofant.inference.session_manager import run_with_oom_retry, session_manager
+        from photofant.inference.session_manager import (
+            arena_shrink_run_options,
+            run_with_oom_retry,
+            session_manager,
+        )
 
         try:
             pil = PILImage.fromarray(image).convert("RGB").resize((112, 112), PILImage.BILINEAR)
@@ -329,8 +333,9 @@ class BuffaloLEngine:
             try:
                 rec_input_name = rec_session.get_inputs()[0].name
                 rec_output_name = rec_session.get_outputs()[0].name
+                run_options = arena_shrink_run_options(rec_session)
                 raw = run_with_oom_retry(
-                    lambda: rec_session.run([rec_output_name], {rec_input_name: blob}),
+                    lambda: rec_session.run([rec_output_name], {rec_input_name: blob}, run_options),
                     description="buffalo_l embed_crop",
                 )[0]
             finally:
@@ -348,7 +353,11 @@ class BuffaloLEngine:
         iou_threshold: float = 0.45,
     ) -> list[dict]:
         """Return one dict per face: {bbox, score, age, embedding, landmarks}."""
-        from photofant.inference.session_manager import run_with_oom_retry, session_manager
+        from photofant.inference.session_manager import (
+            arena_shrink_run_options,
+            run_with_oom_retry,
+            session_manager,
+        )
 
         blob, scale = _make_scrfd_blob(image)
 
@@ -357,8 +366,9 @@ class BuffaloLEngine:
         try:
             input_name = det_session.get_inputs()[0].name
             output_names = [o.name for o in det_session.get_outputs()]
+            det_run_options = arena_shrink_run_options(det_session)
             raw_outputs = run_with_oom_retry(
-                lambda: det_session.run(output_names, {input_name: blob}),
+                lambda: det_session.run(output_names, {input_name: blob}, det_run_options),
                 description="buffalo_l detection",
             )
             det_outputs = dict(zip(output_names, raw_outputs, strict=True))
@@ -377,42 +387,51 @@ class BuffaloLEngine:
             return []
 
         # --- embedding + age for each detected face ---
+        # Nested try blocks: if the age-session acquire fails, the rec session must
+        # still be released — otherwise its refcount stays >0 and it is never evicted.
         rec_session = session_manager.acquire_session(self._rec_path)
-        age_session = session_manager.acquire_session(self._age_gender_path)
         try:
-            rec_input_name = rec_session.get_inputs()[0].name
-            rec_output_name = rec_session.get_outputs()[0].name
-            age_input_name = age_session.get_inputs()[0].name
-            age_output_name = age_session.get_outputs()[0].name
+            age_session = session_manager.acquire_session(self._age_gender_path)
+            try:
+                rec_input_name = rec_session.get_inputs()[0].name
+                rec_output_name = rec_session.get_outputs()[0].name
+                age_input_name = age_session.get_inputs()[0].name
+                age_output_name = age_session.get_outputs()[0].name
+                rec_run_options = arena_shrink_run_options(rec_session)
+                age_run_options = arena_shrink_run_options(age_session)
 
-            for face in face_dicts:
-                landmarks = face.get("landmarks")
-                if landmarks is None:
-                    face["embedding"] = None
-                    face["age"] = None
-                    continue
+                for face in face_dicts:
+                    landmarks = face.get("landmarks")
+                    if landmarks is None:
+                        face["embedding"] = None
+                        face["age"] = None
+                        continue
 
-                # ArcFace embedding (112×112)
-                aligned_112 = _align_face(image, landmarks, out_size=112)
-                arc_blob = _make_arcface_blob(aligned_112)
-                embedding_raw = run_with_oom_retry(
-                    lambda blob=arc_blob: rec_session.run([rec_output_name], {rec_input_name: blob}),
-                    description="buffalo_l recognition",
-                )[0]
-                face["embedding"] = _l2_normalize(embedding_raw).astype(np.float32)
+                    # ArcFace embedding (112×112)
+                    aligned_112 = _align_face(image, landmarks, out_size=112)
+                    arc_blob = _make_arcface_blob(aligned_112)
+                    embedding_raw = run_with_oom_retry(
+                        lambda blob=arc_blob: rec_session.run(
+                            [rec_output_name], {rec_input_name: blob}, rec_run_options
+                        ),
+                        description="buffalo_l recognition",
+                    )[0]
+                    face["embedding"] = _l2_normalize(embedding_raw).astype(np.float32)
 
-                # Age estimation (96×96, same alignment scaled down)
-                aligned_64 = _align_face(image, landmarks, out_size=96)
-                age_blob = _make_arcface_blob(aligned_64[:, :, :])  # same norm
-                age_raw = run_with_oom_retry(
-                    lambda blob=age_blob: age_session.run([age_output_name], {age_input_name: blob}),
-                    description="buffalo_l age estimation",
-                )[0]
-                face["age"], _ = _decode_age_gender(age_raw)
-
+                    # Age estimation (96×96, same alignment scaled down)
+                    aligned_64 = _align_face(image, landmarks, out_size=96)
+                    age_blob = _make_arcface_blob(aligned_64[:, :, :])  # same norm
+                    age_raw = run_with_oom_retry(
+                        lambda blob=age_blob: age_session.run(
+                            [age_output_name], {age_input_name: blob}, age_run_options
+                        ),
+                        description="buffalo_l age estimation",
+                    )[0]
+                    face["age"], _ = _decode_age_gender(age_raw)
+            finally:
+                session_manager.release_session(self._age_gender_path)
         finally:
             session_manager.release_session(self._rec_path)
-            session_manager.release_session(self._age_gender_path)
 
         return face_dicts
 
