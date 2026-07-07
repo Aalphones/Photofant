@@ -22,9 +22,9 @@
 | 1 | MCP-Infrastruktur + Settings-Toggle + Warnhinweis-UI | heikel | complete |
 | 2 | Finden & Ansehen (Read-Tools inkl. Bild-Content, Job-Status) | standard | complete |
 | 3 | Metadaten & Tag-Vokabular (Write, non-destruktiv) | standard | complete |
-| 4 | Personen & Faces | standard | pending |
+| 4 | Personen & Faces | standard | complete |
 | 5 | Import, Organisieren, Duplikate | standard | complete |
-| 6 | Wartung + Confirmation-Gate scharfstellen | standard | pending |
+| 6 | Wartung + Confirmation-Gate scharfstellen | standard | complete |
 
 Phase 1 ist der heikle Kern (neue Library, ASGI-Mount, Lifespan, Security). 2–6 sind gleichförmige
 Tool-Arbeit auf einem in Phase 1 fertig etablierten Muster.
@@ -130,7 +130,42 @@ Neuer Nested-Block `mcp` (Muster: `comfyui`-Block in `settings.py`):
 ## Bottom-Sektionen (beim Archivieren füllen)
 
 ### Summary
+
+Eingebettete MCP-Schnittstelle unter `/mcp` fertig: 63 Tools über alle 6 Phasen, jedes Tool
+ruft die bestehende `api/*.py`-Logik (kein Doppel-Pfad). Confirmation-Gate schützt alle
+destruktiven Aktionen (Papierkorb leeren, Personen/Gesichter löschen/mergen, Collections
+löschen, Duplikat-Löschung, Repair mit `trash`/`mark_missing`) — ohne `confirm=true` wird
+nichts ausgeführt, nur eine Klartext-Warnung zurückgegeben. Auth-frei, aber Loopback-only +
+Default aus (`mcp.enabled=false`), Toggle wirkt live ohne Neustart.
+
 ### Files touched
+
+`backend/photofant/mcp/` (neu: `server.py`, `adapter.py`, `gate.py`, `tools/{library,metadata,
+persons,organize,maintenance}.py`), `backend/photofant/main.py` (Mount + Lifespan),
+`backend/photofant/settings.py` (`mcp`-Block), `frontend/src/app/features/einstellungen/mcp/`
+(Settings-Sektion + Warnhinweis-UI), `docs/routes.md`, `docs/code-map.md`,
+`docs/decisions/019-mcp-schnittstelle.md`.
+
 ### Commits
+
+`50ef59b` Plan angelegt · `9085f74` Phase 1 (Mount, Toggle, Warn-UI) · `b98abda` Phase 2
+(Read-Tools) · `7bac95a` Phase 3 (Metadaten/Tags) · `3191a5e` Phase 4 (Personen/Faces) ·
+`bf3eb5c` Phase 5 (Import/Organisieren/Duplikate) · Phase 6 (Wartung) — dieser Commit.
+
 ### Deviations from plan
+
+Keine strukturellen Abweichungen. Zwei kleine, in FINDINGS.md festgehaltene Anpassungen am
+Adapter-Muster: (1) `get_capabilities` (Phase 2) ist synchron, nicht über `run_endpoint()`
+aufrufbar — direkter `db_session()`-Aufruf. (2) Mehrere Endpoints (Phase 5/6:
+`run_processing`, `scan_duplicates`, `trigger_backup`, `list_backups`, `trigger_reconcile`,
+`trigger_rebuild`) brauchen keine DB-Session — direkter Aufruf statt `run_endpoint()`.
+Nebenbei bemerkt: README-Overview-Tabelle zeigte Phasen 4 und 6 noch als „pending", obwohl der
+Code (Phase 4 per Commit `3191a5e`) bereits fertig war — beim Abschluss dieser Phase
+nachgezogen.
+
 ### Follow-ups
+
+- Live-MCP-Handshake gegen `/mcp` (MCP Inspector / Claude Desktop) — seit Phase 1 die oberste
+  Wackelstelle, planmäßig erst jetzt am Plan-Ende durch den User zu prüfen (private-Profil:
+  kein Live-Smoke während der Umsetzung).
+- Editor/Generativ- und Config-Schreib-Tools bewusst außerhalb v1 (siehe Leitplanken).

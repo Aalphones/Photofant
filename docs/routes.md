@@ -1078,6 +1078,13 @@ eigene Route. Werkzeuge (Tools) statt Endpunkte; sie rufen intern die vorhandene
 | `list_duplicates` | 5 | Offene Duplikat-Paare der Review-Queue auflisten, gedeckelt |
 | `resolve_duplicate` | 5 | Duplikat-Paar auflösen — **Gate nur bei `delete_a`/`delete_b`** |
 | `find_person_duplicates` | 5 | Ad-hoc-Duplikatsuche innerhalb der Fotos einer Person per CLIP |
+| `rebuild` | 6 | Thumbnails/Embeddings/Faces regenerieren (`target`), liefert `job_id` — kein Gate |
+| `backup` | 6 | DB-Backup auslösen, liefert `job_id` |
+| `list_backups` | 6 | Vorhandene DB-Backups auflisten (Datei, Größe, Erstellzeit) |
+| `maintenance_status` | 6 | Wartungs-Kennzahlen (DB-/Cache-Größe, Foto-/Gesichts-Zahl, Festplattenbelegung) |
+| `reconcile` | 6 | FS↔DB-Abgleich anstoßen, liefert `job_id` |
+| `reconcile_report` | 6 | Letzten Abgleich-Report lesen (Waisen/fehlende Dateien/Pfad-Drift/…) |
+| `repair` | 6 | Reparatur-Aktionen aus dem Report ausführen — **Gate nur bei `trash`/`mark_missing`** |
 
-> Weitere Tools kommen phasenweise dazu (Phase 6: Wartung). Destruktive Tools verlangen
-> `confirm=true` (`mcp.require_confirm`).
+Alle Phasen des Plans `2026-07-06_mcp-schnittstelle` sind umgesetzt (63 Tools). Destruktive
+Tools verlangen `confirm=true` (`mcp.require_confirm`).
