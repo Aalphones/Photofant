@@ -6,7 +6,6 @@ import { Verarbeitung } from './verarbeitung/verarbeitung';
 import { Darstellung } from './darstellung/darstellung';
 import { Bearbeitung } from './bearbeitung/bearbeitung';
 import { Tastaturkuerzel } from './tastaturkuerzel/tastaturkuerzel';
-import { BackupWartung } from './backup-wartung/backup-wartung';
 import { Info } from './info/info';
 import { Tags } from './tags/tags';
 import { Klassifizierung } from './klassifizierung/klassifizierung';
@@ -16,7 +15,7 @@ import { McpSection } from './mcp/mcp';
 @Component({
   selector: 'pf-einstellungen',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, Bibliothek, Verarbeitung, Darstellung, Bearbeitung, Tastaturkuerzel, BackupWartung, Info, Tags, Klassifizierung, ComfyUISection, McpSection],
+  imports: [Icon, Bibliothek, Verarbeitung, Darstellung, Bearbeitung, Tastaturkuerzel, Info, Tags, Klassifizierung, ComfyUISection, McpSection],
   templateUrl: './einstellungen.html',
   styleUrl: './einstellungen.scss',
 })

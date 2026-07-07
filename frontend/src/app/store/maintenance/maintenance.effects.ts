@@ -3,7 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, filter, map, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { AppInfo, BackupInfo, Job, MaintenanceStatus, ReconcileReport, RepairResponse } from '@photofant/models';
-import { MaintenanceService } from '@photofant/services';
+import { ClassifyService, MaintenanceService } from '@photofant/services';
 import { jobsActions } from '../jobs/jobs.actions';
 import { maintenanceActions } from './maintenance.actions';
 
@@ -11,6 +11,7 @@ import { maintenanceActions } from './maintenance.actions';
 export class MaintenanceEffects {
   private readonly actions$ = inject(Actions);
   private readonly maintenanceService = inject(MaintenanceService);
+  private readonly classifyService = inject(ClassifyService);
 
   readonly triggerBackup$ = createEffect(() =>
     this.actions$.pipe(
@@ -201,6 +202,43 @@ export class MaintenanceEffects {
       filter(({ job }: { job: Job }) => job.kind === 'thumbnail_rebuild' && job.state === 'error'),
       map(({ job }: { job: Job }) =>
         maintenanceActions.triggerThumbnailRebuildFailure({ error: job.error ?? 'Rebuild fehlgeschlagen' })
+      ),
+    )
+  );
+
+  readonly triggerReembedAll$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.triggerReembedAll),
+      switchMap(() =>
+        this.classifyService.rerun({ asset_ids: 'all', steps: ['embedding'] }).pipe(
+          map((response: { job_id: string }) =>
+            maintenanceActions.triggerReembedAllSuccess({ jobId: response.job_id })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.triggerReembedAllFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly reembedJobDone$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'rerun' && job.state === 'done'),
+      switchMap(() => [
+        maintenanceActions.reembedDone(),
+        maintenanceActions.loadStatus(),
+      ]),
+    )
+  );
+
+  readonly reembedJobFailed$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'rerun' && job.state === 'error'),
+      map(({ job }: { job: Job }) =>
+        maintenanceActions.triggerReembedAllFailure({ error: job.error ?? 'Re-Embed fehlgeschlagen' })
       ),
     )
   );

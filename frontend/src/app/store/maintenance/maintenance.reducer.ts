@@ -20,6 +20,7 @@ export interface MaintenanceState {
   isRepairing: boolean;
   rebuildingTarget: RebuildTarget | null;
   isThumbnailRebuilding: boolean;
+  isReembedding: boolean;
   status: MaintenanceStatus | null;
   appInfo: AppInfo | null;
   isLoadingAppInfo: boolean;
@@ -36,6 +37,7 @@ const initialState: MaintenanceState = {
   isRepairing: false,
   rebuildingTarget: null,
   isThumbnailRebuilding: false,
+  isReembedding: false,
   status: null,
   appInfo: null,
   isLoadingAppInfo: false,
@@ -178,6 +180,24 @@ export const maintenanceFeature = createFeature({
     on(maintenanceActions.thumbnailRebuildDone, (state: MaintenanceState) => ({
       ...state,
       isThumbnailRebuilding: false,
+    })),
+
+    on(maintenanceActions.triggerReembedAll, (state: MaintenanceState) => ({
+      ...state,
+      isReembedding: true,
+      error: null,
+    })),
+    on(maintenanceActions.triggerReembedAllSuccess, (state: MaintenanceState) => ({
+      ...state,
+    })),
+    on(maintenanceActions.triggerReembedAllFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
+      isReembedding: false,
+      error,
+    })),
+    on(maintenanceActions.reembedDone, (state: MaintenanceState) => ({
+      ...state,
+      isReembedding: false,
     })),
 
     on(maintenanceActions.loadStatusSuccess, (state: MaintenanceState, { status }) => ({

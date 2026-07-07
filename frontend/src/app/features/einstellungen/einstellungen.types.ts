@@ -28,6 +28,5 @@ export const SECTIONS: Section[] = [
   { id: 'comfyui',      icon: 'sparkle',  label: 'ComfyUI' },
   { id: 'mcp',          icon: 'link',     label: 'MCP-Schnittstelle' },
   { id: 'shortcuts',    icon: 'keyboard', label: 'Tastaturkürzel' },
-  { id: 'backup',       icon: 'shield',   label: 'Backup & Wartung' },
   { id: 'info',         icon: 'info',     label: 'Info' },
 ];

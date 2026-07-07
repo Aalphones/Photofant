@@ -9,7 +9,7 @@ import type {
   RepairActionKind,
   RepairItem,
 } from '@photofant/models';
-import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
+import { maintenanceActions, maintenanceSelectors, personsActions, personsSelectors } from '@photofant/store';
 
 @Component({
   selector: 'pf-wartung',
@@ -66,6 +66,36 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
         </div>
       </div>
 
+      <!-- Modelle & Embeddings -->
+      <section class="section">
+        <h2 class="section-heading">Modelle &amp; Embeddings</h2>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <div class="card-label">Bild-Embeddings neu berechnen</div>
+              <div class="card-desc">
+                Berechnet für alle Bilder das Embedding neu mit dem aktuell aktiven Modell
+                (semantische Suche, Ähnliche Bilder, Duplikat-Erkennung). Nötig nach einem
+                Modellwechsel in der Modelle-Verwaltung. Läuft im Hintergrund-Worker.
+              </div>
+            </div>
+            <button
+              class="btn-primary"
+              [disabled]="isReembedding()"
+              (click)="triggerReembedAll()"
+            >
+              @if (isReembedding()) {
+                <span class="spinner"></span>
+                Läuft…
+              } @else {
+                Alle neu einbetten
+              }
+            </button>
+          </div>
+        </div>
+      </section>
+
       <!-- Cache & Thumbnails -->
       <section class="section">
         <h2 class="section-heading">Cache &amp; Thumbnails</h2>
@@ -119,6 +149,94 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
             </button>
           </div>
           <p class="card-hint">Weitere Rebuilds (Face-Crops) folgen mit P7. Fortschritt läuft im Job-Dock.</p>
+        </div>
+      </section>
+
+      <!-- Personen -->
+      <section class="section">
+        <h2 class="section-heading">Personen</h2>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <div class="card-label">Neu-Gruppierung starten</div>
+              <div class="card-desc">
+                Gruppiert alle erkannten Gesichter neu nach Ähnlichkeit und legt automatisch
+                Personen-Cluster an. Danach in der Personen-Ansicht benennen, zusammenführen
+                oder aufteilen. Fortschritt läuft im Job-Dock.
+              </div>
+            </div>
+            <button
+              class="btn-ghost"
+              [disabled]="isClustering()"
+              (click)="triggerClustering()"
+            >
+              @if (isClustering()) {
+                <span class="spinner"></span>
+                Läuft…
+              } @else {
+                Clustering starten
+              }
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Backup -->
+      <section class="section">
+        <h2 class="section-heading">Backup</h2>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <div class="card-label">Datenbank-Backup</div>
+              <div class="card-desc">
+                Erstellt einen konsistenten Snapshot via SQLite Online Backup API.
+                Ziel: <code>.photofant/backups/</code>
+              </div>
+            </div>
+            <button
+              class="btn-primary"
+              [disabled]="isRunningBackup()"
+              (click)="triggerBackup()"
+            >
+              @if (isRunningBackup()) {
+                <span class="spinner"></span>
+                Läuft…
+              } @else {
+                Backup erstellen
+              }
+            </button>
+          </div>
+          @if (error()) {
+            <div class="error-banner">{{ error() }}</div>
+          }
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div class="card-label">Vorhandene Backups</div>
+            <button class="btn-ghost" (click)="refreshBackups()">Aktualisieren</button>
+          </div>
+          @if (isLoadingBackups()) {
+            <p class="rec-empty">
+              <span class="spinner"></span> Lade…
+            </p>
+          } @else if (backups().length === 0) {
+            <p class="rec-empty">Noch kein Backup vorhanden.</p>
+          } @else {
+            <ul class="backups-list">
+              @for (backup of backups(); track backup.filename) {
+                <li class="backup-row">
+                  <span class="backup-name">{{ backup.filename }}</span>
+                  <span class="backup-meta">
+                    {{ formatSize(backup.size) }} &nbsp;·&nbsp;
+                    {{ backup.created_at | date:'dd.MM.yyyy HH:mm' }}
+                  </span>
+                </li>
+              }
+            </ul>
+          }
         </div>
       </section>
     </div>
@@ -251,6 +369,39 @@ import { maintenanceActions, maintenanceSelectors } from '@photofant/store';
 
     .btn-primary:hover:not(:disabled) { background: var(--accent-press); }
     .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-ghost {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: var(--radius-s);
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background .12s, opacity .12s;
+    }
+
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-hover); }
+    .btn-ghost:disabled { opacity: .5; cursor: not-allowed; }
+
+    .backups-list { list-style: none; margin: 0; padding: 0; }
+
+    .backup-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 2px;
+      border-top: 1px solid var(--line);
+    }
+
+    .backup-name { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+    .backup-meta { font-size: 11px; color: var(--text-3); }
 
     .error-banner {
       font-size: 12px;
@@ -391,8 +542,13 @@ export class Wartung {
   readonly isRepairing = this.store.selectSignal(maintenanceSelectors.selectIsRepairing);
   readonly rebuildingTarget = this.store.selectSignal(maintenanceSelectors.selectRebuildingTarget);
   readonly isThumbnailRebuilding = this.store.selectSignal(maintenanceSelectors.selectIsThumbnailRebuilding);
+  readonly isReembedding = this.store.selectSignal(maintenanceSelectors.selectIsReembedding);
   readonly status = this.store.selectSignal(maintenanceSelectors.selectStatus);
   readonly error = this.store.selectSignal(maintenanceSelectors.selectError);
+  readonly isClustering = this.store.selectSignal(personsSelectors.selectIsClustering);
+  readonly backups = this.store.selectSignal(maintenanceSelectors.selectBackups);
+  readonly isLoadingBackups = this.store.selectSignal(maintenanceSelectors.selectIsLoadingBackups);
+  readonly isRunningBackup = this.store.selectSignal(maintenanceSelectors.selectIsRunningBackup);
 
   readonly activeTab = signal<IssueKind>('orphan');
   readonly issueTotal = computed((): number => {
@@ -411,6 +567,7 @@ export class Wartung {
     effect(() => {
       this.store.dispatch(maintenanceActions.loadReport());
       this.store.dispatch(maintenanceActions.loadStatus());
+      this.store.dispatch(maintenanceActions.loadBackups());
     });
   }
 
@@ -424,6 +581,22 @@ export class Wartung {
 
   rebuildThumbnails(): void {
     this.store.dispatch(maintenanceActions.triggerRebuild({ target: 'thumbnails' }));
+  }
+
+  triggerReembedAll(): void {
+    this.store.dispatch(maintenanceActions.triggerReembedAll());
+  }
+
+  triggerClustering(): void {
+    this.store.dispatch(personsActions.triggerClustering());
+  }
+
+  triggerBackup(): void {
+    this.store.dispatch(maintenanceActions.triggerBackup({ targetDir: null }));
+  }
+
+  refreshBackups(): void {
+    this.store.dispatch(maintenanceActions.loadBackups());
   }
 
   setTab(tab: IssueKind): void {

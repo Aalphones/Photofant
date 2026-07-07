@@ -50,5 +50,17 @@ blockiert, beide gefixt:
    vorbestehend, nicht von diesem Fix verursacht — per `git stash` gegengeprüft).
 Kaputter Halb-Download (`D:\Models\_Photofant\siglip2-large-patch16-384`, nur `vision_model.onnx` +
 Gerüst-Textmodell) + verwaiste Registry-Zeile entfernt, damit ein sauberer Neu-Download möglich ist.
+3. **Re-Embed-Button in der Wartung-Seite** (User-Wunsch, nicht im ursprünglichen Ablauf): Bulk-Re-Embed
+   lief zuvor nur per curl gegen `/api/classify/rerun` (`asset_ids:"all"`) oder über die Galerie-Mehrfachauswahl
+   (die nur geladene Bilder erfasst — Pagination-Falle bei großen Bibliotheken). Neue Karte „Bild-Embeddings
+   neu berechnen" in `features/wartung/wartung.ts`, neue Store-Actions/-Effect (`maintenanceActions.triggerReembedAll`,
+   `store/maintenance/maintenance.effects.ts`) rufen denselben Endpunkt mit `asset_ids:"all", steps:["embedding"]`.
+   Bleibt als Dauer-Werkzeug für jeden künftigen Modelltausch (ADR-022-Runbook) stehen, nicht nur für SigLIP2.
+   Im selben Zug den Einstellungen-Tab „Backup & Wartung" (`features/einstellungen/backup-wartung/`) aufgelöst
+   und dessen Inhalt (Personen-Clustering, Backup) in die Wartung-Seite integriert — eine Wartungs-Seite statt
+   zwei (User-Wunsch). `docs/code-map.md` nachgezogen. 🟡 Kleine Unschärfe: der Fertig-Indikator hört auf
+   Job-Kind `rerun` generell (kein `job_id`-Abgleich, folgt dem bestehenden Muster bei Thumbnail-Rebuild) —
+   läuft parallel ein normaler Einzel-Rerun aus der Galerie, könnte der Spinner kurz falsch flackern. Bei
+   Solo-Nutzung auf einer Maschine praktisch irrelevant.
 
 ## Report-Back

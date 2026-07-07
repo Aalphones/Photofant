@@ -39,6 +39,11 @@ export const maintenanceActions = createActionGroup({
     'Trigger Thumbnail Rebuild Failure': props<{ error: string }>(),
     'Thumbnail Rebuild Done':            emptyProps(),
 
+    'Trigger Reembed All':         emptyProps(),
+    'Trigger Reembed All Success': props<{ jobId: string }>(),
+    'Trigger Reembed All Failure': props<{ error: string }>(),
+    'Reembed Done':                emptyProps(),
+
     'Load Status':             emptyProps(),
     'Load Status Success':     props<{ status: MaintenanceStatus }>(),
     'Load Status Failure':     props<{ error: string }>(),
