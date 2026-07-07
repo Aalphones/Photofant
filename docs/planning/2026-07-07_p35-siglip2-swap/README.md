@@ -89,7 +89,7 @@ def resolve_image_embedder(role: str = "semantic_search") -> Embedder | None:
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | Austausch-Naht + SigLIP2-Adapter + Manifest | heikel (Naht-Design + neues Preprocessing/Tokenizer) | ✅ complete |
-| 2 | Vektor-Dimension-Migration (768 → 1024) | heikel (Migration + Übergangs-Invariante) | pending |
+| 2 | Vektor-Dimension-Migration (768 → 1024) | heikel (Migration + Übergangs-Invariante) | ✅ complete |
 | 3 | Re-Embed + Schwellwert-Rekalibrierung | standard | pending |
 
 ## Finale AK (Gesamt)

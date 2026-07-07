@@ -1,11 +1,17 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-07_p35-siglip2-swap/`
-**Phase:** 2/3 — Vektor-Dimension-Migration (768 → 1024) (pending)
-**Nächster Schritt:** Phase 2 starten — `vector_index.EMBEDDING_DIM` auf 1024, `vec0`-Tabelle
-migrieren, Übergangs-Invariante (alle `clip_embedding` NULL + `embedding_done=False`) herstellen.
-Phase-2-Datei + FINDINGS (Phase-2-Tag zum Dim-Guard) lesen. **Modell für Phase 2: `opusplan`**
-(heikel — Migration + Übergangs-Invariante).
+**Phase:** 3/3 — Re-Embed + Schwellwert-Rekalibrierung (pending)
+**Nächster Schritt:** Phase 3 starten — `alembic upgrade head` fahren (löscht alle Embeddings, bewusst),
+Re-Embed über den bestehenden Pfad (`rerun_job.py steps=["embedding"], asset_ids="all"`) auslösen,
+dann `dupe_clip_threshold`/`training_near_dupe_clip_threshold` an SigLIP2s Verteilung neu eichen.
+Phase-3-Datei + FINDINGS (Phase-3-Tag: Preprocessing/Text erst gegen echte Config verifizieren,
+Download muss durch sein) lesen. **Modell für Phase 3: `sonnet`** (standard).
+
+_Phase 2 (Dimension-Migration 768 → 1024) ✅ complete, committet. `EMBEDDING_DIM=1024`, Migration
+`0032_siglip2_dim_1024.py` (Recreate `vec0` bei 1024 + Übergangs-Invariante in beide Richtungen),
+`docs/models.md` nachgezogen, ruff/Alembic-Parse grün. Dim-Guard warnt erwartungsgemäß bis SigLIP2 aktiv.
+Offen für User: `alembic upgrade head` selbst fahren (destruktiv — alle Embeddings weg, Re-Embed in Phase 3)._
 
 _Phase 1 (Austausch-Naht + SigLIP2-Adapter + Manifest) ✅ complete, committet. Naht steht,
 alle 5 Konsumenten model-agnostisch, ADR-021/022 + code-map aktualisiert. Offen für User-Smoke:

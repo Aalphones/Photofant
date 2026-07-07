@@ -1,4 +1,4 @@
-"""sqlite-vec vector index for CLIP embeddings (ADR-001).
+"""sqlite-vec vector index for image embeddings (ADR-001, ADR-022).
 
 The searchable index is a `vec0` virtual table (`vec_asset_embedding`) living in
 the main DB; its rowid is `asset.id`. The canonical embedding is stored on
@@ -22,8 +22,10 @@ from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
 
-# CLIP ViT-L/14 projects image and text to a shared 768-dim space.
-EMBEDDING_DIM: int = 768
+# Dimension of the vec0 table = schema truth for the semantic-search index; the
+# active semantic_search embedder must match it (startup dim-guard). SigLIP2-large-
+# patch16-384 projects image and text to a shared 1024-dim space.
+EMBEDDING_DIM: int = 1024
 _TABLE = "vec_asset_embedding"
 
 CREATE_TABLE_SQL = (

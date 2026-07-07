@@ -20,17 +20,29 @@ Zustand „kein Embedding vorhanden" — die Konsumenten behandeln das bereits (
 `WHERE clip_embedding IS NOT NULL` überall). Der Re-Embed (Phase 3) füllt neu.
 
 ## AK der Phase
-- [ ] `vector_index.EMBEDDING_DIM = 1024`; `CREATE_TABLE_SQL` entsprechend (`float[1024]`).
-- [ ] Alembic-Migration (`XXXX_siglip2_dim_1024.py`):
-      1. `DROP TABLE IF EXISTS vec_asset_embedding` + neu anlegen mit `float[1024]` (sqlite-vec laden wie in 0007).
+- [x] `vector_index.EMBEDDING_DIM = 1024`; `CREATE_TABLE_SQL` entsprechend (`float[1024]`, aus der Konstante gebaut).
+- [x] Alembic-Migration (`0032_siglip2_dim_1024.py`):
+      1. `DROP TABLE IF EXISTS vec_asset_embedding` + neu anlegen mit `float[1024]` (sqlite-vec via `load_vec_extension` wie in 0007).
       2. `UPDATE asset SET clip_embedding = NULL`.
       3. `UPDATE processing_ledger SET embedding_done = 0`.
-      Downgrade: analog zurück auf 768 + gleiche NULL/Reset (Alt-Embeddings sind ohnehin verloren — dokumentieren).
-- [ ] Nach der Migration liefert `POST /api/search/semantic` mit `like_asset_id` sauber 409 `NO_EMBEDDING`
-      (statt Crash), solange nicht neu embedded wurde.
-- [ ] `ruff check .` grün; `alembic upgrade head` + `downgrade -1` + `upgrade head` laufen fehlerfrei durch.
+      Downgrade: symmetrisch zurück auf `float[768]` + gleiche NULL/Reset, Verlust dokumentiert. Dim-Literale
+      stehen als Konstanten in der Migration (immutable Snapshot, nicht importiert).
+- [ ] **(User-Smoke, Laufzeit)** Nach der Migration liefert `POST /api/search/semantic` mit `like_asset_id` sauber
+      409 `NO_EMBEDDING` (statt Crash), solange nicht neu embedded wurde. Durch Design gedeckt (`search.py` behandelt
+      NULL bereits), Bestätigung erst mit laufender Migration + Server.
+- [x] `ruff check` auf den geänderten Dateien grün; Alembic parst die Migration, Kette korrekt (Kopf = 0032).
+- [ ] **(User-Smoke, destruktiv)** `alembic upgrade head` + `downgrade -1` + `upgrade head` — nicht von mir gefahren:
+      der Upgrade löscht alle Embeddings (Übergangs-Invariante), gehört an den Re-Embed in Phase 3. User führt aus.
 
 ## Doc-Updates
-- [ ] `docs/models.md` — Vermerk an `vec_asset_embedding` / `asset.clip_embedding`: Dimension 1024 (SigLIP2).
+- [x] `docs/models.md` — `vec_asset_embedding.embedding` `float[1024]`, `asset.clip_embedding` 1024-dim (SigLIP2) vermerkt.
 
 ## Report-Back
+- **Geändert:** `EMBEDDING_DIM 768 → 1024` (+ model-agnostischer Kommentar) in `db/vector_index.py`;
+  neue Migration `0032_siglip2_dim_1024.py` (Recreate `vec0` bei 1024, alle `clip_embedding` NULL, alle
+  `embedding_done` 0 — Übergangs-Invariante in beide Richtungen); `docs/models.md` nachgezogen.
+- **Guard:** `warn_on_embedding_dim_mismatch` liest `EMBEDDING_DIM` live — keine Änderung nötig; warnt
+  erwartungsgemäß bis SigLIP2 aktiv ist (FINDINGS Phase-2 abgehakt).
+- **Offen (User):** `alembic upgrade head` fahren (löscht alle Embeddings — bewusst) und die 409-Prüfung;
+  Re-Embed füllt in Phase 3 neu.
+- **Nicht angefasst:** Gesichts-Index `vec_face_embedding` (512-dim, eigener Vektorraum) — außerhalb des Scope.

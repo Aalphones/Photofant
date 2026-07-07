@@ -6,9 +6,10 @@ Erkenntnisse während der Umsetzung, getaggt nach Phase. Format:
 
 - [x] → Phase 1 (erledigt): Plan zählte 3 Embedder-Konsumenten, es sind **5** — `classification/scoring.py`
   und `api/assets.py` kamen dazu. Alle auf `resolve_image_embedder()` umgestellt.
-- [ ] → Phase 2: Der Dim-Guard (`warn_on_embedding_dim_mismatch`) warnt nur, crasht nicht. Nach Anheben von
-  `vector_index.EMBEDDING_DIM` auf 1024 (Phase 2) muss der Guard grün sein, sobald SigLIP2 aktiv ist —
-  vorher (CLIP aktiv + Index 1024) warnt er absichtlich. Beim Testen der Migration einkalkulieren.
+- [x] → Phase 2 (erledigt): Der Dim-Guard (`warn_on_embedding_dim_mismatch`) warnt nur, crasht nicht.
+  `EMBEDDING_DIM` steht jetzt auf 1024; der Guard liest die Konstante live (keine Code-Änderung nötig).
+  Erwartetes Verhalten nach der Migration: mit CLIP aktiv (768) warnt er absichtlich, mit SigLIP2 aktiv (1024)
+  ist er grün. → Beim User-Smoke einkalkulieren: der Warn-Log beim Start ist bis zum SigLIP2-Aktivieren normal.
 - [ ] → Phase 3: SigLIP2-Preprocessing/Text-Kontrakt sind gegen dokumentierte Specs gebaut, **nicht** gegen
   die echten Config-Dateien verifiziert (Modell war in Phase 1 nicht lokal). Vor der Schwellwert-Kalibrierung
   sicherstellen, dass der Download durch ist und die Verifikation (Smoke #2/#3) sitzt — sonst kalibriert man

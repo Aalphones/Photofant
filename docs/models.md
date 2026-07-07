@@ -55,7 +55,7 @@ One row per unique content-hash (canonical image).
 | `caption_preset_id` | INTEGER FK → `caption_preset.id` | provenance: which preset produced the caption (FK added P5 Phase 4, `fk_asset_caption_preset`) |
 | `tagger` | TEXT | model name (filled in P5) |
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
-| `clip_embedding` | BLOB | CLIP ViT-L/14 image embedding, float32 unit-norm bytes (768-dim); source of truth for the vector index (P5 Phase 4); `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden |
+| `clip_embedding` | BLOB | Image embedding of the active semantic_search model, float32 unit-norm bytes (1024-dim seit SigLIP2, P35 Phase 2; vorher CLIP 768-dim). Spaltenname bleibt inert (ADR-022). Source of truth für den Vector Index (P5 Phase 4); `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden |
 | `caption_edited` | BOOLEAN | `1` = Caption wurde manuell editiert; Captioner überspringt den Asset beim nächsten Rerun (P6 Phase 3) |
 | `original_id` | INTEGER FK → `asset.id` | gesetzt wenn dieses Asset ein Edit eines anderen ist — bei Review-Entscheidung „A/B ist Original" (migration 0014) |
 | `created_at` | DATETIME | EXIF capture date; UTC naive |
@@ -214,9 +214,9 @@ Also added in migration 0028: `ix_asset_effective_date`, an expression index on
 `asset (coalesce(created_at, imported_at))` mirroring the exact sort expression
 `list_assets` uses for date ordering.
 
-### `vec_asset_embedding` (migration 0007)
+### `vec_asset_embedding` (migration 0007, dim 1024 seit 0032)
 
-sqlite-vec `vec0` virtual table — the searchable CLIP vector index (ADR-001). Rowid =
+sqlite-vec `vec0` virtual table — the searchable image-embedding vector index (ADR-001, ADR-022). Rowid =
 `asset.id`; one row per embedded asset. The canonical embedding lives on
 `asset.clip_embedding` (BLOB); this table is a **rebuildable** index over those BLOBs
 (`photofant/db/vector_index.py:rebuild_index`). Persists in `db.sqlite`, so it survives a
@@ -227,7 +227,7 @@ degrades gracefully when the table is absent (e.g. throw-away test DBs).
 | Column | Type | Notes |
 |---|---|---|
 | `rowid` | INTEGER | = `asset.id` |
-| `embedding` | `float[768]` | `distance_metric=cosine`; cosine similarity = `1 − distance` |
+| `embedding` | `float[1024]` | SigLIP2-Dimension (P35 Phase 2; vorher `float[768]` CLIP). `distance_metric=cosine`; cosine similarity = `1 − distance` |
 
 > Requires the sqlite-vec loadable extension, loaded per connection via the SQLAlchemy
 > `connect` event (`photofant/db/engine.py`) and inside migration 0007 (`op.get_bind()`).
