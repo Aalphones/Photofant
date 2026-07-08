@@ -10,6 +10,7 @@
 
 .rr-rail__strip {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 2px;
