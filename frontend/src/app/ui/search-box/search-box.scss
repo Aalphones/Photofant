@@ -81,6 +81,29 @@
   &--busy { animation: reverse-pulse 1s ease-in-out infinite; }
 }
 
+// Semantik-Modus-Umschalter (P36 Phase 4) — dieselbe Akzentfarbe wie die Semantisch-Badges/
+// -Vorschläge oben, damit „aktiv" auf den ersten Blick als „semantisch" lesbar ist.
+.search-box__semantic-toggle {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-3);
+  cursor: pointer;
+  flex: none;
+  padding: 0;
+
+  &:hover { color: oklch(0.65 0.20 300); background: var(--surface-2); }
+
+  &--active {
+    color: oklch(0.65 0.20 300);
+    background: oklch(0.65 0.20 300 / .12);
+  }
+}
+
 .search-box__drop-hint {
   position: absolute;
   inset: 0;

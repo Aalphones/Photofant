@@ -4,7 +4,7 @@ import { Actions, createEffect, ofType, ROOT_EFFECTS_INIT } from '@ngrx/effects'
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import type { AssetDetailDto, AssetDto, AssetsPage, FacesPage, Job } from '@photofant/models';
-import { AssetService, PersonService, SettingsService } from '@photofant/services';
+import { AssetService, extractApiErrorMessage, PersonService, SettingsService } from '@photofant/services';
 import { catchError, EMPTY, filter, map, mergeMap, of, switchMap, tap } from 'rxjs';
 import type { FaceGalleryItemDto } from '@photofant/models';
 import { classificationActions } from '../classification/classification.actions';
@@ -142,8 +142,12 @@ export class GalleryEffects {
             pageSize: result.page_size,
             facets: result.facets,
           })),
+          // Semantik-Modus (P36 Phase 4) kann 409 SEMANTIC_SEARCH_UNAVAILABLE liefern (kein
+          // Embedder aktiv) — deutsche Backend-Meldung statt generischem HttpErrorResponse-Text.
           catchError((error: HttpErrorResponse) =>
-            of(galleryActions.loadPageFailure({ error: error.message }))
+            of(galleryActions.loadPageFailure({
+              error: extractApiErrorMessage(error, error.message),
+            }))
           ),
         );
 

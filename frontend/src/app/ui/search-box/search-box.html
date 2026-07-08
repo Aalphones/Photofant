@@ -12,7 +12,7 @@
   <input
     class="search-box__input"
     type="search"
-    placeholder="Tags, Personen & Bilder suchen…"
+    [placeholder]="semanticMode() ? 'Bildinhalt beschreiben, z. B. »roter Sportwagen«…' : 'Tags, Personen & Bilder suchen…'"
     [value]="localQuery()"
     (input)="onInput($event)"
     (focus)="onFocus()"
@@ -35,6 +35,19 @@
       <pf-icon name="x" [size]="14" />
     </button>
   }
+
+  <!-- Semantik-Modus (P36 Phase 4): sucht nach Bildinhalt statt nach Tag-/Caption-Text -->
+  <button
+    class="search-box__semantic-toggle"
+    [class.search-box__semantic-toggle--active]="semanticMode()"
+    type="button"
+    (click)="toggleSemanticMode()"
+    [attr.aria-pressed]="semanticMode()"
+    title="Semantische Suche: nach Bildinhalt suchen statt nach Tag-Text"
+    aria-label="Semantische Suche umschalten"
+  >
+    <pf-icon name="sparkle" [size]="16" />
+  </button>
 
   <!-- Reverse Image Search: Bild ablegen oder wählen → ähnliche Bilder finden -->
   <button

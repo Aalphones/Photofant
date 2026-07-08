@@ -573,13 +573,26 @@ interface AssetDetailDto {
 
 ## Semantische Suche (P5 Phase 4)
 
-**Tatsächlich genutzter Pfad (Suchleiste, ab P28):** `GET /api/assets?q=<text>&q_mode=semantic` — siehe
-„Assets" weiter oben, Query-Param `q_mode`. Embedded `q` per CLIP-Text-Encoder, filtert über
-`vector_index.search` (sqlite-vec, Cosine), sortiert die Galerie nach Ähnlichkeits-Score.
+**Tatsächlich genutzter Pfad (Suchleiste, ab P28; expliziter Umschalter seit P36 Phase 4):**
+`GET /api/assets?q=<text>&q_mode=semantic` — siehe „Assets" weiter oben, Query-Param `q_mode`.
+Embedded `q` per Bild-Embedder-Text-Encoder (`resolve_image_embedder`, ADR-022), filtert über
+`vector_index.search` (sqlite-vec, Cosine), sortiert die Galerie nach Ähnlichkeits-Score — volle
+Paginierung/Facetten inklusive, da `list_assets` das serverseitig übernimmt.
+
+🟡 **P36 Phase 4 hat bewusst gegen den Umbau auf `POST /api/search/semantic` entschieden:**
+der Plan sah vor, den Text-Pfad über diesen Endpoint + den `similar_ids`-Ordered-Filter aus
+Phase 1–3 zu führen (Wiederverwendung der Reverse-Search-Mechanik). Das hätte die Trefferzahl
+von 200 (aktueller `list_assets`-Kandidatenpool) auf 100 (`SemanticSearchRequest.limit`-Obergrenze)
+gesenkt und einen zusätzlichen Roundtrip gebraucht, ohne einen Funktionsgewinn zu bringen — der
+alte Pfad war schon vollständig paginiert/facettiert. Entscheidung (User, 2026-07-08): alten Pfad
+behalten, nur die UI nachziehen (expliziter Umschalter mit Tooltip in `search-box.ts`, deutsche
+Fehlermeldung bei 409 über `extractApiErrorMessage`, Galerie-Toast in `galerie.ts`). Der
+`query`-Zweig von `POST /api/search/semantic` bleibt damit weiterhin totes Backend-Duplikat
+(siehe unten).
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| — (kein Frontend-Aufrufer, siehe unten) | `POST` | `/api/search/semantic` | `SemanticSearchRequest` | `SemanticSearchResponse` |
+| Lightbox Related-Rail + „mehr"-Sprung (`like_asset_id`, P36 Phase 3) | `POST` | `/api/search/semantic` | `SemanticSearchRequest` | `SemanticSearchResponse` |
 | Globale Suche (Reverse-Upload, P36 Phase 2) | `POST` | `/api/search/by-image` | `multipart/form-data; file` + optional `?limit=` (1–100, Default `reverseSearch.similarLimit`) | `SemanticSearchResponse` |
 
 Der frühere `POST /api/search/warm`-Prewarm (P28 Phase 3) wurde entfernt: er lud beim Tippen die
@@ -587,9 +600,11 @@ CLIP-Textsession (~9s kalt) und blockierte damit den Personen-/Tag-Klick, obwohl
 braucht. Die semantische Suche zahlt den Kaltstart jetzt einmalig beim ersten Aufruf.
 
 `POST /api/search/semantic` ist ein eigenständiger Endpoint aus P5, bevor die Suchleiste existierte
-(„bis dahin API"). Er wird **von keiner Frontend-Stelle aufgerufen** (verifiziert per Grep,
-2026-07-02) — die Lightbox-„ähnliche Bilder"-Funktion nutzt stattdessen `GET /api/assets/{id}/similar`.
-Bleibt vorerst stehen (kein Auftrag zum Entfernen), gilt aber als toter Code.
+(„bis dahin API"). Sein `like_asset_id`-Zweig hat seit P36 Phase 3 einen Frontend-Aufrufer
+(`SearchService.semanticByAsset` — Lightbox Related-Rail + „mehr"-Sprung); der `query`-Zweig bleibt
+weiterhin **ohne Frontend-Aufrufer** — P36 Phase 4 hat bewusst dagegen entschieden, ihn für die
+Text-Semantiksuche zu verdrahten (siehe „Semantische Suche" oben, Entscheidung 2026-07-08). Der
+`query`-Zweig bleibt damit toter Code, kein Auftrag zum Entfernen.
 
 ```typescript
 // Genau eines von query / like_asset_id setzen (sonst 422).
@@ -626,10 +641,11 @@ Fehler-Codes (strukturiert im `detail`-Feld):
 
 `reverseSearch.minScore` (Default 0.0 = aus) filtert Treffer mit Cosine-Ähnlichkeit unter dem Floor heraus.
 
-🟡 **Bekannte Überschneidung:** `GET /api/assets/{id}/similar` (Duplikaterkennung, siehe Abschnitt unten)
-zeigt in der Lightbox bereits eine schwellenwert-basierte „Ähnliche Bilder"-Liste. P36 Phase 3 baut dort
-eine *zweite*, Top-N-basierte Related-Rail — vor Phase 3 klären, ob beide nebeneinander bestehen oder
-konsolidiert werden (siehe FINDINGS.md).
+**Entschieden (2026-07-07, P36 Phase 3):** `GET /api/assets/{id}/similar` (Duplikaterkennung, siehe
+Abschnitt unten) zeigte in der Lightbox eine schwellenwert-basierte „Ähnliche Bilder"-Liste — die
+neue Top-N-Related-Rail hat diesen Lightbox-Klick-Shortcut komplett ersetzt (kein Nebeneinander).
+Der eigenständige Duplikat-Abgleich im Review-Tab (`GET /api/review/dupes`) ist davon unberührt.
+Details: `docs/planning/2026-07-07_p36-reverse-image-search/FINDINGS.md`.
 
 ## Duplikaterkennung — Review-API (erweitert um duale Erkennung, ADR-007, Plan `2026-06-22_p11-duale-duplikaterkennung`)
 

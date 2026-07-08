@@ -24,3 +24,4 @@ export { ExportService } from './export.service';
 export type { ExportFilterParams, ExportRandomParams, CollectionExportParams, SidecarMode, ExportJobStarted } from './export.service';
 export { VersionService } from './version.service';
 export { SearchService } from './search.service';
+export { extractApiErrorMessage } from './api-error.util';

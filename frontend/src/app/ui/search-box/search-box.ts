@@ -16,8 +16,8 @@ import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
 import type { PersonDto, SemanticSearchResponse, TagListItem } from '@photofant/models';
-import { SearchService, TagService } from '@photofant/services';
-import { classificationSelectors, filtersActions, personsActions, personsSelectors, searchActions } from '@photofant/store';
+import { extractApiErrorMessage, SearchService, TagService } from '@photofant/services';
+import { classificationSelectors, filtersActions, personsActions, personsSelectors, searchActions, searchSelectors } from '@photofant/store';
 import { Icon } from '../icon/icon';
 
 interface AutocompleteItem {
@@ -62,6 +62,17 @@ export class SearchBox {
   protected readonly localQuery  = signal('');
   protected readonly isOpen      = signal(false);
   protected readonly activeIndex = signal(-1);
+
+  // Semantik-Modus (P36 Phase 4): expliziter Umschalter neben der exakten Tag-/Caption-Suche.
+  // Quelle der Wahrheit ist der Store-Suchmodus (bleibt so automatisch synchron, auch wenn
+  // ein Filter-Chip anderswo — Sub-Toolbar — die Suche zurücksetzt). `pendingSemanticToggle`
+  // überbrückt nur die Lücke „Umschalter geklickt, aber noch kein Text getippt" — der Store
+  // kennt erst ab dem ersten `setSemanticQuery`-Dispatch einen Semantik-Modus.
+  private readonly storeSearchMode = this.store.selectSignal(searchSelectors.selectMode);
+  private readonly pendingSemanticToggle = signal(false);
+  protected readonly semanticMode = computed((): boolean =>
+    this.storeSearchMode() === 'semantic' || this.pendingSemanticToggle()
+  );
 
   // Reverse Image Search (P36): Drop/Upload eines Bildes → ähnliche Bibliotheks-Bilder.
   protected readonly isDropTarget       = signal(false);
@@ -117,6 +128,11 @@ export class SearchBox {
         ...(recent.type === 'semantic' ? { badge: 'Semantisch' } : {}),
       }));
     }
+    if (this.semanticMode()) {
+      // Im Semantik-Modus zählt der Freitext direkt als Anfrage — keine exakten Tag-/Personen-/
+      // Klassifikations-Vorschläge, die den Modus beim Klicken wieder verlassen würden.
+      return [];
+    }
     const persons = this.personSuggestions().map((person: PersonDto): AutocompleteItem => ({
       type: 'person',
       text: person.name!,
@@ -130,8 +146,7 @@ export class SearchBox {
       count: tag.count,
     }));
     const classifications = this.classificationSuggestions();
-    const semantic: AutocompleteItem = { type: 'semantic', text: query, badge: 'Semantisch' };
-    return [...persons, ...tags, ...classifications, semantic];
+    return [...persons, ...tags, ...classifications];
   });
 
   constructor() {
@@ -142,7 +157,13 @@ export class SearchBox {
       distinctUntilChanged(),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe((query: string) => {
-      this.store.dispatch(searchActions.setQuery({ q: query }));
+      if (this.semanticMode()) {
+        this.store.dispatch(searchActions.setSemanticQuery({ q: query }));
+      } else {
+        this.store.dispatch(searchActions.setQuery({ q: query }));
+      }
+      // Ab hier führt der Store-Modus — die vorgemerkte Absicht hat ihren Zweck erfüllt.
+      this.pendingSemanticToggle.set(false);
       if (query) { this.navigateToGalleryIfNeeded(); }
     });
 
@@ -200,7 +221,28 @@ export class SearchBox {
   protected clearSearch(): void {
     this.localQuery.set('');
     this.queryInput$.next('');
+    this.pendingSemanticToggle.set(false);
     this.store.dispatch(searchActions.clear());
+  }
+
+  // Umschalter „semantische Suche" (P36 Phase 4) — wirkt sofort auf einen bereits eingegebenen
+  // Freitext; ohne Text merkt sich `pendingSemanticToggle` nur die Absicht für den nächsten
+  // Tastendruck (siehe Kommentar am `semanticMode`-Signal oben).
+  protected toggleSemanticMode(): void {
+    const turningOn = !this.semanticMode();
+    const query = this.localQuery().trim();
+    if (!query) {
+      this.pendingSemanticToggle.set(turningOn);
+      return;
+    }
+    this.pendingSemanticToggle.set(false);
+    if (turningOn) {
+      this.store.dispatch(searchActions.setSemanticQuery({ q: query }));
+      this.saveRecentSearch(query, 'semantic');
+    } else {
+      this.store.dispatch(searchActions.setQuery({ q: query }));
+    }
+    this.navigateToGalleryIfNeeded();
   }
 
   protected selectSuggestion(item: AutocompleteItem): void {
@@ -210,10 +252,14 @@ export class SearchBox {
     // leeren. Bei einer Semantik-Auswahl killt das den gerade gesetzten Filter
     // („kurz gesetzt, dann Reload auf ungefiltert"). Aufräumen läuft daher
     // synchron und pro Zweig über den Store, nicht über den Eingabe-Stream.
+    // pendingSemanticToggle hat in allen Zweigen ausgedient — entweder übernimmt gleich der
+    // Store-Modus (semantic-Zweig) oder der Zweig will explizit den exakten Modus.
+    this.pendingSemanticToggle.set(false);
     if (item.type === 'person') {
       this.store.dispatch(searchActions.clear());
       this.store.dispatch(filtersActions.setPersonId({ personId: item.id! }));
     } else if (item.type === 'semantic') {
+      // Nur noch über die Verlaufsliste erreichbar (Umschalter ist der Weg für neue Anfragen).
       this.store.dispatch(searchActions.setSemanticQuery({ q: item.text }));
       this.saveRecentSearch(item.text, 'semantic');
     } else if (item.type === 'class' && item.id != null) {
@@ -312,7 +358,7 @@ export class SearchBox {
         },
         error: (error: HttpErrorResponse) => {
           this.isReverseSearching.set(false);
-          this.setReverseError(this.extractErrorMessage(error));
+          this.setReverseError(extractApiErrorMessage(error, 'Reverse-Suche fehlgeschlagen.'));
         },
       });
   }
@@ -335,18 +381,6 @@ export class SearchBox {
     } finally {
       bitmap.close();
     }
-  }
-
-  // Backend liefert Fehler als { detail: { code, message } } (deutsche Meldung) oder als
-  // String — beides auf eine anzeigbare Meldung reduzieren.
-  private extractErrorMessage(error: HttpErrorResponse): string {
-    const detail: unknown = (error.error as { detail?: unknown } | null)?.detail;
-    if (detail != null && typeof detail === 'object' && 'message' in detail) {
-      const message: unknown = (detail as { message?: unknown }).message;
-      if (typeof message === 'string') { return message; }
-    }
-    if (typeof detail === 'string') { return detail; }
-    return 'Reverse-Suche fehlgeschlagen.';
   }
 
   private setReverseError(message: string): void {

@@ -113,6 +113,8 @@ export class Galerie {
     this.comfyConfig().enabled && this.upscaleWorkflow() != null
   );
 
+  protected readonly galleryError = this.store.selectSignal(gallerySelectors.selectError);
+
   protected readonly isEmpty = computed((): boolean => {
     if (this.mediaType() === 'faces') {
       return !this.isLoading() && this.faceItems().length === 0;
@@ -145,6 +147,13 @@ export class Galerie {
 
     this.store.dispatch(collectionsActions.load());
     this.store.dispatch(galleryActions.requestPage());
+
+    // Galerie-Ladefehler (z. B. 409 SEMANTIC_SEARCH_UNAVAILABLE im Semantik-Modus, P36 Phase 4)
+    // als Toast — bislang wurde der Store-Fehler nirgends angezeigt.
+    effect((): void => {
+      const error = this.galleryError();
+      if (error != null) { this.showRunToast(`Fehler: ${error}`); }
+    });
     // Config + Workflows laden, damit Bulk-Upscale die Default-Zuordnung kennt.
     this.store.dispatch(comfyuiActions.loadConfig());
     this.store.dispatch(comfyuiActions.loadWorkflows());

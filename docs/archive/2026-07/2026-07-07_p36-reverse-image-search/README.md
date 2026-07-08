@@ -45,7 +45,7 @@ so freigegeben: „gleich p26-kompatibel bauen").
 | 1 | Backend: Upload-Embed-Endpoint + Galerie-`similar_ids` | standard | done |
 | 2 | Globale Suche: Drag & Drop / Upload → Reverse-Filter | heikel (UI-Fluss + Filter-Modus) | done |
 | 3 | Lightbox „Ähnliche Bilder" (Related-Rail, p26-kompatibel) + „mehr"-Sprung | standard | done |
-| 4 | Text-Semantiksuche verdrahten (toter `/semantic`-Text-Pfad → Frontend) | standard | pending |
+| 4 | Text-Semantiksuche verdrahten (toter `/semantic`-Text-Pfad → Frontend) | standard | done |
 
 ## Finale AK (Gesamt)
 - [ ] Bild in die globale Suche ziehen **oder** hochladen → Galerie zeigt ähnliche Bilder (nach Ähnlichkeit sortiert),
@@ -55,8 +55,10 @@ so freigegeben: „gleich p26-kompatibel bauen").
 - [ ] Lightbox zeigt bis zu 10 ähnliche Bilder als Rail; Klick öffnet das Bild.
 - [ ] „mehr"-Button öffnet die Galerie in der Reverse-Search zu genau dem offenen Bild.
 - [ ] Die Rail-Komponente akzeptiert `reasons` (für P26) — P36 übergibt `null`, ohne dass die Struktur später bricht.
-- [ ] **Text-Semantiksuche:** Freitext (z.B. „roter Sportwagen") liefert über `/api/search/semantic` thematisch
-      passende Bilder in der Galerie; klar von der bestehenden exakten Tag-/Caption-Suche unterscheidbar.
+- [ ] **Text-Semantiksuche:** Freitext (z.B. „roter Sportwagen") liefert thematisch passende Bilder in der
+      Galerie (über den bestehenden `q_mode=semantic`-Pfad, nicht `/api/search/semantic` — Abweichung
+      vom Plan, siehe `phase-4-text-semantiksuche.md` Report-Back); klar von der exakten Tag-/Caption-Suche
+      unterscheidbar (expliziter Umschalter mit Tooltip). Gebaut, noch nicht smoke-getestet.
 - [ ] Kein Laufzeit-Netzwerkzugriff; Upload-Bild wird nur eingebettet, nicht importiert/gespeichert.
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende)
@@ -79,4 +81,23 @@ so freigegeben: „gleich p26-kompatibel bauen").
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_ — Follow-up: P26 rendert seine Empfehlungskarten in die hier gebaute Related-Rail.
+
+**Summary:** Reverse Image Search (Drag&Drop/Upload → Galerie-Filter, Phase 1–2), Lightbox-
+Related-Rail als p26-kompatibler Ersatz des alten Similar-Overlays (Phase 3) und ein expliziter
+Umschalter für die Text-Semantiksuche (Phase 4) — alle vier Phasen durch, lint+build grün.
+
+**Deviations:**
+- Phase 3: Related-Rail ersetzt das alte `/assets/{id}/similar`-Overlay komplett (statt Nebeneinander) —
+  abgestimmt, Details in `phase-3-lightbox-aehnliche.md`.
+- Phase 4: Text-Semantiksuche läuft weiterhin über den bestehenden `q_mode=semantic`-Pfad in
+  `list_assets`, **nicht** über `POST /api/search/semantic` + `similar_ids`-Filter wie im Plan
+  vorgesehen — der alte Pfad war bereits vollständig funktionsfähig (seit P28) und dem
+  Plan-Vorschlag technisch überlegen (volle Paginierung/Facetten, 200 statt 100 Kandidaten). Mit dem
+  User abgestimmt 2026-07-08. Details: `phase-4-text-semantiksuche.md` Report-Back, `docs/routes.md`.
+
+**Follow-ups (nicht blockierend):**
+- P26 rendert seine Empfehlungskarten in die hier gebaute Related-Rail.
+- `AssetService.setAssetOriginal()` + `PATCH /assets/{id}/original` sind seit der Overlay-Entfernung
+  (Phase 3) ohne Aufrufer — bewusst nicht mitentfernt, eigener kleiner Cleanup bei Gelegenheit
+  (siehe STATE.md-Historie).
+- `POST /api/search/semantic`s `query`-Zweig bleibt totes Backend-Duplikat (kein Auftrag zum Entfernen).

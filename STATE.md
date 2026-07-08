@@ -1,18 +1,22 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-07_p36-reverse-image-search/` — Phase 3 (Lightbox „Ähnliche Bilder" als
-p26-kompatible Related-Rail + „mehr"-Sprung, ersetzt das alte Similar-Overlay komplett) **fertig**, lint+build
-grün. Nächster Schritt: Phase 4 (toter `POST /api/search/semantic`-Text-Pfad → Frontend verdrahten). Danach
-Plan komplett → archivieren, STATE auf nächsten Plan setzen.
+**Aktiver Plan:** keiner — `docs/archive/2026-07/2026-07-07_p36-reverse-image-search/` (alle 4 Phasen
+fertig, lint+build grün, archiviert 2026-07-08).
 
-**Follow-up aus Phase 3 (🟡 nicht blockierend):** `AssetService.setAssetOriginal()` + Backend-Endpoint
-`PATCH /assets/{id}/original` sind seit der Overlay-Entfernung ohne Aufrufer (weder Frontend noch MCP) —
-bewusst nicht mitentfernt (außerhalb des Phase-3-AK), bei Gelegenheit eigener kleiner Cleanup. Details:
-`phase-3-lightbox-aehnliche.md` Report-Back.
+**Nächster Schritt (User-Reihenfolge, 2026-07-07):** `docs/planning/2026-07-07_p37-dinov2-reranking/`
+starten → danach `2026-07-01_p22-knowledge-engine` bis `p26-recommendation-engine` (in
+Nummernreihenfolge) → `2026-07-06_p34-mcp-wissensbasis` → `2026-07-01_p27-gemma-integration`.
 
-**Backlog danach (User-Reihenfolge, 2026-07-07):** `2026-07-07_p37-dinov2-reranking` →
-`2026-07-01_p22-knowledge-engine` bis `p26-recommendation-engine` (in Nummernreihenfolge) →
-`2026-07-06_p34-mcp-wissensbasis` → `2026-07-01_p27-gemma-integration`.
+**Offen, User muss noch smoke-testen (P36 Phase 4, nicht blockierend für nächsten Plan):**
+Text-Semantiksuche über den neuen Umschalter in der Suchbox — Checkliste in
+`docs/archive/2026-07/2026-07-07_p36-reverse-image-search/phase-4-text-semantiksuche.md`
+(Report-Back, Abschnitt „Smoke-Checkliste").
+
+**Follow-ups aus P36 (🟡 nicht blockierend):**
+- `AssetService.setAssetOriginal()` + `PATCH /assets/{id}/original` seit Phase 3 ohne Aufrufer —
+  eigener kleiner Cleanup bei Gelegenheit.
+- `POST /api/search/semantic`s `query`-Zweig bleibt totes Backend-Duplikat (Entscheidung Phase 4,
+  kein Auftrag zum Entfernen).
 
 ---
 

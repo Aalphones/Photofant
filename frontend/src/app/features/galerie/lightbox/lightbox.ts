@@ -13,7 +13,7 @@ import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, 
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, FaceDto, FaceMatch, Framing, PersonDto, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
-import { AssetService, ClassifyService, ComfyUIService, PersonService, SearchService, TagService } from '@photofant/services';
+import { AssetService, ClassifyService, ComfyUIService, extractApiErrorMessage, PersonService, SearchService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
@@ -1046,20 +1046,13 @@ export class Lightbox {
       startWith({ items: [], loading: true, emptyMessage: null } as RelatedRailData),
       catchError((err: unknown) => {
         console.error('[Lightbox] Ähnliche Bilder konnten nicht geladen werden:', err);
-        return of({ items: [], loading: false, emptyMessage: this.relatedRailErrorMessage(err) });
+        return of({
+          items: [],
+          loading: false,
+          emptyMessage: extractApiErrorMessage(err, 'Ähnliche Bilder konnten nicht geladen werden.'),
+        });
       }),
     );
-  }
-
-  // Backend liefert 409 mit { detail: { code, message } } (deutsche Meldung) für
-  // SEMANTIC_SEARCH_UNAVAILABLE/NO_EMBEDDING — sonst eine generische Meldung.
-  private relatedRailErrorMessage(err: unknown): string {
-    const detail: unknown = (err as { error?: { detail?: unknown } } | null)?.error?.detail;
-    if (detail != null && typeof detail === 'object' && 'message' in detail) {
-      const message: unknown = (detail as { message?: unknown }).message;
-      if (typeof message === 'string') { return message; }
-    }
-    return 'Ähnliche Bilder konnten nicht geladen werden.';
   }
 
   protected openRelatedAsset(assetId: number): void {
