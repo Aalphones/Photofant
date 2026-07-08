@@ -506,6 +506,26 @@ Markdown-Entsprechung (Kontrakt, siehe `docs/planning/2026-07-01_p22-knowledge-e
 SQLite läuft projektweit ohne `PRAGMA foreign_keys=ON`, die deklarierten FKs erzwingen also
 nichts von selbst (gleiches Muster wie `classification_label`/`asset_classification` oben).
 
+### `knowledge_tasks` (migration 0035, P23 Phase 1)
+
+Aufgaben-Queue für „hier fehlt Wissen" — reiner Arbeitszustand, kein Vault-Wissen (Gegenstück
+zu den `knowledge_*`-Cache-Tabellen oben, die den Markdown-Vault spiegeln). Geschrieben
+ausschließlich über `knowledge/tasks.py::TaskService`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | autoincrement |
+| `kind` | TEXT | `new_person\|missing_entity\|confirm_relationship\|review_recommendation` (indexed) |
+| `status` | TEXT | `open\|resolved\|dismissed`, Default `open` (indexed); Übergang nur `open` → `resolved`/`dismissed`, kein zweiter Wechsel |
+| `context` | JSON | frei geformt (z.B. `{"ref": "actors/robert-downey-jr"}`); Dedup über `kind` + exakte `context`-Gleichheit unter **offenen** Aufgaben |
+| `created_at` | DATETIME | gesetzt bei Anlage |
+| `resolved_at` | DATETIME | NULL solange offen; gesetzt bei `resolve` **und** `dismiss` (ein Feld für „wann geschlossen", keine zwei) |
+
+`KnowledgeLookupJob` (`jobs/knowledge_lookup_job.py`) legt bei fehlender Entity (`KnowledgeService.find_entity`
+liefert `None`) genau eine Aufgabe an; ein mehrdeutiger Alias-Treffer (`AmbiguousEntityError`) zählt als
+gefunden, keine Aufgabe. Automatischer Trigger aus Ereignissen erst ab P24 — hier nur manuell über
+`POST /api/knowledge/lookup` auslösbar.
+
 ## Upcoming tables (planned)
 
 *(keine offenen Tabellen)*

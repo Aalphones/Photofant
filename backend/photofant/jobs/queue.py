@@ -44,6 +44,7 @@ class JobKind(StrEnum):
     COMFYUI_RUN = "comfyui_run"
     EXPORT = "export"
     CAPTIONS = "captions"
+    KNOWLEDGE_LOOKUP = "knowledge_lookup"
 
 
 @dataclass

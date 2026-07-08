@@ -26,6 +26,7 @@ from photofant.api import (
     info,
     jobs,
     knowledge,
+    knowledge_tasks,
     maintenance,
     models,
     persons,
@@ -112,6 +113,7 @@ def create_app() -> FastAPI:
     app.include_router(info.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
     app.include_router(knowledge.router, prefix="/api")
+    app.include_router(knowledge_tasks.router, prefix="/api")
     app.include_router(assets.router, prefix="/api")
     app.include_router(trash.router, prefix="/api")
     app.include_router(maintenance.router, prefix="/api")

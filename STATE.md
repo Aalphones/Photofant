@@ -1,11 +1,16 @@
 # STATE
 
-**Aktiver Plan:** _(kein aktiver Plan)_ — P22 Knowledge Engine ist **komplett fertig + archiviert**
-(`docs/archive/2026-07/2026-07-01_p22-knowledge-engine/`, alle 4 Phasen ✅).
+**Aktiver Plan:** `docs/planning/2026-07-01_p23-knowledge-wizard/`
+**Phase:** 2/3 — Wizard-UI (Entity manuell anlegen) (pending)
+**Nächster Schritt:** Phase 2 starten — Frontend legt den P22-Kontrakt real an
+(`models/knowledge.model.ts`, `store/knowledge/`, `services/knowledge.service.ts`, `features/wissen/`)
++ Wizard-Dialog für manuelle Entity-Anlage.
 
-**Nächster Schritt:** Backlog-Plan wählen und mit `/implement` starten. Freigegebene, geparkte Pläne
-in `docs/planning/`:
-- `2026-07-01_p23-knowledge-wizard/` — Task-Queue + Wizard-UI + Work-Queue-UI
+Phase 1 (Task-Queue Backend) ist fertig: Migration `0035_knowledge_tasks`, `TaskService`,
+REST (`api/knowledge_tasks.py`: CRUD + `POST /lookup`), `KnowledgeLookupJob` — alle Backend-AK grün,
+24 neue Tests grün.
+
+Andere freigegebene, geparkte Pläne in `docs/planning/` (nach P23):
 - `2026-07-01_p24-photofant-integration/` — Entity-Linking, Personen-Affordance, Media-Links
 - `2026-07-01_p25-lore-panel/` — Lore-API + Panel-UI + Korrektur-Flow
 - `2026-07-01_p26-recommendation-engine/` — Empfehlungs-Job + Cards + Explainability

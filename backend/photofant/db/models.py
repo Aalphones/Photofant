@@ -334,6 +334,24 @@ class KnowledgeMediaLink(Base):
     target_id: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class KnowledgeTask(Base):
+    """Offene „hier fehlt Wissen"-Aufgabe (P23) — Arbeitszustand, kein Vault-Wissen.
+
+    ``context`` ist frei geformtes JSON (z.B. ``{"ref": "person/max-mustermann"}``);
+    Dedup läuft über ``kind`` + ``context``-Gleichheit unter offenen Aufgaben, siehe
+    ``knowledge/tasks.py::TaskService.create_task``.
+    """
+
+    __tablename__ = "knowledge_tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="open", index=True)
+    context: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class ReviewItem(Base):
     """Review queue for both duplicate candidates and face suggestions.
 

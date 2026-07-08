@@ -1082,6 +1082,27 @@ comfyui.result_wait_timeout_seconds = 1800
 
 **Medien-Verknüpfung** (`POST/DELETE .../{id}/media-links`) ist laut Kontrakt erst P24 dran, hier nicht implementiert.
 
+**Aufgaben-Queue** (P23 Phase 1, `api/knowledge_tasks.py`):
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| *(ab P23 Phase 3)* | `POST` | `/api/knowledge/tasks` | `{ kind, context? }` | `TaskDto` (201) — 422 bei unbekanntem `kind` |
+| *(ab P23 Phase 3)* | `GET` | `/api/knowledge/tasks` | `status?` (`open\|resolved\|dismissed`) | `TaskDto[]` — ohne `status` alle, neueste zuerst |
+| *(ab P23 Phase 3)* | `POST` | `/api/knowledge/tasks/{id}/resolve` | — | `TaskDto` — 404 nicht gefunden, 409 wenn nicht mehr `open` |
+| *(ab P23 Phase 3)* | `POST` | `/api/knowledge/tasks/{id}/dismiss` | — | `TaskDto` — 404 nicht gefunden, 409 wenn nicht mehr `open` |
+| — | `POST` | `/api/knowledge/lookup` | `{ kind, ref }` | `{ job_id: string }` — startet `KnowledgeLookupJob`; legt bei fehlender Entity (`ref` = `id` oder Alias) eine Aufgabe an, idempotent über `context={"ref": ref}`; manueller Trigger, Auto-Anbindung an Ereignisse erst P24 |
+
+```typescript
+interface TaskDto {
+  id: number;
+  kind: 'new_person' | 'missing_entity' | 'confirm_relationship' | 'review_recommendation';
+  status: 'open' | 'resolved' | 'dismissed';
+  context: Record<string, unknown>;
+  created_at: string;
+  resolved_at: string | null;
+}
+```
+
 ```typescript
 interface EntityDto {
   id: string; type: string; title: string; domain: string;
