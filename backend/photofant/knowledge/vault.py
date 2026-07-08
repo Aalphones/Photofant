@@ -60,6 +60,13 @@ class Vault:
         path.write_text(serialize_entity(entity), encoding="utf-8")
         return path
 
+    def delete_entity(self, entity: Entity, domain: Domain) -> None:
+        """Löscht die Markdown-Datei einer Entity, falls vorhanden.
+
+        Reines I/O — der Aufrufer verantwortet Ownership-Prüfung und Cache-Löschung.
+        """
+        self.entity_path(entity, domain).unlink(missing_ok=True)
+
     def _seed_packaged_domains(self) -> None:
         target_dir = self.root / _DOMAINS_DIRNAME
         if not _PACKAGED_DOMAINS_DIR.is_dir():

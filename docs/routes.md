@@ -1062,6 +1062,35 @@ comfyui.result_poll_interval_seconds = 1.0
 comfyui.result_wait_timeout_seconds = 1800
 ```
 
+## Wissensbasis (P22 Phase 3 · ADR-025 — Markdown = Wahrheit, SQLite = Cache)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| *(ab P23)* | `POST` | `/api/knowledge/entities` | `CreateEntityRequest { id, type, title, domain, aliases?, status?, owner? ("user" default), confidence?, media_links?, relationships?, sources? }` | `EntityDto` (201) — 409 bei bereits vergebener `id`, 422 bei unbekanntem Typ/Beziehungstyp/Owner |
+| *(ab P23)* | `GET` | `/api/knowledge/entities` | `q?`, `type?`, `domain?` | `EntityDto[]` — Titel/Alias-Suche, leeres `q` = alle |
+| *(ab P23)* | `GET` | `/api/knowledge/entities/search` | `q` (Pflicht), `type?`, `domain?` | `EntityDto[]` — identische Logik wie oben, eigener Pfad laut Kontrakt |
+| *(ab P23)* | `GET` | `/api/knowledge/entities/{id}` | `{id}` ist `id` **oder** Alias | `EntityDto` — 404 nicht gefunden, 409 bei mehrdeutigem Alias (mehrere Treffer, keine automatische Auflösung) |
+| *(ab P23)* | `PATCH` | `/api/knowledge/entities/{id}` | `UpdateEntityRequest { owner? ("user" default), title?, aliases?, status?, confidence?, media_links?, relationships?, sources? }` — nur gesetzte Felder ändern sich; `id`/`type`/`domain` sind unveränderlich (422) | `EntityDto` — 404 nicht gefunden, 409 wenn `owner` niedrigere Priorität als der bestehende Wert hat (Ownership-Regel) |
+| *(ab P23)* | `DELETE` | `/api/knowledge/entities/{id}` | — | `204` — löscht Markdown + Cache-Zeilen; 404 nicht gefunden |
+| *(ab P23)* | `POST` | `/api/knowledge/entities/{id}/relationships` | `{ type, target, owner? }` | `EntityDto` (Beziehung angehängt, keine Duplikate) — 404/409/422 wie oben |
+| *(ab P23)* | `DELETE` | `/api/knowledge/entities/{id}/relationships` | Query: `type`, `target`, `owner?` | `EntityDto` (Beziehung entfernt, idempotent) — 404/409 |
+| *(ab P23)* | `GET` | `/api/knowledge/entities/{id}/lore` | — | `LoreDto { entity, relationships }` — **Stub**: nur direkte ausgehende Beziehungen, Graph-Tiefe/Empfehlungen ab P25 |
+
+**Ownership:** jeder Schreibzugriff ist entity-weit (ein `owner`-Feld pro Entity, kein Per-Feld-Owner). Priorität `user > manual > web > inferred`; ein Schreiber mit niedrigerer Priorität als der bestehende `owner` wird komplett abgelehnt (409), ein erfolgreicher Schreiber wird selbst zum neuen `owner`. `owner=user` erzwingt immer `confidence=1.0`. REST setzt `owner` optional entgegen (Default `"user"`, da die UI heute der einzige Schreiber ist) — Jobs (ab P24) laufen in-process und rufen `KnowledgeService` direkt auf, nicht über REST.
+
+**Medien-Verknüpfung** (`POST/DELETE .../{id}/media-links`) ist laut Kontrakt erst P24 dran, hier nicht implementiert.
+
+```typescript
+interface EntityDto {
+  id: string; type: string; title: string; domain: string;
+  owner: "user" | "manual" | "web" | "inferred"; confidence: number; status: string;
+  aliases: string[];
+  media_links: { persons: number[]; assets: number[] };
+  relationships: { type: string; target: string }[];
+  sources: string[];
+}
+```
+
 ## MCP-Schnittstelle (ADR-019 · Plan `2026-07-06_mcp-schnittstelle`)
 
 Kein REST-Router, sondern ein ASGI-Mount unter **`/mcp`** (Streamable-HTTP, offizielles

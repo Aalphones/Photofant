@@ -1,14 +1,28 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p22-knowledge-engine/`
-**Phase:** 3/4 — KnowledgeService + REST-API (standard, noch nicht begonnen)
-**Nächster Schritt:** Phase 3 von P22 — `knowledge/service.py` (`KnowledgeService`, orchestriert
-`vault` + `repository` + `validator`, setzt die Ownership-Regel durch) + `api/knowledge.py` +
-Registrierung in `main.py`. Kontext in `phase-3-service-api.md` + README-Kontrakt. Zwei Findings
-aus Phase 2 vorab lesen: `vault.save_entity`/`EntityRepository.upsert_from_vault` sind reines I/O
-(keine Ownership-Prüfung dort — die macht der Service vor jedem Schreiben), und
-`find_by_alias`/`search` liefern Listen ohne Mehrdeutigkeits-Auflösung (Service muss entscheiden,
-was bei mehreren Alias-Treffern passiert).
+**Phase:** 4/4 — Rebuild-Job + Vault↔Cache-Reconcile (standard, noch nicht begonnen)
+**Nächster Schritt:** Phase 4 von P22 — `jobs/knowledge_rebuild_job.py` + `jobs/knowledge_reconcile_job.py`
+(oder Integration in bestehendes `reconcile_job.py`, Bearbeiter entscheidet + begründet), Registrierung
+in `jobs/queue.py`, Wartungs-Trigger in `features/wartung/` mit i-Erklärung. Kontext in
+`phase-4-rebuild-reconcile.md` + README-Kontrakt + Risiko „Vault↔Cache-Drift". Offene Finding aus
+Phase 2 vorab lesen: `vault.py` hat noch **keinen Entity-Iterator** — für den Rebuild fehlt
+`iter_entity_files()`/`load_all()` (bewusst nicht auf Vorrat gebaut, YAGNI), muss hier ergänzt
+werden; Typ→Ordner-Zuordnung kommt aus `domain.folder_for()`. Nach Phase 4: finale AK + die
+4-Punkte-Smoke-Checkliste der README gegenprüfen (P22 komplett) und archivieren.
+
+**Phase 3 abgeschlossen (2026-07-08):** KnowledgeService + REST-API. `knowledge/service.py`
+(`KnowledgeService` — einzige Mutationsschicht, Markdown-first: erst Vault, dann Cache-Upsert;
+Ownership entity-weit statt pro Feld, `owner=user` erzwingt `confidence=1.0`; `find_entity` löst
+mehrdeutige Alias-Treffer **nicht** still auf, sondern wirft `AmbiguousEntityError`). `Vault.delete_entity`
+ergänzt (reines I/O, wie `save_entity`). `api/knowledge.py` — REST-CRUD + Beziehungen + Lore-Stub,
+Registrierung in `main.py`. `owner` ist ein optionales Request-Feld (Default `"user"`) auf allen
+Schreibrouten, damit die Ownership-Ablehnung per REST testbar ist (Plan-Smoke-Checkliste #4).
+Routing-Falle gefunden + gefixt: `{entity_id:path}` matcht Slashes, Suffix-Routen (`/relationships`,
+`/lore`) müssen vor der bloßen `/entities/{id}`-Route stehen, sonst verschluckt deren Pattern jede
+tiefere Anfrage gleicher HTTP-Methode. 32 neue pytest-Tests (20 Service, 12 REST), alle grün. mypy
+projektweit weiterhin exakt 124 vorbestehende Fehler (0 neue), ruff auf allen angefassten Dateien
+grün. Docs (`routes.md`, `code-map.md`, README-Phasentabelle, FINDINGS) nachgezogen.
 
 **Phase 2 abgeschlossen (2026-07-08):** SQLite-Cache + Repositories. Migration `0034_knowledge_cache.py`
 (`knowledge_entities`/`_relationships`/`_sources`/`_media_links`, kein `ON DELETE CASCADE` — SQLite-FK-
