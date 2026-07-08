@@ -8,7 +8,7 @@ from typing import Annotated, Any, Literal, cast
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import ColumnElement, exists, func, select, update
+from sqlalchemy import ColumnElement, delete, exists, func, select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -64,6 +64,10 @@ class SimilarAssetDto(AssetSummaryDto):
 
 class ResolveRequest(BaseModel):
     resolution: DupeResolution
+
+
+class ClearDupesResponse(BaseModel):
+    deleted: int
 
 
 def _to_summary(asset: Asset) -> AssetSummaryDto:
@@ -172,6 +176,28 @@ async def list_dupe_pairs(session: DbSession, offset: int = 0, limit: int = 50) 
 
     items = [_to_pair_dto(item, row_asset_a, row_asset_b) for item, row_asset_a, row_asset_b in rows]
     return DupePageDto(items=items, total=total)
+
+
+@router.delete("/review/dupes", response_model=ClearDupesResponse)
+async def clear_dupe_candidates(session: DbSession) -> ClearDupesResponse:
+    """Delete all *unresolved* dupe-candidate pairs — clears the queue for a fresh scan.
+
+    Resolved pairs (user already picked an original or chose "keep both") are kept,
+    so those decisions survive and a re-scan won't surface them again — same rule
+    as the full scan's pre-scan purge (`_purge_unresolved_dupe_candidates`).
+    """
+    result = cast(
+        "CursorResult[Any]",
+        session.execute(
+            delete(ReviewItem).where(
+                ReviewItem.type == "dupe_candidate",
+                ReviewItem.resolved_at.is_(None),
+            )
+        ),
+    )
+    session.commit()
+    log.info("cleared %d unresolved dupe-candidate pair(s) from the review queue", result.rowcount)
+    return ClearDupesResponse(deleted=result.rowcount or 0)
 
 
 @router.patch("/review/dupes/{item_id}", response_model=DupePairDto)

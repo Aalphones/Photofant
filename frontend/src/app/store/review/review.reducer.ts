@@ -65,6 +65,13 @@ export const reviewFeature = createFeature({
       ...state,
       error,
     })),
+    on(reviewActions.clearDupeCandidatesSuccess, (state: ReviewState) =>
+      adapter.removeAll({ ...state, total: 0, offset: 0, error: null }),
+    ),
+    on(reviewActions.clearDupeCandidatesFailure, (state: ReviewState, { error }) => ({
+      ...state,
+      error,
+    })),
     on(reviewActions.triggerDupeScanFailure, (state: ReviewState, { error }) => ({
       ...state,
       error,

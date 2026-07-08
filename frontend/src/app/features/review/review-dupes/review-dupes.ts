@@ -23,6 +23,7 @@ export class ReviewDupes implements OnInit {
   protected readonly isLoading = this.store.selectSignal(reviewSelectors.selectIsLoading);
   protected readonly isLoadingMore = this.store.selectSignal(reviewSelectors.selectIsLoadingMore);
   protected readonly comparePair = signal<DupePair | null>(null);
+  protected readonly confirmClear = signal<boolean>(false);
 
   private readonly resolvingId = signal<number | null>(null);
 
@@ -59,6 +60,20 @@ export class ReviewDupes implements OnInit {
 
   protected onScan(): void {
     this.store.dispatch(reviewActions.triggerDupeScan());
+  }
+
+  protected onRequestClear(): void {
+    this.confirmClear.set(true);
+  }
+
+  protected onCancelClear(): void {
+    this.confirmClear.set(false);
+  }
+
+  protected onConfirmClear(): void {
+    this.confirmClear.set(false);
+    this.comparePair.set(null);
+    this.store.dispatch(reviewActions.clearDupeCandidates());
   }
 
   protected onLoadMore(): void {

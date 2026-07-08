@@ -664,6 +664,7 @@ Details: `docs/planning/2026-07-07_p36-reverse-image-search/FINDINGS.md`.
 |---|---|---|---|---|
 | Review-Tab (Duplikate) | `GET` | `/api/review/dupes?offset&limit` | — | `DupePageDto` (paginiert, nur unresolved) |
 | Review-Tab (Auflösen) | `PATCH` | `/api/review/dupes/{id}` | `{ resolution: DupeResolution }` | `DupePairDto` |
+| Review-Tab (Queue leeren) | `DELETE` | `/api/review/dupes` | — | `{ deleted: number }` (nur unresolved; entschiedene Paare bleiben) |
 | Review-Tab / Action-Bar | `POST` | `/api/jobs/dupe-scan` | `{ scope: 'all' \| 'selection', asset_ids?: number[] }` | `{ job_id: string }` |
 | Lightbox (Ähnliche Bilder) | `GET` | `/api/assets/{id}/similar` | — | `SimilarAssetDto[]` |
 
@@ -709,6 +710,11 @@ Aktions-Semantik (`PATCH /api/review/dupes/{id}`):
 - `b_is_original`: setzt `asset_a.original_id = asset_b.id`
 - `delete_a` / `delete_b`: Soft-Delete des jeweiligen Assets (Datei → Papierkorb)
 - `dismiss`: keine Asset-Änderung, Paar als erledigt markiert
+
+`DELETE /api/review/dupes` — verwirft alle **unresolved** `dupe_candidate`-Paare (Queue leeren
+für einen strengeren Neuscan) und gibt die Anzahl zurück. Bereits entschiedene Paare (`dismiss`
+etc.) behalten ihren Grabstein — dieselbe Regel wie die Vor-Scan-Purge beim Voll-Scan, damit ein
+Neuscan sie nicht erneut vorlegt.
 
 `POST /api/jobs/dupe-scan` mit `scope='selection'` erfordert `asset_ids` (sonst `422`).
 

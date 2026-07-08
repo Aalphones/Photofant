@@ -17,6 +17,10 @@ export class ReviewService {
     return this.http.patch<DupePair>(`/api/review/dupes/${itemId}`, { resolution });
   }
 
+  clearDupeCandidates(): Observable<{ deleted: number }> {
+    return this.http.delete<{ deleted: number }>('/api/review/dupes');
+  }
+
   triggerDupeScan(scope: 'all' | 'selection', assetIds?: number[]): Observable<{ job_id: string }> {
     return this.http.post<{ job_id: string }>('/api/jobs/dupe-scan', {
       scope,

@@ -66,6 +66,22 @@ export class ReviewEffects {
     ),
   );
 
+  readonly clearDupeCandidates$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(reviewActions.clearDupeCandidates),
+      switchMap(() =>
+        this.reviewService.clearDupeCandidates().pipe(
+          map((response: { deleted: number }) =>
+            reviewActions.clearDupeCandidatesSuccess({ deleted: response.deleted }),
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(reviewActions.clearDupeCandidatesFailure({ error: error.message })),
+          ),
+        ),
+      ),
+    ),
+  );
+
   readonly triggerDupeScan$ = createEffect(() =>
     this.actions$.pipe(
       ofType(reviewActions.triggerDupeScan),
