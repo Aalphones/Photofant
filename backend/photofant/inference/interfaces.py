@@ -51,7 +51,15 @@ class Captioner(Protocol):
 
 @runtime_checkable
 class Embedder(Protocol):
-    """Produces a feature embedding in a shared image/text space (CLIP-style)."""
+    """Produces a feature embedding from an image.
+
+    Image-only by contract — text is NOT part of this protocol. A visual model
+    like DINOv2 (P37, role "visual_rerank") embeds images but has no text encoder;
+    it satisfies `Embedder` and nothing more. Models that also map text into the
+    same space (CLIP, SigLIP2) satisfy the richer `TextEmbedder` below. Callers
+    that need a text query check the capability (`isinstance(x, TextEmbedder)`)
+    instead of calling `embed_text` blindly.
+    """
 
     @property
     def dim(self) -> int:
@@ -69,6 +77,16 @@ class Embedder(Protocol):
         image: uint8 RGB array (H, W, 3).
         """
         ...
+
+
+@runtime_checkable
+class TextEmbedder(Embedder, Protocol):
+    """An `Embedder` that also maps free text into the same space (CLIP-style).
+
+    Backs text→image semantic search: a text query and an image become comparable
+    by cosine similarity because both land in one shared space. CLIP and SigLIP2
+    satisfy this; a purely visual embedder (DINOv2) does not.
+    """
 
     def embed_text(self, text: str) -> np.ndarray:
         """Return a 1-D float32 unit-norm text embedding in the same space.

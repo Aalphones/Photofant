@@ -461,12 +461,22 @@ def _tag_name_match_subquery(session: Session, name_fragment: str) -> Any:
 async def _embed_semantic(query: str) -> np.ndarray:
     """Embed *query* via the active image embedder's text encoder. Raises 409 if unavailable."""
     from photofant.inference.image_embedder import resolve_image_embedder
+    from photofant.inference.interfaces import TextEmbedder
 
     embedder = resolve_image_embedder()
     if embedder is None:
         raise HTTPException(
             status_code=409,
             detail={"code": "SEMANTIC_SEARCH_UNAVAILABLE", "message": "Kein Bild-Embedder aktiv."},
+        )
+    if not isinstance(embedder, TextEmbedder):
+        # Visual-only embedder (e.g. DINOv2) can't embed text — see api/search.py.
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SEMANTIC_SEARCH_UNAVAILABLE",
+                "message": "Aktiver Bild-Embedder kann keine Textsuche.",
+            },
         )
     return await asyncio.to_thread(embedder.embed_text, query)
 

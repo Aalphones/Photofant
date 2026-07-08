@@ -22,10 +22,13 @@ def _embed_prompt_cached(prompt: str) -> np.ndarray:
     the expensive ONNX session itself is cached separately by `session_manager`.
     """
     from photofant.inference.image_embedder import resolve_image_embedder
+    from photofant.inference.interfaces import TextEmbedder
 
     embedder = resolve_image_embedder()
     if embedder is None:
         raise RuntimeError("Image embedder unavailable — caller must guard before calling")
+    if not isinstance(embedder, TextEmbedder):
+        raise RuntimeError("Active image embedder has no text encoder — cannot score text prompts")
     return embedder.embed_text(prompt)
 
 

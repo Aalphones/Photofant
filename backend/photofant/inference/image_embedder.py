@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 
 from photofant.inference.adapters.clip import CLIPEmbedder
+from photofant.inference.adapters.dinov2 import DINOv2Embedder
 from photofant.inference.adapters.siglip import SigLIPEmbedder
 from photofant.inference.interfaces import Embedder
 
@@ -24,6 +25,9 @@ log = logging.getLogger(__name__)
 _IMAGE_EMBEDDER_ADAPTERS: dict[str, type[Embedder]] = {
     "clip-vit-l-14": CLIPEmbedder,
     "siglip2-large-patch16-384": SigLIPEmbedder,
+    # role "visual_rerank" (P37) — image-only, no text encoder. Lives in the same
+    # registry so a rerank-model swap stays "adapter + this line + manifest".
+    "dinov2-with-registers-base": DINOv2Embedder,
 }
 
 

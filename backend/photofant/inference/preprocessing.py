@@ -29,23 +29,26 @@ def resize_pad_square(image: np.ndarray, size: int) -> np.ndarray:
     return np.asarray(canvas, dtype=np.uint8)
 
 
-def resize_center_crop(image: np.ndarray, size: int) -> np.ndarray:
-    """Resize shortest side to `size` then center-crop to (size, size).
+def resize_center_crop(image: np.ndarray, size: int, crop_size: int | None = None) -> np.ndarray:
+    """Resize shortest side to `size`, then center-crop to (crop_size, crop_size).
 
     image: uint8 RGB (H, W, 3).
-    Returns uint8 RGB (size, size, 3).
+    crop_size defaults to `size` (CLIP: resize 224 → crop 224). DINOv2 needs them
+    to differ — resize shortest edge to 256, then crop 224 — so it passes crop_size.
+    Returns uint8 RGB (crop_size, crop_size, 3).
     """
     from PIL import Image as PILImage
 
+    crop = crop_size if crop_size is not None else size
     pil = PILImage.fromarray(image).convert("RGB")
     original_width, original_height = pil.size
     scale = size / min(original_width, original_height)
     new_width = round(original_width * scale)
     new_height = round(original_height * scale)
     pil = pil.resize((new_width, new_height), PILImage.LANCZOS)
-    left = (new_width - size) // 2
-    top = (new_height - size) // 2
-    pil = pil.crop((left, top, left + size, top + size))
+    left = (new_width - crop) // 2
+    top = (new_height - crop) // 2
+    pil = pil.crop((left, top, left + crop, top + crop))
     return np.asarray(pil, dtype=np.uint8)
 
 
@@ -138,6 +141,19 @@ def preprocess_for_siglip(image: np.ndarray, size: int = 384) -> np.ndarray:
     """
     resized = resize_squash(image, size)
     normalized = normalize_siglip(resized)
+    return normalized[np.newaxis, ...]  # NCHW
+
+
+def preprocess_for_dinov2(image: np.ndarray, size: int = 256, crop_size: int = 224) -> np.ndarray:
+    """Full DINOv2 preprocessing: resize shortest edge to 256 → center-crop 224² → ImageNet NCHW.
+
+    Verified against facebook/dinov2-with-registers-base preprocessor_config.json:
+    resize shortest edge to 256 (bicubic), center-crop 224×224, rescale 1/255, then
+    ImageNet mean/std — the same stats as Florence, but with a 256→224 resize-then-crop
+    step (SigLIP squashes to 384² with 0.5-stats; the contracts must not be mixed).
+    """
+    cropped = resize_center_crop(image, size, crop_size)
+    normalized = normalize_imagenet(cropped)
     return normalized[np.newaxis, ...]  # NCHW
 
 

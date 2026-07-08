@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from photofant.db import vector_index
 from photofant.db.models import Asset, AssetInstance
 from photofant.db.session import get_session
-from photofant.inference.interfaces import Embedder
+from photofant.inference.interfaces import Embedder, TextEmbedder
 from photofant.settings import load_settings
 
 router = APIRouter(prefix="/search")
@@ -65,6 +65,17 @@ def _require_embedder(unavailable_message: str) -> Embedder:
 
 def _embed_query_text(query: str) -> np.ndarray:
     embedder = _require_embedder("Kein Bild-Embedder aktiv — Textsuche nicht möglich.")
+    if not isinstance(embedder, TextEmbedder):
+        # The active image embedder is visual-only (e.g. DINOv2) — it can't embed
+        # a text query. Should not happen for role "semantic_search", but the seam
+        # is honest about it rather than crashing on a missing method.
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SEMANTIC_SEARCH_UNAVAILABLE",
+                "message": "Aktiver Bild-Embedder kann keine Textsuche.",
+            },
+        )
     return embedder.embed_text(query)
 
 
