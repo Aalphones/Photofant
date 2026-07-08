@@ -76,7 +76,7 @@ Das ist keine Schwäche, sondern die Bauartgrenze: ohne visuellen Anker im DINOv
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | DINOv2-Adapter + image-only-Naht + Manifest | heikel (Protokoll-Aufweichung + neues Preprocessing) | ✅ complete |
-| 2 | Zweiter Vektorraum + Embedding-Job + Migration | heikel (zweiter Index + Ledger-Flag + Migration) | pending |
+| 2 | Zweiter Vektorraum + Embedding-Job + Migration | heikel (zweiter Index + Ledger-Flag + Migration) | ✅ complete |
 | 3 | Two-Stage Re-Ranking in der Bild→Bild-Suche | heikel (Rerank-Naht, Degradation bei Text/ohne Modell) | pending |
 | 4 | Dupe-Scan auf DINOv2 + Schwellwert-Rekalibrierung | standard | pending |
 

@@ -1,10 +1,11 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-07_p37-dinov2-reranking/`
-**Phase:** 2/4 — Zweiter Vektorraum + Embedding-Job + Migration (pending)
-**Nächster Schritt:** Phase 2 starten — `asset.dino_embedding` (BLOB) + `vec_asset_dino` (float[768]) +
-Ledger-Flag `dino_embedding_done` + Embedding-Job auf `role="visual_rerank"`. Manifest-`id` ist
-`dinov2-with-registers-base` (768-dim). Kontext in `phase-2-zweiter-vektorraum.md` + FINDINGS-Einträge → Phase 2.
+**Phase:** 3/4 — Two-Stage Re-Ranking in der Bild→Bild-Suche (pending)
+**Nächster Schritt:** Phase 3 starten — Rerank-Funktion `rerank_by_appearance(query_dino_vec, candidate_asset_ids)`
++ Einhängen in `like_asset_id` (`api/search.py`) und `POST /api/search/by-image` (P36). Degradation bei
+Text-Query / fehlendem DINOv2-Modell / `rerank.enabled=false`. Kontext in `phase-3-two-stage-reranking.md` +
+FINDINGS-Einträge → Phase 3 (DINOv2-Lesepfad ist bewusst noch offen, `_search`-Kern in `vector_index.py` steht).
 
 ---
 

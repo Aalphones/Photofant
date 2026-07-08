@@ -19,12 +19,15 @@ from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
 log = logging.getLogger(__name__)
 
-ClassifyStep = Literal["tags", "caption", "embedding", "heuristics", "faces", "categories"]
+ClassifyStep = Literal[
+    "tags", "caption", "embedding", "dino_embedding", "heuristics", "faces", "categories"
+]
 
 _STEP_FLAGS: dict[str, str] = {
     "tags": "tags_done",
     "caption": "caption_done",
     "embedding": "embedding_done",
+    "dino_embedding": "dino_embedding_done",  # P37: DINOv2-only re-embed (SigLIP2 untouched)
     "heuristics": "heuristics_done",
     "faces": "faces_done",
     "categories": "classified",
@@ -117,7 +120,7 @@ async def run_rerun_job(
 ) -> None:
     from photofant.jobs.caption_job import _run_caption_with_preset
     from photofant.jobs.classification_job import _run_classification
-    from photofant.jobs.embedding_job import _run_embedding
+    from photofant.jobs.embedding_job import _run_dino_embedding, _run_embedding
     from photofant.jobs.face_job import _run_face_job
     from photofant.jobs.heuristics_job import _run_heuristics
     from photofant.jobs.tagging_job import _run_tagging
@@ -138,6 +141,9 @@ async def run_rerun_job(
             await asyncio.to_thread(_run_caption_with_preset, asset_id, asset_path, caption_preset_id, True)
         if "embedding" in steps:
             await asyncio.to_thread(_run_embedding, asset_id, asset_path)
+        elif "dino_embedding" in steps:
+            # DINOv2-only re-embed — skipped when the full embedding step already ran both.
+            await asyncio.to_thread(_run_dino_embedding, asset_id, asset_path)
         if "categories" in steps:
             await asyncio.to_thread(_run_classification, asset_id)
         if "faces" in steps:

@@ -55,6 +55,10 @@ class Asset(Base):
     tagger: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
+    # P37: second, purely visual embedding (DINOv2, 768-dim) — its own vector space
+    # (vec_asset_dino), independent of the SigLIP2 space above. A NULL here is a valid
+    # state (asset not yet DINOv2-embedded); rerank degrades to plain SigLIP2 then.
+    dino_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
     caption_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
     original_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("asset.id"), nullable=True, index=True,
@@ -86,6 +90,9 @@ class ProcessingLedger(Base):
     tags_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     caption_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     embedding_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    # P37: separate finish-flag for the DINOv2 embedding so a library can gain the
+    # second embedding on a rerun without recomputing SigLIP2 (embedding_done stays set).
+    dino_embedding_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     heuristics_done: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     classified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
 

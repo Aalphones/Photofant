@@ -34,9 +34,30 @@ Erkenntnisse während der Umsetzung, getaggt nach Phase. Format:
   rufen — Fähigkeit ist damit ein Typ, kein Flag. Begründung: type-honest, macht die Bauartgrenze
   „DINOv2 kann keinen Text" im Typsystem sichtbar.
 
-- [ ] → Phase 2: Manifest-`id` ist **`dinov2-with-registers-base`** (an `hf_repo` angeglichen, wie bei
+- [x] → Phase 2: Manifest-`id` ist **`dinov2-with-registers-base`** (an `hf_repo` angeglichen, wie bei
   SigLIP), nicht das im Plan skizzierte `dinov2-vitb14-reg`. Adapter-`_MANIFEST_ID` und die Registry-Zeile
   in `image_embedder.py` nutzen denselben Wert — Phase 2 (Ledger/Job) muss auf diese id referenzieren.
+  *(Erledigt: Job resolved über `role="visual_rerank"`, nicht über die manifest-id — die id-Referenz liegt
+  in der Registry-Zeile aus Phase 1. Kein direkter id-Bezug im Job nötig.)*
 
-- [ ] → Phase 2: DINOv2-Vektor ist **768-dim** (SigLIP2 = 1024). `vec_asset_dino` muss `float[768]` sein,
+- [x] → Phase 2: DINOv2-Vektor ist **768-dim** (SigLIP2 = 1024). `vec_asset_dino` muss `float[768]` sein,
   getrennt von `vec_asset_embedding` (1024). Adapter `dim = 768` ist die Single Source für die Migration.
+  *(Erledigt: `DINO_EMBEDDING_DIM = 768` in `vector_index.py`; Migration 0033 pinnt `float[768]` lokal als
+  Snapshot.)*
+
+## Phase 2 — Umsetzung (2026-07-08)
+
+- [x] → Phase 2: **`vector_index.py` parametrisiert statt drittem Copy-Paste.** `face_vector_index.py` ist eine
+  Copy-Paste-Kopie; der Plan wollte aber Parametrisierung. Shared private Kern (`_serialize(embedding, dim)`,
+  `_upsert/_delete/_search/_rebuild(session, table, …)`), SigLIP2-Public-API unverändert (kein Ripple auf die
+  ~8 Aufrufer + Migration 0007), DINOv2 als schlanke Fläche. `face_vector_index.py` bewusst **nicht** angefasst
+  (anderer Rowid-Entity, außer Scope).
+
+- [ ] → Phase 3: **DINOv2-Lesepfad fehlt noch bewusst.** `vector_index.py` hat den parametrisierten `_search`-Kern,
+  aber **kein** öffentliches `search_dino`/`rerank`-Zugang — YAGNI für Phase 2. Phase 3 baut die Rerank-Funktion
+  `rerank_by_appearance(query_dino_vec, candidate_asset_ids)` (Kontrakt) und braucht dafür Lese-Zugriff auf
+  `vec_asset_dino` bzw. `asset.dino_embedding`-BLOBs der Kandidaten — auf `_search` bzw. direktem BLOB-Load aufsetzen.
+
+- [ ] → Phase 4: **Dupe-Scan liegt heute auf SigLIP2.** `embedding_job._check_for_dupes` nutzt `vector_index.search`
+  (SigLIP2) + `settings["dupe_clip_threshold"]`. Phase 4 stellt das auf DINOv2 (`vec_asset_dino`) + neuen
+  `dupe_dino_threshold` um. `delete_dino_embedding` ist schon im Purge-Pfad verdrahtet (`media/moves.py`).

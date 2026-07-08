@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 from photofant.db.cache import delete_thumbnails, init_cache_db
 from photofant.db.face_vector_index import delete_embedding as delete_face_embedding
 from photofant.db.models import Asset, AssetInstance, Face, ProcessingLedger
-from photofant.db.vector_index import delete_embedding
+from photofant.db.vector_index import delete_dino_embedding, delete_embedding
 
 log = logging.getLogger(__name__)
 
@@ -251,5 +251,6 @@ async def purge(session: Session, instance: AssetInstance, cache_db_path: Path) 
                 session.delete(ledger)
             session.delete(asset)
             delete_embedding(session, asset_id)
+            delete_dino_embedding(session, asset_id)  # P37: second index, else orphan row
 
     session.commit()

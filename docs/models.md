@@ -56,6 +56,7 @@ One row per unique content-hash (canonical image).
 | `tagger` | TEXT | model name (filled in P5) |
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
 | `clip_embedding` | BLOB | Image embedding of the active semantic_search model, float32 unit-norm bytes (1024-dim seit SigLIP2, P35 Phase 2; vorher CLIP 768-dim). Spaltenname bleibt inert (ADR-022). Source of truth für den Vector Index (P5 Phase 4); `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden |
+| `dino_embedding` | BLOB | DINOv2 visual-rerank embedding, float32 unit-norm bytes (768-dim, P37 / ADR-024). Zweiter, rein visueller Vektorraum neben `clip_embedding` — unabhängig, kann NULL sein (Asset noch nicht DINOv2-embedded → Rerank degradiert auf SigLIP2). Source of truth für `vec_asset_dino`; `deferred=True` |
 | `caption_edited` | BOOLEAN | `1` = Caption wurde manuell editiert; Captioner überspringt den Asset beim nächsten Rerun (P6 Phase 3) |
 | `original_id` | INTEGER FK → `asset.id` | gesetzt wenn dieses Asset ein Edit eines anderen ist — bei Review-Entscheidung „A/B ist Original" (migration 0014) |
 | `created_at` | DATETIME | EXIF capture date; UTC naive |
@@ -115,7 +116,8 @@ Once-only guarantee per content-hash.
 | `faces_done` | BOOLEAN | (set in P7) |
 | `tags_done` | BOOLEAN | (set in P5) |
 | `caption_done` | BOOLEAN | (set in P5) |
-| `embedding_done` | BOOLEAN | CLIP embedding computed (migration 0007, set in P5 Phase 4) |
+| `embedding_done` | BOOLEAN | SigLIP2 embedding computed (migration 0007, set in P5 Phase 4) |
+| `dino_embedding_done` | BOOLEAN | DINOv2 embedding computed (migration 0033, P37). Eigenes Flag, damit eine Bibliothek DINOv2 per Rerun-Step `dino_embedding` nachbekommt, ohne SigLIP2 neu zu rechnen |
 | `classified` | BOOLEAN | `True` wenn die Klassifizierungs-Kategorien für diesen Content-Hash berechnet sind (WD14+CLIP-Fusion, P18 Phase 2); zurückgesetzt vom Rerun-Step `categories`. Spalte existiert seit Migration 0009, war bis P18 ungenutzt. |
 
 ### `model_registry` (migration 0004)
@@ -231,6 +233,23 @@ degrades gracefully when the table is absent (e.g. throw-away test DBs).
 
 > Requires the sqlite-vec loadable extension, loaded per connection via the SQLAlchemy
 > `connect` event (`photofant/db/engine.py`) and inside migration 0007 (`op.get_bind()`).
+
+### `vec_asset_dino` (migration 0033, dim 768)
+
+sqlite-vec `vec0` virtual table — the searchable **DINOv2 visual-rerank** vector index (P37, ADR-024).
+Second, independent space next to `vec_asset_embedding`: same rowid (`asset.id`), different model and
+dimension, no shared index. Canonical embedding on `asset.dino_embedding` (BLOB); rebuildable over those
+BLOBs via the shared parametrized core in `photofant/db/vector_index.py`. An asset may be indexed here, in
+`vec_asset_embedding`, in both, or in neither — a missing row is a valid state (rerank degrades to plain
+SigLIP2). Maintained on embed (upsert) and final delete (remove, both indexes).
+
+| Column | Type | Notes |
+|---|---|---|
+| `rowid` | INTEGER | = `asset.id` |
+| `embedding` | `float[768]` | DINOv2-with-registers-base Dimension. `distance_metric=cosine`; cosine similarity = `1 − distance` |
+
+> Requires the sqlite-vec loadable extension (same loading path as `vec_asset_embedding`; migration 0033
+> loads it before creating **and** before dropping the table — a vec0 table can't be dropped without the module).
 
 ### `vec_face_embedding` (migration 0016)
 
