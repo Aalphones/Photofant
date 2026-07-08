@@ -476,6 +476,36 @@ Tagging+Embedding (`jobs/classification_pipeline.py`) oder manuell über den Rer
 Tabelle wurde in P16 Phase 2 entfernt. Workflows sind jetzt Dateien in `.photofant/workflows/`,
 keine DB-Einträge mehr. Migration 0022 dropped die Tabelle; Model `ComfyUIWorkflow` aus `models.py` entfernt.
 
+### `knowledge_entities` / `knowledge_relationships` / `knowledge_sources` / `knowledge_media_links` (migration 0034, P22 Phase 2)
+
+Reiner Cache über der Markdown-Wissensbasis (`photofant/knowledge/vault.py`, ADR-025) —
+jede Zeile ist aus dem Vault identisch neu aufbaubar, geschrieben ausschließlich über
+`knowledge/repository.py::EntityRepository.upsert_from_vault`. Kein Feld ohne
+Markdown-Entsprechung (Kontrakt, siehe `docs/planning/2026-07-01_p22-knowledge-engine/README.md`).
+
+**`knowledge_entities`**
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | TEXT PK | Entity-`id` aus dem Vault (`<type>/<slug>`), keine Autoincrement-ID |
+| `type` | TEXT | Entity-Typ (domänenabhängig, z.B. `actor`); indexed |
+| `title` | TEXT | Anzeigename |
+| `domain` | TEXT | Domänenname (z.B. `Movies`); indexed |
+| `owner` | TEXT | `Owner`-Wert (`user\|manual\|web\|inferred`) |
+| `confidence` | REAL | 0.0–1.0 |
+| `status` | TEXT | frei, kann leer sein |
+| `aliases` | JSON | Liste von Alias-Strings; Suche via `cast(aliases, Text).like(...)` (kein FTS, laut Kontrakt optional) |
+
+**`knowledge_relationships`** — `id` PK, `entity_id` FK → `knowledge_entities.id` (Quelle, indexed), `type` TEXT, `target` TEXT (Ziel-Entity-`id`, indexed, **keine FK** — Ziel kann vor/nach der Beziehung angelegt werden).
+
+**`knowledge_sources`** — `id` PK, `entity_id` FK → `knowledge_entities.id` (indexed), `source` TEXT (freier String, z.B. URL).
+
+**`knowledge_media_links`** — `id` PK, `entity_id` FK → `knowledge_entities.id` (indexed), `kind` TEXT (`person\|asset`), `target_id` INTEGER (`person.id`/`asset.id` je nach `kind`, **keine FK** — Zieltabelle variiert, gleiches Muster wie `review_item.face_id`). `UNIQUE(entity_id, kind, target_id)`.
+
+**Cascade-Deletes sind explizit im Code** (`knowledge/repository.py::EntityRepository.delete`) —
+SQLite läuft projektweit ohne `PRAGMA foreign_keys=ON`, die deklarierten FKs erzwingen also
+nichts von selbst (gleiches Muster wie `classification_label`/`asset_classification` oben).
+
 ## Upcoming tables (planned)
 
 *(keine offenen Tabellen)*

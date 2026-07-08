@@ -48,7 +48,7 @@ Entity-Frontmatter (verbindlich, Dok 020 §5): `id` (`<type>/<slug>`, unverände
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | Vault + Entity-Schema + Parser | heikel | ✅ complete |
-| 2 | SQLite-Cache + Repositories | standard | pending |
+| 2 | SQLite-Cache + Repositories | standard | ✅ complete |
 | 3 | KnowledgeService + REST-API | standard | pending |
 | 4 | Rebuild-Job + Vault↔Cache-Reconcile | standard | pending |
 

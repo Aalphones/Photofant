@@ -281,6 +281,59 @@ class AssetClassification(Base):
     source: Mapped[str] = mapped_column(Text, nullable=False)  # clip | wd14 | fused
 
 
+class KnowledgeEntity(Base):
+    """Cache-Zeile einer Wissens-Entity (P22) — reiner Index, Wahrheit ist die Markdown-Datei.
+
+    ``id`` ist die stabile Entity-``id`` (``<type>/<slug>``) aus dem Vault, nicht autoincrement.
+    ``aliases`` liegt als JSON-Liste vor (Suche via ``cast(..., Text).like(...)``, siehe
+    ``knowledge/repository.py`` — FTS ist laut Kontrakt optional, nicht Pflicht).
+    """
+
+    __tablename__ = "knowledge_entities"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    domain: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    owner: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, server_default="1.0")
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    aliases: Mapped[list[str]] = mapped_column(JSON, nullable=False, server_default="[]")  # type: ignore[type-arg]
+
+
+class KnowledgeRelationship(Base):
+    __tablename__ = "knowledge_relationships"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_id: Mapped[str] = mapped_column(ForeignKey("knowledge_entities.id"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False)
+    # Entity-id des Ziels (<type>/<slug>) — keine FK: das Ziel kann angelegt werden,
+    # bevor/nachdem die Beziehung geschrieben wird (Vault ist die Wahrheit, nicht die DB).
+    target: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+
+
+class KnowledgeSource(Base):
+    __tablename__ = "knowledge_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_id: Mapped[str] = mapped_column(ForeignKey("knowledge_entities.id"), nullable=False, index=True)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class KnowledgeMediaLink(Base):
+    __tablename__ = "knowledge_media_links"
+    __table_args__ = (
+        UniqueConstraint("entity_id", "kind", "target_id", name="uq_knowledge_media_link"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_id: Mapped[str] = mapped_column(ForeignKey("knowledge_entities.id"), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(Text, nullable=False)  # person | asset
+    # person.id oder asset.id, je nach kind — keine FK, weil die Ziel-Tabelle variiert
+    # (gleiches Muster wie ReviewItem.face_id).
+    target_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 class ReviewItem(Base):
     """Review queue for both duplicate candidates and face suggestions.
 
