@@ -51,6 +51,11 @@ class ReverseSearchSettings(TypedDict):
     min_score: float            # optionaler Ähnlichkeits-Floor (0.0 = aus)
 
 
+class RerankSettings(TypedDict):
+    enabled: bool               # DINOv2-Two-Stage-Rerank für Bild→Bild global an/aus (P37)
+    candidate_pool_size: int    # wie viele SigLIP2-Kandidaten in den DINOv2-Rerank gehen
+
+
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
@@ -88,6 +93,7 @@ class AppSettings(TypedDict):
     classification: ClassificationSettings
     mcp: McpSettings
     reverse_search: ReverseSearchSettings
+    rerank: RerankSettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -157,6 +163,10 @@ SETTINGS_DEFAULTS: AppSettings = {
         "max_upload_bytes": 15 * 1024 * 1024,
         "min_score": 0.0,
     },
+    "rerank": {
+        "enabled": True,
+        "candidate_pool_size": 100,
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -197,6 +207,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "classification": dict,
     "mcp": dict,
     "reverse_search": dict,
+    "rerank": dict,
 }
 
 

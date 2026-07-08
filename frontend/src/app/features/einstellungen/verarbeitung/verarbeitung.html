@@ -153,6 +153,40 @@
   </div>
 </div>
 
+<div class="verarbeitung__gruppen-label">Bildähnliche Suche</div>
+<div class="verarbeitung__gruppe">
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Nach Aussehen nachsortieren</div>
+      <div class="verarbeitung__zeile-sub">Bei „ähnliche Bilder finden" die Treffer zusätzlich danach ordnen, wie ähnlich sie aussehen — gleicher Bildaufbau, Perspektive, Farben, Stil landen oben. Braucht das zweite Bildmodell (DINOv2); ist es nicht aktiv, bleibt die normale Reihenfolge. Die Textsuche ist davon unberührt.</div>
+      @if (processingConfig().rerankEnabled) {
+        <div class="verarbeitung__slider-gruppe">
+          <span class="verarbeitung__slider-wert">Kandidaten zum Nachsortieren</span>
+          <input
+            class="verarbeitung__zahleneingabe"
+            type="number"
+            min="10"
+            max="500"
+            step="10"
+            [value]="processingConfig().rerankCandidatePoolSize"
+            (change)="onRerankPoolSizeChange($any($event.target))"
+          >
+        </div>
+        <div class="verarbeitung__zeile-sub">Wie viele der besten Treffer nachsortiert werden. Mehr = gründlicher, minimal langsamer. Default: 100</div>
+      }
+    </div>
+    <div class="verarbeitung__zeile-steuerung">
+      <button
+        class="verarbeitung__schalter"
+        [class.verarbeitung__schalter--an]="processingConfig().rerankEnabled"
+        role="switch"
+        [attr.aria-checked]="processingConfig().rerankEnabled"
+        (click)="onRerankEnabledToggle()"
+      ><i></i></button>
+    </div>
+  </div>
+</div>
+
 <div class="verarbeitung__gruppen-label">Detektion</div>
 <div class="verarbeitung__gruppe">
   <div class="verarbeitung__zeile verarbeitung__zeile--oben">

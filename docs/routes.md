@@ -621,6 +621,12 @@ interface SemanticSearchResponse { hits: SearchHit[]; }
 Treffer sind nach Cosine-Ähnlichkeit absteigend sortiert; soft-gelöschte Assets werden
 herausgefiltert, bei `like_asset_id` ist das Quell-Asset selbst ausgeschlossen.
 
+**DINOv2-Rerank (P37 Phase 3, ADR-024):** Der `like_asset_id`-Zweig sortiert seine SigLIP2-Treffer
+zusätzlich per DINOv2 nach visueller Erscheinung nach (`search/rerank.py`), wenn `rerank.enabled`
+und das Quell-Asset ein `dino_embedding` hat. Der `query`-(Text-)Zweig **nie** — DINOv2 kann keinen
+Text. Fällt sauber auf reines SigLIP2 zurück (Setting aus / kein DINOv2-Vektor). Volle Fallback-Matrix:
+ADR-024.
+
 Fehler-Codes (strukturiert im `detail`-Feld):
 - `422` — weder oder beide von `query`/`like_asset_id` gesetzt
 - `404` — `like_asset_id` existiert nicht
@@ -640,6 +646,11 @@ Fehler-Codes (strukturiert im `detail`-Feld):
 - `409 { code: "SEMANTIC_SEARCH_UNAVAILABLE" }` — kein Bild-Embedder aktiv
 
 `reverseSearch.minScore` (Default 0.0 = aus) filtert Treffer mit Cosine-Ähnlichkeit unter dem Floor heraus.
+
+**DINOv2-Rerank (P37 Phase 3, ADR-024):** Ist `rerank.enabled` und ein DINOv2-Modell aktiv, wird das
+Upload-Bild zusätzlich per `resolve_image_embedder(role="visual_rerank")` embedded und der Kandidaten-Pool
+nach visueller Erscheinung nachsortiert. Der `minScore`-Floor greift **vor** dem Rerank (SigLIP-Raum).
+Kein DINOv2-Modell → reines SigLIP2 (Fallback-Matrix: ADR-024).
 
 **Entschieden (2026-07-07, P36 Phase 3):** `GET /api/assets/{id}/similar` (Duplikaterkennung, siehe
 Abschnitt unten) zeigte in der Lightbox eine schwellenwert-basierte „Ähnliche Bilder"-Liste — die

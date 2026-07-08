@@ -53,10 +53,14 @@ Erkenntnisse während der Umsetzung, getaggt nach Phase. Format:
   ~8 Aufrufer + Migration 0007), DINOv2 als schlanke Fläche. `face_vector_index.py` bewusst **nicht** angefasst
   (anderer Rowid-Entity, außer Scope).
 
-- [ ] → Phase 3: **DINOv2-Lesepfad fehlt noch bewusst.** `vector_index.py` hat den parametrisierten `_search`-Kern,
+- [x] → Phase 3: **DINOv2-Lesepfad fehlt noch bewusst.** `vector_index.py` hat den parametrisierten `_search`-Kern,
   aber **kein** öffentliches `search_dino`/`rerank`-Zugang — YAGNI für Phase 2. Phase 3 baut die Rerank-Funktion
   `rerank_by_appearance(query_dino_vec, candidate_asset_ids)` (Kontrakt) und braucht dafür Lese-Zugriff auf
   `vec_asset_dino` bzw. `asset.dino_embedding`-BLOBs der Kandidaten — auf `_search` bzw. direktem BLOB-Load aufsetzen.
+  *(Erledigt: `vector_index.load_dino_embeddings` liest die Kandidaten-Vektoren **direkt aus den
+  `asset.dino_embedding`-BLOBs** — nicht über `_search`, weil der Rerank Vektoren **nach id** holt, nicht per
+  Nearest-Neighbour. Signatur bekam einen `session`-Parameter (mechanische DB-Handle-Notwendigkeit, kein
+  Kontrakt-Bruch) + `top_k`.)*
 
 - [ ] → Phase 4: **Dupe-Scan liegt heute auf SigLIP2.** `embedding_job._check_for_dupes` nutzt `vector_index.search`
   (SigLIP2) + `settings["dupe_clip_threshold"]`. Phase 4 stellt das auf DINOv2 (`vec_asset_dino`) + neuen

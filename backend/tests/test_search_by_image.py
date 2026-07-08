@@ -69,7 +69,12 @@ def _png_bytes() -> bytes:
 
 def _patch_reverse_search_settings(monkeypatch: pytest.MonkeyPatch, **overrides: float | int) -> None:
     settings = {**SETTINGS_DEFAULTS["reverse_search"], **overrides}
-    monkeypatch.setattr(search_api, "load_settings", lambda: {"reverse_search": settings})
+    # Rerank off in these P36 tests — they assert the plain SigLIP2 order. Two-stage
+    # re-ranking is covered separately in test_search_rerank.py.
+    rerank = {**SETTINGS_DEFAULTS["rerank"], "enabled": False}
+    monkeypatch.setattr(
+        search_api, "load_settings", lambda: {"reverse_search": settings, "rerank": rerank}
+    )
 
 
 class _FakeEmbedder:

@@ -26,9 +26,10 @@ from __future__ import annotations
 import contextlib
 import logging
 import sqlite3
+from collections.abc import Sequence
 
 import numpy as np
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
@@ -209,3 +210,27 @@ def upsert_dino_embedding(session: Session, asset_id: int, embedding: np.ndarray
 def delete_dino_embedding(session: Session, asset_id: int) -> None:
     """Remove the DINOv2 index row for *asset_id* if present (no commit)."""
     _delete(session, _DINO_TABLE, asset_id)
+
+
+def load_dino_embeddings(
+    session: Session, asset_ids: Sequence[int]
+) -> dict[int, np.ndarray]:
+    """Load the DINOv2 embedding vectors for *asset_ids* from `asset.dino_embedding`.
+
+    Returns a mapping asset_id -> 1-D float32 vector for the subset that actually
+    has a DINOv2 embedding — assets without one (a valid state, ADR-024) are simply
+    absent from the result. Reads the canonical BLOB column directly (not the vec0
+    index), because the rerank fetches vectors *by id*, not by nearest-neighbour.
+    """
+    if not asset_ids:
+        return {}
+    statement = text(
+        "SELECT id, dino_embedding FROM asset "
+        "WHERE id IN :ids AND dino_embedding IS NOT NULL"
+    ).bindparams(bindparam("ids", expanding=True))
+    rows = session.execute(statement, {"ids": list(asset_ids)}).fetchall()
+    return {
+        int(asset_id): np.frombuffer(blob, dtype=np.float32)
+        for asset_id, blob in rows
+        if blob is not None
+    }

@@ -114,6 +114,17 @@ export class Verarbeitung {
     this.patchProcessingConfig({ dupeClipEnabled: !this.processingConfig().dupeClipEnabled });
   }
 
+  onRerankEnabledToggle(): void {
+    this.patchProcessingConfig({ rerankEnabled: !this.processingConfig().rerankEnabled });
+  }
+
+  onRerankPoolSizeChange(target: HTMLInputElement): void {
+    const raw = parseInt(target.value, 10);
+    const clamped = Math.min(500, Math.max(10, isNaN(raw) ? 100 : raw));
+    target.value = String(clamped);
+    this.patchProcessingConfig({ rerankCandidatePoolSize: clamped });
+  }
+
   onDupeClipThresholdInput(target: HTMLInputElement): void {
     const pct = parseInt(target.value, 10);
     this.dupeClipThresholdDisplay.set((100 - pct) / 100);

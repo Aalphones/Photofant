@@ -1,11 +1,13 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-07_p37-dinov2-reranking/`
-**Phase:** 3/4 — Two-Stage Re-Ranking in der Bild→Bild-Suche (pending)
-**Nächster Schritt:** Phase 3 starten — Rerank-Funktion `rerank_by_appearance(query_dino_vec, candidate_asset_ids)`
-+ Einhängen in `like_asset_id` (`api/search.py`) und `POST /api/search/by-image` (P36). Degradation bei
-Text-Query / fehlendem DINOv2-Modell / `rerank.enabled=false`. Kontext in `phase-3-two-stage-reranking.md` +
-FINDINGS-Einträge → Phase 3 (DINOv2-Lesepfad ist bewusst noch offen, `_search`-Kern in `vector_index.py` steht).
+**Phase:** 4/4 — Dupe-Scan auf DINOv2 + Schwellwert-Rekalibrierung (pending)
+**Nächster Schritt:** Phase 4 starten — `embedding_job._check_for_dupes` von SigLIP2 (`vector_index.search` +
+`dupe_clip_threshold`) auf DINOv2 (`vec_asset_dino` + neuer `dupe_dino_threshold`) umstellen; alter
+`dupe_clip_threshold` bleibt inert für Rollback. Kontext in `phase-4-dupe-scan.md` + FINDINGS-Eintrag → Phase 4
+(`delete_dino_embedding` ist schon im Purge-Pfad verdrahtet). Komplexität: standard → `sonnet` reicht.
+
+_Phase 3 abgeschlossen (2026-07-08): DINOv2-Rerank in beide Bild→Bild-Pfade verdrahtet, 15 Tests grün._
 
 ---
 

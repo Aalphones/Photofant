@@ -11,7 +11,10 @@ import { jobsActions } from '../jobs/jobs.actions';
 import { modelsActions } from './models.actions';
 import { modelsSelectors } from './models.selectors';
 
-const PROCESSING_CONFIG_KEY_MAP: Record<keyof ProcessingConfig, string> = {
+// Flat top-level settings keys. The nested `rerank` group (rerankEnabled /
+// rerankCandidatePoolSize) is mapped separately below — it lives under a `rerank`
+// object in settings.json, not as a flat key.
+const PROCESSING_CONFIG_KEY_MAP: Partial<Record<keyof ProcessingConfig, string>> = {
   autoTag:              'auto_tag',
   autoCaption:          'auto_caption',
   autoEmbed:            'auto_embed',
@@ -32,6 +35,7 @@ const PROCESSING_CONFIG_KEY_MAP: Record<keyof ProcessingConfig, string> = {
 };
 
 function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfig {
+  const rerank = (data['rerank'] ?? {}) as Record<string, unknown>;
   return {
     autoTag:              Boolean(data['auto_tag']                  ?? PROCESSING_CONFIG_DEFAULTS.autoTag),
     autoCaption:          Boolean(data['auto_caption']              ?? PROCESSING_CONFIG_DEFAULTS.autoCaption),
@@ -42,6 +46,8 @@ function extractProcessingConfig(data: Record<string, unknown>): ProcessingConfi
     blurThreshold:        Number(data['blur_threshold']             ?? PROCESSING_CONFIG_DEFAULTS.blurThreshold),
     dupeClipEnabled:      Boolean(data['dupe_clip_enabled']         ?? PROCESSING_CONFIG_DEFAULTS.dupeClipEnabled),
     dupeClipThreshold:    Number(data['dupe_clip_threshold']        ?? PROCESSING_CONFIG_DEFAULTS.dupeClipThreshold),
+    rerankEnabled:            Boolean(rerank['enabled']              ?? PROCESSING_CONFIG_DEFAULTS.rerankEnabled),
+    rerankCandidatePoolSize:  Number(rerank['candidate_pool_size']   ?? PROCESSING_CONFIG_DEFAULTS.rerankCandidatePoolSize),
     faceDetConfThreshold: Number(data['face_det_conf_threshold']    ?? PROCESSING_CONFIG_DEFAULTS.faceDetConfThreshold),
     faceDetIouThreshold:  Number(data['face_det_iou_threshold']     ?? PROCESSING_CONFIG_DEFAULTS.faceDetIouThreshold),
     faceCropPadding:      Number(data['face_crop_padding']          ?? PROCESSING_CONFIG_DEFAULTS.faceCropPadding),
@@ -143,6 +149,14 @@ export class ModelsEffects {
           const apiKey = PROCESSING_CONFIG_KEY_MAP[key as keyof ProcessingConfig];
           if (apiKey !== undefined) { apiPatch[apiKey] = value; }
         }
+        // Nested rerank group — a partial patch deep-merges server-side, so sending
+        // only the changed sub-key preserves the other.
+        const rerankPatch: Record<string, unknown> = {};
+        if (patch.rerankEnabled !== undefined) { rerankPatch['enabled'] = patch.rerankEnabled; }
+        if (patch.rerankCandidatePoolSize !== undefined) {
+          rerankPatch['candidate_pool_size'] = patch.rerankCandidatePoolSize;
+        }
+        if (Object.keys(rerankPatch).length > 0) { apiPatch['rerank'] = rerankPatch; }
         return this.modelService.patchConfig(apiPatch).pipe(
           map((response) => modelsActions.updateProcessingConfigSuccess({
             processingConfig: extractProcessingConfig(response.data),
