@@ -122,7 +122,7 @@ export interface RepairResponse {
   import_job_id: string | null;
 }
 
-export const REBUILD_TARGETS = ['thumbnails', 'embeddings', 'faces'] as const;
+export const REBUILD_TARGETS = ['thumbnails', 'embeddings', 'faces', 'knowledge', 'knowledge_reconcile'] as const;
 export type RebuildTarget = typeof REBUILD_TARGETS[number];
 
 export interface MaintenanceStatus {

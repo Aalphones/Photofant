@@ -50,15 +50,15 @@ Entity-Frontmatter (verbindlich, Dok 020 §5): `id` (`<type>/<slug>`, unverände
 | 1 | Vault + Entity-Schema + Parser | heikel | ✅ complete |
 | 2 | SQLite-Cache + Repositories | standard | ✅ complete |
 | 3 | KnowledgeService + REST-API | standard | ✅ complete |
-| 4 | Rebuild-Job + Vault↔Cache-Reconcile | standard | pending |
+| 4 | Rebuild-Job + Vault↔Cache-Reconcile | standard | ✅ complete |
 
 Strikt sequenziell (jede Phase konsumiert die vorige).
 
 ## Finale AK (Gesamt)
-- [ ] Entity als Markdown anlegen, per REST lesen/suchen/ändern/löschen — Änderung immer Markdown-first, dann Cache.
-- [ ] Cache komplett löschbar und aus dem Vault identisch neu aufbaubar.
-- [ ] Schreibzugriff mit niedrigerer Owner-Priorität überschreibt keinen höheren Wert.
-- [ ] Beispiel-Domäne „Movies" definiert Typen; Engine-Code enthält keine Domänen-Typen hart.
+- [x] Entity als Markdown anlegen, per REST lesen/suchen/ändern/löschen — Änderung immer Markdown-first, dann Cache. *(Phase 3: `KnowledgeService` + `api/knowledge.py`.)*
+- [x] Cache komplett löschbar und aus dem Vault identisch neu aufbaubar. *(Phase 4: `rebuild_cache` — `clear_all()` + Reimport; per Test `test_rebuild_from_cleared_cache_restores_entities` verifiziert.)*
+- [x] Schreibzugriff mit niedrigerer Owner-Priorität überschreibt keinen höheren Wert. *(Phase 3: `owner_can_overwrite`, entity-weit.)*
+- [x] Beispiel-Domäne „Movies" definiert Typen; Engine-Code enthält keine Domänen-Typen hart. *(Phase 1: `domains.py` + `domains/movies.yaml`.)*
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende)
 1. `curl POST /api/knowledge/entities` mit Beispiel-Entity → Datei liegt unter `knowledge/actors/…md`.
@@ -76,5 +76,22 @@ Berührt additiv: `jobs/queue.py` (neue Job-Typen), `db/models.py`+Alembic, `mai
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_
-- Follow-up: Markdown-Embeddings / semantische Wissenssuche · Relationship-Metadaten falls P26 es braucht.
+
+**Summary:** Generische Markdown-Wissensbasis steht — Vault (Markdown = Wahrheit) + SQLite-Cache
+(jederzeit neu aufbaubar) + `KnowledgeService` (einzige Mutationsschicht, Markdown-first, Ownership) +
+REST `api/knowledge.py`. Domänen als Config (Beispiel „Movies"), keine Typen im Engine-Code. Cache
+lässt sich in der Wartung neu aufbauen (rebuild) und mit dem Vault abgleichen (reconcile).
+
+**Files touched (Phase 4):** `knowledge/maintenance.py` (neu, testbarer Kern) · `knowledge/vault.py`
+(`iter_entity_files`/`load_all`) · `knowledge/repository.py` (`clear_all`/`all`) · `jobs/rebuild_job.py`
+(`RebuildTarget` +`knowledge`/`knowledge_reconcile`, `_sync_knowledge`) · `frontend .../models/maintenance.model.ts`
+(`REBUILD_TARGETS`) · `frontend .../features/wartung/wartung.ts` (Karte „Wissensbasis", 2 Buttons) ·
+`tests/test_knowledge_maintenance.py` (6 Tests) · Docs `code-map.md`/`routes.md`.
+
+**Deviations:** (1) Cache-Wartung an den bestehenden Rebuild-Mechanismus gehängt statt eigener
+`jobs/knowledge_*_job.py` (Plan erlaubte die Wahl; reservierter Name bleibt frei für P27-Intelligenz-Jobs).
+(2) Reconcile ohne mtime-Vergleich (voller Re-Import; Cache hat keine Zeitstempel-Spalte). Beides in
+FINDINGS begründet.
+
+**Follow-ups:** Markdown-Embeddings / semantische Wissenssuche (bewusst nach hinten) · Relationship-Metadaten
+falls P26 es braucht · inkrementeller Reconcile mit `synced_at`-Spalte erst wenn der Vault groß wird.

@@ -231,7 +231,7 @@ interface InfoResponse {
 | `/wartung` (reconcile trigger) | `POST` | `/api/maintenance/reconcile` | — | `{ job_id: string }` — RECONCILE-Job in Queue |
 | `/wartung` (reconcile report) | `GET` | `/api/maintenance/reconcile/report` | — | `ReconcileReport` (leerer Report wenn noch kein Scan) |
 | `/wartung` (reconcile repair) | `POST` | `/api/maintenance/reconcile/repair` | `{ actions: RepairAction[] }` | `RepairResponse` |
-| `/wartung` (rebuild trigger) | `POST` | `/api/maintenance/rebuild` | `{ target: 'thumbnails' }` | `{ job_id: string }` — REBUILD-Job in Queue (löscht Cache, baut neu auf) |
+| `/wartung` (rebuild trigger) | `POST` | `/api/maintenance/rebuild` | `{ target: RebuildTarget }` | `{ job_id: string }` — REBUILD-Job in Queue (löscht Cache, baut neu auf; `knowledge`/`knowledge_reconcile` synchronisieren den Wissens-Cache aus dem Vault) |
 | `/wartung` (thumbnail rebuild additive) | `POST` | `/api/maintenance/rebuild-thumbnails` | — | `{ job_id: string }` — THUMBNAIL_REBUILD-Job; 409 wenn bereits läuft |
 | `/wartung` (status) | `GET` | `/api/maintenance/status` | — | `MaintenanceStatus` |
 
@@ -263,8 +263,10 @@ interface BackupInfo {
   created_at: string;  // ISO-8601
 }
 
-type RebuildTarget = 'thumbnails' | 'embeddings' | 'faces';
+type RebuildTarget = 'thumbnails' | 'embeddings' | 'faces' | 'knowledge' | 'knowledge_reconcile';
 // faces: re-extrahiert abgeleitete Face-Crops (origin != manual_original) aus Quell-Bildern
+// knowledge: leert den Wissens-Cache (knowledge_*) und baut ihn komplett aus dem Markdown-Vault neu
+// knowledge_reconcile: gleicht den Cache an den Vault ab (Markdown gewinnt, verwaiste Cache-Zeilen weg), ohne Nuke
 
 interface MaintenanceStatus {
   db_size: number;          // db.sqlite Größe in Bytes

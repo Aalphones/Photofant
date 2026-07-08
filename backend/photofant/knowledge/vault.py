@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 
 from photofant.knowledge.domains import Domain, load_domain
@@ -49,6 +50,30 @@ class Vault:
 
     def load_entity(self, path: Path) -> Entity:
         return parse_entity(path.read_text(encoding="utf-8"))
+
+    def iter_entity_files(self) -> Iterator[Path]:
+        """Alle Entity-Markdown-Dateien im Vault (für Rebuild/Reconcile).
+
+        Läuft rekursiv über die Typ-Ordner und überspringt die Nicht-Entity-Bereiche
+        ``domains/`` (YAML) und ``prompts/`` (später P27) — dort liegende ``.md``
+        sind keine Entities. Reihenfolge ist die von ``rglob`` (nicht sortiert);
+        der Aufrufer verlässt sich nicht darauf.
+        """
+        for path in self.root.rglob("*.md"):
+            top_level = path.relative_to(self.root).parts[0]
+            if top_level in {_DOMAINS_DIRNAME, _PROMPTS_DIRNAME}:
+                continue
+            yield path
+
+    def load_all(self) -> Iterator[tuple[Path, Entity]]:
+        """(Pfad, Entity) für jede Entity-Datei — reines I/O, keine Validierung.
+
+        Ein defektes Frontmatter lässt ``load_entity`` werfen; der Aufrufer (Rebuild/
+        Reconcile) fängt das pro Datei ab, damit eine kaputte Notiz nicht den ganzen
+        Lauf abbricht.
+        """
+        for path in self.iter_entity_files():
+            yield path, self.load_entity(path)
 
     def save_entity(self, entity: Entity, domain: Domain) -> Path:
         """Schreibt eine Entity als Markdown und gibt den Pfad zurück.

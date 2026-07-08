@@ -10,12 +10,14 @@ from photofant.jobs.thumbnail_job import gather_active_items, generate_thumbnail
 
 log = logging.getLogger(__name__)
 
-RebuildTarget = Literal["thumbnails", "embeddings", "faces"]
+RebuildTarget = Literal["thumbnails", "embeddings", "faces", "knowledge", "knowledge_reconcile"]
 
 _TARGET_LABELS: dict[str, str] = {
     "thumbnails": "Thumbnails neu aufbauen",
     "embeddings": "Vektor-Index neu aufbauen",
     "faces": "Face-Crops neu extrahieren",
+    "knowledge": "Wissens-Cache neu aufbauen",
+    "knowledge_reconcile": "Notiz-Änderungen übernehmen",
 }
 
 
@@ -129,6 +131,34 @@ async def _rebuild_faces(status: JobStatus) -> None:
     log.info("Face rebuild complete: %d crops re-extracted", count)
 
 
+async def _sync_knowledge(status: JobStatus, mode: Literal["rebuild", "reconcile"]) -> None:
+    """Rebuild or reconcile the knowledge cache from the markdown vault (async wrapper).
+
+    The heavy lifting is the pure sync core in ``knowledge/maintenance.py``; here we only
+    open the vault, run it off the event loop and commit. Markdown is the truth, the cache
+    is fully rebuildable from it (P22 contract).
+    """
+    import asyncio
+
+    from photofant.knowledge.maintenance import rebuild_cache, reconcile_cache
+    from photofant.knowledge.vault import open_vault
+
+    job_queue.update(status, progress=0.1, state=JobState.RUNNING)
+
+    def _do_sync() -> str:
+        vault = open_vault()
+        with SessionLocal() as session:
+            if mode == "rebuild":
+                result = rebuild_cache(session, vault)
+            else:
+                result = reconcile_cache(session, vault)
+            session.commit()
+        return f"{result.imported} imported, {result.removed} removed, {result.failed} failed"
+
+    summary = await asyncio.to_thread(_do_sync)
+    log.info("Knowledge %s complete: %s", mode, summary)
+
+
 async def run_rebuild_job(status: JobStatus, target: RebuildTarget) -> None:
     if target == "thumbnails":
         await _rebuild_thumbnails(status)
@@ -136,6 +166,10 @@ async def run_rebuild_job(status: JobStatus, target: RebuildTarget) -> None:
         await _rebuild_embeddings(status)
     elif target == "faces":
         await _rebuild_faces(status)
+    elif target == "knowledge":
+        await _sync_knowledge(status, "rebuild")
+    elif target == "knowledge_reconcile":
+        await _sync_knowledge(status, "reconcile")
     else:  # pragma: no cover - guarded by the API Literal
         raise ValueError(f"unknown rebuild target '{target}'")
 

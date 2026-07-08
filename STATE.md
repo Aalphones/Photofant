@@ -1,15 +1,28 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-01_p22-knowledge-engine/`
-**Phase:** 4/4 — Rebuild-Job + Vault↔Cache-Reconcile (standard, noch nicht begonnen)
-**Nächster Schritt:** Phase 4 von P22 — `jobs/knowledge_rebuild_job.py` + `jobs/knowledge_reconcile_job.py`
-(oder Integration in bestehendes `reconcile_job.py`, Bearbeiter entscheidet + begründet), Registrierung
-in `jobs/queue.py`, Wartungs-Trigger in `features/wartung/` mit i-Erklärung. Kontext in
-`phase-4-rebuild-reconcile.md` + README-Kontrakt + Risiko „Vault↔Cache-Drift". Offene Finding aus
-Phase 2 vorab lesen: `vault.py` hat noch **keinen Entity-Iterator** — für den Rebuild fehlt
-`iter_entity_files()`/`load_all()` (bewusst nicht auf Vorrat gebaut, YAGNI), muss hier ergänzt
-werden; Typ→Ordner-Zuordnung kommt aus `domain.folder_for()`. Nach Phase 4: finale AK + die
-4-Punkte-Smoke-Checkliste der README gegenprüfen (P22 komplett) und archivieren.
+**Aktiver Plan:** `docs/planning/2026-07-01_p22-knowledge-engine/` — **alle 4 Phasen complete**
+**Phase:** 4/4 — Rebuild-Job + Vault↔Cache-Reconcile (✅ complete)
+**Nächster Schritt:** Smoke-Checkliste durch den User (siehe unten), dann P22 archivieren
+(`git mv docs/planning/2026-07-01_p22-knowledge-engine → docs/archive/2026-07/`) und STATE auf den
+nächsten Backlog-Plan zeigen lassen (Kandidaten: P23 Wizard, P24 Integration, P25 Lore, P26 Empfehlungen,
+P27 Gemma, P34 MCP).
+
+**Smoke-Checkliste (User prüft, P22 gesamt):**
+1. `curl POST /api/knowledge/entities` mit Beispiel-Entity → Datei liegt unter `knowledge/actors/…md`.
+2. `curl GET .../search?q=RDJ` findet sie über den Alias.
+3. Wartung → „Wissens-Schnellsuche neu aufbauen" → Suche findet die Entity wieder (Rebuild aus Vault).
+   Ebenso „Notiz-Änderungen übernehmen" (Reconcile) nach einem Hand-Edit einer .md.
+4. `PATCH` mit `owner=inferred` auf ein user-Feld → wird abgelehnt (409/403).
+
+**Phase 4 abgeschlossen (2026-07-08):** Rebuild + Vault↔Cache-Reconcile. `knowledge/maintenance.py`
+(`rebuild_cache` = `clear_all()` + Reimport; `reconcile_cache` = Reimport, Markdown gewinnt, +
+Entfernung von Cache-Zeilen ohne Vault-*Datei* — Existenzprüfung, nicht Import-Erfolg, damit ein
+Frontmatter-Tippfehler keinen Datenverlust auslöst). `vault.py` +`iter_entity_files`/`load_all`,
+`repository.py` +`clear_all`/`all`. **Entscheidung (Plan überließ sie mir):** an bestehenden Rebuild
+gehängt statt eigener `jobs/knowledge_*_job.py` — `RebuildTarget` +`knowledge`/`knowledge_reconcile`,
+Frontend nutzt den `triggerRebuild`-Strang (null neue NgRx), Wartungs-Karte „Wissensbasis" mit 2 Buttons.
+🟡 Reconcile ohne mtime (voller Re-Import; kein Zeitstempel im Cache). 6 neue pytest-Tests grün,
+ruff/mypy auf angefassten Dateien grün, tsc grün. Docs (code-map, routes, README, FINDINGS) nachgezogen.
 
 **Phase 3 abgeschlossen (2026-07-08):** KnowledgeService + REST-API. `knowledge/service.py`
 (`KnowledgeService` — einzige Mutationsschicht, Markdown-first: erst Vault, dann Cache-Upsert;

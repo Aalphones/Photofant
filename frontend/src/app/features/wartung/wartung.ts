@@ -152,6 +152,63 @@ import { maintenanceActions, maintenanceSelectors, personsActions, personsSelect
         </div>
       </section>
 
+      <!-- Wissensbasis -->
+      <section class="section">
+        <h2 class="section-heading">Wissensbasis</h2>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <div class="card-label">Notiz-Änderungen übernehmen</div>
+              <div class="card-desc">
+                Liest deine Wissens-Notizen (Markdown) neu ein und bringt die
+                Schnellsuche auf Stand — von Hand geänderte Notizen werden übernommen,
+                Einträge zu gelöschten Notizen verschwinden. Die Notizen selbst bleiben
+                unangetastet, sie sind die Quelle.
+              </div>
+            </div>
+            <button
+              class="btn-primary"
+              [disabled]="rebuildingTarget() !== null"
+              (click)="reconcileKnowledge()"
+            >
+              @if (rebuildingTarget() === 'knowledge_reconcile') {
+                <span class="spinner"></span>
+                Läuft…
+              } @else {
+                Änderungen übernehmen
+              }
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <div class="card-label">Wissens-Schnellsuche neu aufbauen</div>
+              <div class="card-desc">
+                Verwirft die Schnellsuche-Tabelle komplett und baut sie ganz aus deinen
+                Notizen neu auf. Für den Fall, dass die Suche einmal nicht mehr zu den
+                Notizen passt. Gefahrlos — die Notizen sind die Wahrheit, hier entsteht
+                nur ihr Index neu.
+              </div>
+            </div>
+            <button
+              class="btn-primary"
+              [disabled]="rebuildingTarget() !== null"
+              (click)="rebuildKnowledge()"
+            >
+              @if (rebuildingTarget() === 'knowledge') {
+                <span class="spinner"></span>
+                Läuft…
+              } @else {
+                Neu aufbauen
+              }
+            </button>
+          </div>
+        </div>
+      </section>
+
       <!-- Personen -->
       <section class="section">
         <h2 class="section-heading">Personen</h2>
@@ -581,6 +638,14 @@ export class Wartung {
 
   rebuildThumbnails(): void {
     this.store.dispatch(maintenanceActions.triggerRebuild({ target: 'thumbnails' }));
+  }
+
+  rebuildKnowledge(): void {
+    this.store.dispatch(maintenanceActions.triggerRebuild({ target: 'knowledge' }));
+  }
+
+  reconcileKnowledge(): void {
+    this.store.dispatch(maintenanceActions.triggerRebuild({ target: 'knowledge_reconcile' }));
   }
 
   triggerReembedAll(): void {

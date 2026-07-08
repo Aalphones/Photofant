@@ -7,7 +7,7 @@ Cache ist jederzeit aus dem Vault identisch neu aufbaubar (Kontrakt-AK).
 """
 from __future__ import annotations
 
-from sqlalchemy import Text, cast, or_
+from sqlalchemy import Text, cast, or_, select
 from sqlalchemy.orm import Session
 
 from photofant.db.models import (
@@ -69,6 +69,23 @@ class EntityRepository:
 
     def get(self, entity_id: str) -> KnowledgeEntity | None:
         return self.session.get(KnowledgeEntity, entity_id)
+
+    def all(self) -> list[KnowledgeEntity]:
+        """Alle Cache-Zeilen — Basis für den Reconcile-Abgleich (Zeilen ohne Vault-Datei
+        aufspüren)."""
+        return list(self.session.execute(select(KnowledgeEntity)).scalars())
+
+    def clear_all(self) -> None:
+        """Leert alle ``knowledge_*``-Cache-Tabellen (Kind→Eltern-Reihenfolge).
+
+        Für den vollständigen Rebuild aus dem Vault. Expliziter Cascade in Python, da
+        SQLite-FK-Enforcement in dieser App aus ist (siehe ``db/engine.py``) — dasselbe
+        Muster wie ``delete``, nur über den gesamten Namespace statt einer Entity.
+        """
+        self.session.query(KnowledgeRelationship).delete()
+        self.session.query(KnowledgeSource).delete()
+        self.session.query(KnowledgeMediaLink).delete()
+        self.session.query(KnowledgeEntity).delete()
 
     def find_by_alias(self, alias: str) -> list[KnowledgeEntity]:
         """Entities, deren Alias-Liste ``alias`` exakt enthält.
