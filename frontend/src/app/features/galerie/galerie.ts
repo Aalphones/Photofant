@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { collectionsActions, collectionsSelectors, comfyuiActions, comfyuiSelectors, filtersActions, filtersSelectors, galleryActions, gallerySelectors, jobsActions, personsActions, personsSelectors, presetsActions, presetsSelectors, reviewActions, tagsActions } from '@photofant/store';
 import type { AssetDto } from '@photofant/models';
-import { AssetService, ClassifyService, ComfyUIService, PersonService } from '@photofant/services';
+import { AssetService, ClassifyService, ComfyUIService, PersonService, RunDraftService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { FaceGrid } from './face-grid/face-grid';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
@@ -31,6 +31,7 @@ export class Galerie {
   private readonly assetService    = inject(AssetService);
   private readonly comfyuiService  = inject(ComfyUIService);
   private readonly personService   = inject(PersonService);
+  private readonly runDraft        = inject(RunDraftService);
   private readonly destroyRef      = inject(DestroyRef);
 
   protected readonly density       = this.store.selectSignal(filtersSelectors.density);
@@ -82,14 +83,16 @@ export class Galerie {
   protected readonly activeWorkflows   = this.store.selectSignal(comfyuiSelectors.selectActiveWorkflows);
   protected readonly comfyConfig       = this.store.selectSignal(comfyuiSelectors.selectConfig);
   protected readonly workflowMode      = signal(false);
-  protected readonly activeWorkflowId  = signal<string | null>(null);
-  protected readonly slotBindings         = signal<Record<string, number | number[]>>({});
-  protected readonly faceSlotBindings     = signal<Record<string, number | number[]>>({});
-  protected readonly versionSlotBindings  = signal<Record<string, number | number[]>>({});
-  protected readonly toggleBindings       = signal<Record<string, boolean>>({});
+  // Der Entwurf lebt tab-übergreifend im RunDraftService; hier nur lesend gespiegelt.
+  protected readonly activeWorkflowId     = this.runDraft.workflowId.asReadonly();
+  protected readonly slotBindings         = this.runDraft.slotBindings.asReadonly();
+  protected readonly faceSlotBindings     = this.runDraft.faceSlotBindings.asReadonly();
+  protected readonly versionSlotBindings  = this.runDraft.versionSlotBindings.asReadonly();
+  protected readonly toggleBindings       = this.runDraft.toggleBindings.asReadonly();
+  protected readonly batchAxisKey         = this.runDraft.batchAxisKey.asReadonly();
   protected readonly assetHashMap      = this.store.selectSignal(gallerySelectors.selectHashMap);
+  // „Scharfer" Slot bleibt bewusst lokal — jeder Tab bewaffnet für sich, geteilt sind nur Belegungen.
   protected readonly armedSlotKey      = signal<string | null>(null);
-  protected readonly batchAxisKey      = signal<string | null>(null);
   protected readonly isFiring          = signal(false);
   protected readonly runToast          = signal<string | null>(null);
   private runToastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -209,11 +212,7 @@ export class Galerie {
     const armedKey = this.armedSlotKey();
     if (armedKey === null) { return; }
     // Gesicht direkt binden — unabhängig davon ob ein Quell-Asset existiert
-    const currentAssetBindings = { ...this.slotBindings() };
-    delete currentAssetBindings[armedKey];
-    this.slotBindings.set(currentAssetBindings);
-    if (this.batchAxisKey() === armedKey) { this.batchAxisKey.set(null); }
-    this.faceSlotBindings.set({ ...this.faceSlotBindings(), [armedKey]: event.faceId });
+    this.runDraft.bindFace(armedKey, event.faceId);
     this.armedSlotKey.set(null);
   }
 
@@ -407,22 +406,13 @@ export class Galerie {
   }
 
   protected onWorkflowChanged(workflowKey: string | null): void {
-    const hasBindings =
-      Object.keys(this.slotBindings()).length > 0 ||
-      Object.keys(this.faceSlotBindings()).length > 0 ||
-      Object.keys(this.versionSlotBindings()).length > 0;
-    if (hasBindings && workflowKey !== this.activeWorkflowId()) {
+    if (this.runDraft.hasBindings() && workflowKey !== this.activeWorkflowId()) {
       if (!window.confirm('Workflow wechseln? Alle aktuellen Bindungen werden gelöscht.')) {
         return;
       }
     }
-    this.activeWorkflowId.set(workflowKey);
-    this.slotBindings.set({});
-    this.faceSlotBindings.set({});
-    this.versionSlotBindings.set({});
-    this.toggleBindings.set({});
+    this.runDraft.setWorkflow(workflowKey);
     this.armedSlotKey.set(null);
-    this.batchAxisKey.set(null);
   }
 
   protected onSlotArmed(slotKey: string | null): void {
@@ -431,21 +421,12 @@ export class Galerie {
 
   /** Galerie-Klick wenn ein Slot scharf: Einzelbild binden + entschärfen */
   protected onBindAsset(event: { id: number; versionId: number | null }): void {
-    const assetId = event.id;
     const armedKey = this.armedSlotKey();
     if (armedKey === null) {
       this.onOpenAsset(event);
       return;
     }
-    // Gesicht-Bindung für diesen Slot löschen (Asset überschreibt Gesicht)
-    const currentFaceBindings = { ...this.faceSlotBindings() };
-    delete currentFaceBindings[armedKey];
-    this.faceSlotBindings.set(currentFaceBindings);
-
-    const currentBindings = this.slotBindings();
-    const updatedBindings = { ...currentBindings, [armedKey]: assetId };
-    if (this.batchAxisKey() === armedKey) { this.batchAxisKey.set(null); }
-    this.slotBindings.set(updatedBindings);
+    this.runDraft.bindAsset(armedKey, event.id);
     this.armedSlotKey.set(null);
   }
 
@@ -453,41 +434,12 @@ export class Galerie {
   protected onBatchBindAsset(assetId: number): void {
     const armedKey = this.armedSlotKey();
     if (armedKey === null) { return; }
-
-    // Gesicht-Bindung für diesen Slot löschen (Asset überschreibt Gesicht)
-    const currentFaceBindings = { ...this.faceSlotBindings() };
-    delete currentFaceBindings[armedKey];
-    this.faceSlotBindings.set(currentFaceBindings);
-
-    const currentBindings = this.slotBindings();
-    const existing = currentBindings[armedKey];
-    const existingArray = Array.isArray(existing)
-      ? existing
-      : existing != null ? [existing] : [];
-
-    if (existingArray.includes(assetId)) { return; }
-
-    const updatedArray = [...existingArray, assetId];
-
-    // Batch-Achse verschieben wenn nötig (zweiter Slot bekommt Multi-Select)
-    const previousBatchKey = this.batchAxisKey();
-    if (previousBatchKey !== null && previousBatchKey !== armedKey) {
-      const oldBatch = currentBindings[previousBatchKey];
-      const oldFirst = Array.isArray(oldBatch) ? oldBatch[0] : oldBatch;
-      this.slotBindings.set({
-        ...currentBindings,
-        [previousBatchKey]: oldFirst ?? 0,
-        [armedKey]: updatedArray,
-      });
-      this.showBatchAxisHint();
-    } else {
-      this.slotBindings.set({ ...currentBindings, [armedKey]: updatedArray });
-    }
-    this.batchAxisKey.set(armedKey);
+    const result = this.runDraft.batchBindAsset(armedKey, assetId);
+    if (result.batchAxisShifted) { this.showBatchAxisHint(); }
   }
 
   protected onToggleChanged(event: { key: string; value: boolean }): void {
-    this.toggleBindings.update((current) => ({ ...current, [event.key]: event.value }));
+    this.runDraft.setToggle(event.key, event.value);
   }
 
   protected onRunFire(payload: RunFirePayload): void {
@@ -516,15 +468,11 @@ export class Galerie {
     });
   }
 
+  // Run-Leiste zuklappen versteckt nur lokal — der geteilte Entwurf bleibt erhalten,
+  // sonst würde Zuklappen in einem Tab die Arbeit in allen anderen Tabs wegwischen.
   protected resetWorkflowMode(): void {
     this.workflowMode.set(false);
-    this.activeWorkflowId.set(null);
-    this.slotBindings.set({});
-    this.faceSlotBindings.set({});
-    this.versionSlotBindings.set({});
-    this.toggleBindings.set({});
     this.armedSlotKey.set(null);
-    this.batchAxisKey.set(null);
   }
 
   private showRunToast(message: string): void {
