@@ -1,13 +1,15 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
+**Aktiver Plan:** `docs/planning/2026-07-01_p22-knowledge-engine/`
+**Phase:** 1/4 — Vault + Entity-Schema + Parser (heikel, noch nicht begonnen)
 **Stand:** P37 (DINOv2-Reranking + Duplikat-Scan) am 2026-07-08 abgeschlossen und nach
 `docs/archive/2026-07/2026-07-07_p37-dinov2-reranking/` verschoben — alle 4 Phasen ✅, siehe README
-dort für Summary/Deviations/Follow-ups.
-**Nächster Schritt:** Laut User-Vorgabe (2026-07-07) ist `p22-knowledge-engine` als nächstes dran
-(Nummernreihenfolge bis `p26-recommendation-engine` → `2026-07-06_p34-mcp-wissensbasis` →
-`2026-07-01_p27-gemma-integration`). **Noch kein Plan-Dokument angelegt** — `docs/planning/` ist
-aktuell leer; nächster Schritt ist `/plan` für `p22-knowledge-engine`, sobald daran gearbeitet wird.
+dort für Summary/Deviations/Follow-ups. Plan ist bereits vollständig ausgearbeitet (4 Phasen,
+Kontrakt für P23–P27 fixiert) — Korrektur: ein früherer Blick auf `docs/planning/` in dieser Session
+hatte fälschlich „leer" ergeben; die P22–P27- und P34-Plan-Ordner lagen die ganze Zeit da.
+**Nächster Schritt:** Phase 1 von P22 — Vault-Layout (`knowledge/<type-plural>/<entity-slug>.md`),
+Entity-Frontmatter-Parser/Serializer/Validator. Kontext in `phase-1-vault-schema.md` + README-Kontrakt
+(Single Source für P23–P27, Änderungen dort = Vertragsbruch). Komplexität: heikel.
 
 **Offene Follow-ups (🟡, nicht blockierend):**
 - Text-Semantiksuche-Umschalter smoke-testen — Checkliste in
