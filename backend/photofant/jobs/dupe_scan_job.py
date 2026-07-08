@@ -1,4 +1,9 @@
-"""On-Demand-Scan-Job for duplicate detection via CLIP embedding comparison."""
+"""On-Demand-Scan-Job for duplicate detection via DINOv2 embedding comparison (P37 Phase 4).
+
+Duplicate detection ran on CLIP/SigLIP2 through P36; ADR-024 moved the primary
+signal to DINOv2 (visual appearance, not semantic content, is what defines a
+duplicate). `dupe_clip_threshold` stays inert in settings for rollback.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -15,14 +20,14 @@ from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
 log = logging.getLogger(__name__)
 
-_COMPARISON_CHUNK_CLIP = 1000  # outer-loop rows per thread call for CLIP pairwise scan
+_COMPARISON_CHUNK_DINO = 1000  # outer-loop rows per thread call for the DINOv2 pairwise scan
 
 
 def _now_utc() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _compare_chunk_clip(
+def _compare_chunk_dino(
     asset_embeddings: list[tuple[int, bytes]],
     start: int,
     end: int,
@@ -30,9 +35,9 @@ def _compare_chunk_clip(
 ) -> list[tuple[int, int, float]]:
     """Compare asset_embeddings[start:end] (outer loop) against all asset_embeddings[index+1:].
 
-    Embeddings are already L2-normalized (ADR-001), so cosine similarity is a
-    plain dot product. Returns (asset_a_id, asset_b_id, clip_distance) triples
-    where a_id < b_id and distance <= threshold.
+    Embeddings are already L2-normalized, so cosine similarity is a plain dot
+    product. Returns (asset_a_id, asset_b_id, dino_distance) triples where
+    a_id < b_id and distance <= threshold.
     """
     asset_ids = [asset_id for asset_id, _ in asset_embeddings]
     vectors = np.stack([
@@ -76,14 +81,14 @@ def _purge_unresolved_dupe_candidates() -> None:
 
 
 def _insert_pairs(pairs: list[tuple[int, int, float]]) -> None:
-    """Persist (asset_a_id, asset_b_id, clip_distance) tuples; skip conflicts."""
+    """Persist (asset_a_id, asset_b_id, dino_distance) tuples into `clip_distance` (inert column name)."""
     with SessionLocal() as session:
-        for asset_a_id, asset_b_id, clip_distance in pairs:
+        for asset_a_id, asset_b_id, dino_distance in pairs:
             stmt = sqlite_insert(ReviewItem).values(
                 type="dupe_candidate",
                 asset_a_id=asset_a_id,
                 asset_b_id=asset_b_id,
-                clip_distance=clip_distance,
+                clip_distance=dino_distance,
                 created_at=_now_utc(),
             ).on_conflict_do_nothing()
             session.execute(stmt)
@@ -98,49 +103,49 @@ async def run_dupe_scan_job(
     from photofant.settings import load_settings
 
     settings = load_settings()
-    clip_enabled: bool = settings["dupe_clip_enabled"]
-    clip_threshold: float = settings["dupe_clip_threshold"]
+    dino_enabled: bool = settings["dupe_clip_enabled"]
+    dino_threshold: float = settings["dupe_dino_threshold"]
 
     if scope != "selection":
         await asyncio.to_thread(_purge_unresolved_dupe_candidates)
         log.info("dupe_scan: purged unresolved dupe-candidate items before full scan")
 
-    clip_assets: list[tuple[int, bytes]] = []
-    if clip_enabled:
+    dino_assets: list[tuple[int, bytes]] = []
+    if dino_enabled:
         with SessionLocal() as session:
-            clip_query = select(Asset.id, Asset.clip_embedding).where(
-                Asset.clip_embedding.is_not(None)
+            dino_query = select(Asset.id, Asset.dino_embedding).where(
+                Asset.dino_embedding.is_not(None)
             )
             if scope == "selection" and asset_ids:
-                clip_query = clip_query.where(Asset.id.in_(asset_ids))
-            clip_assets = [
-                (asset_id, bytes(blob)) for asset_id, blob in session.execute(clip_query).all()
+                dino_query = dino_query.where(Asset.id.in_(asset_ids))
+            dino_assets = [
+                (asset_id, bytes(blob)) for asset_id, blob in session.execute(dino_query).all()
             ]
 
-    if not clip_assets:
+    if not dino_assets:
         log.info(
-            "dupe_scan: nothing to compare (clip_enabled=%s, scope=%s)", clip_enabled, scope,
+            "dupe_scan: nothing to compare (dupe_enabled=%s, scope=%s)", dino_enabled, scope,
         )
         return
 
-    # (asset_a_id, asset_b_id) -> clip_distance.
+    # (asset_a_id, asset_b_id) -> dino_distance.
     found: dict[tuple[int, int], float] = {}
 
-    total = len(clip_assets)
-    log.info("dupe_scan: CLIP comparing %d assets (scope=%s, threshold=%.3f)", total, scope, clip_threshold)
-    for chunk_start in range(0, total, _COMPARISON_CHUNK_CLIP):
-        chunk_end = min(chunk_start + _COMPARISON_CHUNK_CLIP, total)
-        clip_chunk_pairs = await asyncio.to_thread(
-            _compare_chunk_clip, clip_assets, chunk_start, chunk_end, clip_threshold
+    total = len(dino_assets)
+    log.info("dupe_scan: DINOv2 comparing %d assets (scope=%s, threshold=%.3f)", total, scope, dino_threshold)
+    for chunk_start in range(0, total, _COMPARISON_CHUNK_DINO):
+        chunk_end = min(chunk_start + _COMPARISON_CHUNK_DINO, total)
+        dino_chunk_pairs = await asyncio.to_thread(
+            _compare_chunk_dino, dino_assets, chunk_start, chunk_end, dino_threshold
         )
-        for asset_a_id, asset_b_id, clip_distance in clip_chunk_pairs:
-            found[(asset_a_id, asset_b_id)] = clip_distance
+        for asset_a_id, asset_b_id, dino_distance in dino_chunk_pairs:
+            found[(asset_a_id, asset_b_id)] = dino_distance
         job_queue.update(status, progress=0.9 * chunk_end / total, state=JobState.RUNNING)
 
     if found:
         pairs = [
-            (asset_a_id, asset_b_id, clip_distance)
-            for (asset_a_id, asset_b_id), clip_distance in found.items()
+            (asset_a_id, asset_b_id, dino_distance)
+            for (asset_a_id, asset_b_id), dino_distance in found.items()
         ]
         await asyncio.to_thread(_insert_pairs, pairs)
         log.info("dupe_scan: inserted up to %d new dupe-candidate pair(s)", len(pairs))

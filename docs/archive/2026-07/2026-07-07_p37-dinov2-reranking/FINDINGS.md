@@ -62,6 +62,46 @@ Erkenntnisse während der Umsetzung, getaggt nach Phase. Format:
   Nearest-Neighbour. Signatur bekam einen `session`-Parameter (mechanische DB-Handle-Notwendigkeit, kein
   Kontrakt-Bruch) + `top_k`.)*
 
-- [ ] → Phase 4: **Dupe-Scan liegt heute auf SigLIP2.** `embedding_job._check_for_dupes` nutzt `vector_index.search`
+- [x] → Phase 4: **Dupe-Scan liegt heute auf SigLIP2.** `embedding_job._check_for_dupes` nutzt `vector_index.search`
   (SigLIP2) + `settings["dupe_clip_threshold"]`. Phase 4 stellt das auf DINOv2 (`vec_asset_dino`) + neuen
   `dupe_dino_threshold` um. `delete_dino_embedding` ist schon im Purge-Pfad verdrahtet (`media/moves.py`).
+  *(Erledigt: `vector_index.search_dino()` ergänzt (KNN auf `vec_asset_dino`, spiegelt `search()`).
+  `_check_for_dupes` nimmt jetzt `dino_embedding` statt `semantic_embedding` entgegen und läuft nur noch,
+  wenn ein DINOv2-Embedding vorliegt — **kein Fallback auf SigLIP2** bei fehlendem DINOv2-Modell, bewusst
+  anders als der Rerank-Degradationspfad, weil Duplikat-Erkennung hier Primärsignal ist, nicht Zusatz-Sortierung.)*
+
+## Phase 4 — Umsetzung (2026-07-08)
+
+- [x] → Phase 4: **Scope war größer als der Plan-Text explizit nannte.** Neben `dupe_scan_job` +
+  `embedding_job._check_for_dupes` liefen zwei weitere CLIP-Vergleichsstellen auf demselben Muster
+  (Cosine über `clip_embedding`, eigener Schwellwert): `api/duplicates.py::search_person_duplicates`
+  (Personen-Duplikatsuche) und `collections/stats.py::_near_dupe_rate` + `api/collections.py::list_collection_duplicates`
+  (Trainings-Set-Near-Dupe). Beide auf DINOv2 umgestellt — gleiche Fragestellung („visuelle Ähnlichkeit"),
+  gleiche Begründung wie der Haupt-Scan. Neuer Settings-Key `training_near_dupe_dino_threshold`
+  (Default 0.12), `training_near_dupe_clip_threshold` bleibt inert.
+
+- [x] → Phase 4: **`GET /assets/{id}/similar` bewusst NICHT umgestellt.** Andere Fragestellung
+  („ähnliche Bilder" für Lightbox/MCP, breite semantische Ähnlichkeit) statt „Duplikat" — eigener
+  Schwellwert `similar_clip_threshold`, bleibt auf SigLIP2. Kein Teil des ADR-024-Wechsels.
+
+- [x] → Phase 4: **DTO-/Settings-Feldnamen mit `clip_`-Präfix bleiben unverändert** (`clip_distance`,
+  `clip_similarity_pct`, `dupe_clip_enabled` als genereller An/Aus-Schalter) — Rename hätte Frontend
+  und `settings.json` bestehender Nutzer unnötig angefasst. Dokumentiert als inert/model-agnostisch
+  in Modul-Docstrings, keine funktionale Bedeutung mehr an den Präfix geknüpft.
+
+- [x] → Phase 4: **Frontend-Bug beim Umstellen gefunden und mitgefixt:** `dupe-check-dialog.ts` gab bei
+  der Personen-Duplikatsuche explizit `processingConfig().dupeClipThreshold` (CLIP-Skala) als
+  Override an den jetzt-DINOv2-Endpunkt weiter — hätte den neuen `dupe_dino_threshold`-Default
+  serverseitig verdeckt. Auf `dupeDinoThreshold` umgestellt.
+
+- [x] → Phase 4: **`dupe_dino_threshold` (Default 0.08 ≈ 92 % Ähnlichkeit) und
+  `training_near_dupe_dino_threshold` (Default 0.12 ≈ 88 %) sind begründete Startwerte, keine
+  empirisch kalibrierten Werte** — DINOv2s Cosine-Distanz-Regime unterscheidet sich von CLIP/SigLIP2
+  (u.a. andere Baseline-Ähnlichkeit für unrelated images) und wurde nicht vom alten Wert abgeleitet.
+  Kalibrierung an einem realen Set ist Smoke-Checkliste #2 — kein Live-Test im Rahmen dieser
+  Umsetzung (private Profil: kein Server-Hochfahren/Seed-Daten, siehe Memory `feedback_private_no_live_testing`).
+
+- [x] → Phase 4: **Frontend-Slider auf DINOv2 umgestellt** (`verarbeitung.ts`/`.html`): Bereich von
+  90–99 % auf 60–99 % Ähnlichkeit geweitet (unkalibriertes Regime, mehr Spielraum für die
+  Nutzer-Kalibrierung), Label entsprechend angepasst. `dupeClipEnabled` bleibt der Name des
+  An/Aus-Schalters (jetzt generisch „Duplikaterkennung an/aus", kein CLIP-Bezug mehr).

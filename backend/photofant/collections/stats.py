@@ -89,7 +89,9 @@ def _near_dupe_rate(embeddings: list[bytes], threshold: float) -> float:
     """Fraction of images that have at least one near-dupe partner in the set.
 
     Embeddings are already L2-normalized (ADR-001), so cosine similarity is a
-    plain dot product; distance = 1 - similarity.
+    plain dot product; distance = 1 - similarity. DINOv2-sourced since P37
+    Phase 4 (ADR-024) — visual appearance, not semantic content, defines a
+    near-dupe in a training set.
     """
     total = len(embeddings)
     if total < 2:
@@ -112,7 +114,7 @@ def compute_training_set_stats(session: Session, collection_id: int) -> Training
 
     rows = (
         session.query(
-            Asset.id, Asset.framing, Asset.quality_score, Asset.width, Asset.height, Asset.clip_embedding
+            Asset.id, Asset.framing, Asset.quality_score, Asset.width, Asset.height, Asset.dino_embedding
         )
         .join(CollectionItem, CollectionItem.asset_id == Asset.id)
         .filter(CollectionItem.collection_id == collection_id)
@@ -153,8 +155,8 @@ def compute_training_set_stats(session: Session, collection_id: int) -> Training
     )
     tag_frequencies = [TagFrequency(name=row.name, count=row.cnt) for row in tag_rows]
 
-    embeddings = [bytes(row.clip_embedding) for row in rows if row.clip_embedding is not None]
-    near_dupe_threshold = load_settings()["training_near_dupe_clip_threshold"]
+    embeddings = [bytes(row.dino_embedding) for row in rows if row.dino_embedding is not None]
+    near_dupe_threshold = load_settings()["training_near_dupe_dino_threshold"]
     near_dupe_rate = _near_dupe_rate(embeddings, near_dupe_threshold)
 
     return TrainingSetStats(

@@ -212,6 +212,15 @@ def delete_dino_embedding(session: Session, asset_id: int) -> None:
     _delete(session, _DINO_TABLE, asset_id)
 
 
+def search_dino(session: Session, query_embedding: np.ndarray, limit: int) -> list[tuple[int, float]]:
+    """Return up to *limit* (asset_id, cosine_similarity) pairs from the DINOv2 space.
+
+    Used by the post-embedding dupe check (P37 Phase 4) — same KNN shape as the
+    SigLIP2 `search`, pinned to `vec_asset_dino`/`DINO_EMBEDDING_DIM`.
+    """
+    return _search(session, _DINO_TABLE, DINO_EMBEDDING_DIM, query_embedding, limit)
+
+
 def load_dino_embeddings(
     session: Session, asset_ids: Sequence[int]
 ) -> dict[int, np.ndarray]:

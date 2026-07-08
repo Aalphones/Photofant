@@ -1,6 +1,6 @@
 # ADR-024 — Two-Stage Retrieval & Rerank-Naht
 
-**Status:** Angenommen — in P37 Phase 3 umgesetzt (Bild→Bild-Rerank verdrahtet)
+**Status:** Angenommen — vollständig umgesetzt (P37 Phase 3: Bild→Bild-Rerank; Phase 4: Duplikat-Scan auf DINOv2)
 **Datum:** 2026-07-08
 **Betrifft:** Plan `2026-07-07_p37-dinov2-reranking`, baut auf ADR-023 (DINOv2 als visueller Re-Ranker) und ADR-022 (Embedder-Naht) auf
 
@@ -42,9 +42,27 @@ Die Frage ist, **wie** DINOv2 an die Suche andockt, ohne die bestehende KNN-Schi
   SigLIP2-Ergebnis, **nie** ein Crash. Fähigkeits-Check statt blindem Aufruf; jeder Zweig wird
   in Phase 3 explizit getestet.
 
-**Duplikat-Scan:** wird auf DINOv2 als Primär-Signal umgestellt (visuelle Erscheinung = was ein
-Duplikat ausmacht). Der alte `dupe_clip_threshold` bleibt als Settings-Key inert für Rollback; der
-neue `dupe_dino_threshold` wird in Phase 4 an realem Set kalibriert.
+**Duplikat-Scan:** auf DINOv2 als Primär-Signal umgestellt (visuelle Erscheinung = was ein Duplikat
+ausmacht). Betrifft alle vier Stellen, die zuvor `clip_embedding` für Ähnlichkeitsvergleiche lasen:
+
+- Post-Embedding-Check (`embedding_job._check_for_dupes`) — läuft nur, wenn ein DINOv2-Embedding
+  vorliegt (Modell in der Modelle-UI aktiv); ohne DINOv2 findet **kein** automatischer Check mehr
+  statt (bewusster Trade-off, kein Fallback auf SigLIP2 — Duplikat-Erkennung ist Primärsignal, kein
+  Rerank mit Degradationspfad).
+- Voll-/Selektions-Scan (`dupe_scan_job.run_dupe_scan_job`, „Duplikate scannen").
+- Personen-Duplikatsuche (`api/duplicates.py`).
+- Trainings-Set-Near-Dupe-Rate + Review (`collections/stats.py`, `api/collections.py` — eigene
+  Entscheidung in Phase 4, da gleiche Fragestellung: visuelle Ähnlichkeit einer Trainings-Kollektion).
+
+Ausdrücklich **nicht** umgestellt: `GET /assets/{id}/similar` (Lightbox/MCP „ähnliche Bilder") bleibt
+auf SigLIP2 — andere Fragestellung (breite semantische Ähnlichkeit statt strenges Duplikat), eigener
+Schwellwert `similar_clip_threshold`.
+
+Die alten `dupe_clip_threshold`/`training_near_dupe_clip_threshold` bleiben als Settings-Keys inert
+für Rollback. Neue Keys `dupe_dino_threshold` (Default 0.08 ≈ 92 % Ähnlichkeit) und
+`training_near_dupe_dino_threshold` (Default 0.12 ≈ 88 %) sind **begründete Startwerte** — DINOv2s
+Distanz-Regime unterscheidet sich von CLIP/SigLIP2 und wurde nicht 1:1 übernommen. Feinjustierung an
+einem realen Set ist Smoke-Checkliste #2 (Nutzer-Aufgabe, kein Live-Test im Rahmen dieser Umsetzung).
 
 ## Konsequenzen
 

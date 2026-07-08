@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from photofant.db.models import Asset, ProcessingLedger, ReviewItem
 from photofant.db.session import SessionLocal
-from photofant.db.vector_index import search, upsert_dino_embedding, upsert_embedding
+from photofant.db.vector_index import search_dino, upsert_dino_embedding, upsert_embedding
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
 log = logging.getLogger(__name__)
@@ -26,11 +26,14 @@ def _now_utc() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _check_for_dupes(session: Session, asset_id: int, embedding: np.ndarray) -> None:
-    """Post-embedding dupe check via sqlite-vec (P33: runs after the embedding job, not at import time).
+def _check_for_dupes(session: Session, asset_id: int, dino_embedding: np.ndarray) -> None:
+    """Post-embedding dupe check via sqlite-vec (P33; on DINOv2 since P37 Phase 4).
 
-    Own try/except + own commit — a failure here must not roll back the embedding
-    result that was already committed by the caller.
+    Duplicate detection runs on the DINOv2 visual-rerank space now — visual
+    appearance, not semantic content, is what defines a duplicate (ADR-024).
+    `dupe_clip_threshold`/SigLIP2 stay inert (rollback). Own try/except + own
+    commit — a failure here must not roll back the embedding result that was
+    already committed by the caller.
     """
     from photofant.settings import load_settings
 
@@ -38,11 +41,11 @@ def _check_for_dupes(session: Session, asset_id: int, embedding: np.ndarray) -> 
     if not settings["dupe_clip_enabled"]:
         return
 
-    clip_threshold: float = settings["dupe_clip_threshold"]
-    similarity_floor = 1.0 - clip_threshold
+    dino_threshold: float = settings["dupe_dino_threshold"]
+    similarity_floor = 1.0 - dino_threshold
 
     try:
-        hits = search(session, embedding, limit=settings["dupe_search_limit"])
+        hits = search_dino(session, dino_embedding, limit=settings["dupe_search_limit"])
         found = False
         for other_id, similarity in hits:
             if other_id == asset_id or similarity < similarity_floor:
@@ -98,6 +101,7 @@ def _embed_asset(asset_id: int, asset_path: str, *, semantic: bool, dino: bool) 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
 
     semantic_embedding: np.ndarray | None = None
+    dino_embedding: np.ndarray | None = None
     with SessionLocal() as session:
         asset = session.get(Asset, asset_id)
         if asset is None:
@@ -123,8 +127,8 @@ def _embed_asset(asset_id: int, asset_path: str, *, semantic: bool, dino: bool) 
 
         session.commit()
 
-        if semantic_embedding is not None:
-            _check_for_dupes(session, asset_id, semantic_embedding)
+        if dino_embedding is not None:
+            _check_for_dupes(session, asset_id, dino_embedding)
 
     if semantic_embedding is not None:
         log.info("Embedded asset %d (SigLIP2 %d dims)", asset_id, semantic_embedding.shape[0])

@@ -75,10 +75,12 @@ class AppSettings(TypedDict):
     trash_auto_days: int
     keyboard_shortcuts: dict[str, Any] | None
     dupe_clip_enabled: bool
-    dupe_clip_threshold: float
+    dupe_clip_threshold: float  # inert since P37 Phase 4 — kept for rollback, no longer read by the scan
+    dupe_dino_threshold: float  # P37 Phase 4 — primary duplicate-scan threshold (DINOv2 cosine distance)
     dupe_search_limit: int
     similar_clip_threshold: float
-    training_near_dupe_clip_threshold: float
+    training_near_dupe_clip_threshold: float  # inert since P37 Phase 4 — kept for rollback
+    training_near_dupe_dino_threshold: float  # P37 Phase 4 — DINOv2 equivalent for the training-set near-dupe stat
     face_dedupe_similarity_threshold: float
     face_det_conf_threshold: float
     face_det_iou_threshold: float
@@ -116,9 +118,14 @@ SETTINGS_DEFAULTS: AppSettings = {
     "keyboard_shortcuts": None,
     "dupe_clip_enabled": True,
     "dupe_clip_threshold": 0.03,
+    # DINOv2 cosine-distance regime differs from CLIP/SigLIP2 (P37 Phase 4) — these are
+    # reasoned starting points (~92 %/88 % similarity), not carried over from the old
+    # values. Calibrate against a real library via Smoke-Checkliste #2 in the P37-Plan.
+    "dupe_dino_threshold": 0.08,
     "dupe_search_limit": 20,
     "similar_clip_threshold": 0.15,
     "training_near_dupe_clip_threshold": 0.05,
+    "training_near_dupe_dino_threshold": 0.12,
     "face_dedupe_similarity_threshold": 0.9,
     "face_det_conf_threshold": 0.5,
     "face_det_iou_threshold": 0.45,
@@ -190,9 +197,11 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "keyboard_shortcuts": (dict, type(None)),
     "dupe_clip_enabled": bool,
     "dupe_clip_threshold": (float, int),
+    "dupe_dino_threshold": (float, int),
     "dupe_search_limit": int,
     "similar_clip_threshold": (float, int),
     "training_near_dupe_clip_threshold": (float, int),
+    "training_near_dupe_dino_threshold": (float, int),
     "face_dedupe_similarity_threshold": (float, int),
     "face_det_conf_threshold": (float, int),
     "face_det_iou_threshold": (float, int),

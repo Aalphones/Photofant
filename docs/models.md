@@ -327,7 +327,7 @@ Zwei Review-Typen teilen sich die Tabelle: offene Duplikat-Paare (`dupe_candidat
 | `type` | TEXT | `dupe_candidate` · `face_suggestion` |
 | `asset_a_id` | INTEGER FK → `asset.id` | dupe_candidate: kleinere ID. face_suggestion: gleiche Asset-ID wie `asset_b_id` (Hack, siehe unten) |
 | `asset_b_id` | INTEGER FK → `asset.id` | dupe_candidate: größere ID. face_suggestion: = `asset_a_id` |
-| `clip_distance` | REAL | nullable; CLIP Cosine-Distance (0.0–1.0) — bei `dupe_candidate` die einzige Distanz-Metrik (P33/ADR-018); `NULL` bleibt nur bei resolved Alt-Zeilen aus der Vor-ADR-018-Aera möglich |
+| `clip_distance` | REAL | nullable; Cosine-Distance (0.0–1.0) — bei `dupe_candidate` die einzige Distanz-Metrik (P33/ADR-018). Spaltenname bleibt inert: seit P37 Phase 4 (ADR-024) ist der Wert eine DINOv2-Distanz, nicht mehr CLIP/SigLIP2. `NULL` bleibt nur bei resolved Alt-Zeilen aus der Vor-ADR-018-Aera möglich |
 | `created_at` | DATETIME | UTC naive; nicht null |
 | `resolved_at` | DATETIME | nullable; gesetzt bei Entscheidung |
 | `resolution` | TEXT | nullable: `a_is_original` · `b_is_original` · `delete_a` · `delete_b` · `dismiss` (dupe_candidate); `confirmed` · `rejected` · `reassigned:<id>` (face_suggestion) |
@@ -341,7 +341,7 @@ Zwei partielle Unique-Indizes (migration 0027 — ersetzt den ursprünglichen, z
 
 Grund für die Aufteilung: `face_suggestion`-Zeilen setzen `asset_a_id == asset_b_id` (kein "Paar", nur ein Gesicht) — ein Foto mit mehreren Gesichtern, die alle zur Review anstehen, konnte sonst nur die erste Zeile einfügen (UNIQUE-Verletzung auf `(type, asset_a_id, asset_b_id)` ab dem zweiten Gesicht desselben Fotos).
 
-Flow Duplikate (ADR-018, CLIP-only): Embedding-Job berechnet `clip_embedding` → Post-Embedding-Check via sqlite-vec-Suche (Cosine-Distance ≤ `dupe_clip_threshold`) legt bei Treffer ein `review_item` an → User entscheidet im Review-Tab.
+Flow Duplikate (ADR-018; DINOv2 seit P37 Phase 4, ADR-024): Embedding-Job berechnet `dino_embedding` → Post-Embedding-Check via sqlite-vec-Suche auf `vec_asset_dino` (Cosine-Distance ≤ `dupe_dino_threshold`) legt bei Treffer ein `review_item` an → User entscheidet im Review-Tab. Läuft nur, wenn ein DINOv2-Modell aktiv ist (kein Fallback auf SigLIP2 — Duplikat-Erkennung ist Primärsignal, nicht Rerank). `dupe_clip_threshold` bleibt als Settings-Key inert für Rollback.
 
 Flow Gesichts-Vorschläge: Clustering/inkrementelles Matching (`photofant/clustering/engine.py`, `photofant/jobs/clustering_job.py`) legt für ein Gesicht mit `band == "review"` eine Zeile an → User entscheidet in der Review-Queue (`photofant/api/review_queue.py`: confirm/reject/reassign).
 

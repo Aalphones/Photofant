@@ -46,6 +46,7 @@ export interface ProcessingConfig {
   blurThreshold: number;
   dupeClipEnabled: boolean;
   dupeClipThreshold: number;
+  dupeDinoThreshold: number;
   rerankEnabled: boolean;
   rerankCandidatePoolSize: number;
   faceDetConfThreshold: number;
@@ -68,6 +69,7 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   blurThreshold: 200.0,
   dupeClipEnabled: true,
   dupeClipThreshold: 0.03,
+  dupeDinoThreshold: 0.08,
   rerankEnabled: true,
   rerankCandidatePoolSize: 100,
   faceDetConfThreshold: 0.5,

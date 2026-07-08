@@ -225,7 +225,13 @@ async def resolve_dupe(item_id: int, body: ResolveRequest, session: DbSession) -
 
 @router.get("/assets/{asset_id}/similar", response_model=list[SimilarAssetDto])
 async def get_similar_assets(asset_id: int, session: DbSession) -> list[SimilarAssetDto]:
-    """Return assets similar to the given one (ad-hoc CLIP search, for Lightbox)."""
+    """Return assets similar to the given one (ad-hoc CLIP search, for Lightbox/MCP).
+
+    Deliberately stays on SigLIP2 (P37 Phase 4 decision, see FINDINGS): this is
+    "semantically similar", not "duplicate" — its own `similar_clip_threshold`
+    setting and broader-recall intent differ from the dupe scan, which moved to
+    DINOv2. Not part of the ADR-024 duplicate-detection switch.
+    """
     from photofant.settings import load_settings
 
     asset = session.get(Asset, asset_id)

@@ -126,19 +126,19 @@
       <div class="verarbeitung__zeile-sub">Findet inhaltlich ähnliche und doppelt importierte Bilder: gleiche Szene aus einem anderen Blickwinkel, andere Belichtung oder Bearbeitung. Pixelidentische Kopien (dieselbe Datei doppelt importiert) werden davon unabhängig immer erkannt.</div>
       @if (processingConfig().dupeClipEnabled) {
         <div class="verarbeitung__slider-gruppe">
-          <span class="verarbeitung__slider-wert">{{ dupeClipThresholdLabel() }}</span>
+          <span class="verarbeitung__slider-wert">{{ dupeDinoThresholdLabel() }}</span>
           <input
             class="verarbeitung__slider"
             type="range"
-            min="90"
+            min="60"
             max="99"
             step="1"
-            [value]="dupeClipThresholdPct()"
-            (input)="onDupeClipThresholdInput($any($event.target))"
-            (change)="onDupeClipThresholdChange($any($event.target))"
+            [value]="dupeDinoThresholdPct()"
+            (input)="onDupeDinoThresholdInput($any($event.target))"
+            (change)="onDupeDinoThresholdChange($any($event.target))"
           >
         </div>
-        <div class="verarbeitung__zeile-sub">99 % = nur nahezu identische Bilder · 90 % = auch stärker bearbeitete Varianten</div>
+        <div class="verarbeitung__zeile-sub">99 % = nur nahezu identische Bilder · 60 % = auch deutlich abweichende Varianten (DINOv2-Wert, noch nicht endgültig kalibriert)</div>
       }
     </div>
     <div class="verarbeitung__zeile-steuerung">

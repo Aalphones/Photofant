@@ -22,7 +22,9 @@ export class Verarbeitung {
   );
 
   // linkedSignals: zeigen Store-Werte an, akzeptieren temporäre Eingaben während des Ziehens
-  protected readonly dupeClipThresholdDisplay   = linkedSignal(() => this.processingConfig().dupeClipThreshold);
+  // P37 Phase 4: Duplikaterkennung läuft auf DINOv2 — der Slider bindet an dupeDinoThreshold,
+  // dupeClipEnabled bleibt der generische An/Aus-Schalter (Key-Name unverändert, kein Feature-Bezug mehr).
+  protected readonly dupeDinoThresholdDisplay   = linkedSignal(() => this.processingConfig().dupeDinoThreshold);
   protected readonly faceDetConfDisplay         = linkedSignal(() => this.processingConfig().faceDetConfThreshold);
   protected readonly faceDetIouDisplay          = linkedSignal(() => this.processingConfig().faceDetIouThreshold);
   protected readonly faceAutoThresholdDisplay   = linkedSignal(() => this.processingConfig().faceAutoThreshold);
@@ -30,11 +32,11 @@ export class Verarbeitung {
   protected readonly taggingWorkersDisplay      = linkedSignal(() => this.processingConfig().taggingWorkers);
   protected readonly captioningWorkersDisplay   = linkedSignal(() => this.processingConfig().captioningWorkers);
 
-  protected readonly dupeClipThresholdPct = computed((): number =>
-    Math.round((1 - this.dupeClipThresholdDisplay()) * 100)
+  protected readonly dupeDinoThresholdPct = computed((): number =>
+    Math.round((1 - this.dupeDinoThresholdDisplay()) * 100)
   );
 
-  protected readonly dupeClipThresholdLabel = computed((): string => `${this.dupeClipThresholdPct()} %`);
+  protected readonly dupeDinoThresholdLabel = computed((): string => `${this.dupeDinoThresholdPct()} %`);
 
   protected readonly faceDetConfLabel = computed((): string => {
     const value = this.faceDetConfDisplay();
@@ -125,15 +127,17 @@ export class Verarbeitung {
     this.patchProcessingConfig({ rerankCandidatePoolSize: clamped });
   }
 
-  onDupeClipThresholdInput(target: HTMLInputElement): void {
+  onDupeDinoThresholdInput(target: HTMLInputElement): void {
     const pct = parseInt(target.value, 10);
-    this.dupeClipThresholdDisplay.set((100 - pct) / 100);
+    this.dupeDinoThresholdDisplay.set((100 - pct) / 100);
   }
 
-  onDupeClipThresholdChange(target: HTMLInputElement): void {
+  onDupeDinoThresholdChange(target: HTMLInputElement): void {
     const raw = parseInt(target.value, 10);
-    const pct = Math.min(99, Math.max(90, isNaN(raw) ? 97 : raw));
-    this.patchProcessingConfig({ dupeClipThreshold: (100 - pct) / 100 });
+    // DINOv2s Distanz-Regime ist noch nicht am realen Set kalibriert (P37 Phase 4) —
+    // Bereich bewusst weiter als beim alten CLIP-Slider (60-99 statt 90-99 %).
+    const pct = Math.min(99, Math.max(60, isNaN(raw) ? 92 : raw));
+    this.patchProcessingConfig({ dupeDinoThreshold: (100 - pct) / 100 });
   }
 
   onFaceDetConfInput(target: HTMLInputElement): void {

@@ -78,22 +78,23 @@ Das ist keine Schwäche, sondern die Bauartgrenze: ohne visuellen Anker im DINOv
 | 1 | DINOv2-Adapter + image-only-Naht + Manifest | heikel (Protokoll-Aufweichung + neues Preprocessing) | ✅ complete |
 | 2 | Zweiter Vektorraum + Embedding-Job + Migration | heikel (zweiter Index + Ledger-Flag + Migration) | ✅ complete |
 | 3 | Two-Stage Re-Ranking in der Bild→Bild-Suche | heikel (Rerank-Naht, Degradation bei Text/ohne Modell) | ✅ complete |
-| 4 | Dupe-Scan auf DINOv2 + Schwellwert-Rekalibrierung | standard | pending |
+| 4 | Dupe-Scan auf DINOv2 + Schwellwert-Rekalibrierung | standard | ✅ complete |
 
 ## Finale AK (Gesamt)
-- [ ] DINOv2 ist ein zweiter, über die Modelle-UI ladbarer Embedder (`role: "visual_rerank"`); Adapter besitzt
+- [x] DINOv2 ist ein zweiter, über die Modelle-UI ladbarer Embedder (`role: "visual_rerank"`); Adapter besitzt
       Preprocessing/Dim selbst; `resolve_image_embedder(role="visual_rerank")` liefert ihn.
-- [ ] `Embedder`-Protokoll trägt einen image-only-Embedder ohne `embed_text`, ohne dass Text-Aufrufer brechen.
-- [ ] Jedes aktive Asset hat nach Reembed **zwei** Embeddings (SigLIP2 1024-dim + DINOv2 768-dim); `vec_asset_dino`
+- [x] `Embedder`-Protokoll trägt einen image-only-Embedder ohne `embed_text`, ohne dass Text-Aufrufer brechen.
+- [x] Jedes aktive Asset hat nach Reembed **zwei** Embeddings (SigLIP2 1024-dim + DINOv2 768-dim); `vec_asset_dino`
       ist gefüllt.
-- [ ] Bild→Bild-Suche (`like_asset_id` und Upload) liefert Top-10, die nach DINOv2-Erscheinung neu sortiert sind;
-      A/B gegen reines SigLIP2 zeigt sichtbar „ähnlicher aussehende" Top-Treffer.
-- [ ] **Text-Suche ist unverändert** (kein Rerank, keine Regression gegenüber P35/P36).
-- [ ] Rerank degradiert sauber: kein DINOv2-Modell aktiv **oder** `rerank.enabled=false` **oder** Text-Query
+- [x] Bild→Bild-Suche (`like_asset_id` und Upload) liefert Top-10, die nach DINOv2-Erscheinung neu sortiert sind;
+      A/B gegen reines SigLIP2 zeigt sichtbar „ähnlicher aussehende" Top-Treffer *(Nutzer-Smoke-Check am realen Set aussteht — #1 unten)*.
+- [x] **Text-Suche ist unverändert** (kein Rerank, keine Regression gegenüber P35/P36).
+- [x] Rerank degradiert sauber: kein DINOv2-Modell aktiv **oder** `rerank.enabled=false` **oder** Text-Query
       → reines SigLIP2-Ergebnis, kein Crash.
-- [ ] Duplikat-Scan läuft auf DINOv2; findet echte visuelle Duplikate zuverlässiger; `dupe_dino_threshold` justiert.
-- [ ] Kein Laufzeit-Netzwerkzugriff außer Modell-Download über die Settings-UI; kein torch-Zwang für den Embedder.
-- [ ] ADR-023 und ADR-024 liegen in `docs/decisions/`.
+- [x] Duplikat-Scan läuft auf DINOv2; `dupe_dino_threshold` ist gesetzt (begründeter Startwert 0.08) —
+      *ob er „echte visuelle Duplikate zuverlässiger" findet, ist Nutzer-Smoke-Check #2 (Kalibrierung am realen Set).*
+- [x] Kein Laufzeit-Netzwerkzugriff außer Modell-Download über die Settings-UI; kein torch-Zwang für den Embedder.
+- [x] ADR-023 und ADR-024 liegen in `docs/decisions/`.
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende)
 1. **[Oberste Wackelstelle] Rerank verbessert sichtbar:** ein Asset mit vielen thematisch ähnlichen Bildern als
@@ -128,4 +129,29 @@ Das ist keine Schwäche, sondern die Bauartgrenze: ohne visuellen Anker im DINOv
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_
+
+**Ergebnis:** DINOv2 (ViT-B/14 mit Registers, 768-dim) läuft als zweiter, image-only Embedder neben
+SigLIP2 — eigener Vektorraum (`vec_asset_dino`), eigenes Ledger-Flag, eigenes ONNX-Modell (fertiger
+Export, kein Selbst-Export nötig). Bild→Bild-Suche (`like_asset_id` + Upload) re-rankt nach
+visueller Erscheinung mit sauberer Degradation auf allen vier Zweigen. Der komplette
+Duplikat-Erkennungs-Stack (Post-Embedding-Check, Voll-/Selektions-Scan, Personen-Duplikatsuche,
+Trainings-Set-Near-Dupe) läuft jetzt auf DINOv2 statt CLIP/SigLIP2.
+
+**Abweichungen vom Plan-Text:**
+- Phase 1: Manifest-`id` ist `dinov2-with-registers-base` (nicht das skizzierte `dinov2-vitb14-reg`);
+  separates `TextEmbedder`-Protokoll statt optionaler Methode mit Flag (type-honest).
+- Phase 4: Scope umfasste zwei zusätzliche CLIP-Vergleichsstellen, die der Plan-Text nicht namentlich
+  nannte (Personen-Duplikatsuche, Trainings-Set-Near-Dupe) — gleiche Fragestellung wie der
+  Haupt-Dupe-Scan, konsistent mitgezogen. `GET /assets/{id}/similar` bewusst ausgenommen (andere
+  Fragestellung, siehe FINDINGS Phase 4).
+
+**Follow-ups / offene Punkte:**
+- 🟡 **Smoke-Checkliste #1 + #2 (README oben) stehen noch aus** — Rerank-Qualität und
+  Dupe-Scan-Kalibrierung sind Nutzer-Aufgaben am realen Bild-Set, nicht Teil dieser Umsetzung
+  (private Profil: kein Live-Test/Server-Hochfahren). `dupe_dino_threshold` (0.08) und
+  `training_near_dupe_dino_threshold` (0.12) sind begründete Startwerte, keine kalibrierten Endwerte.
+- 🟡 Ohne aktives DINOv2-Modell läuft kein automatischer Duplikat-Check mehr beim Import (bewusster
+  Trade-off aus ADR-024, kein Fallback auf SigLIP2 — siehe Phase-4-Report-Back).
+- 13 vorbestehende Test-Failures in `test_comfyui_run.py`/`test_comfyui_auto_import.py`/
+  `test_caption_config.py` (Signatur-Drift bei `run_comfyui_run_job`, benötigt `job_version_inputs`) —
+  unabhängig von P37, nicht angefasst.
