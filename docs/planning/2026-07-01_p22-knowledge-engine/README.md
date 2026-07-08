@@ -37,17 +37,17 @@ Entity-Frontmatter (verbindlich, Dok 020 §5): `id` (`<type>/<slug>`, unverände
 
 ## Reservierte Entscheidungen & Settings
 
-**ADR (real in `docs/decisions/` anlegen; nächste freie = 010, 007 bleibt Lücke):**
-- **ADR-010** — Vault: Markdown = Wahrheit, SQLite = Cache.
-- **ADR-011** — Intelligente Jobs erweitern die Job-Queue statt Agenten-Framework (real ab P24).
+**ADR (real in `docs/decisions/` anlegen):**
+- **ADR-025** — Vault: Markdown = Wahrheit, SQLite = Cache. *(Phase 1 angelegt. Die im Plan ursprünglich reservierte Nummer 010 war bereits belegt — echte nächste freie Nummer ist 025, siehe FINDINGS.)*
+- **Intelligente Jobs erweitern die Job-Queue statt Agenten-Framework** — real ab P24, bekommt dort die dann freie ADR-Nummer (die ursprünglich reservierte 011 ist ebenfalls belegt).
 
-**settings.json (vorab freigeben):** `knowledge.vaultPath` (Default `<library>/knowledge`) · `knowledge.defaultDomain` (Default `Movies`) · `jobs.maxDepth` (Job-Ketten-Tiefe, Dok 030 §11, Default 5; von P24 genutzt).
+**settings.json (vorab freigeben, snake_case wie der Rest von `settings.py`):** `knowledge.vault_path` (Default `<data_root>/knowledge`) · `knowledge.default_domain` (Default `Movies`) · `jobs.max_depth` (Job-Ketten-Tiefe, Dok 030 §11, Default 5; erst von P24 angelegt). *(Ursprünglich als `vaultPath`/`defaultDomain` notiert — auf snake_case korrigiert, siehe FINDINGS.)*
 
 ## Phasen
 
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | Vault + Entity-Schema + Parser | heikel | pending |
+| 1 | Vault + Entity-Schema + Parser | heikel | ✅ complete |
 | 2 | SQLite-Cache + Repositories | standard | pending |
 | 3 | KnowledgeService + REST-API | standard | pending |
 | 4 | Rebuild-Job + Vault↔Cache-Reconcile | standard | pending |

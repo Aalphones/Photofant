@@ -56,6 +56,11 @@ class RerankSettings(TypedDict):
     candidate_pool_size: int    # wie viele SigLIP2-Kandidaten in den DINOv2-Rerank gehen
 
 
+class KnowledgeSettings(TypedDict):
+    vault_path: str | None      # Wurzel der Markdown-Wissensbasis; None = <data_root>/knowledge (P22)
+    default_domain: str         # Domäne für neue Entities ohne explizite Angabe (P22)
+
+
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
@@ -96,6 +101,7 @@ class AppSettings(TypedDict):
     mcp: McpSettings
     reverse_search: ReverseSearchSettings
     rerank: RerankSettings
+    knowledge: KnowledgeSettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -174,6 +180,10 @@ SETTINGS_DEFAULTS: AppSettings = {
         "enabled": True,
         "candidate_pool_size": 100,
     },
+    "knowledge": {
+        "vault_path": None,
+        "default_domain": "Movies",
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -217,6 +227,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "mcp": dict,
     "reverse_search": dict,
     "rerank": dict,
+    "knowledge": dict,
 }
 
 

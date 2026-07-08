@@ -1,0 +1,35 @@
+# Beispiel-Domäne "Movies" — Single Source für die erlaubten Typen.
+# Die Engine kennt keinen dieser Typen hart; sie kommen ausschließlich von hier.
+# Wird beim ersten Vault-Zugriff nach <vault>/domains/movies.yaml kopiert und ist
+# danach frei editierbar.
+name: Movies
+
+# Jeder Entity-Typ: 'name' steht im Frontmatter (type:), 'folder' ist der Ordner
+# (Plural) unter der Vault-Wurzel. Kein automatisches Pluralisieren — explizit.
+entity_types:
+  - name: Movie
+    folder: movies
+  - name: Series
+    folder: series
+  - name: Actor
+    folder: actors
+  - name: Character
+    folder: characters
+  - name: Franchise
+    folder: franchises
+  - name: Location
+    folder: locations
+  - name: Organization
+    folder: organizations
+  - name: Event
+    folder: events
+
+# Erlaubte Beziehungstypen. Der Knowledge Graph wird ausschließlich aus diesen
+# Beziehungen erzeugt (Dok 020 §6).
+relationship_types:
+  - plays
+  - appears_in
+  - directed_by
+  - member_of
+  - part_of
+  - located_in
