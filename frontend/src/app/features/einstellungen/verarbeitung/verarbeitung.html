@@ -151,6 +151,26 @@
       ><i></i></button>
     </div>
   </div>
+  <div class="verarbeitung__zeile verarbeitung__zeile--oben">
+    <div class="verarbeitung__zeile-inhalt">
+      <div class="verarbeitung__zeile-titel">Trainings-Set-Dubletten</div>
+      <div class="verarbeitung__zeile-sub">Wie ähnlich sich zwei Bilder in einem Trainings-Set sein müssen, damit sie in der Dubletten-Quote der Trainings-Set-Statistik als Beinah-Dublette zählen. Unabhängig vom Schalter oben — betrifft nur die Statistik-Anzeige, nicht den Import.</div>
+      <div class="verarbeitung__slider-gruppe">
+        <span class="verarbeitung__slider-wert">{{ trainingNearDupeThresholdLabel() }}</span>
+        <input
+          class="verarbeitung__slider"
+          type="range"
+          min="60"
+          max="99"
+          step="1"
+          [value]="trainingNearDupeThresholdPct()"
+          (input)="onTrainingNearDupeThresholdInput($any($event.target))"
+          (change)="onTrainingNearDupeThresholdChange($any($event.target))"
+        >
+      </div>
+      <div class="verarbeitung__zeile-sub">99 % = nur nahezu identische Bilder · 60 % = auch deutlich abweichende Varianten (DINOv2-Wert, noch nicht endgültig kalibriert)</div>
+    </div>
+  </div>
 </div>
 
 <div class="verarbeitung__gruppen-label">Bildähnliche Suche</div>

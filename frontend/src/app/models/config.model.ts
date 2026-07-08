@@ -47,6 +47,7 @@ export interface ProcessingConfig {
   dupeClipEnabled: boolean;
   dupeClipThreshold: number;
   dupeDinoThreshold: number;
+  trainingNearDupeDinoThreshold: number;
   rerankEnabled: boolean;
   rerankCandidatePoolSize: number;
   faceDetConfThreshold: number;
@@ -70,6 +71,7 @@ export const PROCESSING_CONFIG_DEFAULTS: ProcessingConfig = {
   dupeClipEnabled: true,
   dupeClipThreshold: 0.03,
   dupeDinoThreshold: 0.08,
+  trainingNearDupeDinoThreshold: 0.12,
   rerankEnabled: true,
   rerankCandidatePoolSize: 100,
   faceDetConfThreshold: 0.5,

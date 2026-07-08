@@ -25,6 +25,7 @@ export class Verarbeitung {
   // P37 Phase 4: Duplikaterkennung läuft auf DINOv2 — der Slider bindet an dupeDinoThreshold,
   // dupeClipEnabled bleibt der generische An/Aus-Schalter (Key-Name unverändert, kein Feature-Bezug mehr).
   protected readonly dupeDinoThresholdDisplay   = linkedSignal(() => this.processingConfig().dupeDinoThreshold);
+  protected readonly trainingNearDupeThresholdDisplay = linkedSignal(() => this.processingConfig().trainingNearDupeDinoThreshold);
   protected readonly faceDetConfDisplay         = linkedSignal(() => this.processingConfig().faceDetConfThreshold);
   protected readonly faceDetIouDisplay          = linkedSignal(() => this.processingConfig().faceDetIouThreshold);
   protected readonly faceAutoThresholdDisplay   = linkedSignal(() => this.processingConfig().faceAutoThreshold);
@@ -37,6 +38,12 @@ export class Verarbeitung {
   );
 
   protected readonly dupeDinoThresholdLabel = computed((): string => `${this.dupeDinoThresholdPct()} %`);
+
+  protected readonly trainingNearDupeThresholdPct = computed((): number =>
+    Math.round((1 - this.trainingNearDupeThresholdDisplay()) * 100)
+  );
+
+  protected readonly trainingNearDupeThresholdLabel = computed((): string => `${this.trainingNearDupeThresholdPct()} %`);
 
   protected readonly faceDetConfLabel = computed((): string => {
     const value = this.faceDetConfDisplay();
@@ -138,6 +145,19 @@ export class Verarbeitung {
     // Bereich bewusst weiter als beim alten CLIP-Slider (60-99 statt 90-99 %).
     const pct = Math.min(99, Math.max(60, isNaN(raw) ? 92 : raw));
     this.patchProcessingConfig({ dupeDinoThreshold: (100 - pct) / 100 });
+  }
+
+  onTrainingNearDupeThresholdInput(target: HTMLInputElement): void {
+    const pct = parseInt(target.value, 10);
+    this.trainingNearDupeThresholdDisplay.set((100 - pct) / 100);
+  }
+
+  onTrainingNearDupeThresholdChange(target: HTMLInputElement): void {
+    const raw = parseInt(target.value, 10);
+    // Gleiches unkalibriertes DINOv2-Distanz-Regime wie der Haupt-Slider (P37 Phase 4),
+    // bewusst lockerer Default (88 % statt 92 %). Bereich 60-99 % analog.
+    const pct = Math.min(99, Math.max(60, isNaN(raw) ? 88 : raw));
+    this.patchProcessingConfig({ trainingNearDupeDinoThreshold: (100 - pct) / 100 });
   }
 
   onFaceDetConfInput(target: HTMLInputElement): void {
