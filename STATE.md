@@ -1,10 +1,23 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p25-lore-panel/`
-**Phase:** 1/3 — Lore-Aggregations-API (Backend) (pending)
-**Nächster Schritt:** Phase 1 starten — `phase-1-lore-api.md` lesen (AK, Checkliste, Kontext-Sektion),
-davor P15-Andockpunkt in `features/galerie/lightbox/` zur Kenntnis nehmen (P15 ist archiviert,
-kein Reihenfolge-Konflikt mehr, aber Panel-Struktur beachten für spätere Phase 2).
+**Phase:** 2/3 — Lore-Panel-UI (Lightbox) (pending) — **heikel** (fremder Screen P15 + freihändiges Design)
+**Nächster Schritt:** Vor Phase 2 zuerst `../2026-06-28_p15-lightbox-angleichung/README.md` +
+`features/galerie/lightbox/` lesen (Andockpunkt benennen, Chesterton), dann `phase-2-lore-panel-ui.md`.
+Modell-Hinweis: Phase ist als „heikel" geratet — `opusplan` empfohlen statt `sonnet`.
+
+**Phase 1 (Lore-Aggregations-API, Backend) ist fertig, committet (`c51c572`):**
+`get_lore()` liefert jetzt die Vollform (Beziehungsziele zu Titel/Typ aufgelöst, Franchises
+als eigenes Feld, media_links zu Thumbnail-Refs gejoint via `_resolve_media_refs` in
+`api/knowledge.py`). Neue Route `GET /api/knowledge/lore?asset_id=/person_id=` → 200 mit
+`entity: null` ohne Verknüpfung (nie 404 — Kontrakt). Backend-Tests grün (50 in
+`test_knowledge_service.py`/`test_knowledge_api.py`), volle Suite unverändert 13
+vorbekannte Fails, `ruff` grün.
+**Findings für Phase 2** (`FINDINGS.md`): `franchises[]` dedupliziert nicht gegen
+`relationships[]` (UI muss Franchise-Ziele beim Rendern von „Beziehungen" selbst
+rausfiltern) · Personen ohne Portrait fehlen in `related_media[]` (kein Fehler, aber
+„Verknüpfung da, Bild fehlt" ist erwartbar) · unbekannte Beziehungsziele kommen mit
+`target.type == ""` zurück (Klick-Handling muss das abfangen).
 
 **P24 — Photofant-Integration ist fertig (alle 3 Phasen archiviert):**
 Entity-Chip auf Personen-Karte (`features/personen/person-card/`, Frosted-
