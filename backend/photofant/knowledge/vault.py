@@ -20,8 +20,11 @@ log = logging.getLogger(__name__)
 
 _DOMAINS_DIRNAME = "domains"
 _PROMPTS_DIRNAME = "prompts"
+_AGENTS_MD_FILENAME = "AGENTS.md"
 # Mitgelieferte Beispiel-Domänen, die beim ersten Zugriff in den Vault kopiert werden.
 _PACKAGED_DOMAINS_DIR = Path(__file__).parent / _DOMAINS_DIRNAME
+# Agenten-Anleitung, die einmalig in die Vault-Wurzel kopiert wird (frei editierbar danach).
+_PACKAGED_AGENTS_MD = Path(__file__).parent / f"{_AGENTS_MD_FILENAME}.template"
 
 
 class Vault:
@@ -36,6 +39,7 @@ class Vault:
         (self.root / _DOMAINS_DIRNAME).mkdir(exist_ok=True)
         (self.root / _PROMPTS_DIRNAME).mkdir(exist_ok=True)
         self._seed_packaged_domains()
+        self._seed_agents_md()
 
     def domain_path(self, domain_name: str) -> Path:
         return self.root / _DOMAINS_DIRNAME / f"{domain_name.lower()}.yaml"
@@ -78,8 +82,10 @@ class Vault:
         der Aufrufer verlässt sich nicht darauf.
         """
         for path in self.root.rglob("*.md"):
-            top_level = path.relative_to(self.root).parts[0]
-            if top_level in {_DOMAINS_DIRNAME, _PROMPTS_DIRNAME}:
+            relative_parts = path.relative_to(self.root).parts
+            # Entity-Dateien liegen immer in <type-folder>/<slug>.md — ein .md direkt
+            # in der Vault-Wurzel (z.B. das gesäte AGENTS.md) ist nie eine Entity.
+            if len(relative_parts) < 2 or relative_parts[0] in {_DOMAINS_DIRNAME, _PROMPTS_DIRNAME}:
                 continue
             yield path
 
@@ -123,6 +129,21 @@ class Vault:
                 log.info("knowledge: seeded default domain '%s' into vault", source.name)
             except OSError as error:
                 log.warning("knowledge: could not seed domain '%s': %s", source.name, error)
+
+    def _seed_agents_md(self) -> None:
+        """Kopiert die Agenten-Anleitung einmalig in die Vault-Wurzel.
+
+        Nur beim ersten Anlegen (Datei fehlt noch) — danach frei editierbar, ein
+        späterer App-Start überschreibt keine Nutzer-Anpassungen.
+        """
+        target = self.root / _AGENTS_MD_FILENAME
+        if target.exists() or not _PACKAGED_AGENTS_MD.is_file():
+            return
+        try:
+            shutil.copyfile(_PACKAGED_AGENTS_MD, target)
+            log.info("knowledge: seeded AGENTS.md into vault")
+        except OSError as error:
+            log.warning("knowledge: could not seed AGENTS.md: %s", error)
 
 
 def get_vault_path() -> Path:

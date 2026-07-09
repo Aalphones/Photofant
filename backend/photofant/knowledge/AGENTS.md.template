@@ -1,0 +1,117 @@
+# Wissensbasis — Anleitung für Agenten
+
+Dieser Ordner ist die **Markdown-Wissensbasis** von Photofant. Die Markdown-Dateien
+hier sind die Wahrheit — eine SQLite-Cache-Datenbank an anderer Stelle ist nur ein
+Suchindex darüber und wird bei Bedarf komplett aus diesen Dateien neu aufgebaut.
+Wenn du (ein Agent mit Dateizugriff) hier etwas änderst: ändere die Markdown-Datei,
+nie eine Datenbank direkt — die kennst du an dieser Stelle ohnehin nicht.
+
+## Struktur
+
+- `domains/*.yaml` — je eine Datei pro Domäne (Themenbereich). Legt fest, welche
+  Entity-Typen es gibt, in welchen Ordner sie geschrieben werden, und welche
+  Beziehungstypen erlaubt sind. Mitgeliefert: `domains/movies.yaml`.
+- `<ordner>/<slug>.md` — je eine Datei pro Wissenseinheit (Entity). Der Ordnername
+  kommt aus der Domänen-Datei (z.B. `movies/`, `actors/`, `characters/`).
+- `prompts/` — reserviert für später, aktuell leer.
+- `AGENTS.md` — diese Datei. Wird nur einmalig gesät, du darfst sie anpassen.
+
+## Eine Entity-Datei
+
+Jede Entity ist eine Markdown-Datei mit YAML-Frontmatter + freiem Text darunter.
+Beispiel `actors/robert-downey-jr.md`:
+
+```markdown
+---
+id: Actor/robert-downey-jr
+type: Actor
+title: Robert Downey Jr.
+aliases:
+  - RDJ
+status: ""
+owner: inferred
+confidence: 0.8
+domain: Movies
+media_links:
+  persons: []
+  assets: []
+relationships:
+  - type: plays
+    target: Character/tony-stark
+sources:
+  - https://example.com/quelle
+---
+
+Freier Beschreibungstext (Kurzbio) kommt hier drunter.
+```
+
+### Feld-Bedeutung
+
+- `id` — **muss** `<type>/<slug>` sein und zu Ordner + Dateiname passen
+  (`<folder-aus-domain>/<slug>.md`).
+- `type` — muss einer der `entity_types[].name`-Werte der referenzierten Domäne sein.
+- `title` — Pflicht, nicht leer.
+- `aliases` — alternative Namen, über die die Entity ebenfalls gefunden wird.
+- `owner` — wer den Wert zuletzt geschrieben hat, einer von
+  `user` / `manual` / `web` / `inferred`. **Priorität absteigend:
+  `user > manual > web > inferred`** — ein niedrigerer Owner darf einen höheren
+  nie überschreiben. **Als Agent schreibst du grundsätzlich `inferred` oder
+  `web`, nie `user`** — `user` ist reserviert für das, was der Mensch selbst über
+  die App eingegeben hat, damit seine Korrekturen dauerhaft Vorrang behalten.
+- `confidence` — Zahl zwischen `0.0` und `1.0`, wie sicher du dir bist.
+- `domain` — Name der Domäne (`domains/<name>.yaml`), muss existieren.
+- `media_links` — Verknüpfung zu Personen/Bildern in der App-Datenbank
+  (`persons`/`assets`, numerische IDs). Kennst du die IDs nicht: beide Listen leer
+  lassen — das übernimmt normalerweise die App selbst beim Verknüpfen.
+- `relationships` — Liste aus `type` (muss in der Domäne unter
+  `relationship_types` stehen) + `target` (`id` einer anderen Entity). **Wird
+  nicht auf Existenz des Ziels geprüft** — ein Tippfehler im Ziel erzeugt eine
+  stille Sackgasse, keinen Fehler. Prüf das Ziel selbst, bevor du speicherst.
+- `sources` — Liste aus URLs oder Freitext-Quellenangaben.
+- Text unter dem Frontmatter — die Kurzbio/Beschreibung.
+
+## Neue Domäne anlegen
+
+Neue Datei unter `domains/<name>.yaml`, z.B. `domains/manga.yaml`:
+
+```yaml
+name: Manga
+entity_types:
+  - name: Manga
+    folder: mangas
+  - name: MangaCharacter
+    folder: manga_characters
+relationship_types:
+  - authored_by
+  - appears_in
+```
+
+**Wichtig:** Ordner-Namen (`folder:`) sind **ein einziger flacher Namensraum über
+alle Domänen hinweg** — nicht pro Domäne isoliert. Verwendest du einen Ordner-
+Namen, den eine andere Domäne schon für einen anderen Typ nutzt, landen beide
+Typen im selben Ordner, und zwei Entities mit demselben Slug überschreiben sich
+gegenseitig ohne Warnung. Vor dem Anlegen einer neuen Domäne: existierende
+`domains/*.yaml` auf Ordner-Namen-Kollisionen prüfen.
+
+## Neue Entity anlegen
+
+1. Domäne wählen (oder wie oben neu anlegen).
+2. Slug festlegen (dateisystemtauglich, z.B. `robert-downey-jr`).
+3. Datei unter `<folder-aus-domain>/<slug>.md` mit dem Frontmatter-Schema oben
+   anlegen. `id`/`type`/`title`/`domain` sind Pflichtfelder — fehlen sie, wird die
+   Datei beim nächsten Sync stillschweigend übersprungen (kein Fehler, aber auch
+   keine Wirkung).
+
+## Nach dem Bearbeiten: Cache synchronisieren
+
+Der SQLite-Cache merkt Datei-Änderungen **nicht von selbst**. Damit eine neue oder
+geänderte Entity in der App auftaucht (Suche, Lore-Panel in der Lightbox), muss der
+Cache neu abgeglichen werden:
+
+- In der App: Seite „Wartung" → Karte „Wissensbasis" → „Notiz-Änderungen
+  übernehmen" (Reconcile — überschreibt keine anderen Daten, Markdown gewinnt immer).
+- Per MCP-Tool, falls du darüber Zugriff auf die laufende App hast:
+  `rebuild(target="knowledge_reconcile")`.
+
+Ohne diesen Schritt bleibt deine Änderung auf der Platte, taucht aber nirgends in
+der App auf.
