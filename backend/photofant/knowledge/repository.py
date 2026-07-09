@@ -116,6 +116,27 @@ class EntityRepository:
             statement = statement.filter(KnowledgeEntity.domain == domain)
         return statement.all()
 
+    def find_linked_entities(self, kind: str, target_ids: list[int]) -> dict[int, KnowledgeEntity]:
+        """Reverse-Lookup: ``target_id`` (Person/Asset) → verknüpfte Entity, falls vorhanden.
+
+        Bulk-Variante (ein Query statt N) für Listen-DTOs (P24, analog
+        ``_person_instance_counts`` in ``api/persons.py``). Zeigen mehrere Entities auf
+        denselben ``target_id`` (Konvention sieht das nicht vor), gewinnt die erste
+        gefundene Zeile — deterministisch über die Query-Reihenfolge, kein Sonderfall nötig.
+        """
+        if not target_ids:
+            return {}
+        rows = (
+            self.session.query(KnowledgeMediaLink, KnowledgeEntity)
+            .join(KnowledgeEntity, KnowledgeEntity.id == KnowledgeMediaLink.entity_id)
+            .filter(KnowledgeMediaLink.kind == kind, KnowledgeMediaLink.target_id.in_(target_ids))
+            .all()
+        )
+        result: dict[int, KnowledgeEntity] = {}
+        for link, entity in rows:
+            result.setdefault(link.target_id, entity)
+        return result
+
     def delete(self, entity_id: str) -> None:
         """Löscht die Entity und alle Kind-Zeilen (kein Waise).
 

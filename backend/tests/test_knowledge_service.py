@@ -202,6 +202,73 @@ def test_get_lore_returns_entity_and_outgoing_relationships(service: KnowledgeSe
     assert lore.relationships == [Relationship(type="plays", target="movies/iron-man")]
 
 
+def test_link_media_appends_and_dedups(service: KnowledgeService, vault: Vault) -> None:
+    service.create_entity(_actor(), Owner.USER)
+
+    service.link_media("actors/robert-downey-jr", "person", 42, Owner.USER)
+    updated = service.link_media("actors/robert-downey-jr", "person", 42, Owner.USER)
+
+    assert updated.media_links.persons == [42]
+    on_disk = vault.load_entity(vault.root / "actors" / "robert-downey-jr.md")
+    assert on_disk.media_links.persons == [42]
+
+
+def test_link_media_missing_entity_raises_not_found(service: KnowledgeService) -> None:
+    with pytest.raises(EntityNotFoundError):
+        service.link_media("actors/nobody", "person", 42, Owner.USER)
+
+
+def test_link_media_rejects_lower_priority_owner(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    with pytest.raises(OwnershipConflictError):
+        service.link_media("actors/robert-downey-jr", "person", 42, Owner.INFERRED)
+
+
+def test_unlink_media_removes_target(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    service.link_media("actors/robert-downey-jr", "person", 42, Owner.USER)
+
+    updated = service.unlink_media("actors/robert-downey-jr", "person", 42, Owner.USER)
+
+    assert updated.media_links.persons == []
+
+
+def test_unlink_media_missing_target_is_a_noop(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    updated = service.unlink_media("actors/robert-downey-jr", "person", 999, Owner.USER)
+    assert updated.media_links.persons == []
+
+
+def test_linked_entity_ref_returns_cache_projection_without_body(service: KnowledgeService) -> None:
+    service.create_entity(_actor(body="Langer Wikipedia-Text..."), Owner.USER)
+    service.link_media("actors/robert-downey-jr", "person", 42, Owner.USER)
+
+    ref = service.linked_entity_ref("person", 42)
+
+    assert ref is not None
+    assert ref.id == "actors/robert-downey-jr"
+    assert ref.title == "Robert Downey Jr."
+    assert ref.type == "Actor"
+
+
+def test_linked_entity_ref_none_when_unlinked(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    assert service.linked_entity_ref("person", 42) is None
+
+
+def test_linked_entity_refs_bulk(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    service.create_entity(_movie(), Owner.USER)
+    service.link_media("actors/robert-downey-jr", "person", 1, Owner.USER)
+    service.link_media("movies/iron-man", "person", 2, Owner.USER)
+
+    refs = service.linked_entity_refs("person", [1, 2, 3])
+
+    assert refs[1].id == "actors/robert-downey-jr"
+    assert refs[2].id == "movies/iron-man"
+    assert 3 not in refs
+
+
 def test_search_entities_filters_by_type_and_domain(service: KnowledgeService) -> None:
     service.create_entity(_actor(), Owner.USER)
     service.create_entity(_movie(), Owner.USER)

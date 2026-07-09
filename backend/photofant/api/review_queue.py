@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -12,6 +12,9 @@ from sqlalchemy.orm import Session
 
 from photofant.db.models import Face, Person, ReviewItem
 from photofant.db.session import get_session
+
+if TYPE_CHECKING:
+    from photofant.knowledge.service import KnowledgeService
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +40,21 @@ class ReviewActionRequest(BaseModel):
 
 def _now_utc() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _needs_knowledge_lookup(
+    knowledge_service: KnowledgeService, auto_lookup_enabled: bool, person: Person | None
+) -> bool:
+    """P24: soll für `person` ein `KnowledgeLookupJob` angestoßen werden?
+
+    Reine Entscheidungsfunktion (kein I/O außer dem Cache-Read über den Service) — dadurch
+    ohne HTTP-Layer testbar. `False` bei fehlendem Namen: eine unbenannte Person liefert
+    keinen sinnvollen `ref` für den Lookup, und der spätere Wizard (Phase 2) braucht den
+    Namen ohnehin als Titel-Vorbelegung.
+    """
+    if not auto_lookup_enabled or person is None or not person.name:
+        return False
+    return knowledge_service.linked_entity_ref("person", person.id) is None
 
 
 @router.get("", response_model=list[FaceReviewItemDto])
@@ -128,6 +146,29 @@ async def resolve_face_review(
         if face.asset_id is not None:
             import asyncio
             asyncio.ensure_future(enqueue_reevaluate_assets([face.asset_id]))
+
+        # P24: Person bestätigt ohne verknüpfte Entity → Wissens-Lookup anstoßen (additiv,
+        # ändert den Move-Pfad oben nicht — siehe README-Chesterton). Sackgassen-Job, kein
+        # Rekursionsschutz nötig (ADR-014).
+        from photofant.knowledge.service import KnowledgeService
+        from photofant.knowledge.vault import open_vault
+        from photofant.settings import load_settings
+
+        target_person = session.get(Person, target_person_id)
+        auto_lookup_enabled = load_settings()["knowledge"]["auto_lookup"]
+        knowledge_service = KnowledgeService(session, open_vault())
+        if _needs_knowledge_lookup(knowledge_service, auto_lookup_enabled, target_person):
+            import asyncio
+
+            from photofant.jobs.knowledge_lookup_job import enqueue_knowledge_lookup
+            from photofant.knowledge.tasks import TaskKind
+
+            assert target_person is not None  # für mypy — von _needs_knowledge_lookup geprüft
+            asyncio.ensure_future(
+                enqueue_knowledge_lookup(
+                    TaskKind.NEW_PERSON, target_person.name, {"person_id": target_person_id}
+                )
+            )
 
         log.info("Face %d confirmed → person %d", face_id, target_person_id)
         return {"status": "confirmed"}

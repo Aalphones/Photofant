@@ -48,6 +48,19 @@ class AmbiguousEntityError(ValueError):
 
 
 @dataclass
+class EntityRef:
+    """Schlanke Cache-Projektion einer Entity — für ``linked_entity`` auf Person-/Asset-DTOs.
+
+    Bewusst kein voller ``Entity``-Load (kein Vault-Read): die Personen-/Asset-Liste
+    braucht nur ``id``/``title``/``type`` für den Chip, nicht den ganzen Markdown-Body.
+    """
+
+    id: str
+    title: str
+    type: str
+
+
+@dataclass
 class Lore:
     """Rückgabe von ``get_lore`` — Entity + direkte ausgehende Beziehungen.
 
@@ -166,6 +179,63 @@ class KnowledgeService:
         self.vault.save_entity(entity, domain)
         self.entities.upsert_from_vault(entity)
         return entity
+
+    def link_media(self, entity_id: str, kind: str, target_id: int, owner: Owner) -> Entity:
+        """Verknüpft eine Person/ein Asset (``kind`` = ``"person"``/``"asset"``) mit einer Entity.
+
+        Idempotent wie ``create_relationship``: bereits verknüpfte ``target_id`` wird nicht
+        doppelt angehängt.
+        """
+        entity = self._require_entity(entity_id)
+        self._check_ownership(entity, owner)
+
+        targets = entity.media_links.persons if kind == "person" else entity.media_links.assets
+        if target_id not in targets:
+            targets.append(target_id)
+
+        entity.owner = owner
+        if owner is Owner.USER:
+            entity.confidence = 1.0
+
+        domain = self.vault.load_domain(entity.domain)
+        self._validate(entity, domain)
+        self.vault.save_entity(entity, domain)
+        self.entities.upsert_from_vault(entity)
+        return entity
+
+    def unlink_media(self, entity_id: str, kind: str, target_id: int, owner: Owner) -> Entity:
+        """Löst eine Person-/Asset-Verknüpfung — kein Fehler, wenn sie nicht existiert."""
+        entity = self._require_entity(entity_id)
+        self._check_ownership(entity, owner)
+
+        if kind == "person":
+            entity.media_links.persons = [
+                person_id for person_id in entity.media_links.persons if person_id != target_id
+            ]
+        else:
+            entity.media_links.assets = [
+                asset_id for asset_id in entity.media_links.assets if asset_id != target_id
+            ]
+
+        entity.owner = owner
+        if owner is Owner.USER:
+            entity.confidence = 1.0
+
+        domain = self.vault.load_domain(entity.domain)
+        self.vault.save_entity(entity, domain)
+        self.entities.upsert_from_vault(entity)
+        return entity
+
+    def linked_entity_refs(self, kind: str, target_ids: list[int]) -> dict[int, EntityRef]:
+        """Bulk-Variante von ``linked_entity_ref`` — ein Query für eine ganze Listen-Ansicht."""
+        rows = self.entities.find_linked_entities(kind, target_ids)
+        return {
+            target_id: EntityRef(id=row.id, title=row.title, type=row.type)
+            for target_id, row in rows.items()
+        }
+
+    def linked_entity_ref(self, kind: str, target_id: int) -> EntityRef | None:
+        return self.linked_entity_refs(kind, [target_id]).get(target_id)
 
     def get_lore(self, entity_id: str) -> Lore:
         """Stub: Entity + direkte ausgehende Beziehungen. Ausbau P25."""

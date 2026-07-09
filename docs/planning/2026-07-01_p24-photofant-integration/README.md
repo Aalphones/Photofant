@@ -18,7 +18,12 @@ Personen/Assets mit Entities verknüpfen; hat eine bestätigte Person keine Enti
 - **DTO:** Personen-/Asset-Detail bekommen optionales `linked_entity` (id, title, type) — read-only Cache-Projektion.
 
 ## Reservierte Entscheidungen & Settings
-ADR-011 (intelligente Jobs, von P22 reserviert) hier real → beim Umsetzen anlegen, falls noch nicht: `docs/decisions/011-intelligente-jobs.md`. Nutzt `knowledge.autoLookup` (P23) + `jobs.maxDepth` (P22), keine neuen Keys.
+~~ADR-011 (intelligente Jobs, von P22 reserviert)~~ — Nummer war bei Umsetzung bereits an
+`011-galerie-virtual-scroll.md` vergeben; real angelegt als **ADR-014**
+(`docs/decisions/014-wissens-lookup-auto-trigger-ohne-tiefenschutz.md`). ~~Nutzt `knowledge.autoLookup`
+(P23) + `jobs.maxDepth` (P22), keine neuen Keys~~ — beides existierte nicht, `knowledge.auto_lookup`
+wurde als echtes neues Setting angelegt, `jobs.maxDepth` bewusst nicht gebaut (Details: ADR-014,
+`FINDINGS.md`).
 
 ## Design-Lage (freihändig — freigegeben)
 Kein Mockup. Affordance + Entity-Anzeige fügen sich in bestehende Screens (Personen-Karte, Review-Queue, Asset-Detail) — **Screen-Eigentümer-Regel:** in deren Struktur einbauen, kein Wegwerf-Container. Dezent, kein Popup-Zwang (Dok 050 §13).
@@ -26,7 +31,7 @@ Kein Mockup. Affordance + Entity-Anzeige fügen sich in bestehende Screens (Pers
 ## Phasen
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | Entity-Linking + Job-Kette (Backend) | standard | pending |
+| 1 | Entity-Linking + Job-Kette (Backend) | standard | complete |
 | 2 | „Neue Person erkannt"-Affordance (UI) | standard | pending |
 | 3 | Verknüpfte Entity an Person/Asset (UI) | mechanisch | pending |
 

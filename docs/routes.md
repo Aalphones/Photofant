@@ -5,8 +5,10 @@
 | `/galerie` (load) | `GET` | `/api/assets` | `page`, `page_size`, `sort` (`date\|size`), `order` (`asc\|desc`), `favourite` (bool, optional), `source[]` (repeatable), `quality_min` (0.0–1.0), `tags[]` (tag IDs, AND, repeatable), `collection_id` (Mitglied einer Sammlung), `q` (Suchtext), `q_mode` (`tags\|caption\|semantic\|text`, `text` = Fuzzy-Freitextsuche über Tag-Name+Caption+Personen-Name via rapidfuzz, ADR-015, Default der Suchleiste seit P28), `similar_ids[]` (geordnete Asset-ID-Liste, P36 — überschreibt Datum/Größe-Sortierung mit dieser Reihenfolge, respektiert weiterhin Soft-Delete + andere Filter) | `AssetsPage { items, total, page, page_size, facets }` — `items[]` sind P21 flache Einzeleinträge (Asset **oder** Version-Pseudo-Eintrag), je mit `kind` (`asset\|version`), `version_id`, `stack_size` (1 = kein Stapel), `stack_group_id` (ADR-012) |
 | `/galerie` (cell thumbnail) | `GET` | `/api/assets/{id}/thumbnail` | `size` (256\|512\|1024) | JPEG blob — `ETag: "{hash}-{size}"`, `Cache-Control: immutable` |
 | `/galerie` (lightbox) | `GET` | `/api/assets/{id}/file` | — | Original-Bild |
-| `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`, `tags`, `faces`, `versions`, `original_id`, `linked_edits`, `quality`, `framing`) |
+| `/galerie` (detail) | `GET` | `/api/assets/{id}` | — | `AssetDetailDto` (wie Dto + `path`, `tags`, `faces`, `versions`, `original_id`, `linked_edits`, `quality`, `framing`, `linked_entity` (P24, optional `{id, title, type}` — Cache-Projektion, kein Vault-Read)) |
 | Lightbox (Metadaten-Edit, P15 Phase 1) | `PATCH` | `/api/assets/{id}` | `{ source?, framing?, original_id? }` — nur gesetzte Felder werden geändert, `original_id: null` löscht die Zuordnung | `AssetDetailDto` |
+| Wissens-Verknüpfung (P24) | `POST` | `/api/assets/{id}/link-entity` | `{ entity_id: string, owner? ("user" default) }` | `AssetDetailDto` — 404 Asset/Entity nicht gefunden, 409 Ownership-Konflikt |
+| Wissens-Verknüpfung lösen (P24) | `DELETE` | `/api/assets/{id}/link-entity` | Query: `entity_id`, `owner?` | `AssetDetailDto` — idempotent (kein Fehler, wenn nicht verknüpft) |
 | Lightbox (Verwandte Assets, P10 Phase 1) | `GET` | `/api/assets/{id}/lineage` | — | `LineageDto { asset_id, thumbnail_url, versions: VersionDto[], faces: LineageFaceDto[] }` — Ableitungs-Baum aus `version.instance_id`/`version.parent_id` (Editor-Edits) und `face.asset_id`/`face.source_version_id` (extrahierte Gesichter + deren eigene Edits); `LineageFaceDto` = `FaceDto`-Felder + `versions: VersionDto[]` |
 | `/galerie` (import — Serverpfade) | `POST` | `/api/assets/import` | `{ paths: string[] }` | `{ job_id }` |
 | `/galerie` (import — Browser-Upload) | `POST` | `/api/assets/upload` | `multipart/form-data; files[]` | `{ job_id }` |
@@ -728,8 +730,10 @@ Auto-Resolve (Papierkorb-Paare) läuft vor jeder Seite als Bulk-UPDATE.
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| `/personen` (Liste) | `GET` | `/api/persons` | — | `PersonDto[]` (sortiert: benannte Personen zuerst nach `id` aufsteigend, Unbekannt zuletzt) |
+| `/personen` (Liste) | `GET` | `/api/persons` | — | `PersonDto[]` (sortiert: benannte Personen zuerst nach `id` aufsteigend, Unbekannt zuletzt; `linked_entity` (P24, optional `{id, title, type}`) — Bulk-Cache-Projektion, ein Query für die ganze Liste) |
 | `/personen` (Umbenennen/Gruppe setzen) | `PATCH` | `/api/persons/{id}` | `{ name?: string, group_name?: string }` | `PersonDto` (mind. eines der beiden Felder gesetzt, sonst 422; 400 bei Rename von `is_unknown`, 422 bei leerem Namen; `group_name: ""` löscht die Gruppe) |
+| Wissens-Verknüpfung (P24) | `POST` | `/api/persons/{id}/link-entity` | `{ entity_id: string, owner? ("user" default) }` | `PersonDto` — 404 Person/Entity nicht gefunden, 409 Ownership-Konflikt |
+| Wissens-Verknüpfung lösen (P24) | `DELETE` | `/api/persons/{id}/link-entity` | Query: `entity_id`, `owner?` | `PersonDto` — idempotent (kein Fehler, wenn nicht verknüpft) |
 | `/galerie` (Person-Filter) | `GET` | `/api/assets` | `person_id` (int, optional) | `AssetsPage` — filtert auf `AssetInstance.person_id` |
 | `/galerie` (Framing-Filter) | `GET` | `/api/assets` | `framing[]` (repeatable) | `AssetsPage` — filtert auf `Asset.framing` |
 
@@ -832,7 +836,7 @@ Aktions-Semantik (`POST /api/review-queue/{face_id}`):
 |---|---|---|---|---|
 | `/personen` (Merge) | `POST` | `/api/persons/merge` | `{ from_id, into_id }` | `MergeResultDto` |
 | `/personen` (Split) | `POST` | `/api/persons/{id}/split` | `{ face_ids: number[] }` | `SplitResultDto` |
-| `/personen` (Löschen) | `DELETE` | `/api/persons/{id}` | — | `MergeResultDto` (404 unbekannte ID, 400 bei `is_unknown`; Fotos/Faces wandern nach „Unbekannt", Ordner + DB-Eintrag weg; löscht zugehörige `person`-Smart-Trigger und stößt Reevaluate für betroffene Assets an) |
+| `/personen` (Löschen) | `DELETE` | `/api/persons/{id}` | — | `MergeResultDto` (404 unbekannte ID, 400 bei `is_unknown`; Fotos/Faces wandern nach „Unbekannt", Ordner + DB-Eintrag weg; löscht zugehörige `person`-Smart-Trigger und stößt Reevaluate für betroffene Assets an; P24: löst vorher eine bestehende Wissens-Verknüpfung — Waisen-Schutz) |
 | `/personen` (Faces einer Person) | `GET` | `/api/persons/{id}/faces` | — | `PersonFaceDto[]` |
 
 ```typescript
@@ -1083,7 +1087,10 @@ comfyui.result_wait_timeout_seconds = 1800
 
 **Ownership:** jeder Schreibzugriff ist entity-weit (ein `owner`-Feld pro Entity, kein Per-Feld-Owner). Priorität `user > manual > web > inferred`; ein Schreiber mit niedrigerer Priorität als der bestehende `owner` wird komplett abgelehnt (409), ein erfolgreicher Schreiber wird selbst zum neuen `owner`. `owner=user` erzwingt immer `confidence=1.0`. REST setzt `owner` optional entgegen (Default `"user"`, da die UI heute der einzige Schreiber ist) — Jobs (ab P24) laufen in-process und rufen `KnowledgeService` direkt auf, nicht über REST.
 
-**Medien-Verknüpfung** (`POST/DELETE .../{id}/media-links`) ist laut Kontrakt erst P24 dran, hier nicht implementiert.
+**Medien-Verknüpfung (P24, umgesetzt):** nicht auf der Entity-Seite (`.../{id}/media-links`, wie im
+P22-Kontrakt vorskizziert), sondern auf der Person-/Asset-Seite — `POST/DELETE
+/api/persons/{id}/link-entity` und analog `/api/assets/{id}/link-entity` (siehe „Personen"- und
+Galerie-Abschnitt oben). Intern über `KnowledgeService.link_media`/`unlink_media`.
 
 **Aufgaben-Queue** (P23 Phase 1, `api/knowledge_tasks.py`):
 
@@ -1093,7 +1100,7 @@ comfyui.result_wait_timeout_seconds = 1800
 | *(ab P23 Phase 3)* | `GET` | `/api/knowledge/tasks` | `status?` (`open\|resolved\|dismissed`) | `TaskDto[]` — ohne `status` alle, neueste zuerst |
 | *(ab P23 Phase 3)* | `POST` | `/api/knowledge/tasks/{id}/resolve` | — | `TaskDto` — 404 nicht gefunden, 409 wenn nicht mehr `open` |
 | *(ab P23 Phase 3)* | `POST` | `/api/knowledge/tasks/{id}/dismiss` | — | `TaskDto` — 404 nicht gefunden, 409 wenn nicht mehr `open` |
-| — | `POST` | `/api/knowledge/lookup` | `{ kind, ref }` | `{ job_id: string }` — startet `KnowledgeLookupJob`; legt bei fehlender Entity (`ref` = `id` oder Alias) eine Aufgabe an, idempotent über `context={"ref": ref}`; manueller Trigger, Auto-Anbindung an Ereignisse erst P24 |
+| — | `POST` | `/api/knowledge/lookup` | `{ kind, ref }` | `{ job_id: string }` — startet `KnowledgeLookupJob`; legt bei fehlender Entity (`ref` = `id` oder Alias) eine Aufgabe an, idempotent über `context={"ref": ref, ...extra}`; manueller Trigger. **Seit P24** zusätzlich automatisch: `POST /api/review-queue/{face_id}` mit `action=confirm` stößt bei unverknüpfter, benannter Person denselben Job an (`kind=new_person`, `context={"ref": person.name, "person_id": id}`), sofern `knowledge.auto_lookup` (Default `true`) an ist — siehe ADR-014 (kein Tiefenschutz, da Sackgassen-Job) |
 
 ```typescript
 interface TaskDto {

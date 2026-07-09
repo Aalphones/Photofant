@@ -1,31 +1,22 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** P23 ist komplett und archiviert (`docs/archive/2026-07/2026-07-01_p23-knowledge-wizard/`).
-Nächster Schritt ist eine Auswahl aus dem Backlog unten — z.B. `/implement` aufrufen und den
-gewünschten Plan nennen.
+**Aktiver Plan:** `docs/planning/2026-07-01_p24-photofant-integration/`
+**Phase:** 2/3 — „Neue Person erkannt"-Affordance (UI) (pending)
+**Nächster Schritt:** `/clear`, dann `phase-2-new-person-affordance.md` lesen (Kontext:
+`features/review/`, `features/personen/`, `store/persons/`) und die Inline-Affordance bauen.
+Modell-Empfehlung: `sonnet` (Komplexität „standard").
 
-P23 (Knowledge Wizard) fertig, alle 3 Phasen grün, `tsc`/`ng build` grün:
-- Phase 1: Task-Queue Backend (Migration `0035_knowledge_tasks`, `TaskService`, REST, `KnowledgeLookupJob`).
-- Phase 2: Wizard-UI (`features/wissen/entity-wizard-dialog`) + zwei additive P22-Kontrakt-Lücken
-  geschlossen (`GET /api/knowledge/domains`, `body`-Feld).
-- Phase 3: Work-Queue-UI (`features/wissen/work-queue`) — offene Aufgaben, „Erledigen" öffnet den
-  Wizard vorbelegt und löst die Aufgabe danach auf, „Später"/„Ignorieren" als Sekundäraktion.
-- Details/Abweichungen: `docs/archive/2026-07/2026-07-01_p23-knowledge-wizard/README.md`.
+Phase 1 (Entity-Linking + Job-Kette, Backend) ist fertig, `pytest`/`ruff` grün (368 passed,
+13 vorbekannte Failures unverändert). Abweichungen vom Plan-Text dokumentiert in
+`docs/planning/2026-07-01_p24-photofant-integration/FINDINGS.md` + `docs/decisions/014-…md`
+(kein `ParentJobId`/`Depth`-Schleifenschutz gebaut — YAGNI, mit Nutzer abgestimmt; ADR-Nummer
+011 war schon belegt).
 
-**Smoke-Checkliste (noch vom Nutzer zu prüfen — Details im archivierten P23-README):**
-1. „Wissen" in der Nav öffnen → Wizard → Entity anlegen → Datei liegt im Vault.
-2. Aufgabe per `curl POST .../tasks` anlegen → erscheint in der Work-Queue.
-3. Aufgabe „Erledigen" → Wizard vorbelegt → speichern → Aufgabe verschwindet.
-4. Zweiter Lookup zum selben Kontext → keine zweite Aufgabe.
-
-Andere freigegebene, geparkte Pläne in `docs/planning/` (nach P23):
-- `2026-07-01_p24-photofant-integration/` — Entity-Linking, Personen-Affordance, Media-Links
-- `2026-07-01_p25-lore-panel/` — Lore-API + Panel-UI + Korrektur-Flow
-- `2026-07-01_p26-recommendation-engine/` — Empfehlungs-Job + Cards + Explainability
-- `2026-07-01_p27-gemma-integration/` — KI-Layer/Gemma-Adapter + Import/Update/Interview-Jobs
-- `2026-07-06_p34-mcp-wissensbasis/` — Entities/Beziehungen, Media-Links/Aufgaben, Lore/Empfehlungen, agentischer Workflow
+Andere freigegebene, geparkte Pläne in `docs/planning/` (nach P24):
+- `2026-07-01_p25-lore-panel/` — Lore-API + Panel-UI + Korrektur-Flow (braucht P24)
+- `2026-07-01_p26-recommendation-engine/` — Empfehlungs-Job + Cards + Explainability (braucht P25)
+- `2026-07-01_p27-gemma-integration/` — KI-Layer/Gemma-Adapter + Import/Update/Interview-Jobs (braucht P25)
+- `2026-07-06_p34-mcp-wissensbasis/` — Entities/Beziehungen, Media-Links/Aufgaben, Lore/Empfehlungen, agentischer Workflow (braucht MCP-Basisplan + P24-P26)
 
 P23–P27 lesen den P22-Kontrakt (README-Sektion „Kontrakt", jetzt im Archiv) als Single Source.
 
@@ -42,3 +33,9 @@ P23–P27 lesen den P22-Kontrakt (README-Sektion „Kontrakt", jetzt im Archiv) 
 - 13 vorbestehende Test-Failures in `test_comfyui_run.py`/`test_comfyui_auto_import.py`/
   `test_caption_config.py` (Signatur-Drift `run_comfyui_run_job` fehlt `job_version_inputs`).
 - 124 vorbestehende `mypy --strict`-Fehler quer über die Codebase — kein Vollprojekt-Grün-Gate aktiv.
+
+**Smoke-Checkliste P23 (noch vom Nutzer zu prüfen — Details im archivierten P23-README):**
+1. „Wissen" in der Nav öffnen → Wizard → Entity anlegen → Datei liegt im Vault.
+2. Aufgabe per `curl POST .../tasks` anlegen → erscheint in der Work-Queue.
+3. Aufgabe „Erledigen" → Wizard vorbelegt → speichern → Aufgabe verschwindet.
+4. Zweiter Lookup zum selben Kontext → keine zweite Aufgabe.

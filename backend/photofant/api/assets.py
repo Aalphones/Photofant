@@ -38,6 +38,9 @@ from photofant.db.models import (
 from photofant.db.session import get_session
 from photofant.jobs.collections_job import enqueue_reevaluate_assets
 from photofant.jobs.import_job import enqueue_import, enqueue_scan
+from photofant.knowledge.schema import Owner
+from photofant.knowledge.service import EntityNotFoundError, KnowledgeService, OwnershipConflictError
+from photofant.knowledge.vault import Vault, open_vault
 from photofant.media import moves
 from photofant.media.thumbnails import generate_thumbnail
 
@@ -46,6 +49,17 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/assets")
 
 DbSession = Annotated[Session, Depends(get_session)]
+VaultDep = Annotated[Vault, Depends(open_vault)]
+
+
+def _parse_owner(value: str) -> Owner:
+    try:
+        return Owner(value)
+    except ValueError as error:
+        allowed = ", ".join(owner.value for owner in Owner)
+        raise HTTPException(
+            status_code=422, detail=f"Unbekannter Owner '{value}' (erlaubt: {allowed})"
+        ) from error
 
 _VALID_THUMB_SIZES = frozenset({256, 512, 1024})
 _VALID_FRAMINGS = frozenset({"close_up", "medium", "full_body"})
@@ -143,6 +157,17 @@ class ClassificationDto(BaseModel):
     confidence: float
 
 
+class EntityRefDto(BaseModel):
+    id: str
+    title: str
+    type: str
+
+
+class LinkEntityRequest(BaseModel):
+    entity_id: str
+    owner: str = Owner.USER.value
+
+
 class AssetDetailDto(AssetDto):
     path: str | None
     tags: list[TagDto]
@@ -157,6 +182,7 @@ class AssetDetailDto(AssetDto):
     quality: float | None = None
     framing: str | None = None
     classifications: list[ClassificationDto] = []
+    linked_entity: EntityRefDto | None = None
 
 
 class FacetItem(BaseModel):
@@ -1025,7 +1051,9 @@ def _load_linked_edits(session: Session, asset_id: int) -> list[AssetSummaryDto]
     ]
 
 
-def _build_asset_detail_dto(session: Session, asset: Asset, instance: AssetInstance) -> AssetDetailDto:
+def _build_asset_detail_dto(
+    session: Session, asset: Asset, instance: AssetInstance, vault: Vault
+) -> AssetDetailDto:
     version_count = (
         session.query(func.count(Version.id))
         .filter(Version.instance_id == instance.id)
@@ -1037,6 +1065,7 @@ def _build_asset_detail_dto(session: Session, asset: Asset, instance: AssetInsta
     versions = _load_asset_versions(session, instance.id, asset.id)
     linked_edits = _load_linked_edits(session, asset.id)
     classifications = _load_asset_classifications(session, asset.id)
+    linked_entity = KnowledgeService(session, vault).linked_entity_ref("asset", asset.id)
     return AssetDetailDto(
         **base.model_dump(),
         path=instance.path,
@@ -1052,17 +1081,20 @@ def _build_asset_detail_dto(session: Session, asset: Asset, instance: AssetInsta
         quality=asset.quality_score,
         framing=asset.framing,
         classifications=classifications,
+        linked_entity=EntityRefDto(id=linked_entity.id, title=linked_entity.title, type=linked_entity.type)
+        if linked_entity is not None
+        else None,
     )
 
 
 @router.get("/{asset_id}", response_model=AssetDetailDto)
-async def get_asset(asset_id: int, session: DbSession) -> AssetDetailDto:
+async def get_asset(asset_id: int, session: DbSession, vault: VaultDep) -> AssetDetailDto:
     row = _active_row(session, asset_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Asset not found")
 
     asset, instance = row
-    return _build_asset_detail_dto(session, asset, instance)
+    return _build_asset_detail_dto(session, asset, instance, vault)
 
 
 @router.get("/{asset_id}/lineage", response_model=LineageDto)
@@ -1083,7 +1115,9 @@ class AssetPatchBody(BaseModel):
 
 
 @router.patch("/{asset_id}", response_model=AssetDetailDto)
-async def patch_asset(asset_id: int, body: AssetPatchBody, session: DbSession) -> AssetDetailDto:
+async def patch_asset(
+    asset_id: int, body: AssetPatchBody, session: DbSession, vault: VaultDep
+) -> AssetDetailDto:
     """Partially update source/framing/original_id — only fields present in the body are touched.
 
     `original_id: null` clears the assignment; omitting the field leaves it unchanged
@@ -1111,7 +1145,56 @@ async def patch_asset(asset_id: int, body: AssetPatchBody, session: DbSession) -
     session.commit()
     session.refresh(asset)
     log.info("patch_asset: asset %d fields=%s", asset_id, sorted(fields_set))
-    return _build_asset_detail_dto(session, asset, instance)
+    return _build_asset_detail_dto(session, asset, instance, vault)
+
+
+@router.post("/{asset_id}/link-entity", response_model=AssetDetailDto)
+async def link_asset_entity(
+    asset_id: int, body: LinkEntityRequest, session: DbSession, vault: VaultDep
+) -> AssetDetailDto:
+    """Verknüpft ein Asset mit einer Wissens-Entity (P24) — analog `link_person_entity`."""
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset, instance = row
+
+    service = KnowledgeService(session, vault)
+    try:
+        service.link_media(body.entity_id, "asset", asset_id, _parse_owner(body.owner))
+    except EntityNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except OwnershipConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    session.commit()
+
+    log.info("Linked asset %d → entity %r", asset_id, body.entity_id)
+    return _build_asset_detail_dto(session, asset, instance, vault)
+
+
+@router.delete("/{asset_id}/link-entity", response_model=AssetDetailDto)
+async def unlink_asset_entity(
+    asset_id: int,
+    entity_id: str,
+    session: DbSession,
+    vault: VaultDep,
+    owner: str = Owner.USER.value,
+) -> AssetDetailDto:
+    row = _active_row(session, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset, instance = row
+
+    service = KnowledgeService(session, vault)
+    try:
+        service.unlink_media(entity_id, "asset", asset_id, _parse_owner(owner))
+    except EntityNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except OwnershipConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    session.commit()
+
+    log.info("Unlinked asset %d from entity %r", asset_id, entity_id)
+    return _build_asset_detail_dto(session, asset, instance, vault)
 
 
 @router.post("/upload", response_model=JobStarted)

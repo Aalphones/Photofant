@@ -1,9 +1,11 @@
 """Persons API — list, rename, merge and split Person records.
 
-GET    /api/persons             → PersonDto[]
-PATCH  /api/persons/{id}        → rename
-POST   /api/persons/merge       → merge two persons
-POST   /api/persons/{id}/split  → split faces into new person
+GET    /api/persons                 → PersonDto[]
+PATCH  /api/persons/{id}            → rename
+POST   /api/persons/merge           → merge two persons
+POST   /api/persons/{id}/split      → split faces into new person
+POST   /api/persons/{id}/link-entity   → mit Wissens-Entity verknüpfen (P24)
+DELETE /api/persons/{id}/link-entity   → Verknüpfung lösen (P24)
 """
 from __future__ import annotations
 
@@ -22,12 +24,32 @@ from sqlalchemy.orm import Session
 
 from photofant.db.models import AssetInstance, Face, Person
 from photofant.db.session import get_session
+from photofant.knowledge.schema import Owner
+from photofant.knowledge.service import EntityNotFoundError, KnowledgeService, OwnershipConflictError
+from photofant.knowledge.vault import Vault, open_vault
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/persons")
 
 DbSession = Annotated[Session, Depends(get_session)]
+VaultDep = Annotated[Vault, Depends(open_vault)]
+
+
+def _parse_owner(value: str) -> Owner:
+    try:
+        return Owner(value)
+    except ValueError as error:
+        allowed = ", ".join(owner.value for owner in Owner)
+        raise HTTPException(
+            status_code=422, detail=f"Unbekannter Owner '{value}' (erlaubt: {allowed})"
+        ) from error
+
+
+class EntityRefDto(BaseModel):
+    id: str
+    title: str
+    type: str
 
 
 class PersonDto(BaseModel):
@@ -39,6 +61,12 @@ class PersonDto(BaseModel):
     portrait_face_id: int | None
     group_name: str | None
     created_at: datetime | None
+    linked_entity: EntityRefDto | None = None
+
+
+class LinkEntityRequest(BaseModel):
+    entity_id: str
+    owner: str = Owner.USER.value
 
 
 class CreatePersonRequest(BaseModel):
@@ -86,7 +114,7 @@ class PersonImportResponse(BaseModel):
     job_id: str
 
 
-def _build_person_dto(session: Session, person: Person) -> PersonDto:
+def _build_person_dto(session: Session, person: Person, vault: Vault) -> PersonDto:
     count: int = (
         session.query(func.count(AssetInstance.id))
         .filter(
@@ -113,6 +141,8 @@ def _build_person_dto(session: Session, person: Person) -> PersonDto:
         .first()
     )
 
+    linked_entity = KnowledgeService(session, vault).linked_entity_ref("person", person.id)
+
     return PersonDto(
         id=person.id,
         name=person.name,
@@ -122,6 +152,9 @@ def _build_person_dto(session: Session, person: Person) -> PersonDto:
         portrait_face_id=portrait_face.id if portrait_face is not None else None,
         group_name=person.group_name,
         created_at=person.created_at,
+        linked_entity=EntityRefDto(id=linked_entity.id, title=linked_entity.title, type=linked_entity.type)
+        if linked_entity is not None
+        else None,
     )
 
 
@@ -162,7 +195,7 @@ def _person_portrait_face_ids(session: Session) -> dict[int, int]:
 
 
 @router.post("", response_model=PersonDto, status_code=201)
-async def create_person(body: CreatePersonRequest, session: DbSession) -> PersonDto:
+async def create_person(body: CreatePersonRequest, session: DbSession, vault: VaultDep) -> PersonDto:
     """Create a new named person and ensure their folder exists."""
     from photofant.config import get_data_root
     from photofant.media.person_folders import ensure_person_folder
@@ -182,11 +215,11 @@ async def create_person(body: CreatePersonRequest, session: DbSession) -> Person
     session.refresh(new_person)
 
     log.info("Created person %d with name %r", new_person.id, new_person.name)
-    return _build_person_dto(session, new_person)
+    return _build_person_dto(session, new_person, vault)
 
 
 @router.get("", response_model=list[PersonDto])
-async def list_persons(session: DbSession) -> list[PersonDto]:
+async def list_persons(session: DbSession, vault: VaultDep) -> list[PersonDto]:
     persons = (
         session.query(Person)
         .order_by(Person.is_unknown.asc(), Person.id.asc())
@@ -194,6 +227,9 @@ async def list_persons(session: DbSession) -> list[PersonDto]:
     )
     counts = _person_instance_counts(session)
     portrait_face_ids = _person_portrait_face_ids(session)
+    linked_entities = KnowledgeService(session, vault).linked_entity_refs(
+        "person", [person.id for person in persons]
+    )
 
     return [
         PersonDto(
@@ -205,6 +241,11 @@ async def list_persons(session: DbSession) -> list[PersonDto]:
             portrait_face_id=portrait_face_ids.get(person.id),
             group_name=person.group_name,
             created_at=person.created_at,
+            linked_entity=(
+                EntityRefDto(id=ref.id, title=ref.title, type=ref.type)
+                if (ref := linked_entities.get(person.id)) is not None
+                else None
+            ),
         )
         for person in persons
     ]
@@ -234,7 +275,9 @@ async def list_person_faces(person_id: int, session: DbSession) -> list[PersonFa
 
 
 @router.patch("/{person_id}", response_model=PersonDto)
-async def update_person(person_id: int, body: UpdatePersonRequest, session: DbSession) -> PersonDto:
+async def update_person(
+    person_id: int, body: UpdatePersonRequest, session: DbSession, vault: VaultDep
+) -> PersonDto:
     person = session.get(Person, person_id)
     if person is None:
         raise HTTPException(status_code=404, detail="Person not found")
@@ -264,7 +307,56 @@ async def update_person(person_id: int, body: UpdatePersonRequest, session: DbSe
 
     session.commit()
     session.refresh(person)
-    return _build_person_dto(session, person)
+    return _build_person_dto(session, person, vault)
+
+
+@router.post("/{person_id}/link-entity", response_model=PersonDto)
+async def link_person_entity(
+    person_id: int, body: LinkEntityRequest, session: DbSession, vault: VaultDep
+) -> PersonDto:
+    """Verknüpft eine Person mit einer Wissens-Entity (P24). Überlebt Cache-Rebuild —
+    die Verknüpfung lebt im Vault-Frontmatter (``media_links.persons``), der Cache ist
+    nur die Projektion."""
+    person = session.get(Person, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    service = KnowledgeService(session, vault)
+    try:
+        service.link_media(body.entity_id, "person", person_id, _parse_owner(body.owner))
+    except EntityNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except OwnershipConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    session.commit()
+
+    log.info("Linked person %d → entity %r", person_id, body.entity_id)
+    return _build_person_dto(session, person, vault)
+
+
+@router.delete("/{person_id}/link-entity", response_model=PersonDto)
+async def unlink_person_entity(
+    person_id: int,
+    entity_id: str,
+    session: DbSession,
+    vault: VaultDep,
+    owner: str = Owner.USER.value,
+) -> PersonDto:
+    person = session.get(Person, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    service = KnowledgeService(session, vault)
+    try:
+        service.unlink_media(entity_id, "person", person_id, _parse_owner(owner))
+    except EntityNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except OwnershipConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    session.commit()
+
+    log.info("Unlinked person %d from entity %r", person_id, entity_id)
+    return _build_person_dto(session, person, vault)
 
 
 @router.post("/merge", response_model=MergeResultDto)
@@ -308,7 +400,7 @@ async def merge_persons_endpoint(body: MergeRequest, session: DbSession) -> Merg
 
 
 @router.delete("/{person_id}", response_model=MergeResultDto)
-async def delete_person_endpoint(person_id: int, session: DbSession) -> MergeResultDto:
+async def delete_person_endpoint(person_id: int, session: DbSession, vault: VaultDep) -> MergeResultDto:
     """Delete a person — faces and photos move to _unknown, folder + row are gone."""
     from photofant.config import get_data_root
     from photofant.media.person_folders import delete_person
@@ -318,6 +410,14 @@ async def delete_person_endpoint(person_id: int, session: DbSession) -> MergeRes
         raise HTTPException(status_code=404, detail="Person not found")
     if person.is_unknown:
         raise HTTPException(status_code=400, detail="Cannot delete the unknown person")
+
+    # Waisen-Schutz (P24): eine gelöschte Person darf keine Verknüpfung in einer
+    # Entity zurücklassen — sonst zeigt media_links.persons auf eine tote ID.
+    service = KnowledgeService(session, vault)
+    linked = service.linked_entity_ref("person", person_id)
+    if linked is not None:
+        service.unlink_media(linked.id, "person", person_id, Owner.USER)
+        session.commit()
 
     data_root = get_data_root()
     result = await asyncio.to_thread(delete_person, session, person_id, data_root)

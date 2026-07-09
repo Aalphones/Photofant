@@ -133,6 +133,25 @@ def test_delete_removes_entity_and_all_children(db_session: Session) -> None:
     assert db_session.query(KnowledgeMediaLink).filter_by(entity_id=entity_id).count() == 0
 
 
+def test_find_linked_entities_bulk_reverse_lookup(db_session: Session) -> None:
+    repository = EntityRepository(db_session)
+    repository.upsert_from_vault(_rdj(media_links=MediaLinks(persons=[7], assets=[])))
+    repository.upsert_from_vault(
+        _rdj(id="actors/robert-de-niro", title="Robert De Niro", media_links=MediaLinks(persons=[9], assets=[]))
+    )
+    db_session.commit()
+
+    result = repository.find_linked_entities("person", [7, 9, 999])
+
+    assert result[7].id == "actors/robert-downey-jr"
+    assert result[9].id == "actors/robert-de-niro"
+    assert 999 not in result
+
+
+def test_find_linked_entities_empty_target_ids_returns_empty_dict(db_session: Session) -> None:
+    assert EntityRepository(db_session).find_linked_entities("person", []) == {}
+
+
 def test_relationship_repository_for_entity_and_referencing(db_session: Session) -> None:
     repository = EntityRepository(db_session)
     repository.upsert_from_vault(_rdj())

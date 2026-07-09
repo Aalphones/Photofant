@@ -72,6 +72,16 @@ def test_run_lookup_second_run_same_ref_is_idempotent(session_factory, vault: Va
         assert len(TaskService(session).list_tasks()) == 1
 
 
+def test_run_lookup_merges_extra_context_into_task(session_factory, vault: Vault) -> None:
+    created = _run_lookup(TaskKind.NEW_PERSON, "Jane Doe", {"person_id": 42})
+
+    assert created is True
+    with session_factory() as session:
+        tasks = TaskService(session).list_tasks(TaskStatus.OPEN)
+        assert len(tasks) == 1
+        assert tasks[0].context == {"ref": "Jane Doe", "person_id": 42}
+
+
 def test_run_lookup_ambiguous_alias_skips_task(session_factory, vault: Vault) -> None:
     with session_factory() as session:
         service = KnowledgeService(session, vault)
