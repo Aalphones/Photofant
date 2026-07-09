@@ -57,7 +57,7 @@ class RerankSettings(TypedDict):
 
 
 class KnowledgeSettings(TypedDict):
-    vault_path: str | None      # Wurzel der Markdown-Wissensbasis; None = <data_root>/knowledge (P22)
+    vault_path: str | None      # Wurzel der Markdown-Wissensbasis; None = <data_root>/.photofant/knowledge
     default_domain: str         # Domäne für neue Entities ohne explizite Angabe (P22)
     auto_lookup: bool           # Person bestätigt ohne Entity → automatisch KnowledgeLookupJob (P24)
 

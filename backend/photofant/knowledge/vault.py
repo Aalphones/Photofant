@@ -126,7 +126,7 @@ class Vault:
 
 
 def get_vault_path() -> Path:
-    """Vault-Wurzel aus den Settings (``knowledge.vault_path``), Default ``<data>/knowledge``."""
+    """Vault-Wurzel aus den Settings (``knowledge.vault_path``), Default ``<data>/.photofant/knowledge``."""
     from photofant.config import get_data_root_base
     from photofant.settings import load_settings
 
@@ -134,7 +134,7 @@ def get_vault_path() -> Path:
     configured = settings["knowledge"].get("vault_path")
     if configured:
         return Path(configured)
-    return get_data_root_base() / "knowledge"
+    return get_data_root_base() / ".photofant" / "knowledge"
 
 
 def open_vault() -> Vault:
