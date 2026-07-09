@@ -10,7 +10,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from photofant.db.models import Base
+from photofant.db.models import Asset, Base, Face, Person
 from photofant.db.session import get_session
 from photofant.knowledge.vault import Vault, open_vault
 from photofant.main import create_app
@@ -243,7 +243,14 @@ async def test_relationship_lifecycle_and_lore(app_with_deps: tuple[Any, Session
     assert created.status_code == 200
     assert created.json()["relationships"] == [{"type": "plays", "target": "movies/iron-man"}]
     assert lore.status_code == 200
-    assert lore.json()["relationships"] == [{"type": "plays", "target": "movies/iron-man"}]
+    lore_body = lore.json()
+    assert lore_body["entity"]["id"] == "actors/robert-downey-jr"
+    assert lore_body["relationships"] == [
+        {"type": "plays", "target": {"id": "movies/iron-man", "title": "Iron Man", "type": "Movie"}}
+    ]
+    assert lore_body["franchises"] == []
+    assert lore_body["related_media"] == []
+    assert lore_body["sources"] == []
     assert removed.status_code == 200
     assert removed.json()["relationships"] == []
 
@@ -270,3 +277,59 @@ async def test_lore_missing_entity_returns_404(app_with_deps: tuple[Any, Session
         response = await client.get("/api/knowledge/entities/actors/nobody/lore")
 
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_lore_by_person_id_without_link_returns_200_with_null_entity(
+    app_with_deps: tuple[Any, Session, Vault],
+) -> None:
+    app, _session, _vault = app_with_deps
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/knowledge/lore", params={"person_id": 42})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "entity": None, "relationships": [], "franchises": [], "related_media": [], "sources": [],
+    }
+
+
+@pytest.mark.asyncio
+async def test_lore_by_person_id_resolves_linked_entity_and_media(
+    app_with_deps: tuple[Any, Session, Vault],
+) -> None:
+    app, session, _vault = app_with_deps
+    session.add(Person(id=42, name="Robert Downey Jr.", is_unknown=False))
+    session.add(Face(id=7, person_id=42, crop_path="x", score=0.9))
+    session.add(Asset(id=99, content_hash="abc"))
+    session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            "/api/knowledge/entities",
+            json=_entity_payload(media_links={"persons": [42], "assets": [99]}),
+        )
+        response = await client.get("/api/knowledge/lore", params={"person_id": 42})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["entity"]["id"] == "actors/robert-downey-jr"
+    assert {ref["kind"]: ref["id"] for ref in body["related_media"]} == {"person": 42, "asset": 99}
+    person_ref = next(ref for ref in body["related_media"] if ref["kind"] == "person")
+    assert person_ref["thumbnail_url"] == "/faces/7/thumbnail"
+    asset_ref = next(ref for ref in body["related_media"] if ref["kind"] == "asset")
+    assert asset_ref["thumbnail_url"] == "/api/assets/99/thumbnail"
+
+
+@pytest.mark.asyncio
+async def test_lore_requires_exactly_one_of_asset_id_or_person_id(
+    app_with_deps: tuple[Any, Session, Vault],
+) -> None:
+    app, _session, _vault = app_with_deps
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        neither = await client.get("/api/knowledge/lore")
+        both = await client.get("/api/knowledge/lore", params={"asset_id": 1, "person_id": 2})
+
+    assert neither.status_code == 422
+    assert both.status_code == 422

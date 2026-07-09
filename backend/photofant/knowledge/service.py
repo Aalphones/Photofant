@@ -19,7 +19,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from photofant.db.models import KnowledgeEntity
+from photofant.db.models import KnowledgeEntity, KnowledgeRelationship
 from photofant.knowledge.domains import Domain
 from photofant.knowledge.repository import EntityRepository, RelationshipRepository
 from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship, owner_can_overwrite
@@ -61,14 +61,30 @@ class EntityRef:
 
 
 @dataclass
-class Lore:
-    """Rückgabe von ``get_lore`` — Entity + direkte ausgehende Beziehungen.
+class ResolvedRelationship:
+    """Eine ausgehende Beziehung mit aufgelöstem Ziel (Titel + Typ statt der rohen id)."""
 
-    Stub für Phase 3; Ausbau (Graph-Tiefe, Empfehlungen) folgt in P25.
+    type: str
+    target: EntityRef
+
+
+@dataclass
+class Lore:
+    """Rückgabe von ``get_lore`` — Entity + 1-Hop-Beziehungen, Medien, Quellen, Franchises.
+
+    Vollform seit P25 Phase 1 (vorher Stub aus P22 Phase 3). ``entity`` ist nur bei
+    ``get_lore_for_media`` ohne Verknüpfung ``None`` (200 statt 404 — Kontrakt P25).
+    ``franchises`` ist eine Teilmenge von ``relationships`` (Ziel-Typ ``"Franchise"``),
+    eigenes Feld, weil das Lore-Panel (Dok 050 §5) Franchises als eigene Sektion zeigt.
+    ``related_media`` bleibt roh (nur ids) — der Medien-Join (Thumbnails) passiert in
+    der API-Schicht, damit dieses Modul frei von Person-/Asset-/Face-Importen bleibt.
     """
 
-    entity: Entity
-    relationships: list[Relationship]
+    entity: Entity | None
+    relationships: list[ResolvedRelationship]
+    franchises: list[EntityRef]
+    related_media: MediaLinks
+    sources: list[str]
 
 
 class KnowledgeService:
@@ -238,13 +254,49 @@ class KnowledgeService:
         return self.linked_entity_refs(kind, [target_id]).get(target_id)
 
     def get_lore(self, entity_id: str) -> Lore:
-        """Stub: Entity + direkte ausgehende Beziehungen. Ausbau P25."""
+        """Vollständige Lore einer Entity (P25 Phase 1). Wirft ``EntityNotFoundError``."""
         entity = self._require_entity(entity_id)
-        outgoing = self.relationships.for_entity(entity_id)
+        resolved = self._resolve_relationships(self.relationships.for_entity(entity_id))
+        franchises = [relationship.target for relationship in resolved if relationship.target.type == "Franchise"]
         return Lore(
             entity=entity,
-            relationships=[Relationship(type=row.type, target=row.target) for row in outgoing],
+            relationships=resolved,
+            franchises=franchises,
+            related_media=entity.media_links,
+            sources=list(entity.sources),
         )
+
+    def get_lore_for_media(self, *, asset_id: int | None = None, person_id: int | None = None) -> Lore:
+        """Lore über eine verknüpfte Person/ein verknüpftes Asset (P25 Kontrakt).
+
+        Genau eines von ``asset_id``/``person_id`` wird erwartet (von der Route erzwungen).
+        Keine Verknüpfung ist **kein** Fehler — anders als ``get_lore`` liefert das hier eine
+        leere Lore (``entity=None``) statt ``EntityNotFoundError`` (Kontrakt: 200, kein 404).
+        """
+        kind = "person" if person_id is not None else "asset"
+        target_id = person_id if person_id is not None else asset_id
+        assert target_id is not None  # von der Route erzwungen (genau ein Parameter gesetzt)
+        ref = self.linked_entity_ref(kind, target_id)
+        if ref is None:
+            return Lore(entity=None, relationships=[], franchises=[], related_media=MediaLinks(), sources=[])
+        return self.get_lore(ref.id)
+
+    def _resolve_relationships(self, rows: list[KnowledgeRelationship]) -> list[ResolvedRelationship]:
+        """Löst Beziehungsziele zu Titel+Typ auf (1 Hop, keine weitere Traversierung — Dok 020 §6).
+
+        Ziel-Entity fehlt im Cache (noch nicht angelegt) → Beziehung bleibt sichtbar, mit der
+        rohen id als Titel-Fallback statt die Beziehung stillschweigend zu verschlucken.
+        """
+        targets = self.entities.get_many([row.target for row in rows])
+        resolved: list[ResolvedRelationship] = []
+        for row in rows:
+            target_row = targets.get(row.target)
+            if target_row is not None:
+                ref = EntityRef(id=target_row.id, title=target_row.title, type=target_row.type)
+            else:
+                ref = EntityRef(id=row.target, title=row.target, type="")
+            resolved.append(ResolvedRelationship(type=row.type, target=ref))
+        return resolved
 
     def _check_ownership(self, entity: Entity, writer: Owner) -> None:
         if not owner_can_overwrite(writer, entity.owner):

@@ -15,8 +15,10 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from photofant.db.models import Asset, Face, Person
 from photofant.db.session import get_session
 from photofant.knowledge.domains import Domain, DomainLoadError
 from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship
@@ -108,18 +110,56 @@ class DomainDto(BaseModel):
         )
 
 
+class EntityRefDto(BaseModel):
+    id: str
+    title: str
+    type: str
+
+
+class ResolvedRelationshipDto(BaseModel):
+    type: str
+    target: EntityRefDto
+
+
+class MediaRefDto(BaseModel):
+    """Ein per ``media_links`` verknüpftes Person-/Asset-Bild samt Thumbnail (Medien-Join)."""
+
+    kind: str  # "person" | "asset"
+    id: int
+    thumbnail_url: str
+    label: str | None = None
+
+
 class LoreDto(BaseModel):
-    entity: EntityDto
-    relationships: list[RelationshipDto]
+    """Vollform seit P25 Phase 1. ``entity`` ist nur bei ``GET .../lore?asset_id=/person_id=``
+    ohne Verknüpfung ``None`` (Kontrakt: 200 statt 404)."""
+
+    entity: EntityDto | None
+    relationships: list[ResolvedRelationshipDto]
+    franchises: list[EntityRefDto]
+    related_media: list[MediaRefDto]
+    sources: list[str]
 
     @classmethod
-    def from_lore(cls, lore: Lore) -> LoreDto:
+    def from_lore(cls, lore: Lore, related_media: list[MediaRefDto]) -> LoreDto:
         return cls(
-            entity=EntityDto.from_entity(lore.entity),
+            entity=EntityDto.from_entity(lore.entity) if lore.entity is not None else None,
             relationships=[
-                RelationshipDto(type=relationship.type, target=relationship.target)
+                ResolvedRelationshipDto(
+                    type=relationship.type,
+                    target=EntityRefDto(
+                        id=relationship.target.id,
+                        title=relationship.target.title,
+                        type=relationship.target.type,
+                    ),
+                )
                 for relationship in lore.relationships
             ],
+            franchises=[
+                EntityRefDto(id=ref.id, title=ref.title, type=ref.type) for ref in lore.franchises
+            ],
+            related_media=related_media,
+            sources=list(lore.sources),
         )
 
 
@@ -203,6 +243,77 @@ def _parse_owner(value: str) -> Owner:
 
 def _search(service: KnowledgeService, q: str, type: str | None, domain: str | None) -> list[EntityDto]:
     return [EntityDto.from_entity(entity) for entity in service.search_entities(q, type=type, domain=domain)]
+
+
+def _portrait_face_ids(session: Session, person_ids: list[int]) -> dict[int, int]:
+    """Best face (highest score, NULLs last) je ``person_id`` — scoped Variante von
+    ``api/persons.py::_person_portrait_face_ids`` (dort ungefiltert für die Personen-Liste,
+    hier auf die verknüpften ids der Lore begrenzt statt einen Vollscan zu duplizieren)."""
+    if not person_ids:
+        return {}
+    ranked = (
+        select(
+            Face.person_id,
+            Face.id,
+            func.row_number()
+            .over(partition_by=Face.person_id, order_by=Face.score.desc().nulls_last())
+            .label("rank"),
+        )
+        .where(Face.person_id.in_(person_ids))
+        .subquery()
+    )
+    rows = session.execute(select(ranked.c.person_id, ranked.c.id).where(ranked.c.rank == 1)).all()
+    return dict(rows)
+
+
+def _resolve_media_refs(session: Session, media_links: MediaLinks) -> list[MediaRefDto]:
+    """Löst ``media_links`` (rohe Person-/Asset-ids) zu anzeigbaren Refs mit Thumbnail auf.
+
+    Personen ohne Portrait (keine Gesichts-Aufnahme) werden ausgelassen — kein Bild zum
+    Zeigen ist kein Fehler, aber auch kein Eintrag in "Eigene Bilder".
+    """
+    refs: list[MediaRefDto] = []
+    if media_links.persons:
+        portrait_face_ids = _portrait_face_ids(session, media_links.persons)
+        persons = session.query(Person).filter(Person.id.in_(media_links.persons)).all()
+        for person in persons:
+            face_id = portrait_face_ids.get(person.id)
+            if face_id is None:
+                continue
+            refs.append(
+                MediaRefDto(
+                    kind="person", id=person.id, thumbnail_url=f"/faces/{face_id}/thumbnail",
+                    label=person.name,
+                )
+            )
+    if media_links.assets:
+        assets = session.query(Asset).filter(Asset.id.in_(media_links.assets)).all()
+        for asset in assets:
+            refs.append(
+                MediaRefDto(
+                    kind="asset", id=asset.id, thumbnail_url=f"/api/assets/{asset.id}/thumbnail",
+                )
+            )
+    return refs
+
+
+@router.get("/lore", response_model=LoreDto)
+async def get_lore_for_media(
+    session: DbSession,
+    vault: VaultDep,
+    asset_id: int | None = None,
+    person_id: int | None = None,
+) -> LoreDto:
+    """Lore für ein Bild/eine Person (P25 Kontrakt) — ohne Verknüpfung 200 mit ``entity: null``,
+    kein 404 (anders als die entity-id-basierte ``/entities/{id}/lore`` unten)."""
+    if (asset_id is None) == (person_id is None):
+        raise HTTPException(
+            status_code=422, detail="Genau einer von asset_id/person_id ist erforderlich"
+        )
+    service = _service(session, vault)
+    lore = service.get_lore_for_media(asset_id=asset_id, person_id=person_id)
+    media_refs = _resolve_media_refs(session, lore.related_media) if lore.entity is not None else []
+    return LoreDto.from_lore(lore, media_refs)
 
 
 @router.get("/domains", response_model=list[DomainDto])
@@ -304,7 +415,8 @@ async def get_lore(entity_id: str, session: DbSession, vault: VaultDep) -> LoreD
         lore = service.get_lore(entity_id)
     except EntityNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    return LoreDto.from_lore(lore)
+    media_refs = _resolve_media_refs(session, lore.related_media)
+    return LoreDto.from_lore(lore, media_refs)
 
 
 @router.get("/entities/{entity_id:path}", response_model=EntityDto)

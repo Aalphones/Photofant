@@ -190,7 +190,26 @@ def test_remove_relationship_removes_entry(service: KnowledgeService) -> None:
     assert updated.relationships == []
 
 
-def test_get_lore_returns_entity_and_outgoing_relationships(service: KnowledgeService) -> None:
+def test_get_lore_resolves_relationship_targets_to_title_and_type(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    service.create_entity(_movie(), Owner.USER)
+    service.create_relationship(
+        "actors/robert-downey-jr", Relationship(type="plays", target="movies/iron-man"), Owner.USER
+    )
+
+    lore = service.get_lore("actors/robert-downey-jr")
+
+    assert lore.entity is not None
+    assert lore.entity.id == "actors/robert-downey-jr"
+    assert len(lore.relationships) == 1
+    resolved = lore.relationships[0]
+    assert resolved.type == "plays"
+    assert resolved.target.id == "movies/iron-man"
+    assert resolved.target.title == "Iron Man"
+    assert resolved.target.type == "Movie"
+
+
+def test_get_lore_falls_back_to_raw_id_for_unknown_target(service: KnowledgeService) -> None:
     service.create_entity(_actor(), Owner.USER)
     service.create_relationship(
         "actors/robert-downey-jr", Relationship(type="plays", target="movies/iron-man"), Owner.USER
@@ -198,8 +217,57 @@ def test_get_lore_returns_entity_and_outgoing_relationships(service: KnowledgeSe
 
     lore = service.get_lore("actors/robert-downey-jr")
 
+    resolved = lore.relationships[0]
+    assert resolved.target.id == "movies/iron-man"
+    assert resolved.target.title == "movies/iron-man"
+    assert resolved.target.type == ""
+
+
+def test_get_lore_splits_out_franchises(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    service.create_entity(
+        Entity(id="franchises/mcu", type="Franchise", title="MCU", domain="Movies"), Owner.USER
+    )
+    service.create_relationship(
+        "actors/robert-downey-jr", Relationship(type="member_of", target="franchises/mcu"), Owner.USER
+    )
+
+    lore = service.get_lore("actors/robert-downey-jr")
+
+    assert [franchise.id for franchise in lore.franchises] == ["franchises/mcu"]
+    assert len(lore.relationships) == 1  # Franchise bleibt zusätzlich in relationships[]
+
+
+def test_get_lore_includes_sources_and_raw_media_links(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    service.update_entity(
+        "actors/robert-downey-jr", {"sources": ["https://example.com"]}, Owner.USER
+    )
+    service.link_media("actors/robert-downey-jr", "person", 42, Owner.USER)
+
+    lore = service.get_lore("actors/robert-downey-jr")
+
+    assert lore.sources == ["https://example.com"]
+    assert lore.related_media.persons == [42]
+
+
+def test_get_lore_for_media_without_link_returns_empty_lore(service: KnowledgeService) -> None:
+    lore = service.get_lore_for_media(person_id=42)
+
+    assert lore.entity is None
+    assert lore.relationships == []
+    assert lore.franchises == []
+    assert lore.sources == []
+
+
+def test_get_lore_for_media_resolves_via_linked_entity(service: KnowledgeService) -> None:
+    service.create_entity(_actor(), Owner.USER)
+    service.link_media("actors/robert-downey-jr", "person", 42, Owner.USER)
+
+    lore = service.get_lore_for_media(person_id=42)
+
+    assert lore.entity is not None
     assert lore.entity.id == "actors/robert-downey-jr"
-    assert lore.relationships == [Relationship(type="plays", target="movies/iron-man")]
 
 
 def test_link_media_appends_and_dedups(service: KnowledgeService, vault: Vault) -> None:

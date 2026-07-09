@@ -1,10 +1,10 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** P24 ist archiviert unter `docs/archive/2026-07/2026-07-01_p24-photofant-integration/`.
-Smoke-Checkliste unten vom Nutzer prüfen lassen. Danach `/implement` erneut aufrufen und
-einen der geparkten Pläne wählen (P25 ist der nächste sinnvolle, braucht P24 — jetzt erfüllt).
+**Aktiver Plan:** `docs/planning/2026-07-01_p25-lore-panel/`
+**Phase:** 1/3 — Lore-Aggregations-API (Backend) (pending)
+**Nächster Schritt:** Phase 1 starten — `phase-1-lore-api.md` lesen (AK, Checkliste, Kontext-Sektion),
+davor P15-Andockpunkt in `features/galerie/lightbox/` zur Kenntnis nehmen (P15 ist archiviert,
+kein Reihenfolge-Konflikt mehr, aber Panel-Struktur beachten für spätere Phase 2).
 
 **P24 — Photofant-Integration ist fertig (alle 3 Phasen archiviert):**
 Entity-Chip auf Personen-Karte (`features/personen/person-card/`, Frosted-

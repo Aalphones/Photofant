@@ -70,6 +70,17 @@ class EntityRepository:
     def get(self, entity_id: str) -> KnowledgeEntity | None:
         return self.session.get(KnowledgeEntity, entity_id)
 
+    def get_many(self, entity_ids: list[str]) -> dict[str, KnowledgeEntity]:
+        """Bulk-Read mehrerer Entities per id — ein Query statt N für Relationship-Auflösung (P25)."""
+        if not entity_ids:
+            return {}
+        rows = (
+            self.session.query(KnowledgeEntity)
+            .filter(KnowledgeEntity.id.in_(entity_ids))
+            .all()
+        )
+        return {row.id: row for row in rows}
+
     def all(self) -> list[KnowledgeEntity]:
         """Alle Cache-Zeilen — Basis für den Reconcile-Abgleich (Zeilen ohne Vault-Datei
         aufspüren)."""

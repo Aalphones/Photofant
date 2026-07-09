@@ -28,7 +28,7 @@ Kein Mockup. Panel-Struktur unten als AK fixiert (Dok 050 §5), eingepasst in P1
 ## Phasen
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | Lore-Aggregations-API (Backend) | standard | pending |
+| 1 | Lore-Aggregations-API (Backend) | standard | complete |
 | 2 | Lore-Panel-UI (Lightbox) | heikel (fremder Screen P15 + freihändiges Design) | pending |
 | 3 | Korrektur-Flow (PatchJob) | standard | pending |
 
