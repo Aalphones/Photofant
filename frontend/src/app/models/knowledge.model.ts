@@ -53,16 +53,35 @@ export interface UpdateEntityRequest {
   body?: string;
 }
 
-export interface LoreDto {
-  entity: EntityDto;
-  relationships: Relationship[];
-}
-
 // P24 Phase 3 — schlanke Read-only-Projektion für Person/Asset-Detail (kein voller EntityDto-Roundtrip).
 export interface EntityRefDto {
   id: string;
   title: string;
   type: string;
+}
+
+// P25 Phase 1 — Beziehung mit aufgelöstem Ziel (Titel/Typ statt roher id).
+export interface ResolvedRelationshipDto {
+  type: string;
+  target: EntityRefDto;
+}
+
+// P25 Phase 1 — ein per media_links verknüpftes Person-/Asset-Bild samt fertigem Thumbnail.
+export interface MediaRefDto {
+  kind: 'person' | 'asset';
+  id: number;
+  thumbnail_url: string;
+  label: string | null;
+}
+
+// P25 Phase 1 — Vollform der Lore-Aggregation. `entity` ist null, wenn Bild/Person
+// keine verknüpfte Entity hat (Kontrakt: 200 statt 404).
+export interface LoreDto {
+  entity: EntityDto | null;
+  relationships: ResolvedRelationshipDto[];
+  franchises: EntityRefDto[];
+  related_media: MediaRefDto[];
+  sources: string[];
 }
 
 export interface EntityType {

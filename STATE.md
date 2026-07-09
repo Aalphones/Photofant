@@ -1,10 +1,34 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p25-lore-panel/`
-**Phase:** 2/3 — Lore-Panel-UI (Lightbox) (pending) — **heikel** (fremder Screen P15 + freihändiges Design)
-**Nächster Schritt:** Vor Phase 2 zuerst `../2026-06-28_p15-lightbox-angleichung/README.md` +
-`features/galerie/lightbox/` lesen (Andockpunkt benennen, Chesterton), dann `phase-2-lore-panel-ui.md`.
-Modell-Hinweis: Phase ist als „heikel" geratet — `opusplan` empfohlen statt `sonnet`.
+**Phase:** 3/3 — Korrektur-Flow (PatchJob) (pending) — **standard**
+**Nächster Schritt:** `phase-3-correction-flow.md` umsetzen: `POST /entities/{id}/patch` →
+`jobs/knowledge_patch_job.py` → `update_entity(owner=user)` → Markdown+Cache, Explainability-Eintrag;
+im Lore-Panel „Das stimmt nicht"-Aktion + Korrektur-Formular. Danach ist P25 (und damit das MVP) durch.
+Modell-Hinweis: Phase ist „standard" — `/clear`, dann `/model sonnet` reicht.
+
+**Phase 2 (Lore-Panel-UI, Lightbox) ist fertig, committet:**
+Neue Komponente `features/galerie/lightbox/lore-panel/` (`pf-lore-panel`) dockt als weitere
+`.panel-sec` nach dem Panel-Header an P15s Lightbox an (beide Modi: Asset via `asset_id`,
+Gesichter-Modus via `person_id` der Face-Person). Rendert das Wissen als **5 domänen-agnostische
+Sektionen** (Kurzbio · Beziehungen · Franchises · Eigene Bilder · Quellen) — **Deviation** von der
+7-Sektionen-Liste aus Dok 050 §5 (Sascha 2026-07-09, Doku in `docs/design-reconciliation.md`):
+„Rollen"/„Verwandte Entitäten" haben kein eigenes Datenfeld, ihre Info steckt in „Beziehungen".
+Lore lädt lokal per `toSignal` + neuem `KnowledgeService.getLore({assetId|personId})` (nach
+P15-Nachbar-Muster `detail`/`lineage`/`relatedRail`, kein NgRx-Slice). Leer-Zustand „anlegen"
+(nur bei Personenkontext) → `/wissen`; Beziehungs-/Franchise-Klick → `/wissen?entity=` (unaufgelöste
+Ziele mit leerem Typ nicht klickbar). `models/knowledge.model.ts`: `LoreDto` auf Vollform +
+`ResolvedRelationshipDto`/`MediaRefDto`. Frontend `tsc`+`ng build` grün.
+**Nebenbei gefixt (Phase-1-Backend-Bug, mit Sascha abgestimmt):** Personen-Thumbnail in `get_lore`
+kam als `/faces/{id}/thumbnail` (ohne `/api`) → Bild lud nicht; auf `/api/faces/{id}/thumbnail`
+gezogen (`api/knowledge.py`) + Test-Assertion (`test_knowledge_api.py:319`) nachgezogen.
+Backend-Knowledge-Tests grün (50).
+**Findings Phase 2 (alle in FINDINGS.md abgehakt):** Franchise-Dedup über ids statt Typ-String;
+unaufgelöste Beziehungsziele (`type==""`) nicht navigierbar; portraitlose Personen fehlen erwartbar
+in „Eigene Bilder".
+**Follow-up P25/P26:** `related_media`-Thumbnails sind bewusst noch nicht klickbar (Anzeige-only);
+Entity-Detail-Ansicht existiert weiter nicht — der `?entity=`-Param landet auf der `/wissen`-Übersicht,
+nicht bei der Entity selbst (bekannt aus P24, wird eigenständig behandelt).
 
 **Phase 1 (Lore-Aggregations-API, Backend) ist fertig, committet (`c51c572`):**
 `get_lore()` liefert jetzt die Vollform (Beziehungsziele zu Titel/Typ aufgelöst, Franchises

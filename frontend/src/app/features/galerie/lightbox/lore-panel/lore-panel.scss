@@ -1,0 +1,241 @@
+:host {
+  display: contents;
+}
+
+// Spiegelt P15s .panel-sec, damit die Lore-Sektionen nahtlos an die übrigen
+// Lightbox-Panel-Sektionen anschließen (eigene Komponente = eigener Style-Scope).
+.panel-sec {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.psec-title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+
+// ── Kurzbio: Entity-Kopf + Fließtext ─────────────────────────────────────────
+
+.lore-entity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  color: var(--text);
+  transition: background 0.12s, border-color 0.12s;
+  border: 1px solid transparent;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-hover);
+    border-color: var(--accent-line, oklch(0.55 0.18 285 / 0.35));
+  }
+
+  .pf-icon,
+  pf-icon {
+    color: var(--accent);
+    flex: none;
+  }
+}
+
+.lore-entity__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.lore-entity__type {
+  color: var(--text-3);
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+  flex: none;
+}
+
+.lore-bio {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+  white-space: pre-wrap;
+}
+
+// ── Beziehungen: Zeilen wie P15s .rel-row ────────────────────────────────────
+
+.rel-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 4px;
+  width: 100%;
+  text-align: left;
+
+  & + & {
+    border-top: 1px solid var(--line);
+  }
+
+  &--clickable {
+    cursor: pointer;
+    border-radius: var(--radius-s);
+    transition: background 0.12s;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--surface);
+    }
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.rr-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.rr-id {
+  font-size: 12.5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text);
+}
+
+.rel-tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+// ── Franchises: Chips ────────────────────────────────────────────────────────
+
+.lore-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lore-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-hover);
+    border-color: var(--accent-line, oklch(0.55 0.18 285 / 0.35));
+  }
+
+  &--static {
+    cursor: default;
+    color: var(--text-3);
+
+    &:hover {
+      background: var(--surface-2);
+      border-color: var(--line);
+    }
+  }
+}
+
+// ── Eigene Bilder: Thumbnail-Reihe ───────────────────────────────────────────
+
+.lore-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lore-media__item {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+
+.lore-media__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+
+  &--round {
+    border-radius: 50%;
+  }
+}
+
+// ── Quellen ──────────────────────────────────────────────────────────────────
+
+.lore-sources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lore-source {
+  font-size: 12px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// ── Leer-Zustand: „anlegen" wie P15s .rel-add ────────────────────────────────
+
+.lore-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 38px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-s);
+  font-size: 12.5px;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--accent-line, oklch(0.55 0.18 285 / 0.35));
+    background: var(--accent-weak, oklch(0.55 0.18 285 / 0.1));
+    color: var(--accent);
+  }
+}

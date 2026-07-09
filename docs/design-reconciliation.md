@@ -130,6 +130,17 @@
 
 *Keine Design-Missachtungen.*
 
+**Lore-Panel (P25 Phase 2) — Design-Lücke-erfunden (freihändig, freigegeben):** Kein Mockup.
+`docs/design/js/detail.jsx` kennt kein Wissens-/Lore-Panel; Dok 050 §5 gibt nur eine Beispiel-Liste
+von Sektionen vor. Umgesetzt als weitere Sektion in P15s Lightbox-Panel (`lore-panel/`), Optik über
+dieselben CSS-Tokens wie die Nachbar-Sektionen (`.panel-sec`/`.rel-row`/Chips). **Bewusste Abweichung
+von der 7-Sektionen-Liste aus Dok 050 §5:** gebaut als **5 domänen-agnostische Sektionen**
+(Kurzbio · Beziehungen · Franchises · Eigene Bilder · Quellen). „Rollen" und „Verwandte Entitäten"
+entfallen als eigene Sektionen — ihre Information steckt in „Beziehungen" (nach Beziehungstyp
+beschriftet). Grund: Das Datenmodell trägt keine eigenen Felder dafür; die einzige Quelle wären die
+frei editierbaren Domänen-Beziehungstypen, und die dürfen laut Domänen-Kontrakt nirgends hart
+verdrahtet sein. Entscheidung Sascha (2026-07-09).
+
 ---
 
 ### Personen-View

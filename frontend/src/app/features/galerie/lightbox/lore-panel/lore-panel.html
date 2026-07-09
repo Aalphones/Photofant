@@ -1,0 +1,113 @@
+@if (status() === 'ready' && entity(); as ent) {
+
+  <!-- Kurzbio -->
+  <div class="panel-sec lore-sec">
+    <div class="psec-title">Wissen</div>
+    <button
+      class="lore-entity"
+      type="button"
+      (click)="selectEntity(ent)"
+      [title]="'Zur Wissens-Sicht: ' + ent.title"
+    >
+      <pf-icon name="sparkle" [size]="13" />
+      <span class="lore-entity__title">{{ ent.title }}</span>
+      <span class="lore-entity__type">{{ ent.type }}</span>
+    </button>
+    @if (bio(); as text) {
+      <p class="lore-bio">{{ text }}</p>
+    }
+  </div>
+
+  <!-- Beziehungen -->
+  @if (relationships().length > 0) {
+    <div class="panel-sec lore-sec">
+      <div class="psec-title">Beziehungen</div>
+      @for (relationship of relationships(); track relationship.type + '-' + relationship.target.id) {
+        <button
+          class="rel-row"
+          [class.rel-row--clickable]="isNavigable(relationship.target)"
+          type="button"
+          [disabled]="!isNavigable(relationship.target)"
+          (click)="selectEntity(relationship.target)"
+          [title]="isNavigable(relationship.target) ? ('Zur Wissens-Sicht: ' + relationship.target.title) : relationship.target.title"
+        >
+          <div class="rr-body">
+            <div class="rr-id">
+              {{ relationship.target.title }}
+              <span class="rel-tag">{{ relationTypeLabel(relationship.type) }}</span>
+            </div>
+          </div>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Franchises -->
+  @if (franchises().length > 0) {
+    <div class="panel-sec lore-sec">
+      <div class="psec-title">Franchises</div>
+      <div class="lore-chips">
+        @for (franchise of franchises(); track franchise.id) {
+          <button
+            class="lore-chip"
+            type="button"
+            [class.lore-chip--static]="!isNavigable(franchise)"
+            [disabled]="!isNavigable(franchise)"
+            (click)="selectEntity(franchise)"
+            [title]="isNavigable(franchise) ? ('Zur Wissens-Sicht: ' + franchise.title) : franchise.title"
+          >
+            {{ franchise.title }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Eigene Bilder -->
+  @if (relatedMedia().length > 0) {
+    <div class="panel-sec lore-sec">
+      <div class="psec-title">Eigene Bilder</div>
+      <div class="lore-media">
+        @for (media of relatedMedia(); track media.kind + '-' + media.id) {
+          <div class="lore-media__item" [title]="media.label ?? ''">
+            <img
+              class="lore-media__img"
+              [class.lore-media__img--round]="media.kind === 'person'"
+              [src]="media.thumbnail_url"
+              [alt]="media.label ?? ''"
+            />
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Quellen -->
+  @if (sources().length > 0) {
+    <div class="panel-sec lore-sec">
+      <div class="psec-title">Quellen</div>
+      <ul class="lore-sources">
+        @for (source of sources(); track source) {
+          <li class="lore-source">
+            @if (isUrl(source)) {
+              <a [href]="source" target="_blank" rel="noopener">{{ sourceLabel(source) }}</a>
+            } @else {
+              <span>{{ source }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+}
+
+@if (showEmptyState()) {
+  <div class="panel-sec lore-sec">
+    <div class="psec-title">Wissen</div>
+    <button class="lore-empty" type="button" (click)="requestCreate()">
+      <pf-icon name="sparkle" [size]="14" />
+      Noch kein Wissen — anlegen
+    </button>
+  </div>
+}

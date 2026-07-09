@@ -127,6 +127,8 @@ export type {
   Relationship,
   EntityDto,
   EntityRefDto,
+  ResolvedRelationshipDto,
+  MediaRefDto,
   CreateEntityRequest,
   UpdateEntityRequest,
   LoreDto,

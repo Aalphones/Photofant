@@ -85,6 +85,15 @@
         }
       </div>
 
+      <!-- Wissen zum Inhalt (P25 Lore-Panel) — dockt als weitere Panel-Sektion an -->
+      <pf-lore-panel
+        [assetId]="isFaceMode() ? null : (asset()?.id ?? null)"
+        [personId]="isFaceMode() ? (faceDetail()?.person_id ?? null) : null"
+        [hasPersonContext]="isFaceMode() ? (faceDetail()?.person_id != null) : faces().length > 0"
+        (entitySelected)="openLinkedEntity($event)"
+        (createRequested)="openKnowledgeCreate()"
+      />
+
       @if (!isFaceMode()) {
 
       <!-- Aktionen -->

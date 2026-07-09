@@ -21,6 +21,7 @@ import type { RerunPayload } from '@photofant/ui';
 import { comfyuiActions, comfyuiSelectors, filtersActions, galleryActions, gallerySelectors, jobsSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 import { RelatedRail } from './related-rail/related-rail';
+import { LorePanel } from './lore-panel/lore-panel';
 import { Editor } from '../../editor/editor';
 
 // Anzahl Vorschläge in der Lightbox-Rail — spiegelt `reverseSearch.similarLimit` (Default
@@ -119,7 +120,7 @@ function formatDate(dateStr: string | null): string {
 @Component({
   selector: 'pf-lightbox',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ZoomStage, Icon, RerunDialog, RelatedRail, ComfyuiImportDialog, Editor],
+  imports: [ZoomStage, Icon, RerunDialog, RelatedRail, LorePanel, ComfyuiImportDialog, Editor],
   templateUrl: './lightbox.html',
   styleUrl: './lightbox.scss',
 })
@@ -815,6 +816,12 @@ export class Lightbox {
   protected openLinkedEntity(entity: EntityRefDto): void {
     this.close();
     this.router.navigate(['/wissen'], { queryParams: { entity: entity.id } });
+  }
+
+  // P25 Lore-Panel: „anlegen" im Leer-Zustand -> Wissens-Seite (der Wizard liegt dort).
+  protected openKnowledgeCreate(): void {
+    this.close();
+    this.router.navigate(['/wissen']);
   }
 
   protected onEditorClosed(): void {
