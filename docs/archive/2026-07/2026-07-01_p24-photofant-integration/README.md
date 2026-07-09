@@ -33,14 +33,14 @@ Kein Mockup. Affordance + Entity-Anzeige fügen sich in bestehende Screens (Pers
 |---|---|---|---|
 | 1 | Entity-Linking + Job-Kette (Backend) | standard | complete |
 | 2 | „Neue Person erkannt"-Affordance (UI) | standard | complete |
-| 3 | Verknüpfte Entity an Person/Asset (UI) | mechanisch | pending |
+| 3 | Verknüpfte Entity an Person/Asset (UI) | mechanisch | complete |
 
 ## Finale AK (Gesamt)
-- [ ] Person mit Entity verknüpfbar + lösbar; überlebt Neustart (Cache + Vault media_links).
-- [ ] Person bestätigt ohne Entity (+ Auto-Lookup) → **genau eine** Aufgabe, **ohne** Job-Endlosschleife (Depth-Schutz greift).
+- [x] Person mit Entity verknüpfbar + lösbar; überlebt Neustart (Cache + Vault media_links).
+- [x] Person bestätigt ohne Entity (+ Auto-Lookup) → **genau eine** Aufgabe, **ohne** Job-Endlosschleife (Depth-Schutz greift durch `TaskService`-Dedup statt `ParentJobId`/`Depth`, s. ADR-014).
 - [x] Neu erkannte Person → UI bietet dezent: Wissen anlegen / später / ignorieren.
-- [ ] Verknüpfte Entity an Personen-Karte + Asset-Detail sichtbar, Klick → Wissens-Sicht.
-- [ ] Bestehende Personen-/Review-Funktionen unverändert (keine Regression).
+- [x] Verknüpfte Entity an Personen-Karte + Asset-Detail sichtbar, Klick → `/wissen` (echte Entity-Detail-Ansicht erst mit P25, s. Deviations).
+- [x] Bestehende Personen-/Review-Funktionen unverändert (keine Regression, Chip ist rein additiv).
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende)
 1. `curl POST /api/persons/{id}/link-entity` → Personen-Detail zeigt `linked_entity`, überlebt Neustart.
@@ -58,4 +58,21 @@ Kein Mockup. Affordance + Entity-Anzeige fügen sich in bestehende Screens (Pers
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_ — Follow-up: Auto-Web-Recherche verknüpfter Entities → P27.
+
+**Summary:** Personen/Assets lassen sich mit Wissens-Entities verknüpfen (`link-entity`-Endpunkte),
+eine bestätigte Person ohne Entity erzeugt automatisch eine Aufgabe, die Verknüpfung ist an
+Personen-Karte und Bild-Detail als Chip sichtbar.
+
+**Deviations:**
+- Kein `ParentJobId`/`Depth`-Schleifenschutz gebaut (P22 hatte ihn nie, YAGNI mit Nutzer
+  abgestimmt) — `TaskService`-Dedup übernimmt die Schutzfunktion. Details: ADR-014.
+- Phase 3s „Klick → Wissens-Sicht" landet auf der allgemeinen `/wissen`-Seite
+  (`?entity=<id>` als Query-Param mitgegeben), **nicht** auf einer Entity-Detail-Ansicht —
+  die gibt es im Frontend noch nicht (Backend-Route `GET /api/knowledge/entities/{id}`
+  existiert, ist aber "ungenutzt"). Folge-Arbeit an P25.
+
+**Follow-ups:**
+- P25 (Lore-Panel) muss die `/wissen`-Route um eine Entity-Detail-Ansicht erweitern, die den
+  `entity`-Query-Param aus P24 Phase 3 auswertet (Personen-Karte + Asset-Chip verlinken bereits
+  dorthin).
+- Auto-Web-Recherche verknüpfter Entities → P27.

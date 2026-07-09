@@ -11,8 +11,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import type { PersonDto, PersonFace, TaskDto } from '@photofant/models';
+import { Router, RouterLink } from '@angular/router';
+import type { EntityRefDto, PersonDto, PersonFace, TaskDto } from '@photofant/models';
 import { Icon } from '@photofant/ui';
 import { AssetService, PersonService } from '@photofant/services';
 import { groupColor } from '../group-color.util';
@@ -29,6 +29,7 @@ export type PersonViewMode = 'single' | 'grid4' | 'face';
 export class PersonCard {
   private readonly personService = inject(PersonService);
   private readonly assetService = inject(AssetService);
+  private readonly router = inject(Router);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -232,6 +233,14 @@ export class PersonCard {
     const task = this.newPersonTask();
     if (task === null) { return; }
     this.dismissNewPersonTask.emit(task.id);
+  }
+
+  // P24 Phase 3: verknüpfte Entity im Chip anklicken -> Wissens-Sicht. Chip liegt (wie
+  // Menü/Editoren) innerhalb des kartenweiten <a>, deshalb stopPropagation gegen den
+  // Galerie-Navigate — gleiches Muster wie bei den übrigen Aktionsbuttons hier.
+  protected onEntityChipClick(event: MouseEvent, entity: EntityRefDto): void {
+    event.stopPropagation();
+    this.router.navigate(['/wissen'], { queryParams: { entity: entity.id } });
   }
 
   protected onImportClick(event: MouseEvent): void {

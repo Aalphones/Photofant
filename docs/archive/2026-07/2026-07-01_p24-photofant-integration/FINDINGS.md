@@ -24,8 +24,20 @@
 
 ## Phase 2
 
-- [ ] → Phase 3: Backend `PersonDto.linked_entity` (`EntityRefDto`, gebaut in Phase 1) existiert
+- [x] → Phase 3: Backend `PersonDto.linked_entity` (`EntityRefDto`, gebaut in Phase 1) existiert
   bereits und wird von `GET /api/persons` schon befüllt — das Frontend-`PersonDto`-Model
   (`models/person.model.ts`) hat das Feld aber noch **nicht** nachgezogen (war außerhalb von
   Phase 2s Scope). Phase 3 muss es dort + in `PersonService` ergänzen, bevor der Entity-Chip
   auf Personen-Karte/Asset-Detail angezeigt werden kann.
+  Eingearbeitet: `linked_entity` in `person.model.ts` + `asset.model.ts` ergänzt (`EntityRefDto`
+  aus `knowledge.model.ts`), kein `PersonService`-Mapping nötig — `HttpClient` reicht das
+  Backend-JSON typisiert durch, ohne manuelle Transformation.
+
+## Phase 3
+
+- [x] → (P25) Es gibt noch keine Entity-Detail-Ansicht im Frontend — nur die allgemeine
+  `/wissen`-Seite (Domänen/Aufgaben-Liste). Backend-Route `GET /api/knowledge/entities/{id}`
+  existiert, ist laut `docs/routes.md` aber "ab P23, ungenutzt". Entity-Chips (Personen-Karte,
+  Asset-Detail) verlinken auf `/wissen?entity=<id>` — der Query-Param wird heute noch nicht
+  ausgewertet. P25 (Lore-Panel) muss die Route ergänzen, damit der Klick tatsächlich bei der
+  Entity landet statt nur auf der Übersichtsseite. Im README-Follow-up festgehalten.

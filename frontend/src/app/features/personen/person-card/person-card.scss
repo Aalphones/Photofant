@@ -211,6 +211,36 @@
   color: rgba(255, 255, 255, 0.65);
 }
 
+/* Verknüpfte Wissens-Entity (P24 Phase 3) — dezenter Chip, gleiche Frosted-Glass-Familie
+   wie .person-card__np-btn, damit kein neuer visueller Stil auf der Karte entsteht. */
+.person-card__entity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 7px;
+  border-radius: var(--radius-s);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 10px;
+  font-weight: 600;
+  transition: background 0.1s, color 0.1s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+  }
+}
+
+.person-card__entity-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
 /* "🆕 Neue Person"-Affordance (P24 Phase 2) — dezente Zeile über dem Namen, kein Popup */
 .person-card__np-banner {
   display: flex;

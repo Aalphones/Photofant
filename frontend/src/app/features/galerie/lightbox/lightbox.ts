@@ -9,10 +9,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
+import { Router } from '@angular/router';
 import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, startWith, type Observable } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, FaceDto, FaceMatch, Framing, PersonDto, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, EntityRefDto, FaceDto, FaceMatch, Framing, PersonDto, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, extractApiErrorMessage, PersonService, SearchService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -132,6 +133,7 @@ export class Lightbox {
   private readonly document           = inject(DOCUMENT);
   private readonly personService      = inject(PersonService);
   private readonly searchService      = inject(SearchService);
+  private readonly router             = inject(Router);
   private readonly destroyRef         = inject(DestroyRef);
 
   protected readonly showRerunDialog = signal(false);
@@ -806,6 +808,13 @@ export class Lightbox {
 
   protected openSourceAsset(assetId: number): void {
     this.store.dispatch(galleryActions.openAssetLightbox({ assetId }));
+  }
+
+  // P24 Phase 3: verknüpfte Entity anklicken -> Wissens-Sicht. Lightbox schließt vorher,
+  // sonst bleibt sie als Overlay über der Navigation hängen (kein eigener Zurück-Weg).
+  protected openLinkedEntity(entity: EntityRefDto): void {
+    this.close();
+    this.router.navigate(['/wissen'], { queryParams: { entity: entity.id } });
   }
 
   protected onEditorClosed(): void {

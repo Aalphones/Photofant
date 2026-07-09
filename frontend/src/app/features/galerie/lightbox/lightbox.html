@@ -197,6 +197,21 @@
             }
           </dd>
           <dt>Hash</dt><dd class="kv-hash">{{ hashShort() }}</dd>
+          @if (detail()?.linked_entity; as entity) {
+            <dt>Verknüpfte Entity</dt>
+            <dd>
+              <button
+                class="tag-chip entity-chip"
+                type="button"
+                [title]="'Verknüpft mit ' + entity.title + ' (' + entity.type + ') — zur Wissens-Sicht'"
+                (click)="openLinkedEntity(entity)"
+              >
+                <pf-icon name="sparkle" [size]="11" />
+                {{ entity.title }}
+                <span class="entity-chip__type">{{ entity.type }}</span>
+              </button>
+            </dd>
+          }
         </dl>
       </div>
 

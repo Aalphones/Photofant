@@ -1,4 +1,5 @@
 import type { AssetClassification } from './classification.model';
+import type { EntityRefDto } from './knowledge.model';
 
 export const SEARCH_MODES = ['tags', 'caption', 'semantic', 'text'] as const;
 export type SearchMode = (typeof SEARCH_MODES)[number];
@@ -137,6 +138,8 @@ export interface AssetDetailDto extends AssetDto {
   quality: number | null;
   framing: Framing | null;
   classifications: AssetClassification[];
+  // P24 Phase 3 — verknüpfte Wissens-Entity (read-only Cache-Projektion).
+  linked_entity: EntityRefDto | null;
 }
 
 export interface FaceDetailDto {

@@ -1,3 +1,5 @@
+import type { EntityRefDto } from './knowledge.model';
+
 export interface PersonDto {
   id: number;
   name: string | null;
@@ -7,6 +9,8 @@ export interface PersonDto {
   portrait_face_id: number | null;
   group_name: string | null;
   created_at: string | null;
+  // P24 Phase 3 — verknüpfte Wissens-Entity (read-only Cache-Projektion, vom Backend seit Phase 1 befüllt).
+  linked_entity: EntityRefDto | null;
 }
 
 export interface PersonFace {

@@ -77,6 +77,17 @@
         }
         <span class="person-card__name">{{ displayName }}</span>
         <span class="person-card__count">{{ person().count }} {{ person().count === 1 ? 'Bild' : 'Bilder' }}</span>
+        @if (person().linked_entity; as entity) {
+          <button
+            class="person-card__entity-chip"
+            type="button"
+            [title]="'Verknüpft mit ' + entity.title + ' (' + entity.type + ') — zur Wissens-Sicht'"
+            (click)="onEntityChipClick($event, entity)"
+          >
+            <pf-icon name="sparkle" [size]="10" />
+            <span class="person-card__entity-chip-text">{{ entity.title }}</span>
+          </button>
+        }
       </div>
     }
   </a>

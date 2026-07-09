@@ -58,6 +58,13 @@ export interface LoreDto {
   relationships: Relationship[];
 }
 
+// P24 Phase 3 — schlanke Read-only-Projektion für Person/Asset-Detail (kein voller EntityDto-Roundtrip).
+export interface EntityRefDto {
+  id: string;
+  title: string;
+  type: string;
+}
+
 export interface EntityType {
   name: string;
   folder: string;

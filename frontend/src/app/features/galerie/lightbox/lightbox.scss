@@ -466,6 +466,25 @@ pf-zoom-stage {
   }
 }
 
+/* Verknüpfte Wissens-Entity (P24 Phase 3) — reine .tag-chip-Optik, hier als klickbarer
+   Button statt Span, deshalb nur Hover/Cursor als kleines additives Modifier. */
+.entity-chip {
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent-line, oklch(0.55 0.18 285 / 0.35));
+  }
+}
+
+.entity-chip__type {
+  color: var(--text-3);
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+}
+
 .tag-add-btn {
   display: inline-flex;
   align-items: center;
