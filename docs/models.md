@@ -526,6 +526,25 @@ liefert `None`) genau eine Aufgabe an; ein mehrdeutiger Alias-Treffer (`Ambiguou
 gefunden, keine Aufgabe. Automatischer Trigger aus Ereignissen erst ab P24 — hier nur manuell über
 `POST /api/knowledge/lookup` auslösbar.
 
+### `recommendation_cache` (migration 0036, P26 Phase 1)
+
+Ergebnis-Cache der Empfehlungen „Bild → Bild" — jederzeit aus CLIP-Nachbarn + Wissensgraph
+neu berechenbar (`jobs/recommendation_job.py`), keine Wahrheit. Geschrieben ausschließlich
+über `store_recommendations` (voller Ersatz je Quell-Asset, kein Merge).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | autoincrement |
+| `source_asset_id` | INTEGER FK → `asset.id` | das Bild, zu dem empfohlen wird (indexed: `ix_recommendation_source`) |
+| `recommended_asset_id` | INTEGER FK → `asset.id` | das empfohlene Bild |
+| `score` | FLOAT | gewichtete Summe der Signale; Default-Gewichte summieren zu 1.0 → Score in [0, 1] |
+| `reasons` | JSON | Begründungskette `[{signal, detail, weight}]` (`signal` ∈ `same_person\|same_role\|same_film\|clip`); geteilte Explainability-Payload mit P25 und P26 Phase 3 |
+| `computed_at` | DATETIME | Zeitpunkt der Berechnung |
+
+`UNIQUE(source_asset_id, recommended_asset_id)`. Kein DB-seitiges Cascade (SQLite-FK-Enforcement
+aus) — verwaiste Zeilen nach Asset-Löschung sind unschädlich, die Lese-Route (`api/recommendations.py`)
+filtert aktiv gegen `asset_instance.deleted_at`.
+
 ## Upcoming tables (planned)
 
 *(keine offenen Tabellen)*

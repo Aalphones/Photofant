@@ -62,6 +62,20 @@ class KnowledgeSettings(TypedDict):
     auto_lookup: bool           # Person bestätigt ohne Entity → automatisch KnowledgeLookupJob (P24)
 
 
+class RecommendationWeights(TypedDict):
+    same_person: float          # geteilte Person im Bild (aktive asset_instance)
+    same_role: float            # geteilte direkt verknüpfte Entity (im Movies-Bsp. die Figur)
+    same_film: float            # geteiltes 1-Hop-Beziehungsziel (im Movies-Bsp. Film/Franchise)
+    clip_similarity: float      # Faktor auf die CLIP-Bildähnlichkeit (0..1)
+
+
+class RecommendationSettings(TypedDict):
+    enabled: bool               # Empfehlungen global an/aus (ADR-008)
+    max_results: int            # Deckel der zurückgegebenen Empfehlungen je Bild
+    min_score: float            # Empfehlungen unter dieser Schwelle fallen weg
+    weights: RecommendationWeights  # Signal-Gewichte, an realem Bild-Set kalibrierbar
+
+
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
@@ -103,6 +117,7 @@ class AppSettings(TypedDict):
     reverse_search: ReverseSearchSettings
     rerank: RerankSettings
     knowledge: KnowledgeSettings
+    recommendations: RecommendationSettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -186,6 +201,21 @@ SETTINGS_DEFAULTS: AppSettings = {
         "default_domain": "Movies",
         "auto_lookup": True,
     },
+    # Startwerte, bewusst summieren die Gewichte zu 1.0, damit der Score in [0, 1] liegt und
+    # min_score (0.3) direkt interpretierbar ist. An einem realen Bild-Set kalibrieren
+    # (P26-Risiko: falsche Gewichte = wertlose Empfehlungen) — die Reason-Chain macht eine
+    # Fehlgewichtung sichtbar.
+    "recommendations": {
+        "enabled": True,
+        "max_results": 12,
+        "min_score": 0.3,
+        "weights": {
+            "same_person": 0.4,
+            "same_role": 0.25,
+            "same_film": 0.15,
+            "clip_similarity": 0.2,
+        },
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -230,6 +260,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "reverse_search": dict,
     "rerank": dict,
     "knowledge": dict,
+    "recommendations": dict,
 }
 
 

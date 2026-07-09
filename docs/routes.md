@@ -1139,6 +1139,33 @@ interface EntityDto {
 }
 ```
 
+## Empfehlungen (P26 Phase 1 · ADR-026 — CLIP-Ähnlichkeit + Wissensgraph, kein neues Modell)
+
+| Angular Route | Method | Backend Endpoint | Request | Response |
+|---|---|---|---|---|
+| Lightbox (Empfehlungs-Karten unter dem Lore-Panel) | `GET` | `/api/recommendations` | Query: `asset_id` | `RecommendationsResponse` — Cache-Treffer → `status: "ready"` + Karten; Fehltreffer → plant den `RecommendationJob`, `status: "computing"` + leere Liste (rechnet **nie** synchron); abgeschaltet → `status: "disabled"` |
+| „Warum nicht?" (ein nicht empfohlenes Bild) | `GET` | `/api/recommendations/{source_asset_id}/{target_asset_id}/why-not` | — | `WhyNotResponse` — live berechnetes Einzelpaar, anwesende **und** fehlende Signale samt Schwelle |
+
+```typescript
+interface Reason { signal: "same_person" | "same_role" | "same_film" | "clip"; detail: string; weight: number; }
+
+interface RecommendationsResponse {
+  status: "ready" | "computing" | "disabled";
+  recommendations: { asset_id: number; thumbnail_url: string; score: number; reasons: Reason[] }[];
+}
+
+interface WhyNotResponse {
+  source_asset_id: number; target_asset_id: number;
+  score: number; threshold: number; recommended: boolean;
+  reasons: Reason[];  // anwesende Signale
+  missing: Reason[];  // fehlende Signale (detail leer, weight = was es wert wäre)
+}
+```
+
+Gewichte, Schwelle und An/Aus stehen in `settings.json` unter `recommendations`
+(`weights.{same_person,same_role,same_film,clip_similarity}`, `min_score`, `max_results`,
+`enabled`) — kalibrierbar am realen Bild-Set.
+
 ## MCP-Schnittstelle (ADR-019 · Plan `2026-07-06_mcp-schnittstelle`)
 
 Kein REST-Router, sondern ein ASGI-Mount unter **`/mcp`** (Streamable-HTTP, offizielles

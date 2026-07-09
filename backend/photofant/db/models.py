@@ -411,3 +411,29 @@ class ReviewItem(Base):
     face_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     suggested_person_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class Recommendation(Base):
+    """Zwischengespeicherte Empfehlung „Bild X → Bild Y" (P26 Phase 1) — Cache, jederzeit
+    aus CLIP-Nachbarn + Wissensgraph neu berechenbar (``jobs/recommendation_job.py``).
+
+    Wie der Empfehlungs-Job selbst hält diese Tabelle keine Wahrheit: sie ist ein
+    Ergebnis-Cache, damit die API nie synchron rechnen muss (Kontrakt: die UI blockiert
+    nie). ``reasons`` ist die JSON-Begründungskette (``[{signal, detail, weight}]``) — dieselbe
+    Struktur, die das Empfehlungs-Kärtchen und das „Warum?"-Popover (Phase 3) anzeigen.
+    """
+
+    __tablename__ = "recommendation_cache"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_asset_id", "recommended_asset_id", name="uq_recommendation_source_target"
+        ),
+        Index("ix_recommendation_source", "source_asset_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
+    recommended_asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    reasons: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, server_default="[]")
+    computed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

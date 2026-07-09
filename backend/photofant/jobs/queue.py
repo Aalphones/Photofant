@@ -46,6 +46,7 @@ class JobKind(StrEnum):
     CAPTIONS = "captions"
     KNOWLEDGE_LOOKUP = "knowledge_lookup"
     KNOWLEDGE_PATCH = "knowledge_patch"
+    RECOMMENDATION = "recommendation"
 
 
 @dataclass
