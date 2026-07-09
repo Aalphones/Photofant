@@ -211,6 +211,73 @@
   color: rgba(255, 255, 255, 0.65);
 }
 
+/* "🆕 Neue Person"-Affordance (P24 Phase 2) — dezente Zeile über dem Namen, kein Popup */
+.person-card__np-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 6px;
+  margin-bottom: 2px;
+  border-radius: var(--radius-s);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.person-card__np-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.person-card__np-text {
+  font-size: 10.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-card__np-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+}
+
+.person-card__np-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-s);
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.1s, color 0.1s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+  }
+
+  &--primary {
+    background: var(--accent);
+    color: #fff;
+
+    &:hover {
+      background: var(--accent);
+      filter: brightness(1.1);
+    }
+  }
+}
+
 /* Inline-Editor (überlagert die Meta-Zeile) */
 .person-card__editor {
   display: flex;

@@ -1,10 +1,16 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p24-photofant-integration/`
-**Phase:** 2/3 — „Neue Person erkannt"-Affordance (UI) (pending)
-**Nächster Schritt:** `/clear`, dann `phase-2-new-person-affordance.md` lesen (Kontext:
-`features/review/`, `features/personen/`, `store/persons/`) und die Inline-Affordance bauen.
-Modell-Empfehlung: `sonnet` (Komplexität „standard").
+**Phase:** 3/3 — Verknüpfte Entity an Person/Asset (UI) (pending)
+**Nächster Schritt:** `/clear`, dann `phase-3-media-links-surfaced.md` lesen (Kontext:
+`features/personen/`, Asset-Detail, `models/person.model.ts`) und den Entity-Chip bauen.
+Modell-Empfehlung: `sonnet` (Komplexität „mechanisch").
+
+Phase 2 („Neue Person erkannt"-Affordance) ist fertig: Inline-Banner auf der Personen-Karte
+(`features/personen/person-card/`), gespeist aus `store/knowledge`-Tasks, Wizard aus P23
+wiederverwendet, Frontend-Typecheck + `ng build` grün. Finding für Phase 3 in FINDINGS.md:
+`models/person.model.ts` hat `linked_entity` noch nicht nachgezogen, obwohl das Backend-DTO es
+seit Phase 1 liefert.
 
 Phase 1 (Entity-Linking + Job-Kette, Backend) ist fertig, `pytest`/`ruff` grün (368 passed,
 13 vorbekannte Failures unverändert). Abweichungen vom Plan-Text dokumentiert in

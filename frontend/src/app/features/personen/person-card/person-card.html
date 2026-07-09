@@ -38,6 +38,40 @@
 
     @if (!isEditing() && !isEditingGroup()) {
       <div class="person-card__meta">
+        @if (newPersonTask(); as task) {
+          <div class="person-card__np-banner" (click)="$event.stopPropagation()">
+            <div class="person-card__np-info">
+              <pf-icon name="sparkle" [size]="12" />
+              <span class="person-card__np-text">Wissen anlegen?</span>
+            </div>
+            <div class="person-card__np-actions">
+              <button
+                class="person-card__np-btn person-card__np-btn--primary"
+                type="button"
+                title="Wissen anlegen"
+                (click)="onCreateKnowledgeClick($event)"
+              >
+                <pf-icon name="check" [size]="11" />
+              </button>
+              <button
+                class="person-card__np-btn"
+                type="button"
+                title="Später erinnern"
+                (click)="onSnoozeNewPersonClick($event)"
+              >
+                Später
+              </button>
+              <button
+                class="person-card__np-btn"
+                type="button"
+                title="Ignorieren"
+                (click)="onDismissNewPersonClick($event)"
+              >
+                <pf-icon name="x" [size]="11" />
+              </button>
+            </div>
+          </div>
+        }
         @if (person().group_name) {
           <span class="person-card__group" [style.--chip-color]="groupColor(person().group_name!)">{{ person().group_name }}</span>
         }

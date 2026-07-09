@@ -32,13 +32,13 @@ Kein Mockup. Affordance + Entity-Anzeige fügen sich in bestehende Screens (Pers
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | Entity-Linking + Job-Kette (Backend) | standard | complete |
-| 2 | „Neue Person erkannt"-Affordance (UI) | standard | pending |
+| 2 | „Neue Person erkannt"-Affordance (UI) | standard | complete |
 | 3 | Verknüpfte Entity an Person/Asset (UI) | mechanisch | pending |
 
 ## Finale AK (Gesamt)
 - [ ] Person mit Entity verknüpfbar + lösbar; überlebt Neustart (Cache + Vault media_links).
 - [ ] Person bestätigt ohne Entity (+ Auto-Lookup) → **genau eine** Aufgabe, **ohne** Job-Endlosschleife (Depth-Schutz greift).
-- [ ] Neu erkannte Person → UI bietet dezent: Wissen anlegen / später / ignorieren.
+- [x] Neu erkannte Person → UI bietet dezent: Wissen anlegen / später / ignorieren.
 - [ ] Verknüpfte Entity an Personen-Karte + Asset-Detail sichtbar, Klick → Wissens-Sicht.
 - [ ] Bestehende Personen-/Review-Funktionen unverändert (keine Regression).
 

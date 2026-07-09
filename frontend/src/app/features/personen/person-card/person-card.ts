@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { PersonDto, PersonFace } from '@photofant/models';
+import type { PersonDto, PersonFace, TaskDto } from '@photofant/models';
 import { Icon } from '@photofant/ui';
 import { AssetService, PersonService } from '@photofant/services';
 import { groupColor } from '../group-color.util';
@@ -36,6 +36,8 @@ export class PersonCard {
 
   readonly person = input.required<PersonDto>();
   readonly viewMode = input<PersonViewMode>('face');
+  // P24 Phase 2: offene "🆕 Neue Person"-Aufgabe für genau diese Person, falls vorhanden.
+  readonly newPersonTask = input<TaskDto | null>(null);
 
   readonly rename = output<{ id: number; name: string }>();
   readonly setGroup = output<{ id: number; groupName: string }>();
@@ -45,6 +47,9 @@ export class PersonCard {
   readonly dupeCheck = output<void>();
   readonly revealInFileBrowser = output<void>();
   readonly deleteClick = output<void>();
+  readonly createKnowledge = output<TaskDto>();
+  readonly snoozeNewPersonTask = output<number>();
+  readonly dismissNewPersonTask = output<number>();
 
   protected readonly isEditing = signal(false);
   protected readonly editName = signal('');
@@ -206,6 +211,27 @@ export class PersonCard {
     event.stopPropagation();
     this.menuOpen.set(false);
     this.deleteClick.emit();
+  }
+
+  protected onCreateKnowledgeClick(event: MouseEvent): void {
+    event.stopPropagation();
+    const task = this.newPersonTask();
+    if (task === null) { return; }
+    this.createKnowledge.emit(task);
+  }
+
+  protected onSnoozeNewPersonClick(event: MouseEvent): void {
+    event.stopPropagation();
+    const task = this.newPersonTask();
+    if (task === null) { return; }
+    this.snoozeNewPersonTask.emit(task.id);
+  }
+
+  protected onDismissNewPersonClick(event: MouseEvent): void {
+    event.stopPropagation();
+    const task = this.newPersonTask();
+    if (task === null) { return; }
+    this.dismissNewPersonTask.emit(task.id);
   }
 
   protected onImportClick(event: MouseEvent): void {

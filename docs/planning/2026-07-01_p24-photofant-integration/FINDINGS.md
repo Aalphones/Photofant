@@ -17,6 +17,15 @@
   014 (012/013/015–025 bereits vergeben).
 - [x] → Phase 1: `knowledge.autoLookup` (Plan-Notation) existierte nicht; als `knowledge.auto_lookup`
   angelegt (Snake_Case passend zu den übrigen `settings.py`-Keys), Default `true`.
-- [ ] → Phase 2: Task-Context trägt jetzt `{"ref": <Personenname>, "person_id": <id>}` statt nur
+- [x] → Phase 2: Task-Context trägt jetzt `{"ref": <Personenname>, "person_id": <id>}` statt nur
   `{"ref": …}` — die Wizard-Verdrahtung („Wissen anlegen" → Task resolven) kann darüber die
   passende `NEW_PERSON`-Aufgabe eindeutig der Person zuordnen, auch bei Namensgleichheit.
+  Eingearbeitet: `Personen.newPersonTaskByPersonId` liest `context.person_id` direkt.
+
+## Phase 2
+
+- [ ] → Phase 3: Backend `PersonDto.linked_entity` (`EntityRefDto`, gebaut in Phase 1) existiert
+  bereits und wird von `GET /api/persons` schon befüllt — das Frontend-`PersonDto`-Model
+  (`models/person.model.ts`) hat das Feld aber noch **nicht** nachgezogen (war außerhalb von
+  Phase 2s Scope). Phase 3 muss es dort + in `PersonService` ergänzen, bevor der Entity-Chip
+  auf Personen-Karte/Asset-Detail angezeigt werden kann.

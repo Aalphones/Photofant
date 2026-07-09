@@ -2,15 +2,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { Density, PersonDto } from '@photofant/models';
+import type { CreateEntityRequest, Density, PersonDto, TaskDto } from '@photofant/models';
 import { PersonService } from '@photofant/services';
-import { personsActions, personsSelectors } from '@photofant/store';
+import { knowledgeActions, knowledgeSelectors, personsActions, personsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
+import { EntityWizardDialog } from '../wissen/entity-wizard-dialog/entity-wizard-dialog';
 import { AlphabetRail } from './alphabet-rail/alphabet-rail';
 import { CreatePersonDialog } from './create-person-dialog/create-person-dialog';
 import { DeletePersonDialog } from './delete-person-dialog/delete-person-dialog';
@@ -28,7 +30,17 @@ const NO_GROUP = 'Ohne Gruppe';
 @Component({
   selector: 'pf-personen',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PersonCard, MergeDialog, SplitDialog, DupeCheckDialog, CreatePersonDialog, DeletePersonDialog, AlphabetRail, Icon],
+  imports: [
+    PersonCard,
+    MergeDialog,
+    SplitDialog,
+    DupeCheckDialog,
+    CreatePersonDialog,
+    DeletePersonDialog,
+    AlphabetRail,
+    Icon,
+    EntityWizardDialog,
+  ],
   templateUrl: './personen.html',
   styleUrl: './personen.scss',
 })
@@ -47,6 +59,44 @@ export class Personen implements OnInit {
   protected readonly persons = this.store.selectSignal(personsSelectors.selectAll);
   protected readonly isLoading = this.store.selectSignal(personsSelectors.selectIsLoading);
   protected readonly isClustering = this.store.selectSignal(personsSelectors.selectIsClustering);
+
+  // P24 Phase 2: "🆕 Neue Person"-Affordance auf der Personen-Karte, gespeist aus den
+  // offenen Wissens-Aufgaben (store/knowledge) — nicht aus der Review-Faces-Queue, die
+  // ist transient (bestätigen → nächstes Gesicht), die Person-Karte ist der dauerhafte Ort.
+  protected readonly knowledgeDomains = this.store.selectSignal(knowledgeSelectors.selectDomains);
+  protected readonly knowledgeDomainsLoading = this.store.selectSignal(knowledgeSelectors.selectDomainsLoading);
+  protected readonly isSavingEntity = this.store.selectSignal(knowledgeSelectors.selectIsSaving);
+  protected readonly entitySaveError = this.store.selectSignal(knowledgeSelectors.selectSaveError);
+  private readonly lastCreatedEntity = this.store.selectSignal(knowledgeSelectors.selectLastCreatedEntity);
+  private readonly openTasks = this.store.selectSignal(knowledgeSelectors.selectAllTasks);
+
+  // "Später" ist session-lokal (wie work-queue.ts) — ändert den Task-Status nicht,
+  // blendet ihn nur bis zum nächsten Neuladen aus.
+  private readonly snoozedTaskIds = signal<Set<number>>(new Set());
+
+  protected readonly newPersonTaskByPersonId = computed((): Map<number, TaskDto> => {
+    const snoozed = this.snoozedTaskIds();
+    const map = new Map<number, TaskDto>();
+    for (const task of this.openTasks()) {
+      if (task.kind !== 'new_person' || snoozed.has(task.id)) { continue; }
+      const personId = task.context['person_id'];
+      if (typeof personId === 'number') {
+        map.set(personId, task);
+      }
+    }
+    return map;
+  });
+
+  protected readonly showKnowledgeWizard = signal(false);
+  private readonly activeNewPersonTask = signal<TaskDto | null>(null);
+
+  protected readonly knowledgeWizardPrefill = computed((): Partial<CreateEntityRequest> => {
+    const task = this.activeNewPersonTask();
+    if (task === null) { return {}; }
+    const ref = task.context['ref'];
+    return typeof ref === 'string' && ref.length > 0 ? { title: ref } : {};
+  });
+
   protected readonly showMergeDialog = signal(false);
   protected readonly mergePreselectedFrom = signal<PersonDto | null>(null);
   protected readonly showCreateDialog = signal(false);
@@ -143,8 +193,51 @@ export class Personen implements OnInit {
     return entries.map(([label, persons]) => ({ label, persons }));
   });
 
+  constructor() {
+    // Entity angelegt, während der Wizard aus einer "🆕 Neue Person"-Karte kam:
+    // Person↔Entity verknüpfen (Phase-1-Route), danach die Aufgabe auflösen — der
+    // Task fällt dann aus store/knowledge, die Karte verliert den Banner von selbst.
+    effect(() => {
+      const entity = this.lastCreatedEntity();
+      const task = this.activeNewPersonTask();
+      if (entity === null || task === null) { return; }
+      const personId = task.context['person_id'];
+      this.showKnowledgeWizard.set(false);
+      this.activeNewPersonTask.set(null);
+      if (typeof personId !== 'number') { return; }
+      this.personService.linkEntity(personId, entity.id).subscribe(() => {
+        this.store.dispatch(knowledgeActions.resolveTask({ taskId: task.id }));
+      });
+    });
+  }
+
   ngOnInit(): void {
     this.store.dispatch(personsActions.loadPersons());
+    this.store.dispatch(knowledgeActions.loadDomains());
+    this.store.dispatch(knowledgeActions.loadTasks());
+  }
+
+  protected onCreateKnowledge(task: TaskDto): void {
+    this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.activeNewPersonTask.set(task);
+    this.showKnowledgeWizard.set(true);
+  }
+
+  protected onSnoozeNewPersonTask(taskId: number): void {
+    this.snoozedTaskIds.update((current: Set<number>) => new Set(current).add(taskId));
+  }
+
+  protected onDismissNewPersonTask(taskId: number): void {
+    this.store.dispatch(knowledgeActions.dismissTask({ taskId }));
+  }
+
+  protected onCloseKnowledgeWizard(): void {
+    this.showKnowledgeWizard.set(false);
+    this.activeNewPersonTask.set(null);
+  }
+
+  protected onSaveKnowledgeEntity(request: CreateEntityRequest): void {
+    this.store.dispatch(knowledgeActions.createEntity({ request }));
   }
 
   protected onRename(event: { id: number; name: string }): void {
