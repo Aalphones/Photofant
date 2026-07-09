@@ -83,6 +83,7 @@ export class NavRail {
     { id: 'personen',     icon: 'people',   label: 'Personen'      },
     { id: 'favoriten',    icon: 'star',     label: 'Favoriten'     },
     { id: 'alben',        icon: 'album',    label: 'Alben'         },
+    { id: 'wissen',       icon: 'text',     label: 'Wissen'        },
     { id: 'trainingssets',icon: 'training', label: 'Trainingssets' },
   ]);
 

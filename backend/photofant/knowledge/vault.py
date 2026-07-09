@@ -12,7 +12,7 @@ import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
-from photofant.knowledge.domains import Domain, load_domain
+from photofant.knowledge.domains import Domain, DomainLoadError, load_domain
 from photofant.knowledge.parser import parse_entity, serialize_entity
 from photofant.knowledge.schema import Entity
 
@@ -43,6 +43,24 @@ class Vault:
     def load_domain(self, domain_name: str) -> Domain:
         """Lädt eine Domäne aus dem Vault (nach ``ensure_structure``)."""
         return load_domain(self.domain_path(domain_name))
+
+    def list_domains(self) -> list[Domain]:
+        """Alle Domänen im Vault (für die Typ-Auswahl im Wizard, P23 Phase 2).
+
+        Eine defekte Domänen-Datei überspringt die Methode statt die ganze Liste
+        scheitern zu lassen — sie ist frei editierbar (siehe Kommentar in den
+        mitgelieferten YAMLs) und ein Tippfehler soll nicht den Wizard blockieren.
+        """
+        domains_dir = self.root / _DOMAINS_DIRNAME
+        if not domains_dir.is_dir():
+            return []
+        domains: list[Domain] = []
+        for path in sorted(domains_dir.glob("*.yaml")):
+            try:
+                domains.append(load_domain(path))
+            except DomainLoadError as error:
+                log.warning("knowledge: übersprungene Domänen-Datei %s: %s", path, error)
+        return domains
 
     def entity_path(self, entity: Entity, domain: Domain) -> Path:
         """Zielpfad einer Entity: ``<root>/<type-folder>/<slug>.md``."""

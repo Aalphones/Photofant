@@ -15,3 +15,4 @@ export * from './comfyui/index';
 export * from './mcp/index';
 export * from './prompt-templates/index';
 export * from './classification/index';
+export * from './knowledge/index';

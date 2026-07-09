@@ -27,7 +27,7 @@ from photofant.knowledge.validator import ValidationError, validate_entity
 from photofant.knowledge.vault import Vault
 
 _PATCHABLE_FIELDS = frozenset(
-    {"title", "aliases", "status", "confidence", "media_links", "relationships", "sources"}
+    {"title", "aliases", "status", "confidence", "media_links", "relationships", "sources", "body"}
 )
 
 
@@ -232,3 +232,5 @@ def _apply_patch(entity: Entity, patch: dict[str, Any]) -> None:
         ]
     if "sources" in patch:
         entity.sources = list(patch["sources"])
+    if "body" in patch:
+        entity.body = str(patch["body"])

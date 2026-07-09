@@ -41,6 +41,11 @@ export const routes: Routes = [
           import('./features/alben/alben').then((m) => m.Alben),
       },
       {
+        path: 'wissen',
+        loadComponent: () =>
+          import('./features/wissen/wissen').then((m) => m.Wissen),
+      },
+      {
         path: 'trainingssets',
         loadComponent: () =>
           import('./features/trainingssets/trainingssets').then(

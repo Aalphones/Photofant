@@ -122,6 +122,23 @@ export type {
 } from './prompt-template.model';
 
 export type {
+  Owner,
+  MediaLinks,
+  Relationship,
+  EntityDto,
+  CreateEntityRequest,
+  UpdateEntityRequest,
+  LoreDto,
+  EntityType,
+  DomainDto,
+  TaskKind,
+  TaskStatus,
+  TaskDto,
+  CreateTaskRequest,
+} from './knowledge.model';
+export { OWNERS, TASK_KINDS, TASK_STATUSES } from './knowledge.model';
+
+export type {
   ClassificationMode,
   ClassificationLabel,
   ClassificationCategory,

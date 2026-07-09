@@ -1,14 +1,22 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p23-knowledge-wizard/`
-**Phase:** 2/3 — Wizard-UI (Entity manuell anlegen) (pending)
-**Nächster Schritt:** Phase 2 starten — Frontend legt den P22-Kontrakt real an
-(`models/knowledge.model.ts`, `store/knowledge/`, `services/knowledge.service.ts`, `features/wissen/`)
-+ Wizard-Dialog für manuelle Entity-Anlage.
+**Phase:** 3/3 — Work-Queue-UI (offene Aufgaben) (pending)
+**Nächster Schritt:** Phase 3 starten — Work-Queue-Komponente in `features/wissen/`, Task-State +
+Task-Calls in den bestehenden `knowledge`-Store/-Service ergänzen (nicht ersetzen), Wizard aus
+Phase 2 mit `prefill`-Input öffnen, nach Anlegen die Aufgabe auflösen. Siehe `FINDINGS.md` (P23)
+für die konkreten Anknüpfpunkte.
 
 Phase 1 (Task-Queue Backend) ist fertig: Migration `0035_knowledge_tasks`, `TaskService`,
 REST (`api/knowledge_tasks.py`: CRUD + `POST /lookup`), `KnowledgeLookupJob` — alle Backend-AK grün,
 24 neue Tests grün.
+
+Phase 2 (Wizard-UI) ist fertig: `models/knowledge.model.ts`, `store/knowledge/`,
+`services/knowledge.service.ts`, `features/wissen/` (Seite + `entity-wizard-dialog`), Nav-Eintrag
+„Wissen" + Route. Unterwegs zwei P22-Kontrakt-Lücken additiv geschlossen (Backend, mit Tests):
+`GET /api/knowledge/domains` (Typ-Dropdown) und `body` durch die REST-Schicht (Beschreibungsfeld) —
+Details in `phase-2-wizard-ui.md` → „Abweichungen vom Plan". `tsc`/`ng build`/Backend-Tests grün.
+Smoke-Checkliste #1 (Wizard → Entity → Markdown-Datei) noch nicht vom Nutzer geprüft.
 
 Andere freigegebene, geparkte Pläne in `docs/planning/` (nach P23):
 - `2026-07-01_p24-photofant-integration/` — Entity-Linking, Personen-Affordance, Media-Links

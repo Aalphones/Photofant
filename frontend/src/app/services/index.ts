@@ -25,5 +25,6 @@ export type { ExportFilterParams, ExportRandomParams, CollectionExportParams, Si
 export { VersionService } from './version.service';
 export { SearchService } from './search.service';
 export { RunDraftService } from './run-draft.service';
+export { KnowledgeService } from './knowledge.service';
 export type { RunDraftSnapshot, BatchBindResult } from './run-draft.service';
 export { extractApiErrorMessage } from './api-error.util';

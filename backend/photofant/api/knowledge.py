@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from photofant.db.session import get_session
-from photofant.knowledge.domains import DomainLoadError
+from photofant.knowledge.domains import Domain, DomainLoadError
 from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship
 from photofant.knowledge.service import (
     AmbiguousEntityError,
@@ -61,6 +61,7 @@ class EntityDto(BaseModel):
     media_links: MediaLinksDto
     relationships: list[RelationshipDto]
     sources: list[str]
+    body: str
 
     @classmethod
     def from_entity(cls, entity: Entity) -> EntityDto:
@@ -81,6 +82,29 @@ class EntityDto(BaseModel):
                 for relationship in entity.relationships
             ],
             sources=list(entity.sources),
+            body=entity.body,
+        )
+
+
+class EntityTypeDto(BaseModel):
+    name: str
+    folder: str
+
+
+class DomainDto(BaseModel):
+    name: str
+    entity_types: list[EntityTypeDto]
+    relationship_types: list[str]
+
+    @classmethod
+    def from_domain(cls, domain: Domain) -> DomainDto:
+        return cls(
+            name=domain.name,
+            entity_types=[
+                EntityTypeDto(name=entity_type.name, folder=entity_type.folder)
+                for entity_type in domain.entity_types.values()
+            ],
+            relationship_types=sorted(domain.relationship_types),
         )
 
 
@@ -111,6 +135,7 @@ class CreateEntityRequest(BaseModel):
     media_links: MediaLinksDto = MediaLinksDto()
     relationships: list[RelationshipDto] = []
     sources: list[str] = []
+    body: str = ""
 
     def to_entity(self) -> Entity:
         return Entity(
@@ -127,6 +152,7 @@ class CreateEntityRequest(BaseModel):
                 for relationship in self.relationships
             ],
             sources=list(self.sources),
+            body=self.body,
         )
 
 
@@ -139,6 +165,7 @@ class UpdateEntityRequest(BaseModel):
     media_links: MediaLinksDto | None = None
     relationships: list[RelationshipDto] | None = None
     sources: list[str] | None = None
+    body: str | None = None
 
     def to_patch(self) -> dict[str, Any]:
         patch = self.model_dump(exclude_unset=True, exclude={"owner"})
@@ -176,6 +203,17 @@ def _parse_owner(value: str) -> Owner:
 
 def _search(service: KnowledgeService, q: str, type: str | None, domain: str | None) -> list[EntityDto]:
     return [EntityDto.from_entity(entity) for entity in service.search_entities(q, type=type, domain=domain)]
+
+
+@router.get("/domains", response_model=list[DomainDto])
+async def list_domains(vault: VaultDep) -> list[DomainDto]:
+    """Verfügbare Domänen mit ihren erlaubten Entity-/Beziehungstypen.
+
+    Nicht im P22-Kontrakt vorgesehen — der Wizard (P23 Phase 2) braucht die
+    Typ-Liste für seinen Pflicht-Dropdown, es gab dafür noch keinen Endpoint.
+    Reines Lesen der Domänen-Configs, keine Cache-Beteiligung.
+    """
+    return [DomainDto.from_domain(domain) for domain in vault.list_domains()]
 
 
 @router.post("/entities", response_model=EntityDto, status_code=201)

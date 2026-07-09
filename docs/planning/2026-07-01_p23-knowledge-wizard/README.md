@@ -27,13 +27,13 @@ Kein Mockup. UI-Struktur unten als AK fixiert (Dok 050 §4/§12), am Bestand (Ta
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | Task-Queue (Backend) | standard | complete |
-| 2 | Wizard-UI (Entity manuell anlegen) | standard | pending |
+| 2 | Wizard-UI (Entity manuell anlegen) | standard | complete |
 | 3 | Work-Queue-UI (offene Aufgaben) | standard | pending |
 
 Backend zuerst, dann UI (2 vor 3, gemeinsame Store-Slice).
 
 ## Finale AK (Gesamt)
-- [ ] Nutzer legt per Wizard eine vollständige Entity an (Typ, Titel, Aliase, Domäne, Beschreibung, ≥1 Beziehung); danach existiert die Markdown-Datei.
+- [x] Nutzer legt per Wizard eine vollständige Entity an (Typ, Titel, Aliase, Domäne, Beschreibung, ≥1 Beziehung); danach existiert die Markdown-Datei. *(Phase 2: `entity-wizard-dialog` + `POST /api/knowledge/entities`.)*
 - [ ] Offene Aufgaben gesammelt sichtbar; Erledigen öffnet den Wizard, markiert die Aufgabe nach Anlegen als erledigt.
 - [ ] Erstnutzer versteht die UI ohne Doku (klare Labels, Beispiel-Placeholder, optionale i-Erklärungen).
 - [x] `KnowledgeLookupJob` legt bei fehlender Entity genau eine Aufgabe an (idempotent).

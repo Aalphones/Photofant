@@ -1,0 +1,90 @@
+export const OWNERS = ['user', 'manual', 'web', 'inferred'] as const;
+export type Owner = typeof OWNERS[number];
+
+export interface MediaLinks {
+  persons: number[];
+  assets: number[];
+}
+
+export interface Relationship {
+  type: string;
+  target: string;
+}
+
+export interface EntityDto {
+  id: string;
+  type: string;
+  title: string;
+  domain: string;
+  owner: Owner;
+  confidence: number;
+  status: string;
+  aliases: string[];
+  media_links: MediaLinks;
+  relationships: Relationship[];
+  sources: string[];
+  body: string;
+}
+
+export interface CreateEntityRequest {
+  id: string;
+  type: string;
+  title: string;
+  domain: string;
+  aliases?: string[];
+  status?: string;
+  owner?: Owner;
+  confidence?: number;
+  media_links?: MediaLinks;
+  relationships?: Relationship[];
+  sources?: string[];
+  body?: string;
+}
+
+export interface UpdateEntityRequest {
+  owner?: Owner;
+  title?: string;
+  aliases?: string[];
+  status?: string;
+  confidence?: number;
+  media_links?: MediaLinks;
+  relationships?: Relationship[];
+  sources?: string[];
+  body?: string;
+}
+
+export interface LoreDto {
+  entity: EntityDto;
+  relationships: Relationship[];
+}
+
+export interface EntityType {
+  name: string;
+  folder: string;
+}
+
+export interface DomainDto {
+  name: string;
+  entity_types: EntityType[];
+  relationship_types: string[];
+}
+
+export const TASK_KINDS = ['new_person', 'missing_entity', 'confirm_relationship', 'review_recommendation'] as const;
+export type TaskKind = typeof TASK_KINDS[number];
+
+export const TASK_STATUSES = ['open', 'resolved', 'dismissed'] as const;
+export type TaskStatus = typeof TASK_STATUSES[number];
+
+export interface TaskDto {
+  id: number;
+  kind: TaskKind;
+  status: TaskStatus;
+  context: Record<string, unknown>;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface CreateTaskRequest {
+  kind: TaskKind;
+  context?: Record<string, unknown>;
+}

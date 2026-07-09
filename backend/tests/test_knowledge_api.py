@@ -128,6 +128,38 @@ async def test_search_finds_entity_via_alias(app_with_deps: tuple[Any, Session, 
 
 
 @pytest.mark.asyncio
+async def test_create_entity_persists_body_as_markdown(app_with_deps: tuple[Any, Session, Vault]) -> None:
+    app, _session, vault = app_with_deps
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/knowledge/entities", json=_entity_payload(body="Bekannt für die Iron-Man-Reihe.")
+        )
+
+    assert response.status_code == 201
+    assert response.json()["body"] == "Bekannt für die Iron-Man-Reihe."
+    markdown = (vault.root / "actors" / "robert-downey-jr.md").read_text(encoding="utf-8")
+    assert "Bekannt für die Iron-Man-Reihe." in markdown
+
+
+@pytest.mark.asyncio
+async def test_list_domains_returns_seeded_movies_domain(
+    app_with_deps: tuple[Any, Session, Vault]
+) -> None:
+    app, _session, _vault = app_with_deps
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/knowledge/domains")
+
+    assert response.status_code == 200
+    domains = response.json()
+    assert [domain["name"] for domain in domains] == ["Movies"]
+    movies = domains[0]
+    assert {entity_type["name"] for entity_type in movies["entity_types"]} >= {"Actor", "Movie"}
+    assert "plays" in movies["relationship_types"]
+
+
+@pytest.mark.asyncio
 async def test_patch_updates_entity(app_with_deps: tuple[Any, Session, Vault]) -> None:
     app, _session, vault = app_with_deps
 

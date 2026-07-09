@@ -1,0 +1,176 @@
+<div class="ew-scrim" (click)="onBackdrop($event)">
+  <div class="ew-modal" (click)="$event.stopPropagation()">
+    <div class="ew-head">
+      <div class="ew-head__icon">
+        <pf-icon name="sparkle" [size]="18" />
+      </div>
+      <div class="ew-head__info">
+        <div class="ew-title">Neue Entity</div>
+        <div class="ew-sub">Wissen manuell anlegen</div>
+      </div>
+      <button class="ew-close" (click)="close.emit()" aria-label="Schließen">
+        <pf-icon name="x" [size]="17" />
+      </button>
+    </div>
+
+    <div class="ew-body">
+      <div class="ew-row">
+        <div class="ew-field ew-field--type">
+          <label class="ew-label" for="ew-type">Typ</label>
+          <select
+            id="ew-type"
+            class="ew-select"
+            [value]="selectedType()"
+            [disabled]="entityTypes().length === 0"
+            (change)="selectedType.set($any($event.target).value)"
+          >
+            @for (entityType of entityTypes(); track entityType.name) {
+              <option [value]="entityType.name">{{ entityType.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="ew-field ew-field--title">
+          <label class="ew-label" for="ew-title">Titel</label>
+          <input
+            id="ew-title"
+            class="ew-input"
+            type="text"
+            placeholder="z.B. Robert Downey Jr."
+            [value]="title()"
+            (input)="title.set($any($event.target).value)"
+            (blur)="titleTouched.set(true)"
+          />
+          @if (titleError(); as error) {
+            <div class="ew-error">{{ error }}</div>
+          }
+        </div>
+      </div>
+
+      <button class="ew-details-toggle" type="button" (click)="toggleDetails()">
+        <pf-icon [name]="detailsOpen() ? 'chevronUp' : 'chevronDown'" [size]="14" />
+        Weitere Details
+      </button>
+
+      @if (detailsOpen()) {
+        <div class="ew-details">
+          @if (domains().length > 1) {
+            <div class="ew-field">
+              <label class="ew-label" for="ew-domain">Domäne</label>
+              <select
+                id="ew-domain"
+                class="ew-select"
+                [value]="selectedDomain()"
+                (change)="onDomainChange($any($event.target).value)"
+              >
+                @for (domain of domains(); track domain.name) {
+                  <option [value]="domain.name">{{ domain.name }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          <div class="ew-field">
+            <label class="ew-label">
+              Aliase
+              <pf-icon class="ew-hint" name="info" [size]="13" title="Alternative Namen, über die die Entity ebenfalls gefunden wird." />
+            </label>
+            <div class="ew-chips">
+              @for (alias of aliases(); track alias) {
+                <span class="ew-chip">
+                  {{ alias }}
+                  <button type="button" class="ew-chip__remove" (click)="removeAlias(alias)" aria-label="Alias entfernen">
+                    <pf-icon name="x" [size]="11" />
+                  </button>
+                </span>
+              }
+              <input
+                class="ew-chip-input"
+                type="text"
+                placeholder="Alias eingeben, Enter…"
+                [value]="aliasInput()"
+                (input)="aliasInput.set($any($event.target).value)"
+                (keydown)="onAliasInputKeydown($event)"
+                (blur)="onAliasInputBlur()"
+              />
+            </div>
+          </div>
+
+          <div class="ew-field">
+            <label class="ew-label" for="ew-description">Beschreibung</label>
+            <textarea
+              id="ew-description"
+              class="ew-textarea"
+              rows="3"
+              placeholder="Kurzer Freitext, z.B. Rolle, Hintergrund…"
+              [value]="description()"
+              (input)="description.set($any($event.target).value)"
+            ></textarea>
+          </div>
+
+          <div class="ew-field">
+            <label class="ew-label">
+              Beziehungen
+              <pf-icon class="ew-hint" name="info" [size]="13" title="Verknüpft diese Entity mit einer bereits bestehenden." />
+            </label>
+            <div class="ew-relationship-row">
+              <select
+                class="ew-select ew-select--rel-type"
+                [value]="relationshipType()"
+                [disabled]="relationshipTypes().length === 0"
+                (change)="relationshipType.set($any($event.target).value)"
+              >
+                <option value="">Beziehungstyp…</option>
+                @for (relType of relationshipTypes(); track relType) {
+                  <option [value]="relType">{{ relType }}</option>
+                }
+              </select>
+              <input
+                class="ew-input ew-input--rel-target"
+                type="text"
+                placeholder="Ziel-Entity suchen…"
+                [value]="relationshipQuery()"
+                [disabled]="!relationshipType()"
+                (input)="onRelationshipQueryInput($any($event.target).value)"
+              />
+            </div>
+            @if (relationshipQuery().trim().length >= 2 && relationshipSuggestions().length > 0) {
+              <div class="ew-suggestions">
+                @for (suggestion of relationshipSuggestions(); track suggestion.id) {
+                  <button type="button" class="ew-suggestion" (click)="addRelationship(suggestion)">
+                    {{ suggestion.title }}
+                    <span class="ew-suggestion__type">{{ suggestion.type }}</span>
+                  </button>
+                }
+              </div>
+            }
+            @if (relationships().length > 0) {
+              <div class="ew-chips">
+                @for (relationship of relationships(); track relationship.type + relationship.target) {
+                  <span class="ew-chip">
+                    {{ relationship.type }} → {{ relationshipLabel(relationship.target) }}
+                    <button type="button" class="ew-chip__remove" (click)="removeRelationship(relationship)" aria-label="Beziehung entfernen">
+                      <pf-icon name="x" [size]="11" />
+                    </button>
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      @if (saveError(); as error) {
+        <div class="ew-save-error">{{ error }}</div>
+      }
+    </div>
+
+    <div class="ew-foot">
+      <button class="ew-btn ew-btn--ghost" type="button" (click)="close.emit()">Abbrechen</button>
+      <button class="ew-btn ew-btn--primary" type="button" [disabled]="!canSave()" (click)="onConfirm()">
+        <pf-icon name="check" [size]="14" />
+        {{ isSaving() ? 'Speichert…' : 'Anlegen' }}
+      </button>
+    </div>
+  </div>
+</div>
