@@ -1,0 +1,129 @@
+:host {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.wq__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.wq__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.wq__count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.wq__empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 24px;
+  color: var(--text-3);
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.wq__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  color: var(--danger);
+  font-size: 13px;
+  background: var(--danger-weak);
+  border-radius: var(--radius-s);
+}
+
+.wq__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wq__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.wq__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wq__kind {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.wq__subtitle {
+  font-size: 12px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wq__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.wq__btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+
+  &--primary {
+    background: var(--accent);
+    color: var(--bg);
+    &:hover { background: var(--accent-press); }
+  }
+
+  &--ghost {
+    color: var(--text-3);
+    &:hover { background: var(--surface-2); color: var(--text-2); }
+  }
+}
+
+@media (max-width: 620px) {
+  .wq__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wq__actions {
+    justify-content: flex-end;
+  }
+}

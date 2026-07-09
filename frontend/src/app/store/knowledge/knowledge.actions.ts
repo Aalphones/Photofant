@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { CreateEntityRequest, DomainDto, EntityDto } from '@photofant/models';
+import type { CreateEntityRequest, DomainDto, EntityDto, TaskDto } from '@photofant/models';
 
 export const knowledgeActions = createActionGroup({
   source: 'Knowledge',
@@ -11,5 +11,14 @@ export const knowledgeActions = createActionGroup({
     'Create Entity Success':    props<{ entity: EntityDto }>(),
     'Create Entity Failure':    props<{ error: string }>(),
     'Reset Create Entity State': emptyProps(),
+    'Load Tasks':            emptyProps(),
+    'Load Tasks Success':    props<{ tasks: TaskDto[] }>(),
+    'Load Tasks Failure':    props<{ error: string }>(),
+    'Resolve Task':          props<{ taskId: number }>(),
+    'Resolve Task Success':  props<{ task: TaskDto }>(),
+    'Resolve Task Failure':  props<{ error: string }>(),
+    'Dismiss Task':          props<{ taskId: number }>(),
+    'Dismiss Task Success':  props<{ task: TaskDto }>(),
+    'Dismiss Task Failure':  props<{ error: string }>(),
   },
 });

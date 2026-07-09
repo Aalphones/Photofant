@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import type { Observable } from 'rxjs';
-import type { CreateEntityRequest, DomainDto, EntityDto } from '@photofant/models';
+import type { CreateEntityRequest, DomainDto, EntityDto, TaskDto, TaskStatus } from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
 export class KnowledgeService {
@@ -24,5 +24,21 @@ export class KnowledgeService {
 
   createEntity(request: CreateEntityRequest): Observable<EntityDto> {
     return this.http.post<EntityDto>('/api/knowledge/entities', request);
+  }
+
+  listTasks(status?: TaskStatus): Observable<TaskDto[]> {
+    let params = new HttpParams();
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.http.get<TaskDto[]>('/api/knowledge/tasks', { params });
+  }
+
+  resolveTask(taskId: number): Observable<TaskDto> {
+    return this.http.post<TaskDto>(`/api/knowledge/tasks/${taskId}/resolve`, {});
+  }
+
+  dismissTask(taskId: number): Observable<TaskDto> {
+    return this.http.post<TaskDto>(`/api/knowledge/tasks/${taskId}/dismiss`, {});
   }
 }

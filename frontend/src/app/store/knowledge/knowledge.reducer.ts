@@ -1,7 +1,12 @@
 import { createEntityAdapter, type EntityAdapter, type EntityState } from '@ngrx/entity';
-import { createFeature, createReducer, on } from '@ngrx/store';
-import type { DomainDto, EntityDto } from '@photofant/models';
+import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
+import type { DomainDto, EntityDto, TaskDto } from '@photofant/models';
 import { knowledgeActions } from './knowledge.actions';
+
+export interface TasksState extends EntityState<TaskDto> {
+  loading: boolean;
+  error: string | null;
+}
 
 export interface KnowledgeState extends EntityState<DomainDto> {
   domainsLoading: boolean;
@@ -9,11 +14,16 @@ export interface KnowledgeState extends EntityState<DomainDto> {
   isSaving: boolean;
   saveError: string | null;
   lastCreatedEntity: EntityDto | null;
+  tasks: TasksState;
 }
 
 const adapter: EntityAdapter<DomainDto> = createEntityAdapter<DomainDto>({
   selectId: (domain: DomainDto) => domain.name,
 });
+
+// Zweiter Adapter im selben Feature-State (FINDINGS.md P23 Phase 3) — Tasks sind
+// keine Domänen, brauchen aber dieselbe by-id-Lookup-Semantik für resolve/dismiss.
+const taskAdapter: EntityAdapter<TaskDto> = createEntityAdapter<TaskDto>();
 
 const initialState: KnowledgeState = adapter.getInitialState({
   domainsLoading: false,
@@ -21,6 +31,7 @@ const initialState: KnowledgeState = adapter.getInitialState({
   isSaving: false,
   saveError: null,
   lastCreatedEntity: null,
+  tasks: taskAdapter.getInitialState({ loading: false, error: null }),
 });
 
 export const knowledgeFeature = createFeature({
@@ -62,8 +73,45 @@ export const knowledgeFeature = createFeature({
       saveError: null,
       lastCreatedEntity: null,
     })),
+    on(knowledgeActions.loadTasks, (state: KnowledgeState) => ({
+      ...state,
+      tasks: { ...state.tasks, loading: true, error: null },
+    })),
+    on(knowledgeActions.loadTasksSuccess, (state: KnowledgeState, { tasks }) => ({
+      ...state,
+      tasks: taskAdapter.setAll(tasks, { ...state.tasks, loading: false, error: null }),
+    })),
+    on(knowledgeActions.loadTasksFailure, (state: KnowledgeState, { error }) => ({
+      ...state,
+      tasks: { ...state.tasks, loading: false, error },
+    })),
+    // resolve/dismiss laden nur offene Tasks — nach dem Statuswechsel fällt der
+    // Task aus der Liste (kein zweiter Load nötig, gleiche Idee wie resolveDupePair).
+    on(knowledgeActions.resolveTaskSuccess, (state: KnowledgeState, { task }) => ({
+      ...state,
+      tasks: taskAdapter.removeOne(task.id, state.tasks),
+    })),
+    on(knowledgeActions.resolveTaskFailure, (state: KnowledgeState, { error }) => ({
+      ...state,
+      tasks: { ...state.tasks, error },
+    })),
+    on(knowledgeActions.dismissTaskSuccess, (state: KnowledgeState, { task }) => ({
+      ...state,
+      tasks: taskAdapter.removeOne(task.id, state.tasks),
+    })),
+    on(knowledgeActions.dismissTaskFailure, (state: KnowledgeState, { error }) => ({
+      ...state,
+      tasks: { ...state.tasks, error },
+    })),
   ),
-  extraSelectors: ({ selectKnowledgeState }) => ({
-    ...adapter.getSelectors(selectKnowledgeState),
-  }),
+  extraSelectors: ({ selectKnowledgeState }) => {
+    const selectTasksState = createSelector(selectKnowledgeState, (state: KnowledgeState) => state.tasks);
+    const { selectAll: selectAllTasks } = taskAdapter.getSelectors(selectTasksState);
+    return {
+      ...adapter.getSelectors(selectKnowledgeState),
+      selectAllTasks,
+      selectTasksLoading: createSelector(selectTasksState, (tasks: TasksState) => tasks.loading),
+      selectTasksError: createSelector(selectTasksState, (tasks: TasksState) => tasks.error),
+    };
+  },
 });

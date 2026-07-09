@@ -1,22 +1,24 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-01_p23-knowledge-wizard/`
-**Phase:** 3/3 — Work-Queue-UI (offene Aufgaben) (pending)
-**Nächster Schritt:** Phase 3 starten — Work-Queue-Komponente in `features/wissen/`, Task-State +
-Task-Calls in den bestehenden `knowledge`-Store/-Service ergänzen (nicht ersetzen), Wizard aus
-Phase 2 mit `prefill`-Input öffnen, nach Anlegen die Aufgabe auflösen. Siehe `FINDINGS.md` (P23)
-für die konkreten Anknüpfpunkte.
+**Aktiver Plan:** (kein aktiver Plan)
+**Phase:** —
+**Nächster Schritt:** P23 ist komplett und archiviert (`docs/archive/2026-07/2026-07-01_p23-knowledge-wizard/`).
+Nächster Schritt ist eine Auswahl aus dem Backlog unten — z.B. `/implement` aufrufen und den
+gewünschten Plan nennen.
 
-Phase 1 (Task-Queue Backend) ist fertig: Migration `0035_knowledge_tasks`, `TaskService`,
-REST (`api/knowledge_tasks.py`: CRUD + `POST /lookup`), `KnowledgeLookupJob` — alle Backend-AK grün,
-24 neue Tests grün.
+P23 (Knowledge Wizard) fertig, alle 3 Phasen grün, `tsc`/`ng build` grün:
+- Phase 1: Task-Queue Backend (Migration `0035_knowledge_tasks`, `TaskService`, REST, `KnowledgeLookupJob`).
+- Phase 2: Wizard-UI (`features/wissen/entity-wizard-dialog`) + zwei additive P22-Kontrakt-Lücken
+  geschlossen (`GET /api/knowledge/domains`, `body`-Feld).
+- Phase 3: Work-Queue-UI (`features/wissen/work-queue`) — offene Aufgaben, „Erledigen" öffnet den
+  Wizard vorbelegt und löst die Aufgabe danach auf, „Später"/„Ignorieren" als Sekundäraktion.
+- Details/Abweichungen: `docs/archive/2026-07/2026-07-01_p23-knowledge-wizard/README.md`.
 
-Phase 2 (Wizard-UI) ist fertig: `models/knowledge.model.ts`, `store/knowledge/`,
-`services/knowledge.service.ts`, `features/wissen/` (Seite + `entity-wizard-dialog`), Nav-Eintrag
-„Wissen" + Route. Unterwegs zwei P22-Kontrakt-Lücken additiv geschlossen (Backend, mit Tests):
-`GET /api/knowledge/domains` (Typ-Dropdown) und `body` durch die REST-Schicht (Beschreibungsfeld) —
-Details in `phase-2-wizard-ui.md` → „Abweichungen vom Plan". `tsc`/`ng build`/Backend-Tests grün.
-Smoke-Checkliste #1 (Wizard → Entity → Markdown-Datei) noch nicht vom Nutzer geprüft.
+**Smoke-Checkliste (noch vom Nutzer zu prüfen — Details im archivierten P23-README):**
+1. „Wissen" in der Nav öffnen → Wizard → Entity anlegen → Datei liegt im Vault.
+2. Aufgabe per `curl POST .../tasks` anlegen → erscheint in der Work-Queue.
+3. Aufgabe „Erledigen" → Wizard vorbelegt → speichern → Aufgabe verschwindet.
+4. Zweiter Lookup zum selben Kontext → keine zweite Aufgabe.
 
 Andere freigegebene, geparkte Pläne in `docs/planning/` (nach P23):
 - `2026-07-01_p24-photofant-integration/` — Entity-Linking, Personen-Affordance, Media-Links

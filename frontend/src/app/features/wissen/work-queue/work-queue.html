@@ -1,0 +1,48 @@
+<div class="wq">
+  <div class="wq__head">
+    <h2 class="wq__title">Offene Aufgaben</h2>
+    @if (visibleTasks().length > 0) {
+      <span class="wq__count">{{ visibleTasks().length }}</span>
+    }
+  </div>
+
+  @if (loading() && tasks().length === 0) {
+    <div class="wq__empty">Aufgaben werden geladen…</div>
+  } @else if (error()) {
+    <div class="wq__error">
+      <pf-icon name="alertTriangle" [size]="15" />
+      {{ error() }}
+    </div>
+  } @else if (visibleTasks().length === 0) {
+    <div class="wq__empty">
+      <pf-icon name="check" [size]="18" />
+      <span>Keine offenen Aufgaben — alles erledigt.</span>
+    </div>
+  } @else {
+    <ul class="wq__list">
+      @for (task of visibleTasks(); track task.id) {
+        <li class="wq__row">
+          <div class="wq__info">
+            <span class="wq__kind">{{ kindLabel(task.kind) }}</span>
+            @if (taskSubtitle(task); as subtitle) {
+              <span class="wq__subtitle">{{ subtitle }}</span>
+            }
+          </div>
+          <div class="wq__actions">
+            <button class="wq__btn wq__btn--primary" type="button" (click)="resolve.emit(task)">
+              <pf-icon name="check" [size]="13" />
+              Erledigen
+            </button>
+            <button class="wq__btn wq__btn--ghost" type="button" (click)="snooze(task.id)">
+              Später
+            </button>
+            <button class="wq__btn wq__btn--ghost" type="button" (click)="dismiss.emit(task.id)">
+              <pf-icon name="x" [size]="13" />
+              Ignorieren
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

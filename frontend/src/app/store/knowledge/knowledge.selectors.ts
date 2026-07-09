@@ -7,6 +7,9 @@ const {
   selectIsSaving,
   selectSaveError,
   selectLastCreatedEntity,
+  selectAllTasks,
+  selectTasksLoading,
+  selectTasksError,
 } = knowledgeFeature;
 
 export const knowledgeSelectors = {
@@ -16,4 +19,7 @@ export const knowledgeSelectors = {
   selectIsSaving,
   selectSaveError,
   selectLastCreatedEntity,
+  selectAllTasks,
+  selectTasksLoading,
+  selectTasksError,
 };

@@ -16,6 +16,14 @@
   </div>
 }
 
+<pf-work-queue
+  [tasks]="tasks()"
+  [loading]="tasksLoading()"
+  [error]="tasksError()"
+  (resolve)="resolveTaskViaWizard($event)"
+  (dismiss)="dismissTask($event)"
+/>
+
 @if (domainsLoading() && domains().length === 0) {
   <div class="wi-empty">Domänen werden geladen…</div>
 } @else if (domains().length === 0) {
@@ -31,6 +39,7 @@
     [domains]="domains()"
     [isSaving]="isSaving()"
     [saveError]="saveError()"
+    [prefill]="wizardPrefill()"
     (close)="closeWizard()"
     (save)="onSave($event)"
   />

@@ -28,14 +28,14 @@ Kein Mockup. UI-Struktur unten als AK fixiert (Dok 050 §4/§12), am Bestand (Ta
 |---|---|---|---|
 | 1 | Task-Queue (Backend) | standard | complete |
 | 2 | Wizard-UI (Entity manuell anlegen) | standard | complete |
-| 3 | Work-Queue-UI (offene Aufgaben) | standard | pending |
+| 3 | Work-Queue-UI (offene Aufgaben) | standard | complete |
 
 Backend zuerst, dann UI (2 vor 3, gemeinsame Store-Slice).
 
 ## Finale AK (Gesamt)
 - [x] Nutzer legt per Wizard eine vollständige Entity an (Typ, Titel, Aliase, Domäne, Beschreibung, ≥1 Beziehung); danach existiert die Markdown-Datei. *(Phase 2: `entity-wizard-dialog` + `POST /api/knowledge/entities`.)*
-- [ ] Offene Aufgaben gesammelt sichtbar; Erledigen öffnet den Wizard, markiert die Aufgabe nach Anlegen als erledigt.
-- [ ] Erstnutzer versteht die UI ohne Doku (klare Labels, Beispiel-Placeholder, optionale i-Erklärungen).
+- [x] Offene Aufgaben gesammelt sichtbar; Erledigen öffnet den Wizard, markiert die Aufgabe nach Anlegen als erledigt. *(Phase 3: `work-queue/`.)*
+- [x] Erstnutzer versteht die UI ohne Doku (klare Labels, Beispiel-Placeholder, optionale i-Erklärungen).
 - [x] `KnowledgeLookupJob` legt bei fehlender Entity genau eine Aufgabe an (idempotent).
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende)
@@ -54,4 +54,21 @@ Neuer Feature-Ordner + Tabelle + Job, additiver Nav-Eintrag „Wissen". Kein Ers
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_ — Follow-up: Interview-Mode / KI-Ausfüllen → P27.
+
+**Summary:** Wissensbasis hat jetzt eine erste UI ohne KI — Aufgaben-Queue (Backend, Phase 1),
+Wizard zum manuellen Anlegen einer Entity (Phase 2), Work-Queue-Sicht, die offene Aufgaben zeigt
+und den Wizard vorbelegt öffnet (Phase 3). Aufgabe löst sich nach erfolgreichem Anlegen selbst auf.
+
+**Files touched (Kern):** `db/models.py` (`KnowledgeTask`) · Migration `0035_knowledge_tasks` ·
+`knowledge/tasks.py` (`TaskService`) · `api/knowledge_tasks.py` · `jobs/knowledge_lookup_job.py` ·
+`models/knowledge.model.ts` · `store/knowledge/` · `services/knowledge.service.ts` ·
+`features/wissen/` (Seite, `entity-wizard-dialog/`, `work-queue/`) · `shell/nav-rail/` ·
+`app.routes.ts`.
+
+**Deviations:**
+- Zwei P22-Kontrakt-Lücken additiv geschlossen (Phase 2): `GET /api/knowledge/domains`,
+  `body`-Feld durch die REST-Schicht — Details in `phase-2-wizard-ui.md`.
+- „Später" (Phase 3) ist eine session-lokale UI-Ausblendung, kein Backend-Statuswechsel — die
+  Aufgabe bleibt `open` und taucht nach Neuladen wieder auf. Details in `phase-3-work-queue-ui.md`.
+
+**Follow-ups:** Interview-Mode / KI-Ausfüllen → P27. Auto-Trigger aus Ereignissen → P24.
