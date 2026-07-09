@@ -1,11 +1,27 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-01_p25-lore-panel/`
-**Phase:** 3/3 — Korrektur-Flow (PatchJob) (pending) — **standard**
-**Nächster Schritt:** `phase-3-correction-flow.md` umsetzen: `POST /entities/{id}/patch` →
-`jobs/knowledge_patch_job.py` → `update_entity(owner=user)` → Markdown+Cache, Explainability-Eintrag;
-im Lore-Panel „Das stimmt nicht"-Aktion + Korrektur-Formular. Danach ist P25 (und damit das MVP) durch.
-Modell-Hinweis: Phase ist „standard" — `/clear`, dann `/model sonnet` reicht.
+**Aktiver Plan:** (kein aktiver Plan)
+**Nächster Schritt:** einen Plan aus dem Backlog unten wählen (`/plan` für einen neuen, `/implement`
+zum Fortsetzen eines bestehenden).
+
+**P25 — Lore Panel ist fertig (alle 3 Phasen archiviert, `docs/archive/2026-07/2026-07-01_p25-lore-panel/`).
+Photofant 2.0 erreicht damit den MVP-Zielpunkt aus dem Konzept (ohne Gemma).**
+Phase 3 (Korrektur-Flow): „Das stimmt nicht" auf der Lore-Panel-Kurzbio (nur wenn `owner !== 'user'`)
+öffnet ein Inline-Formular, löst `POST /entities/{id}/patch` → `KnowledgePatchJob`
+(`jobs/knowledge_patch_job.py`) → `KnowledgeService.update_entity(owner=user)` (Markdown+Cache) →
+Explainability-Eintrag in der neuen Cache-Tabelle `knowledge_changelog` (`ChangelogService`,
+`GET /entities/{id}/changelog`) aus. Läuft als Job (nicht synchron im Request) — Panel wartet über
+den bestehenden SSE-Job-Stream (`JobsService.streamJobs()`) auf done/error und lädt die Lore neu,
+ohne Lightbox-Reload. `owner` bleibt im Job offen (nicht hart auf `user`) — P27s
+`KnowledgeUpdateJob` (KI-Korrekturvorschläge) ruft laut eigenem Plan denselben Patch-Pfad wieder auf.
+**Scope-Deviation:** Korrektur-Formular deckt nur die Kurzbio (`body`) ab, nicht jedes einzelne
+Panel-Feld — Backend/Job/Route sind feldgenerisch (`PATCHABLE_FIELDS`), Erweiterung ist reine
+UI-Arbeit falls gebraucht. Backend-Tests grün (25 neue/geänderte in `test_knowledge_patch_job.py` +
+`test_knowledge_api.py`), volle Suite unverändert 13 vorbekannte Fails, `ruff` grün. Frontend
+`npm run lint` (tsc) + `ng build` grün.
+**Gefundene, nicht gefixte Lücke (pre-existing, außerhalb des Phasen-Scopes):** `JOB_KINDS` im
+Frontend-Model (`models/job.model.ts`) fehlte schon vor dieser Phase `'knowledge_lookup'` (P23) —
+nur `knowledge_patch` wurde jetzt ergänzt, der ältere Eintrag nicht.
 
 **Phase 2 (Lore-Panel-UI, Lightbox) ist fertig, committet:**
 Neue Komponente `features/galerie/lightbox/lore-panel/` (`pf-lore-panel`) dockt als weitere
@@ -62,10 +78,9 @@ Phase 1 (Entity-Linking + Job-Kette, Backend) ist fertig, `pytest`/`ruff` grün 
 (kein `ParentJobId`/`Depth`-Schleifenschutz gebaut — YAGNI, mit Nutzer abgestimmt; ADR-Nummer
 011 war schon belegt).
 
-Andere freigegebene, geparkte Pläne in `docs/planning/` (nach P24):
-- `2026-07-01_p25-lore-panel/` — Lore-API + Panel-UI + Korrektur-Flow (braucht P24)
-- `2026-07-01_p26-recommendation-engine/` — Empfehlungs-Job + Cards + Explainability (braucht P25)
-- `2026-07-01_p27-gemma-integration/` — KI-Layer/Gemma-Adapter + Import/Update/Interview-Jobs (braucht P25)
+Andere freigegebene, geparkte Pläne in `docs/planning/` (nach P25, MVP erreicht):
+- `2026-07-01_p26-recommendation-engine/` — Empfehlungs-Job + Cards + Explainability (P25-Voraussetzung erfüllt)
+- `2026-07-01_p27-gemma-integration/` — KI-Layer/Gemma-Adapter + Import/Update/Interview-Jobs (P25-Voraussetzung erfüllt)
 - `2026-07-06_p34-mcp-wissensbasis/` — Entities/Beziehungen, Media-Links/Aufgaben, Lore/Empfehlungen, agentischer Workflow (braucht MCP-Basisplan + P24-P26)
 
 P23–P27 lesen den P22-Kontrakt (README-Sektion „Kontrakt", jetzt im Archiv) als Single Source.
@@ -100,3 +115,14 @@ P23–P27 lesen den P22-Kontrakt (README-Sektion „Kontrakt", jetzt im Archiv) 
 4. Personen-Karte zeigt den Entity-Chip, Klick landet auf `/wissen`. Bild-Detail (Lightbox)
    zeigt den Chip in den Metadaten, Klick schließt die Lightbox und landet ebenfalls auf
    `/wissen`. **Bekannt:** landet noch nicht bei der Entity selbst (P25-Follow-up).
+
+**Smoke-Checkliste P25 (noch vom Nutzer zu prüfen — Details im archivierten P25-README):**
+1. Bild einer verknüpften Person öffnen → Panel zeigt gefüllte Sektionen; Beziehung anklicken →
+   Ziel-Entity.
+2. Bild ohne Wissen öffnen → „Noch kein Wissen — anlegen?"-Zustand, kein Fehler.
+3. Ein inferred-Feld „Das stimmt nicht" (Kurzbio) → Wert ändern + Grund → Speichern → Panel zeigt
+   neuen Wert ohne Lightbox-Reload; `cat` der Vault-Datei zeigt die Änderung + einen Eintrag in
+   `GET /api/knowledge/entities/{id}/changelog`. **Das ist die wackligste Stelle des Plans** — der
+   Korrektur-Flow läuft über den SSE-Job-Stream (Job-Dock beobachten), nicht synchron; hier lohnt
+   der genaueste Blick.
+4. P15-Lightbox (Zoom, Toolbar) funktioniert unverändert.
