@@ -316,7 +316,7 @@ async def test_lore_by_person_id_resolves_linked_entity_and_media(
     assert body["entity"]["id"] == "actors/robert-downey-jr"
     assert {ref["kind"]: ref["id"] for ref in body["related_media"]} == {"person": 42, "asset": 99}
     person_ref = next(ref for ref in body["related_media"] if ref["kind"] == "person")
-    assert person_ref["thumbnail_url"] == "/faces/7/thumbnail"
+    assert person_ref["thumbnail_url"] == "/api/faces/7/thumbnail"
     asset_ref = next(ref for ref in body["related_media"] if ref["kind"] == "asset")
     assert asset_ref["thumbnail_url"] == "/api/assets/99/thumbnail"
 

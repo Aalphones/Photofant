@@ -282,7 +282,7 @@ def _resolve_media_refs(session: Session, media_links: MediaLinks) -> list[Media
                 continue
             refs.append(
                 MediaRefDto(
-                    kind="person", id=person.id, thumbnail_url=f"/faces/{face_id}/thumbnail",
+                    kind="person", id=person.id, thumbnail_url=f"/api/faces/{face_id}/thumbnail",
                     label=person.name,
                 )
             )
