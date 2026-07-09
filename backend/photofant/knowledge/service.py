@@ -26,7 +26,10 @@ from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship, 
 from photofant.knowledge.validator import ValidationError, validate_entity
 from photofant.knowledge.vault import Vault
 
-_PATCHABLE_FIELDS = frozenset(
+# Öffentlich (kein Unterstrich-Präfix): `api/knowledge.py` validiert `PatchEntityRequest.field`
+# synchron dagegen, bevor der Korrektur-Job (P25 Phase 3) enqueued wird — eine Feldliste,
+# nicht zwei.
+PATCHABLE_FIELDS = frozenset(
     {"title", "aliases", "status", "confidence", "media_links", "relationships", "sources", "body"}
 )
 
@@ -329,7 +332,7 @@ def _apply_patch(entity: Entity, patch: dict[str, Any]) -> None:
     ``id``/``type``/``domain`` sind laut Kontrakt unveränderlich (kein Pfad-Move in
     Phase 3) und werden abgelehnt, statt still ignoriert zu werden.
     """
-    immutable_keys = set(patch) - _PATCHABLE_FIELDS
+    immutable_keys = set(patch) - PATCHABLE_FIELDS
     if immutable_keys:
         raise ValidationError(f"Felder nicht änderbar: {', '.join(sorted(immutable_keys))}")
 

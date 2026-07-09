@@ -334,6 +334,31 @@ class KnowledgeMediaLink(Base):
     target_id: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class KnowledgeChangelog(Base):
+    """Explainability-Log jeder Feld-Korrektur (P25 Phase 3) — Herkunfts-Metadaten einer
+    Änderung, nicht der neue Wert selbst (der steht im Markdown + in den Cache-Spalten
+    oben). Cache-Tabelle wie ``KnowledgeTask`` (Arbeitszustand, kein Vault-Wissen): die
+    Explainability-UI (geteilte Payload mit P26 Phase 3, Dok 020 §14) braucht sie
+    abfrag-/joinbar, ein Vault-Changelog-Anhang wäre nicht strukturiert lesbar.
+
+    ``old_value``/``new_value`` sind JSON, weil das gepatchte Feld sowohl skalar
+    (``title``/``body``) als auch eine Liste/ein Objekt (``relationships``/``media_links``)
+    sein kann — ein einzelner Text-Typ müsste selbst wieder (de)serialisieren.
+    """
+
+    __tablename__ = "knowledge_changelog"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_id: Mapped[str] = mapped_column(ForeignKey("knowledge_entities.id"), nullable=False, index=True)
+    field: Mapped[str] = mapped_column(Text, nullable=False)
+    old_value: Mapped[Any] = mapped_column(JSON, nullable=True)
+    new_value: Mapped[Any] = mapped_column(JSON, nullable=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    job_id: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
 class KnowledgeTask(Base):
     """Offene „hier fehlt Wissen"-Aufgabe (P23) — Arbeitszustand, kein Vault-Wissen.
 

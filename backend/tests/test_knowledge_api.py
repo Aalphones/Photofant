@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from photofant.db.models import Asset, Base, Face, Person
 from photofant.db.session import get_session
+from photofant.knowledge.changelog import ChangelogService
 from photofant.knowledge.vault import Vault, open_vault
 from photofant.main import create_app
 
@@ -333,3 +334,64 @@ async def test_lore_requires_exactly_one_of_asset_id_or_person_id(
 
     assert neither.status_code == 422
     assert both.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_correction_endpoint_returns_job_id(app_with_deps: tuple[Any, Session, Vault]) -> None:
+    """Nur der Trigger selbst: der eigentliche Job-Lauf (Ownership, Changelog-Eintrag) ist
+    in `test_knowledge_patch_job.py` an `_run_patch` direkt getestet, nicht über die Queue —
+    gleiches Muster wie `test_lookup_endpoint_returns_job_id` in `test_knowledge_tasks_api.py`."""
+    app, _session, _vault = app_with_deps
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post("/api/knowledge/entities", json=_entity_payload())
+        response = await client.post(
+            "/api/knowledge/entities/actors/robert-downey-jr/patch",
+            json={"field": "body", "value": "Neuer Text.", "reason": "Das stimmt nicht"},
+        )
+
+    assert response.status_code == 200
+    assert "job_id" in response.json()
+
+
+@pytest.mark.asyncio
+async def test_patch_correction_unknown_field_returns_422(app_with_deps: tuple[Any, Session, Vault]) -> None:
+    app, _session, _vault = app_with_deps
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/knowledge/entities/actors/robert-downey-jr/patch",
+            json={"field": "owner", "value": "user", "reason": "x"},
+        )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_get_changelog_returns_entries_for_entity(app_with_deps: tuple[Any, Session, Vault]) -> None:
+    app, session, _vault = app_with_deps
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post("/api/knowledge/entities", json=_entity_payload())
+        ChangelogService(session).record(
+            entity_id="actors/robert-downey-jr",
+            field="body",
+            old_value="alt",
+            new_value="neu",
+            reason="Das stimmt nicht",
+            source="user",
+            job_id="job-x",
+        )
+        session.commit()
+
+        response = await client.get("/api/knowledge/entities/actors/robert-downey-jr/changelog")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["field"] == "body"
+    assert body[0]["old_value"] == "alt"
+    assert body[0]["new_value"] == "neu"
+    assert body[0]["reason"] == "Das stimmt nicht"
+    assert body[0]["source"] == "user"
+    assert body[0]["job_id"] == "job-x"

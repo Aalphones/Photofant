@@ -1083,10 +1083,22 @@ comfyui.result_wait_timeout_seconds = 1800
 | *(ab P23, ungenutzt)* | `DELETE` | `/api/knowledge/entities/{id}/relationships` | Query: `type`, `target`, `owner?` | `EntityDto` (Beziehung entfernt, idempotent) — 404/409 |
 | *(ab P23, ungenutzt)* | `GET` | `/api/knowledge/entities/{id}/lore` | — | `LoreDto` (Vollform, s.u.) — 404 bei unbekannter `id` |
 | Lore-Panel (P25 Phase 2, Kontrakt) | `GET` | `/api/knowledge/lore` | Query: genau eines von `asset_id`, `person_id` (sonst 422) | `LoreDto` — **200 mit `entity: null` ohne Verknüpfung** (kein 404) |
+| Lore-Panel „Das stimmt nicht" (P25 Phase 3) | `POST` | `/api/knowledge/entities/{id}/patch` | `PatchEntityRequest { field, value, reason }` — `field` muss eine der patchbaren Felder sein (`PATCHABLE_FIELDS` in `knowledge/service.py`), `owner` ist **kein** Request-Feld (fest `user`) | `{ job_id: string }` — startet `KnowledgePatchJob` **asynchron** (Job-Dock/SSE, gleiches Muster wie `/lookup`); 422 bei unbekanntem Feld vorab, Entity-404/Ownership-409 laufen als Job-Error, nicht als HTTP-Status |
+| Lore-Panel (Explainability, P25 Phase 3) | `GET` | `/api/knowledge/entities/{id}/changelog` | — | `ChangelogEntryDto[]` — Korrektur-Historie (neueste zuerst), geteilte Payload mit P26 Phase 3 (Warum?-Popover) |
 
 `EntityDto` trägt zusätzlich `body: string` (freier Markdown-Text unter dem Frontmatter) — im P22-Kontrakt beschrieben, aber erst P23 Phase 2 durch die REST-Schicht gereicht (Wizard-Feld „Beschreibung").
 
 **`LoreDto` (P25 Phase 1 — Vollform des P22-Stubs):** `{ entity: EntityDto | null, relationships: { type, target: EntityRefDto }[], franchises: EntityRefDto[], related_media: { kind: "person"|"asset", id, thumbnail_url, label? }[], sources: string[] }`. `EntityRefDto = { id, title, type }`. Beziehungsziele sind 1 Hop aufgelöst (Titel+Typ statt roher id) — Ziel nicht im Cache → Titel fällt auf die rohe id zurück, keine Beziehung geht verloren. `franchises` ist eine Teilmenge von `relationships` (Ziel-Typ `"Franchise"`), eigenes Feld weil das Lore-Panel es als eigene Sektion zeigt. `related_media` löst `media_links` (rohe Personen-/Asset-ids) zu Thumbnails auf — Personen ohne Gesichts-Aufnahme (kein Portrait) werden ausgelassen.
+
+**Explainability/Changelog (P25 Phase 3, `knowledge/changelog.py`):** jeder über `POST .../patch`
+gelaufene Korrektur-Patch erzeugt eine `knowledge_changelog`-Zeile — Cache-Tabelle wie
+`knowledge_tasks` (Arbeitszustand/Metadaten, kein Vault-Wissen), nicht der Vault selbst, weil die
+UI sie join-/abfragbar braucht statt Markdown-Diffs zu parsen. `ChangelogEntryDto = { id, entity_id,
+field, old_value: unknown, new_value: unknown, reason, source: Owner, job_id, created_at }`.
+`KnowledgePatchJob` (`jobs/knowledge_patch_job.py`) wendet den Patch über den bestehenden
+`KnowledgeService.update_entity`-Pfad an und schreibt danach den Changelog-Eintrag — Sackgassen-Job
+wie `KnowledgeLookupJob`, `owner` bleibt Parameter (nicht hart auf `user` verdrahtet), damit P27s
+KI-Korrekturvorschläge denselben Pfad mit einem anderen Owner wiederverwenden können.
 
 **Ownership:** jeder Schreibzugriff ist entity-weit (ein `owner`-Feld pro Entity, kein Per-Feld-Owner). Priorität `user > manual > web > inferred`; ein Schreiber mit niedrigerer Priorität als der bestehende `owner` wird komplett abgelehnt (409), ein erfolgreicher Schreiber wird selbst zum neuen `owner`. `owner=user` erzwingt immer `confidence=1.0`. REST setzt `owner` optional entgegen (Default `"user"`, da die UI heute der einzige Schreiber ist) — Jobs (ab P24) laufen in-process und rufen `KnowledgeService` direkt auf, nicht über REST.
 

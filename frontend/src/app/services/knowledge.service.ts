@@ -1,7 +1,17 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import type { Observable } from 'rxjs';
-import type { CreateEntityRequest, DomainDto, EntityDto, LoreDto, TaskDto, TaskStatus } from '@photofant/models';
+import type {
+  ChangelogEntryDto,
+  CreateEntityRequest,
+  DomainDto,
+  EntityDto,
+  LoreDto,
+  PatchEntityRequest,
+  PatchJobResponse,
+  TaskDto,
+  TaskStatus,
+} from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
 export class KnowledgeService {
@@ -53,5 +63,15 @@ export class KnowledgeService {
 
   dismissTask(taskId: number): Observable<TaskDto> {
     return this.http.post<TaskDto>(`/api/knowledge/tasks/${taskId}/dismiss`, {});
+  }
+
+  // P25 Phase 3 — löst den KnowledgePatchJob aus; läuft asynchron (Job-Dock/SSE),
+  // deshalb nur der `job_id`-Rückgabewert hier, kein direktes Korrektur-Ergebnis.
+  patchEntity(entityId: string, request: PatchEntityRequest): Observable<PatchJobResponse> {
+    return this.http.post<PatchJobResponse>(`/api/knowledge/entities/${entityId}/patch`, request);
+  }
+
+  getChangelog(entityId: string): Observable<ChangelogEntryDto[]> {
+    return this.http.get<ChangelogEntryDto[]>(`/api/knowledge/entities/${entityId}/changelog`);
   }
 }

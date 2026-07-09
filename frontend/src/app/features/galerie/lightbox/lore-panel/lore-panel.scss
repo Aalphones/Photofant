@@ -71,6 +71,94 @@
   white-space: pre-wrap;
 }
 
+// ── Korrektur-Flow: „Das stimmt nicht" (P25 Phase 3) ─────────────────────────
+
+.lore-correct {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 3px 0;
+  font-size: 11px;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 0.12s;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--accent);
+  }
+}
+
+.lore-correction {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lore-correction__value,
+.lore-correction__reason {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 7px 9px;
+  resize: vertical;
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--accent-line, oklch(0.55 0.18 285 / 0.35));
+  }
+}
+
+.lore-correction__error {
+  font-size: 11.5px;
+  color: var(--danger);
+  margin: 0;
+}
+
+.lore-correction__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.lore-correction__save,
+.lore-correction__cancel {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.lore-correction__save {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+
+  &:hover:not(:disabled) {
+    background: var(--accent-press);
+  }
+}
+
+.lore-correction__cancel {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-2);
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+}
+
 // ── Beziehungen: Zeilen wie P15s .rel-row ────────────────────────────────────
 
 .rel-row {

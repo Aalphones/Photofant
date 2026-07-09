@@ -13,8 +13,52 @@
       <span class="lore-entity__title">{{ ent.title }}</span>
       <span class="lore-entity__type">{{ ent.type }}</span>
     </button>
-    @if (bio(); as text) {
-      <p class="lore-bio">{{ text }}</p>
+    @if (correctingField() === 'body') {
+      <form class="lore-correction" (ngSubmit)="submitCorrection()">
+        <textarea
+          class="lore-correction__value"
+          rows="3"
+          [value]="correctionValue()"
+          (input)="onCorrectionValueInput($any($event.target).value)"
+        ></textarea>
+        <input
+          class="lore-correction__reason"
+          type="text"
+          placeholder="Grund (z.B. veraltet, falsch)"
+          [value]="correctionReason()"
+          (input)="onCorrectionReasonInput($any($event.target).value)"
+        />
+        @if (correctionError(); as err) {
+          <p class="lore-correction__error">{{ err }}</p>
+        }
+        <div class="lore-correction__actions">
+          <button
+            class="lore-correction__save"
+            type="submit"
+            [disabled]="correctionPending() || correctionReason().trim() === ''"
+          >
+            {{ correctionPending() ? 'Speichert…' : 'Speichern' }}
+          </button>
+          <button class="lore-correction__cancel" type="button" (click)="cancelCorrection()">
+            Abbrechen
+          </button>
+        </div>
+      </form>
+    } @else {
+      @if (bio(); as text) {
+        <p class="lore-bio">{{ text }}</p>
+      }
+      @if (canCorrect()) {
+        <button
+          class="lore-correct"
+          type="button"
+          (click)="startCorrection('body', bio() ?? '')"
+          title="Das stimmt nicht"
+        >
+          <pf-icon name="pencil" [size]="11" />
+          Das stimmt nicht
+        </button>
+      }
     }
   </div>
 

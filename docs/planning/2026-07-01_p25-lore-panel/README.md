@@ -30,7 +30,7 @@ Kein Mockup. Panel-Struktur unten als AK fixiert (Dok 050 §5), eingepasst in P1
 |---|---|---|---|
 | 1 | Lore-Aggregations-API (Backend) | standard | complete |
 | 2 | Lore-Panel-UI (Lightbox) | heikel (fremder Screen P15 + freihändiges Design) | complete |
-| 3 | Korrektur-Flow (PatchJob) | standard | pending |
+| 3 | Korrektur-Flow (PatchJob) | standard | complete |
 
 ## Finale AK (Gesamt)
 - [ ] Bild mit verknüpfter Entity → Panel rechts zeigt Kurzbio, Rollen, Beziehungen, Franchises, eigene Bilder, Quellen, verwandte Entities (soweit vorhanden).
@@ -55,4 +55,35 @@ Kein Mockup. Panel-Struktur unten als AK fixiert (Dok 050 §5), eingepasst in P1
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_ — Follow-ups: KI-Lore-Texte (`LoreJob`) → P27 · Empfehlungen unter dem Panel → P26.
+
+**Summary:** Lore-Panel + Korrektur-Flow fertig — P25 komplett, **Photofant 2.0 MVP erreicht**
+(ohne Gemma, wie im Ziel-Satz oben vorgesehen). Bild öffnen zeigt gebündeltes Wissen rechts im
+Lightbox-Panel (5 Sektionen); auto/inferred-Kurzbio ist per „Das stimmt nicht" korrigierbar,
+Korrektur läuft als Job über den P22-Ownership-Pfad und erzeugt einen Explainability-Eintrag.
+
+**Files touched (Phase 3):** Backend: `db/models.py` (+`KnowledgeChangelog`), `knowledge/changelog.py`
+(neu, `ChangelogService`), `knowledge/service.py` (`PATCHABLE_FIELDS` öffentlich), `knowledge/repository.py`
+(Cascade-Delete für Changelog), `jobs/queue.py` (+`JobKind.KNOWLEDGE_PATCH`), `jobs/knowledge_patch_job.py`
+(neu, `KnowledgePatchJob`), `api/knowledge.py` (+`POST .../patch`, +`GET .../changelog`) · Tests:
+`tests/test_knowledge_patch_job.py` (neu), `tests/test_knowledge_api.py` (+3 Tests). Frontend:
+`models/knowledge.model.ts`+`models/index.ts` (+`PatchEntityRequest`/`PatchJobResponse`/`ChangelogEntryDto`),
+`models/job.model.ts` (+`knowledge_patch`), `services/knowledge.service.ts` (+`patchEntity`/`getChangelog`),
+`features/galerie/lightbox/lore-panel/*` (Korrektur-Formular + SSE-Job-Warte + Lore-Reload).
+Docs: `docs/routes.md`, `docs/code-map.md`.
+
+**Deviations:**
+- „Das stimmt nicht" deckt in dieser Phase nur die Kurzbio (`body`) ab, nicht jedes einzelne
+  Panel-Feld (siehe `phase-3-correction-flow.md` AK-Anmerkung) — Backend/Job/Route sind bereits
+  feldgenerisch, Erweiterung auf weitere Felder ist reine UI-Arbeit bei Bedarf.
+- Explainability-Log liegt als Cache-Tabelle (`knowledge_changelog`), nicht als Vault-Anhang —
+  Begründung wie bei `knowledge_tasks` (Arbeitszustand/Metadaten, nicht Vault-Wissen).
+
+**Gefundene, nicht gefixte Lücke (pre-existing, außerhalb des Phasen-Scopes):** `JOB_KINDS` im
+Frontend-Model (`models/job.model.ts`) fehlte schon vor dieser Phase `'knowledge_lookup'` (P23) —
+`knowledge_patch` wurde jetzt ergänzt, der ältere Eintrag nicht (nicht Teil dieser Phase, aber
+gemeldet statt stillschweigend übersehen).
+
+**Follow-ups:** KI-Lore-Texte (`LoreJob`) → P27 · Empfehlungen unter dem Panel → P26 ·
+`KnowledgeUpdateJob` (P27 Phase 3) und das geteilte Explainability-Popover (P26 Phase 3) bauen
+direkt auf dieser Phase auf (Patch-Pfad + Changelog-Payload wiederverwendet) · Korrektur-Formular
+auf weitere Felder ausweiten, falls in der Praxis gebraucht.

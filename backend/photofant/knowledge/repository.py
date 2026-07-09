@@ -11,6 +11,7 @@ from sqlalchemy import Text, cast, or_, select
 from sqlalchemy.orm import Session
 
 from photofant.db.models import (
+    KnowledgeChangelog,
     KnowledgeEntity,
     KnowledgeMediaLink,
     KnowledgeRelationship,
@@ -96,6 +97,7 @@ class EntityRepository:
         self.session.query(KnowledgeRelationship).delete()
         self.session.query(KnowledgeSource).delete()
         self.session.query(KnowledgeMediaLink).delete()
+        self.session.query(KnowledgeChangelog).delete()
         self.session.query(KnowledgeEntity).delete()
 
     def find_by_alias(self, alias: str) -> list[KnowledgeEntity]:
@@ -157,6 +159,7 @@ class EntityRepository:
         self.session.query(KnowledgeRelationship).filter_by(entity_id=entity_id).delete()
         self.session.query(KnowledgeSource).filter_by(entity_id=entity_id).delete()
         self.session.query(KnowledgeMediaLink).filter_by(entity_id=entity_id).delete()
+        self.session.query(KnowledgeChangelog).filter_by(entity_id=entity_id).delete()
         self.session.query(KnowledgeEntity).filter_by(id=entity_id).delete()
 
 

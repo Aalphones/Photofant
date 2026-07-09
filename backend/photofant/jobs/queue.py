@@ -45,6 +45,7 @@ class JobKind(StrEnum):
     EXPORT = "export"
     CAPTIONS = "captions"
     KNOWLEDGE_LOOKUP = "knowledge_lookup"
+    KNOWLEDGE_PATCH = "knowledge_patch"
 
 
 @dataclass

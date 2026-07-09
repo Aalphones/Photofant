@@ -138,6 +138,9 @@ export type {
   TaskStatus,
   TaskDto,
   CreateTaskRequest,
+  PatchEntityRequest,
+  PatchJobResponse,
+  ChangelogEntryDto,
 } from './knowledge.model';
 export { OWNERS, TASK_KINDS, TASK_STATUSES } from './knowledge.model';
 

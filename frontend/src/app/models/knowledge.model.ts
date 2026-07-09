@@ -114,3 +114,28 @@ export interface CreateTaskRequest {
   kind: TaskKind;
   context?: Record<string, unknown>;
 }
+
+// P25 Phase 3 — „Das stimmt nicht"-Korrektur. `owner` ist bewusst kein Request-Feld
+// (anders als UpdateEntityRequest): die Route ist fix die Nutzer-Korrektur (owner=user).
+export interface PatchEntityRequest {
+  field: string;
+  value: unknown;
+  reason: string;
+}
+
+export interface PatchJobResponse {
+  job_id: string;
+}
+
+// P25 Phase 3 — Explainability-Eintrag einer Korrektur (geteilte Payload mit P26 Phase 3).
+export interface ChangelogEntryDto {
+  id: number;
+  entity_id: string;
+  field: string;
+  old_value: unknown;
+  new_value: unknown;
+  reason: string;
+  source: Owner;
+  job_id: string;
+  created_at: string;
+}

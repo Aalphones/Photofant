@@ -18,11 +18,14 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from photofant.db.models import Asset, Face, Person
+from photofant.db.models import Asset, Face, KnowledgeChangelog, Person
 from photofant.db.session import get_session
+from photofant.jobs.knowledge_patch_job import enqueue_knowledge_patch
+from photofant.knowledge.changelog import ChangelogService
 from photofant.knowledge.domains import Domain, DomainLoadError
 from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship
 from photofant.knowledge.service import (
+    PATCHABLE_FIELDS,
     AmbiguousEntityError,
     EntityAlreadyExistsError,
     EntityNotFoundError,
@@ -227,6 +230,51 @@ class CreateRelationshipRequest(BaseModel):
     owner: str = Owner.USER.value
 
 
+class PatchEntityRequest(BaseModel):
+    """„Das stimmt nicht"-Korrektur (P25 Phase 3) — Einzelfeld-Patch mit Grund.
+
+    ``owner`` ist hier bewusst **kein** Request-Parameter (anders als bei
+    ``UpdateEntityRequest``): diese Route ist die Nutzer-Korrektur, der Owner steht
+    fest auf ``user`` (Kontrakt). KI-Korrekturvorschläge (P27) rufen den Job-Pfad
+    (``enqueue_knowledge_patch``) direkt mit einem anderen Owner auf, nicht über
+    diese REST-Route.
+    """
+
+    field: str
+    value: Any
+    reason: str
+
+
+class PatchJobResponse(BaseModel):
+    job_id: str
+
+
+class ChangelogEntryDto(BaseModel):
+    id: int
+    entity_id: str
+    field: str
+    old_value: Any
+    new_value: Any
+    reason: str
+    source: str
+    job_id: str
+    created_at: str
+
+    @classmethod
+    def from_row(cls, row: KnowledgeChangelog) -> ChangelogEntryDto:
+        return cls(
+            id=row.id,
+            entity_id=row.entity_id,
+            field=row.field,
+            old_value=row.old_value,
+            new_value=row.new_value,
+            reason=row.reason,
+            source=row.source,
+            job_id=row.job_id,
+            created_at=row.created_at.isoformat(),
+        )
+
+
 def _service(session: Session, vault: Vault) -> KnowledgeService:
     return KnowledgeService(session, vault)
 
@@ -406,6 +454,29 @@ async def remove_relationship(
     except OwnershipConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     return EntityDto.from_entity(entity)
+
+
+@router.post("/entities/{entity_id:path}/patch", response_model=PatchJobResponse)
+async def patch_entity(entity_id: str, body: PatchEntityRequest) -> PatchJobResponse:
+    """Löst den ``KnowledgePatchJob`` aus (P25 Phase 3) — läuft asynchron über die
+    Job Queue (Kontrakt Dok 030: jede Mutation ist ein Job), Fortschritt/Fehler laufen
+    über den Job-Dock/SSE-Stream wie bei ``POST /lookup``. Existenz der Entity und
+    Ownership werden im Job selbst geprüft, nicht hier synchron — nur die Feldliste
+    wird vorab validiert, damit ein Tippfehler nicht erst als Job-Error auftaucht."""
+    if body.field not in PATCHABLE_FIELDS:
+        allowed = ", ".join(sorted(PATCHABLE_FIELDS))
+        raise HTTPException(
+            status_code=422, detail=f"Feld '{body.field}' nicht patchbar (erlaubt: {allowed})"
+        )
+    status = await enqueue_knowledge_patch(entity_id, body.field, body.value, body.reason, Owner.USER)
+    return PatchJobResponse(job_id=status.id)
+
+
+@router.get("/entities/{entity_id:path}/changelog", response_model=list[ChangelogEntryDto])
+async def get_entity_changelog(entity_id: str, session: DbSession) -> list[ChangelogEntryDto]:
+    """Explainability-Historie einer Entity (P25 Phase 3) — geteilte Payload mit P26
+    Phase 3 (Warum?-Popover)."""
+    return [ChangelogEntryDto.from_row(row) for row in ChangelogService(session).list_for_entity(entity_id)]
 
 
 @router.get("/entities/{entity_id:path}/lore", response_model=LoreDto)
