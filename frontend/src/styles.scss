@@ -1,1 +1,37 @@
 /* Component-level global overrides only — tokens live in tailwind.css */
+
+/* Shared dialog-footer button (`.md-btn` + `.primary`/`.ghost`). Lives here because several
+   dialogs (preset-dialog, bulk-edit-dialog, rerun-dialog, export-dialog) reference these classes
+   in their templates without defining them locally — they rendered as unstyled native buttons.
+   Other components (modelle, bind-dialog, download-dialog, model-drawer) define their own
+   component-scoped `.md-btn` with call-site tweaks (height, flex); Angular's emulated view
+   encapsulation makes those take precedence over this global default, so they keep looking as
+   they did. This is only the fallback for callers that had none. */
+.md-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex: none;
+  transition: background .12s, border-color .12s, color .12s;
+
+  &.primary {
+    background: var(--accent);
+    color: var(--bg);
+    &:hover:not(:disabled) { background: var(--accent-press); }
+    &:disabled { opacity: .5; cursor: not-allowed; }
+  }
+
+  &.ghost {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text-2);
+    &:hover { background: var(--surface-hover); color: var(--text); }
+  }
+}
