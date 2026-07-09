@@ -23,6 +23,7 @@ from photofant.db.models import KnowledgeEntity, KnowledgeRelationship
 from photofant.knowledge.domains import Domain
 from photofant.knowledge.repository import EntityRepository, RelationshipRepository
 from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship, owner_can_overwrite
+from photofant.knowledge.tasks import TaskKind, TaskService
 from photofant.knowledge.validator import ValidationError, validate_entity
 from photofant.knowledge.vault import Vault
 
@@ -111,7 +112,21 @@ class KnowledgeService:
 
         self.vault.save_entity(entity, domain)
         self.entities.upsert_from_vault(entity)
+        self._flag_if_incomplete(entity)
         return entity
+
+    def _flag_if_incomplete(self, entity: Entity) -> None:
+        """Legt eine ``incomplete_entity``-Aufgabe an, wenn eine frisch angelegte Entity
+        außer Typ/Titel noch nichts Inhaltliches trägt (kein Freitext, keine Beziehung) —
+        sonst verschwindet eine leer angelegte Entity kommentarlos in der Ablage, ohne
+        dass irgendwo ein Hinweis übrig bleibt, sie noch zu befüllen.
+        """
+        if entity.body.strip() or entity.relationships:
+            return
+        TaskService(self.session).create_task(
+            TaskKind.INCOMPLETE_ENTITY,
+            {"entity_id": entity.id, "title": entity.title, "type": entity.type},
+        )
 
     def find_entity(self, ref: str) -> Entity | None:
         """Löst ``ref`` als ``id`` (exakt) oder Alias auf. ``None`` = nicht gefunden."""

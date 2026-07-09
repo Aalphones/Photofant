@@ -24,6 +24,7 @@ class TaskKind(StrEnum):
     MISSING_ENTITY = "missing_entity"
     CONFIRM_RELATIONSHIP = "confirm_relationship"
     REVIEW_RECOMMENDATION = "review_recommendation"
+    INCOMPLETE_ENTITY = "incomplete_entity"
 
 
 class TaskStatus(StrEnum):

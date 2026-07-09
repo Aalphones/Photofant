@@ -5,8 +5,8 @@
         <pf-icon name="sparkle" [size]="18" />
       </div>
       <div class="ew-head__info">
-        <div class="ew-title">Neue Entity</div>
-        <div class="ew-sub">Wissen manuell anlegen</div>
+        <div class="ew-title">{{ isEditMode() ? 'Entity bearbeiten' : 'Neue Entity' }}</div>
+        <div class="ew-sub">{{ isEditMode() ? 'Vorhandenes Wissen ergänzen' : 'Wissen manuell anlegen' }}</div>
       </div>
       <button class="ew-close" (click)="close.emit()" aria-label="Schließen">
         <pf-icon name="x" [size]="17" />
@@ -21,7 +21,7 @@
             id="ew-type"
             class="ew-select"
             [value]="selectedType()"
-            [disabled]="entityTypes().length === 0"
+            [disabled]="isEditMode() || entityTypes().length === 0"
             (change)="selectedType.set($any($event.target).value)"
           >
             @for (entityType of entityTypes(); track entityType.name) {
@@ -61,6 +61,7 @@
                 id="ew-domain"
                 class="ew-select"
                 [value]="selectedDomain()"
+                [disabled]="isEditMode()"
                 (change)="onDomainChange($any($event.target).value)"
               >
                 @for (domain of domains(); track domain.name) {
@@ -169,7 +170,7 @@
       <button class="ew-btn ew-btn--ghost" type="button" (click)="close.emit()">Abbrechen</button>
       <button class="ew-btn ew-btn--primary" type="button" [disabled]="!canSave()" (click)="onConfirm()">
         <pf-icon name="check" [size]="14" />
-        {{ isSaving() ? 'Speichert…' : 'Anlegen' }}
+        {{ isSaving() ? 'Speichert…' : (isEditMode() ? 'Speichern' : 'Anlegen') }}
       </button>
     </div>
   </div>

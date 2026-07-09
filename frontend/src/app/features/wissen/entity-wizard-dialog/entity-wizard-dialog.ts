@@ -10,7 +10,14 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
-import type { CreateEntityRequest, DomainDto, EntityDto, EntityType, Relationship } from '@photofant/models';
+import type {
+  CreateEntityRequest,
+  DomainDto,
+  EntityDto,
+  EntityType,
+  Relationship,
+  UpdateEntityRequest,
+} from '@photofant/models';
 import { KnowledgeService } from '@photofant/services';
 import { Icon } from '../../../ui/icon/icon';
 
@@ -26,9 +33,14 @@ export class EntityWizardDialog {
   readonly isSaving = input<boolean>(false);
   readonly saveError = input<string | null>(null);
   readonly prefill = input<Partial<CreateEntityRequest>>({});
+  // Gesetzt -> Wizard bearbeitet eine bestehende Entity statt eine neue anzulegen
+  // (z.B. aus der Aufgabe "Entity noch ohne Inhalt"). Typ/Domäne sind dann gesperrt,
+  // das Backend lehnt eine Änderung dieser Felder ohnehin ab (`_apply_patch`).
+  readonly editEntity = input<EntityDto | null>(null);
 
   readonly close = output<void>();
   readonly save = output<CreateEntityRequest>();
+  readonly update = output<{ entityId: string; patch: UpdateEntityRequest }>();
 
   private readonly knowledgeService = inject(KnowledgeService);
 
@@ -75,6 +87,8 @@ export class EntityWizardDialog {
     this.titleTouched() && this.title().trim().length === 0 ? 'Titel darf nicht leer sein.' : null
   );
 
+  protected readonly isEditMode = computed((): boolean => this.editEntity() !== null);
+
   protected readonly canSave = computed((): boolean =>
     this.title().trim().length > 0 &&
     this.selectedType().trim().length > 0 &&
@@ -84,10 +98,23 @@ export class EntityWizardDialog {
 
   constructor() {
     // Domäne/Typ vorbelegen, sobald die Domänen-Liste (asynchron geladen) oder ein
-    // Prefill (Phase 3: Wizard aus einer Aufgabe geöffnet) verfügbar ist.
+    // Prefill (Phase 3: Wizard aus einer Aufgabe geöffnet) verfügbar ist. Eine zu
+    // bearbeitende Entity (`editEntity`) gewinnt gegenüber dem reinen Anlage-Prefill —
+    // sie bringt bereits alle Felder mit, nicht nur Titel/Typ.
     effect(() => {
       const domains = this.domains();
       if (domains.length === 0 || this.selectedDomain() !== '') { return; }
+      const edit = this.editEntity();
+      if (edit !== null) {
+        this.selectedDomain.set(edit.domain);
+        this.selectedType.set(edit.type);
+        this.title.set(edit.title);
+        this.aliases.set([...edit.aliases]);
+        this.description.set(edit.body);
+        this.relationships.set([...edit.relationships]);
+        this.detailsOpen.set(true);
+        return;
+      }
       const prefill = this.prefill();
       const initialDomain = domains.find((domain: DomainDto) => domain.name === prefill.domain) ?? domains[0];
       if (initialDomain === undefined) { return; }
@@ -159,6 +186,19 @@ export class EntityWizardDialog {
   protected onConfirm(): void {
     this.titleTouched.set(true);
     if (!this.canSave()) { return; }
+
+    const edit = this.editEntity();
+    if (edit !== null) {
+      const patch: UpdateEntityRequest = {
+        title: this.title().trim(),
+        aliases: this.aliases(),
+        relationships: this.relationships(),
+        body: this.description().trim(),
+      };
+      this.update.emit({ entityId: edit.id, patch });
+      return;
+    }
+
     const domain = this.selectedDomain();
     const type = this.selectedType();
     const folder = this.entityTypes().find((entityType: EntityType) => entityType.name === type)?.folder ?? type.toLowerCase();

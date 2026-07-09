@@ -8,13 +8,22 @@ export interface TasksState extends EntityState<TaskDto> {
   error: string | null;
 }
 
+// Dritter Adapter im selben Feature-State (analog `TasksState`) — die Wissen-Liste
+// (Übersicht + Nachschlagen fürs Edit-Prefill der Aufgabe "Entity noch ohne Inhalt").
+export interface EntityListState extends EntityState<EntityDto> {
+  loading: boolean;
+  error: string | null;
+}
+
 export interface KnowledgeState extends EntityState<DomainDto> {
   domainsLoading: boolean;
   domainsError: string | null;
   isSaving: boolean;
   saveError: string | null;
   lastCreatedEntity: EntityDto | null;
+  lastUpdatedEntity: EntityDto | null;
   tasks: TasksState;
+  entityList: EntityListState;
 }
 
 const adapter: EntityAdapter<DomainDto> = createEntityAdapter<DomainDto>({
@@ -25,13 +34,19 @@ const adapter: EntityAdapter<DomainDto> = createEntityAdapter<DomainDto>({
 // keine Domänen, brauchen aber dieselbe by-id-Lookup-Semantik für resolve/dismiss.
 const taskAdapter: EntityAdapter<TaskDto> = createEntityAdapter<TaskDto>();
 
+const entityAdapter: EntityAdapter<EntityDto> = createEntityAdapter<EntityDto>({
+  selectId: (entity: EntityDto) => entity.id,
+});
+
 const initialState: KnowledgeState = adapter.getInitialState({
   domainsLoading: false,
   domainsError: null,
   isSaving: false,
   saveError: null,
   lastCreatedEntity: null,
+  lastUpdatedEntity: null,
   tasks: taskAdapter.getInitialState({ loading: false, error: null }),
+  entityList: entityAdapter.getInitialState({ loading: false, error: null }),
 });
 
 export const knowledgeFeature = createFeature({
@@ -51,6 +66,18 @@ export const knowledgeFeature = createFeature({
       domainsLoading: false,
       domainsError: error,
     })),
+    on(knowledgeActions.loadEntities, (state: KnowledgeState) => ({
+      ...state,
+      entityList: { ...state.entityList, loading: true, error: null },
+    })),
+    on(knowledgeActions.loadEntitiesSuccess, (state: KnowledgeState, { entities }) => ({
+      ...state,
+      entityList: entityAdapter.setAll(entities, { ...state.entityList, loading: false, error: null }),
+    })),
+    on(knowledgeActions.loadEntitiesFailure, (state: KnowledgeState, { error }) => ({
+      ...state,
+      entityList: { ...state.entityList, loading: false, error },
+    })),
     on(knowledgeActions.createEntity, (state: KnowledgeState) => ({
       ...state,
       isSaving: true,
@@ -61,8 +88,26 @@ export const knowledgeFeature = createFeature({
       isSaving: false,
       saveError: null,
       lastCreatedEntity: entity,
+      entityList: entityAdapter.upsertOne(entity, state.entityList),
     })),
     on(knowledgeActions.createEntityFailure, (state: KnowledgeState, { error }) => ({
+      ...state,
+      isSaving: false,
+      saveError: error,
+    })),
+    on(knowledgeActions.updateEntity, (state: KnowledgeState) => ({
+      ...state,
+      isSaving: true,
+      saveError: null,
+    })),
+    on(knowledgeActions.updateEntitySuccess, (state: KnowledgeState, { entity }) => ({
+      ...state,
+      isSaving: false,
+      saveError: null,
+      lastUpdatedEntity: entity,
+      entityList: entityAdapter.upsertOne(entity, state.entityList),
+    })),
+    on(knowledgeActions.updateEntityFailure, (state: KnowledgeState, { error }) => ({
       ...state,
       isSaving: false,
       saveError: error,
@@ -72,6 +117,7 @@ export const knowledgeFeature = createFeature({
       isSaving: false,
       saveError: null,
       lastCreatedEntity: null,
+      lastUpdatedEntity: null,
     })),
     on(knowledgeActions.loadTasks, (state: KnowledgeState) => ({
       ...state,
@@ -107,11 +153,18 @@ export const knowledgeFeature = createFeature({
   extraSelectors: ({ selectKnowledgeState }) => {
     const selectTasksState = createSelector(selectKnowledgeState, (state: KnowledgeState) => state.tasks);
     const { selectAll: selectAllTasks } = taskAdapter.getSelectors(selectTasksState);
+    const selectEntityListState = createSelector(selectKnowledgeState, (state: KnowledgeState) => state.entityList);
+    const { selectAll: selectAllEntities, selectEntities: selectEntityDictionary } =
+      entityAdapter.getSelectors(selectEntityListState);
     return {
       ...adapter.getSelectors(selectKnowledgeState),
       selectAllTasks,
       selectTasksLoading: createSelector(selectTasksState, (tasks: TasksState) => tasks.loading),
       selectTasksError: createSelector(selectTasksState, (tasks: TasksState) => tasks.error),
+      selectAllEntities,
+      selectEntityDictionary,
+      selectEntitiesLoading: createSelector(selectEntityListState, (state: EntityListState) => state.loading),
+      selectEntitiesError: createSelector(selectEntityListState, (state: EntityListState) => state.error),
     };
   },
 });

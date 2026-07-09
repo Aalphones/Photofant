@@ -7,9 +7,14 @@ const {
   selectIsSaving,
   selectSaveError,
   selectLastCreatedEntity,
+  selectLastUpdatedEntity,
   selectAllTasks,
   selectTasksLoading,
   selectTasksError,
+  selectAllEntities,
+  selectEntityDictionary,
+  selectEntitiesLoading,
+  selectEntitiesError,
 } = knowledgeFeature;
 
 export const knowledgeSelectors = {
@@ -19,7 +24,12 @@ export const knowledgeSelectors = {
   selectIsSaving,
   selectSaveError,
   selectLastCreatedEntity,
+  selectLastUpdatedEntity,
   selectAllTasks,
   selectTasksLoading,
   selectTasksError,
+  selectAllEntities,
+  selectEntityDictionary,
+  selectEntitiesLoading,
+  selectEntitiesError,
 };

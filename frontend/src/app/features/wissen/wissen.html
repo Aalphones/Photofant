@@ -15,6 +15,12 @@
     <span><strong>{{ entity.title }}</strong> ({{ entity.type }}) angelegt.</span>
   </div>
 }
+@if (lastUpdatedEntity(); as entity) {
+  <div class="wi-last-created">
+    <pf-icon name="check" [size]="15" />
+    <span><strong>{{ entity.title }}</strong> aktualisiert.</span>
+  </div>
+}
 
 <pf-work-queue
   [tasks]="tasks()"
@@ -28,9 +34,21 @@
   <div class="wi-empty">Domänen werden geladen…</div>
 } @else if (domains().length === 0) {
   <div class="wi-empty">Keine Domäne konfiguriert — ohne Domäne kann keine Entity angelegt werden.</div>
-} @else {
+} @else if (entitiesLoading() && entities().length === 0) {
+  <div class="wi-empty">Wissen wird geladen…</div>
+} @else if (entities().length === 0) {
   <div class="wi-empty">
     Noch keine Übersicht — leg über „Neue Entity" die erste Wissenseinheit an.
+  </div>
+} @else {
+  <div class="wi-list">
+    @for (entity of entities(); track entity.id) {
+      <button type="button" class="wi-list__row" (click)="openEntityForEdit(entity)">
+        <span class="wi-list__title">{{ entity.title }}</span>
+        <span class="wi-list__type">{{ entity.type }}</span>
+        <span class="wi-list__domain">{{ entity.domain }}</span>
+      </button>
+    }
   </div>
 }
 
@@ -40,7 +58,9 @@
     [isSaving]="isSaving()"
     [saveError]="saveError()"
     [prefill]="wizardPrefill()"
+    [editEntity]="editingEntity()"
     (close)="closeWizard()"
     (save)="onSave($event)"
+    (update)="onUpdate($event)"
   />
 }

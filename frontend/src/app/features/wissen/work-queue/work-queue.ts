@@ -7,6 +7,7 @@ const KIND_LABELS: Record<TaskKind, string> = {
   missing_entity: 'Fehlende Entity',
   confirm_relationship: 'Beziehung bestätigen',
   review_recommendation: 'Empfehlung prüfen',
+  incomplete_entity: 'Entity noch ohne Inhalt',
 };
 
 @Component({

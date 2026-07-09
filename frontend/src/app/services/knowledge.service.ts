@@ -11,6 +11,7 @@ import type {
   PatchJobResponse,
   TaskDto,
   TaskStatus,
+  UpdateEntityRequest,
 } from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
@@ -32,8 +33,18 @@ export class KnowledgeService {
     return this.http.get<EntityDto[]>('/api/knowledge/entities/search', { params });
   }
 
+  // Alle Entities (Wissen-Übersichtsliste). Kein `q`-Parameter -> Backend matcht per
+  // `LIKE '%%'` alles, kein separater "list all"-Endpoint nötig.
+  listEntities(): Observable<EntityDto[]> {
+    return this.http.get<EntityDto[]>('/api/knowledge/entities');
+  }
+
   createEntity(request: CreateEntityRequest): Observable<EntityDto> {
     return this.http.post<EntityDto>('/api/knowledge/entities', request);
+  }
+
+  updateEntity(entityId: string, request: UpdateEntityRequest): Observable<EntityDto> {
+    return this.http.patch<EntityDto>(`/api/knowledge/entities/${entityId}`, request);
   }
 
   // Gebündeltes Wissen zu einem Bild (asset_id) oder einer Person (person_id). Ohne

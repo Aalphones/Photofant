@@ -95,7 +95,7 @@ export interface DomainDto {
   relationship_types: string[];
 }
 
-export const TASK_KINDS = ['new_person', 'missing_entity', 'confirm_relationship', 'review_recommendation'] as const;
+export const TASK_KINDS = ['new_person', 'missing_entity', 'confirm_relationship', 'review_recommendation', 'incomplete_entity'] as const;
 export type TaskKind = typeof TASK_KINDS[number];
 
 export const TASK_STATUSES = ['open', 'resolved', 'dismissed'] as const;

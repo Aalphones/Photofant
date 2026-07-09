@@ -14,6 +14,7 @@ from photofant.knowledge.service import (
     KnowledgeService,
     OwnershipConflictError,
 )
+from photofant.knowledge.tasks import TaskKind, TaskService
 from photofant.knowledge.validator import ValidationError
 from photofant.knowledge.vault import Vault
 
@@ -81,6 +82,41 @@ def test_create_entity_rejects_duplicate_id(service: KnowledgeService) -> None:
 def test_create_entity_rejects_unknown_type(service: KnowledgeService) -> None:
     with pytest.raises(ValidationError):
         service.create_entity(_actor(id="aliens/xenomorph", type="Alien"), Owner.USER)
+
+
+def test_create_entity_without_body_or_relationships_flags_incomplete_task(
+    service: KnowledgeService, db_session: Session
+) -> None:
+    service.create_entity(_actor(), Owner.USER)
+
+    tasks = TaskService(db_session).list_tasks()
+
+    assert len(tasks) == 1
+    assert tasks[0].kind == TaskKind.INCOMPLETE_ENTITY.value
+    assert tasks[0].context == {
+        "entity_id": "actors/robert-downey-jr",
+        "title": "Robert Downey Jr.",
+        "type": "Actor",
+    }
+
+
+def test_create_entity_with_body_does_not_flag_incomplete_task(
+    service: KnowledgeService, db_session: Session
+) -> None:
+    service.create_entity(_actor(body="Bekannt aus Iron Man."), Owner.USER)
+
+    assert TaskService(db_session).list_tasks() == []
+
+
+def test_create_entity_with_relationship_does_not_flag_incomplete_task(
+    service: KnowledgeService, db_session: Session
+) -> None:
+    service.create_entity(_movie(body="Marvel-Verfilmung von 2008."), Owner.USER)
+    entity = _actor(relationships=[Relationship(type="plays", target="movies/iron-man")])
+
+    service.create_entity(entity, Owner.USER)
+
+    assert TaskService(db_session).list_tasks() == []
 
 
 def test_find_entity_by_id_and_alias(service: KnowledgeService) -> None:

@@ -49,8 +49,13 @@ def test_run_lookup_creates_task_when_entity_missing(session_factory, vault: Vau
 
 def test_run_lookup_skips_task_when_entity_exists(session_factory, vault: Vault) -> None:
     with session_factory() as session:
+        # `body` gesetzt, sonst legt `create_entity` selbst eine `incomplete_entity`-
+        # Aufgabe an und verfälscht die `list_tasks() == []`-Prüfung unten.
         KnowledgeService(session, vault).create_entity(
-            Entity(id="actors/robert-downey-jr", type="Actor", title="Robert Downey Jr.", domain="Movies"),
+            Entity(
+                id="actors/robert-downey-jr", type="Actor", title="Robert Downey Jr.", domain="Movies",
+                body="Bekannt aus Iron Man.",
+            ),
             Owner.USER,
         )
         session.commit()
@@ -85,6 +90,8 @@ def test_run_lookup_merges_extra_context_into_task(session_factory, vault: Vault
 def test_run_lookup_ambiguous_alias_skips_task(session_factory, vault: Vault) -> None:
     with session_factory() as session:
         service = KnowledgeService(session, vault)
+        # `body` gesetzt, sonst legt `create_entity` selbst je eine `incomplete_entity`-
+        # Aufgabe an und verfälscht die `list_tasks() == []`-Prüfung unten.
         service.create_entity(
             Entity(
                 id="actors/robert-downey-jr",
@@ -92,6 +99,7 @@ def test_run_lookup_ambiguous_alias_skips_task(session_factory, vault: Vault) ->
                 title="Robert Downey Jr.",
                 domain="Movies",
                 aliases=["RDJ"],
+                body="Bekannt aus Iron Man.",
             ),
             Owner.USER,
         )
@@ -102,6 +110,7 @@ def test_run_lookup_ambiguous_alias_skips_task(session_factory, vault: Vault) ->
                 title="Robert De Niro",
                 domain="Movies",
                 aliases=["RDJ"],
+                body="Bekannt aus Taxi Driver.",
             ),
             Owner.USER,
         )

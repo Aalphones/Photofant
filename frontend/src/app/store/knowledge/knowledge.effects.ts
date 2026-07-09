@@ -25,6 +25,20 @@ export class KnowledgeEffects {
     )
   );
 
+  readonly loadEntities$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(knowledgeActions.loadEntities),
+      switchMap(() =>
+        this.knowledgeService.listEntities().pipe(
+          map((entities: EntityDto[]) => knowledgeActions.loadEntitiesSuccess({ entities })),
+          catchError((error: HttpErrorResponse) =>
+            of(knowledgeActions.loadEntitiesFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
   readonly createEntity$ = createEffect(() =>
     this.actions$.pipe(
       ofType(knowledgeActions.createEntity),
@@ -33,6 +47,20 @@ export class KnowledgeEffects {
           map((entity: EntityDto) => knowledgeActions.createEntitySuccess({ entity })),
           catchError((error: HttpErrorResponse) =>
             of(knowledgeActions.createEntityFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly updateEntity$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(knowledgeActions.updateEntity),
+      mergeMap(({ entityId, patch }) =>
+        this.knowledgeService.updateEntity(entityId, patch).pipe(
+          map((entity: EntityDto) => knowledgeActions.updateEntitySuccess({ entity })),
+          catchError((error: HttpErrorResponse) =>
+            of(knowledgeActions.updateEntityFailure({ error: error.message }))
           ),
         )
       ),
