@@ -14,13 +14,6 @@
           <img class="rr-rail__img" [src]="thumbnailUrl(item.assetId)" alt="" />
           <span class="rr-rail__badge">{{ scorePercent(item) }}%</span>
         </button>
-        @if (item.reasons != null && item.reasons.length > 0) {
-          <ul class="rr-rail__reasons">
-            @for (reason of item.reasons; track reason.label) {
-              <li>{{ reason.label }}</li>
-            }
-          </ul>
-        }
         @if (explainLabel(); as label) {
           <pf-explainability-popover
             class="rr-rail__explain"
