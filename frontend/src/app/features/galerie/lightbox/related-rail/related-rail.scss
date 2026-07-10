@@ -19,6 +19,8 @@
 .rr-rail__card {
   flex-shrink: 0;
   width: 96px;
+  height: 96px;
+  position: relative;
 }
 
 .rr-rail__thumb {
@@ -52,8 +54,8 @@
   color: #fff;
   font-size: 10.5px;
   font-weight: 600;
-  text-align: center;
-  padding: 3px 0;
+  text-align: left;
+  padding: 3px 7px;
   font-family: var(--mono);
 }
 
@@ -71,5 +73,8 @@
 }
 
 .rr-rail__explain {
-  margin-top: 2px;
+  padding: 7px;
+  position: absolute;
+  bottom: 0;
+  right: 0;
 }
