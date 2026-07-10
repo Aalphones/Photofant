@@ -29,7 +29,7 @@ Kein Mockup. Karte = Vorschaubild + Score + Reason-Checkliste (Dok 050 §6). Doc
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | Recommendation-Job + Reason-Chain (Backend) | heikel (Scoring/Gewichtung) | **complete** |
-| 2 | Empfehlungs-Karten-UI (unter Lore Panel) | standard | pending |
+| 2 | Empfehlungs-Karten-UI (unter Lore Panel) | standard | **complete** |
 | 3 | Explainability „Warum?/Warum nicht?" | standard | pending |
 
 ## Finale AK (Gesamt)

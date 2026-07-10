@@ -1,5 +1,5 @@
 @if (loading()) {
-  <div class="rr-rail__empty">Suche läuft…</div>
+  <div class="rr-rail__empty">{{ loadingMessage() }}</div>
 } @else if (items().length === 0) {
   <div class="rr-rail__empty">{{ emptyMessage() ?? 'Keine ähnlichen Bilder gefunden.' }}</div>
 } @else {

@@ -1,16 +1,41 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-01_p26-recommendation-engine/`
-**Phase:** 2/3 — Empfehlungs-Karten-UI (unter Lore Panel) (pending, standard)
-**Nächster Schritt:** Frontend — Empfehlungs-Karten unter dem Lore-Panel in der Lightbox
-rendern (Vorschaubild + Score + Reason-Checkliste). Backend ist fertig: `GET /api/recommendations?asset_id=`
-liefert `{status, recommendations[]}`; bei `status:"computing"` über den SSE-Job-Stream auf den
-`recommendation`-Job warten und neu laden. Details + Andock-Hinweise in `FINDINGS.md` (für Phase 2 getaggt).
+**Phase:** 3/3 — Explainability „Warum?/Warum nicht?" (pending, standard)
+**Nächster Schritt:** Backend ist fertig: `GET /api/recommendations/{source}/{target}/why-not` liefert
+`{score, threshold, recommended, reasons[], missing[]}`. Phase 3 ist v.a. UI: ein „Warum?"-Popover an
+jeder Empfehlungs-Karte (zeigt die schon vorhandene Reason-Chain der Karte — Signale/Confidence/Job)
+und ein „Warum nicht?"-Weg an einem nicht empfohlenen Bild (ruft `why-not` live ab, zeigt anwesende +
+fehlende Signale gegen die Schwelle). Details in `FINDINGS.md` (für Phase 3 getaggt).
 
 ## Modell-Empfehlung nächste Phase
 
-Phase 2 ist **standard** → `sonnet` reicht (Phase 1 lief heikel auf Opus). Beim Wiedereinstieg:
-`/clear`, dann `/model sonnet`, dann `/implement`.
+Phase 3 ist **standard** → `sonnet` reicht. Beim Wiedereinstieg: `/clear`, dann `/model sonnet`,
+dann `/implement`.
+
+## Phase 2 (Empfehlungs-Karten-UI, Frontend) — fertig, ungecommittet bei Session-Ende der Vorphase, jetzt zu committen
+
+Empfehlungs-Karten docken direkt unter dem Lore-Panel (P25) an — **keine neue Komponente**: die
+generische `related-rail/` (P36, `{assetId, score, reasons}`) wird mit befüllter Begründungskette
+wiederverwendet. Neue Dateien: `models/recommendation.model.ts` (`RecommendationDto`,
+`recommendationReasonLabel()` — mappt Backend-Signale auf „✓ gleiche Person (…)" etc.),
+`services/recommendation.service.ts` (`getRecommendations`). Geänderte Dateien: `lightbox.ts`/`.html`
+(neues `recommendations`-Signal an derselben Reload-Pipeline wie `detail`/`lineage`/`relatedRail`,
+Job-Wait über den globalen Job-Store statt Job-Id-Filter — Details unten), `related-rail.ts`/`.html`/`.scss`
+(`loadingMessage`-Input, Reasons-Liste ohne Bullet-Punkt), `models/job.model.ts` (`JOB_KINDS` +
+`'recommendation'`).
+
+**Deviation (Details in `phase-2-recommendation-cards.md`):** Kein Job-Id-Filter beim Warten auf
+den Job — der Endpoint liefert bei Cache-Miss keine Job-Id. Stattdessen: `effect()` beobachtet den
+globalen `jobsSelectors.allJobs`-Store auf einen `kind:"recommendation"`-Job in `done`/`error`,
+während die UI noch auf „computing" steht, dann Reload (selbstkorrigierend bei Fehltreffer).
+
+**Reco-State bewusst komponentenlokal** (nicht `store/gallery/`/`store/knowledge/`) — konsistent zu
+P25 (Lore-Panel) und P36 (Related-Rail), die ihre Pro-Asset-Daten ebenfalls nicht in NgRx halten.
+
+**Qualität:** `tsc --noEmit` (App + Lib) grün, `ng build` grün (keine neuen Template-/Typfehler;
+Bundle-Budget-Warnungen sind Bestand, nicht durch diese Phase verursacht). Kein Live-Smoke-Test
+gegen die echte Bibliothek gelaufen (privates Profil — Build/Typecheck reicht, du prüfst live).
 
 ## Phase 1 (Recommendation-Job + Reason-Chain, Backend) — fertig, committet
 
@@ -38,13 +63,16 @@ P26-Scope, gemeldet.
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende, nach Phase 3 — Details im README)
 
-Vorab schon jetzt für Phase 1 gegen die echte Bibliothek prüfbar:
 1. `curl "http://localhost:8000/api/recommendations?asset_id=<x>"` → bei erstem Aufruf `status:"computing"`,
    nach dem Job-Lauf `status:"ready"` mit ≥1 Empfehlung, deren `reasons` **CLIP + ein Graph-Signal** mischen
    (an einem Bild mit verknüpfter Person belegbar). **Wackligste Stelle:** die Scoring-Gewichte — ob die
    Rangfolge am realen Set „sinnvoll" ist, zeigt erst echtes Bildmaterial (Reason-Chain macht Fehlgewichtung sichtbar).
-2. `curl ".../recommendations/<source>/<target>/why-not"` → `reasons` (anwesend) + `missing` (fehlend) + `recommended`.
-3. `recommendations.enabled=false` in `settings.json` → `status:"disabled"`, keine Empfehlungen.
+2. Bild öffnen → unter dem Lore-Panel erscheinen Karten mit Score-Badge + „✓"-Begründungszeilen;
+   Karte anklicken öffnet das Bild. **Wackligste Stelle Phase 2:** der Job-Wait ohne Job-Id — bei
+   parallel laufenden Empfehlungs-Jobs für andere Bilder kann ein Reload zu früh/zu spät kommen
+   (selbstkorrigierend, aber am realen Gerät noch nicht beobachtet).
+3. `curl ".../recommendations/<source>/<target>/why-not"` → `reasons` (anwesend) + `missing` (fehlend) + `recommended`.
+4. `recommendations.enabled=false` in `settings.json` → `status:"disabled"`, keine Empfehlungen (Karten-Bereich entfällt).
 
 ## Backlog (nach P26)
 

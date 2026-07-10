@@ -13,8 +13,9 @@ import { Router } from '@angular/router';
 import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, startWith, type Observable } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, EntityRefDto, FaceDto, FaceMatch, Framing, PersonDto, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
-import { AssetService, ClassifyService, ComfyUIService, extractApiErrorMessage, PersonService, SearchService, TagService } from '@photofant/services';
+import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, EntityRefDto, FaceDto, FaceMatch, Framing, PersonDto, RecommendationDto, RecommendationsResponse, RecommendationStatus, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import { recommendationReasonLabel } from '@photofant/models';
+import { AssetService, ClassifyService, ComfyUIService, extractApiErrorMessage, PersonService, RecommendationService, SearchService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
@@ -34,6 +35,11 @@ interface RelatedRailData {
   items: RelatedRailItem[];
   loading: boolean;
   emptyMessage: string | null;
+}
+
+interface RecommendationsData {
+  status: RecommendationStatus;
+  items: RelatedRailItem[];
 }
 
 interface GenMetaEntry { key: string; value: string }
@@ -134,6 +140,7 @@ export class Lightbox {
   private readonly document           = inject(DOCUMENT);
   private readonly personService      = inject(PersonService);
   private readonly searchService      = inject(SearchService);
+  private readonly recommendationService = inject(RecommendationService);
   private readonly router             = inject(Router);
   private readonly destroyRef         = inject(DestroyRef);
 
@@ -289,6 +296,30 @@ export class Lightbox {
     ),
     { initialValue: { items: [], loading: false, emptyMessage: null } as RelatedRailData },
   );
+
+  // ── Empfehlungen (P26 Phase 2) — dockt unter dem Lore-Panel an ────────────
+  // Läuft an derselben Reload-Pipeline wie `detail`/`lineage`/`relatedRail`. Im
+  // Gesichter-Modus liefert `selectLightboxAsset` null, Empfehlungen bleiben entsprechend leer.
+  protected readonly recommendations = toSignal(
+    combineLatest([
+      this.store.select(gallerySelectors.selectLightboxAsset),
+      toObservable(this.reloadTrigger),
+    ]).pipe(
+      switchMap(([asset]: [AssetDto | null, number]) => this.loadRecommendations(asset)),
+    ),
+    { initialValue: { status: 'ready', items: [] } as RecommendationsData },
+  );
+
+  // „Keine Empfehlungen" -> Bereich entfällt komplett (AK); „computing" zeigt die Sektion
+  // dezent mit Lade-Text (related-rail übernimmt das über `loading`).
+  protected readonly showRecommendations = computed((): boolean => {
+    const data = this.recommendations();
+    return data.status === 'computing' || data.items.length > 0;
+  });
+
+  // Job-Ids, für die bereits ein Reload angestoßen wurde — verhindert, dass ein einmal
+  // fertiger Recommendation-Job bei jedem weiteren Signal-Read erneut einen Reload auslöst.
+  private readonly handledRecommendationJobIds = new Set<string>();
 
   // ── Face matches (PersonPicker-Modal) ─────────────────────────────────────
   // Nur die faceId wird gebraucht (Zuweisen/Vergleich mit Löschziel) — funktioniert
@@ -641,6 +672,24 @@ export class Lightbox {
         this.pendingUpscaleJobId.set(null);
         this.upscaleError.set(job.error ?? 'Upscale fehlgeschlagen');
       }
+    });
+
+    // Empfehlungen (P26): der GET-Endpoint liefert bei Cache-Miss `status:"computing"`
+    // ohne Job-Id (der Job läuft bereits serverseitig) — anders als beim Korrektur-Flow
+    // kann hier also nicht auf eine bestimmte Job-Id gefiltert werden. Stattdessen: sobald
+    // irgendein `recommendation`-Job durchläuft, während wir noch auf „computing" stehen,
+    // neu laden (idempotent — steht der Cache für dieses Bild noch nicht, liefert der
+    // nächste Reload wieder „computing" und wartet auf den nächsten Job weiter).
+    effect((): void => {
+      if (this.recommendations().status !== 'computing') { return; }
+      const finishedJob = this.allJobs().find((job) =>
+        job.kind === 'recommendation' &&
+        (job.state === 'done' || job.state === 'error') &&
+        !this.handledRecommendationJobIds.has(job.id)
+      );
+      if (finishedJob == null) { return; }
+      this.handledRecommendationJobIds.add(finishedJob.id);
+      this.reloadTrigger.update((count: number) => count + 1);
     });
 
     effect((): void => {
@@ -1073,6 +1122,28 @@ export class Lightbox {
 
   protected openRelatedAsset(assetId: number): void {
     this.openSourceAsset(assetId);
+  }
+
+  // ── Empfehlungen (P26 Phase 2) ─────────────────────────────────────────────
+
+  private loadRecommendations(asset: AssetDto | null): Observable<RecommendationsData> {
+    if (asset == null) {
+      return of({ status: 'ready', items: [] });
+    }
+    return this.recommendationService.getRecommendations(asset.id).pipe(
+      map((response: RecommendationsResponse): RecommendationsData => ({
+        status: response.status,
+        items: response.recommendations.map((recommendation: RecommendationDto): RelatedRailItem => ({
+          assetId: recommendation.asset_id,
+          score: recommendation.score,
+          reasons: recommendation.reasons.map((reason) => ({ label: recommendationReasonLabel(reason) })),
+        })),
+      })),
+      catchError((err: unknown) => {
+        console.error('[Lightbox] Empfehlungen konnten nicht geladen werden:', err);
+        return of({ status: 'ready', items: [] } as RecommendationsData);
+      }),
+    );
   }
 
   // „mehr" — öffnet die Galerie im Reverse-Modus (Phase 2) zu genau diesem Bild. Nutzt

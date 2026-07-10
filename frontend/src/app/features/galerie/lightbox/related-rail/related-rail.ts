@@ -16,6 +16,7 @@ export class RelatedRail {
 
   readonly items = input<RelatedRailItem[]>([]);
   readonly loading = input(false);
+  readonly loadingMessage = input('Suche läuft…');
   readonly emptyMessage = input<string | null>(null);
 
   readonly cardClick = output<number>();

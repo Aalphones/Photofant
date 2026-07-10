@@ -94,6 +94,19 @@
         (createRequested)="openKnowledgeCreate()"
       />
 
+      <!-- Empfehlungen (P26 Phase 2) — dockt direkt unter dem Lore-Panel an -->
+      @if (showRecommendations()) {
+        <div class="panel-sec">
+          <div class="psec-title">Empfehlungen</div>
+          <pf-related-rail
+            [items]="recommendations().items"
+            [loading]="recommendations().status === 'computing'"
+            loadingMessage="Wird berechnet …"
+            (cardClick)="openRelatedAsset($event)"
+          />
+        </div>
+      }
+
       @if (!isFaceMode()) {
 
       <!-- Aktionen -->

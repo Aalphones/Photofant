@@ -26,5 +26,6 @@ export { VersionService } from './version.service';
 export { SearchService } from './search.service';
 export { RunDraftService } from './run-draft.service';
 export { KnowledgeService } from './knowledge.service';
+export { RecommendationService } from './recommendation.service';
 export type { RunDraftSnapshot, BatchBindResult } from './run-draft.service';
 export { extractApiErrorMessage } from './api-error.util';

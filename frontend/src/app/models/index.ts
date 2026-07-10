@@ -18,6 +18,14 @@ export type { PersonDto, PersonFace, FaceMatch, PersonDupePair, FaceImportResult
 export { DENSITIES, DENSITY_THUMB_SIZE, SORT_KEYS, SORT_ORDERS, BASE_HEIGHTS, SEARCH_MODES, MEDIA_TYPES, FRAMINGS } from './asset.model';
 export type { SearchHit, SemanticSearchResponse, ReverseSearchState } from './search.model';
 export type { Reason, RelatedRailItem } from './related-rail.model';
+export type {
+  RecommendationSignal,
+  RecommendationReasonDto,
+  RecommendationDto,
+  RecommendationStatus,
+  RecommendationsResponse,
+} from './recommendation.model';
+export { recommendationReasonLabel } from './recommendation.model';
 
 export type {
   Collection,

@@ -141,6 +141,17 @@ beschriftet). Grund: Das Datenmodell trägt keine eigenen Felder dafür; die ein
 frei editierbaren Domänen-Beziehungstypen, und die dürfen laut Domänen-Kontrakt nirgends hart
 verdrahtet sein. Entscheidung Sascha (2026-07-09).
 
+**Empfehlungs-Karten (P26 Phase 2) — Design-Lücke-erfunden (freihändig, freigegeben):** Kein
+Mockup. Dok 050 §6 gibt nur vor: Vorschaubild + Score + „✓"-Begründungsliste, direkt unter dem
+Lore-Panel. Umgesetzt durch Wiederverwendung der bestehenden `related-rail/`-Kartenliste (P36) —
+keine neue Komponente. Jedes Empfehlungs-Signal (`{signal, detail, weight}` vom Backend) wird zu
+einer Checklisten-Zeile „✓ gleiche Person (…)" / „✓ CLIP-Ähnlichkeit 0.94" gemappt
+(`recommendationReasonLabel()`); `related-rail` bekam dafür ein `loadingMessage`-Input (P36 zeigt
+weiter „Suche läuft…", P26 „Wird berechnet …") und die Reasons-Liste verlor ihren Bullet-Punkt
+(nur noch das ✓-Zeichen als Marker). „Keine Empfehlungen" blendet die ganze Sektion aus (kein
+Leer-Text) — Dok 050 nennt diesen Fall nicht explizit, aber „Bereich entfällt" steht so im
+Plan-Kontrakt (`phase-2-recommendation-cards.md`). Entscheidung Sascha (2026-07-10).
+
 ---
 
 ### Personen-View

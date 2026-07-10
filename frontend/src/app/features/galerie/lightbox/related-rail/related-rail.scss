@@ -59,7 +59,13 @@
 
 .rr-rail__reasons {
   margin: 4px 0 0;
-  padding: 0 0 0 14px;
+  padding: 0;
+  list-style: none;
   font-size: 11px;
   color: var(--text-3);
+
+  li {
+    white-space: normal;
+    line-height: 1.4;
+  }
 }
