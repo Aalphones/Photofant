@@ -1,157 +1,165 @@
-@if (status() === 'ready' && entity(); as ent) {
+@if (status() === 'ready') {
 
-  <!-- Kurzbio -->
-  <div class="panel-sec lore-sec">
-    <div class="psec-title">Wissen</div>
-    <button
-      class="lore-entity"
-      type="button"
-      (click)="selectEntity(ent)"
-      [title]="'Zur Wissens-Sicht: ' + ent.title"
-    >
-      <pf-icon name="sparkle" [size]="13" />
-      <span class="lore-entity__title">{{ ent.title }}</span>
-      <span class="lore-entity__type">{{ ent.type }}</span>
-    </button>
-    @if (correctingField() === 'body') {
-      <form class="lore-correction" (ngSubmit)="submitCorrection()">
-        <textarea
-          class="lore-correction__value"
-          rows="3"
-          [value]="correctionValue()"
-          (input)="onCorrectionValueInput($any($event.target).value)"
-        ></textarea>
-        <input
-          class="lore-correction__reason"
-          type="text"
-          placeholder="Grund (z.B. veraltet, falsch)"
-          [value]="correctionReason()"
-          (input)="onCorrectionReasonInput($any($event.target).value)"
-        />
-        @if (correctionError(); as err) {
-          <p class="lore-correction__error">{{ err }}</p>
+  @for (lore of lores(); track trackLore(lore); let isFirst = $first) {
+    @if (lore.entity; as ent) {
+
+      <!-- Kurzbio -->
+      <div class="panel-sec lore-sec">
+        @if (isFirst) {
+          <div class="psec-title">Wissen</div>
         }
-        <div class="lore-correction__actions">
-          <button
-            class="lore-correction__save"
-            type="submit"
-            [disabled]="correctionPending() || correctionReason().trim() === ''"
-          >
-            {{ correctionPending() ? 'Speichert…' : 'Speichern' }}
-          </button>
-          <button class="lore-correction__cancel" type="button" (click)="cancelCorrection()">
-            Abbrechen
-          </button>
-        </div>
-      </form>
-    } @else {
-      @if (bio(); as text) {
-        <p class="lore-bio">{{ text }}</p>
-      }
-      @if (canCorrect()) {
         <button
-          class="lore-correct"
+          class="lore-entity"
           type="button"
-          (click)="startCorrection('body', bio() ?? '')"
-          title="Das stimmt nicht"
+          (click)="selectEntity(ent)"
+          [title]="'Zur Wissens-Sicht: ' + ent.title"
         >
-          <pf-icon name="pencil" [size]="11" />
-          Das stimmt nicht
+          <pf-icon name="sparkle" [size]="13" />
+          <span class="lore-entity__title">{{ ent.title }}</span>
+          <span class="lore-entity__type">{{ ent.type }}</span>
         </button>
-      } @else if (ent.owner === 'user') {
-        <pf-explainability-popover
-          class="lore-correction-explain"
-          label="Warum geändert?"
-          [open]="correctionExplainOpen()"
-          [payload]="correctionExplainPayload()"
-          [loading]="correctionExplainLoading()"
-          (triggerClicked)="onCorrectionExplainOpen()"
-          (closeRequested)="onCorrectionExplainClose()"
-        />
-      }
-    }
-  </div>
-
-  <!-- Beziehungen -->
-  @if (relationships().length > 0) {
-    <div class="panel-sec lore-sec">
-      <div class="psec-title">Beziehungen</div>
-      @for (relationship of relationships(); track relationship.type + '-' + relationship.target.id) {
-        <button
-          class="rel-row"
-          [class.rel-row--clickable]="isNavigable(relationship.target)"
-          type="button"
-          [disabled]="!isNavigable(relationship.target)"
-          (click)="selectEntity(relationship.target)"
-          [title]="isNavigable(relationship.target) ? ('Zur Wissens-Sicht: ' + relationship.target.title) : relationship.target.title"
-        >
-          <div class="rr-body">
-            <div class="rr-id">
-              {{ relationship.target.title }}
-              <span class="rel-tag">{{ relationTypeLabel(relationship.type) }}</span>
-            </div>
-          </div>
-        </button>
-      }
-    </div>
-  }
-
-  <!-- Franchises -->
-  @if (franchises().length > 0) {
-    <div class="panel-sec lore-sec">
-      <div class="psec-title">Franchises</div>
-      <div class="lore-chips">
-        @for (franchise of franchises(); track franchise.id) {
-          <button
-            class="lore-chip"
-            type="button"
-            [class.lore-chip--static]="!isNavigable(franchise)"
-            [disabled]="!isNavigable(franchise)"
-            (click)="selectEntity(franchise)"
-            [title]="isNavigable(franchise) ? ('Zur Wissens-Sicht: ' + franchise.title) : franchise.title"
-          >
-            {{ franchise.title }}
-          </button>
-        }
-      </div>
-    </div>
-  }
-
-  <!-- Eigene Bilder -->
-  @if (relatedMedia().length > 0) {
-    <div class="panel-sec lore-sec">
-      <div class="psec-title">Eigene Bilder</div>
-      <div class="lore-media">
-        @for (media of relatedMedia(); track media.kind + '-' + media.id) {
-          <div class="lore-media__item" [title]="media.label ?? ''">
-            <img
-              class="lore-media__img"
-              [class.lore-media__img--round]="media.kind === 'person'"
-              [src]="media.thumbnail_url"
-              [alt]="media.label ?? ''"
+        @if (correctingField() === 'body' && correctingEntityId() === ent.id) {
+          <form class="lore-correction" (ngSubmit)="submitCorrection()">
+            <textarea
+              class="lore-correction__value"
+              rows="3"
+              [value]="correctionValue()"
+              (input)="onCorrectionValueInput($any($event.target).value)"
+            ></textarea>
+            <input
+              class="lore-correction__reason"
+              type="text"
+              placeholder="Grund (z.B. veraltet, falsch)"
+              [value]="correctionReason()"
+              (input)="onCorrectionReasonInput($any($event.target).value)"
             />
-          </div>
+            @if (correctionError(); as err) {
+              <p class="lore-correction__error">{{ err }}</p>
+            }
+            <div class="lore-correction__actions">
+              <button
+                class="lore-correction__save"
+                type="submit"
+                [disabled]="correctionPending() || correctionReason().trim() === ''"
+              >
+                {{ correctionPending() ? 'Speichert…' : 'Speichern' }}
+              </button>
+              <button class="lore-correction__cancel" type="button" (click)="cancelCorrection()">
+                Abbrechen
+              </button>
+            </div>
+          </form>
+        } @else {
+          @if (bioFor(lore); as text) {
+            <p class="lore-bio">{{ text }}</p>
+          }
+          @if (canCorrectFor(lore)) {
+            <button
+              class="lore-correct"
+              type="button"
+              (click)="startCorrection(ent.id, 'body', bioFor(lore) ?? '')"
+              title="Das stimmt nicht"
+            >
+              <pf-icon name="pencil" [size]="11" />
+              Das stimmt nicht
+            </button>
+          } @else if (ent.owner === 'user') {
+            <pf-explainability-popover
+              class="lore-correction-explain"
+              label="Warum geändert?"
+              [open]="correctionExplainOpenId() === ent.id"
+              [payload]="correctionExplainPayload()"
+              [loading]="correctionExplainLoading()"
+              (triggerClicked)="onCorrectionExplainOpen(ent.id)"
+              (closeRequested)="onCorrectionExplainClose()"
+            />
+          }
         }
       </div>
-    </div>
-  }
 
-  <!-- Quellen -->
-  @if (sources().length > 0) {
-    <div class="panel-sec lore-sec">
-      <div class="psec-title">Quellen</div>
-      <ul class="lore-sources">
-        @for (source of sources(); track source) {
-          <li class="lore-source">
-            @if (isUrl(source)) {
-              <a [href]="source" target="_blank" rel="noopener">{{ sourceLabel(source) }}</a>
-            } @else {
-              <span>{{ source }}</span>
+      <!-- Beziehungen -->
+      @if (relationshipsFor(lore).length > 0) {
+        <div class="panel-sec lore-sec">
+          <div class="psec-title">Beziehungen</div>
+          @for (relationship of relationshipsFor(lore); track relationship.type + '-' + relationship.target.id) {
+            <button
+              class="rel-row"
+              [class.rel-row--clickable]="isNavigable(relationship.target)"
+              type="button"
+              [disabled]="!isNavigable(relationship.target)"
+              (click)="selectEntity(relationship.target)"
+              [title]="isNavigable(relationship.target) ? ('Zur Wissens-Sicht: ' + relationship.target.title) : relationship.target.title"
+            >
+              <div class="rr-body">
+                <div class="rr-id">
+                  {{ relationship.target.title }}
+                  <span class="rel-tag">{{ relationTypeLabel(relationship.type) }}</span>
+                </div>
+              </div>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Franchises -->
+      @if (lore.franchises.length > 0) {
+        <div class="panel-sec lore-sec">
+          <div class="psec-title">Franchises</div>
+          <div class="lore-chips">
+            @for (franchise of lore.franchises; track franchise.id) {
+              <button
+                class="lore-chip"
+                type="button"
+                [class.lore-chip--static]="!isNavigable(franchise)"
+                [disabled]="!isNavigable(franchise)"
+                (click)="selectEntity(franchise)"
+                [title]="isNavigable(franchise) ? ('Zur Wissens-Sicht: ' + franchise.title) : franchise.title"
+              >
+                {{ franchise.title }}
+              </button>
             }
-          </li>
-        }
-      </ul>
-    </div>
+          </div>
+        </div>
+      }
+
+      <!-- Eigene Bilder -->
+      @if (lore.related_media.length > 0) {
+        <div class="panel-sec lore-sec">
+          <div class="psec-title">Eigene Bilder</div>
+          <div class="lore-media">
+            @for (media of lore.related_media; track media.kind + '-' + media.id) {
+              <div class="lore-media__item" [title]="media.label ?? ''">
+                <img
+                  class="lore-media__img"
+                  [class.lore-media__img--round]="media.kind === 'person'"
+                  [src]="media.thumbnail_url"
+                  [alt]="media.label ?? ''"
+                />
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Quellen -->
+      @if (lore.sources.length > 0) {
+        <div class="panel-sec lore-sec">
+          <div class="psec-title">Quellen</div>
+          <ul class="lore-sources">
+            @for (source of lore.sources; track source) {
+              <li class="lore-source">
+                @if (isUrl(source)) {
+                  <a [href]="source" target="_blank" rel="noopener">{{ sourceLabel(source) }}</a>
+                } @else {
+                  <span>{{ source }}</span>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+    }
   }
 
 }

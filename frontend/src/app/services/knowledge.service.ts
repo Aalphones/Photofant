@@ -47,9 +47,11 @@ export class KnowledgeService {
     return this.http.patch<EntityDto>(`/api/knowledge/entities/${entityId}`, request);
   }
 
-  // Gebündeltes Wissen zu einem Bild (asset_id) oder einer Person (person_id). Ohne
-  // verknüpfte Entity liefert das Backend 200 mit `entity: null` (kein 404 — P25-Kontrakt).
-  getLore(params: { assetId?: number | null; personId?: number | null }): Observable<LoreDto> {
+  // Gebündeltes Wissen zu einem Bild (asset_id) oder einer Person (person_id). Ein Bild
+  // liefert je einen Block pro abgebildeter, mit Wissen verknüpfter Person (plus ein evtl.
+  // direkt am Bild verknüpftes Wissen); eine Person höchstens einen. Ohne Verknüpfung
+  // liefert das Backend 200 mit leerer Liste (kein 404 — P25-Kontrakt).
+  getLore(params: { assetId?: number | null; personId?: number | null }): Observable<LoreDto[]> {
     let httpParams = new HttpParams();
     if (params.assetId != null) {
       httpParams = httpParams.set('asset_id', params.assetId);
@@ -57,7 +59,7 @@ export class KnowledgeService {
     if (params.personId != null) {
       httpParams = httpParams.set('person_id', params.personId);
     }
-    return this.http.get<LoreDto>('/api/knowledge/lore', { params: httpParams });
+    return this.http.get<LoreDto[]>('/api/knowledge/lore', { params: httpParams });
   }
 
   listTasks(status?: TaskStatus): Observable<TaskDto[]> {

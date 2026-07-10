@@ -284,6 +284,23 @@ class KnowledgeService:
             sources=list(entity.sources),
         )
 
+    def get_lore_bundle(self, targets: list[tuple[str, int]]) -> list[Lore]:
+        """Sammelt die Lore mehrerer Medien-Ziele (``(kind, target_id)``) in Eingabe-
+        Reihenfolge, dedupliziert nach Entity-``id`` (zwei Personen können dasselbe Wissen
+        teilen). Ziele ohne Verknüpfung fallen still heraus — die Liste ist so lang wie es
+        Treffer gibt. Ein Bild reicht darüber die darauf gezeigten Personen an ihr Wissen
+        durch, statt nur die am Bild selbst verknüpfte Entity zu sehen.
+        """
+        lores: list[Lore] = []
+        seen_entity_ids: set[str] = set()
+        for kind, target_id in targets:
+            ref = self.linked_entity_ref(kind, target_id)
+            if ref is None or ref.id in seen_entity_ids:
+                continue
+            seen_entity_ids.add(ref.id)
+            lores.append(self.get_lore(ref.id))
+        return lores
+
     def get_lore_for_media(self, *, asset_id: int | None = None, person_id: int | None = None) -> Lore:
         """Lore über eine verknüpfte Person/ein verknüpftes Asset (P25 Kontrakt).
 
@@ -294,10 +311,10 @@ class KnowledgeService:
         kind = "person" if person_id is not None else "asset"
         target_id = person_id if person_id is not None else asset_id
         assert target_id is not None  # von der Route erzwungen (genau ein Parameter gesetzt)
-        ref = self.linked_entity_ref(kind, target_id)
-        if ref is None:
+        bundle = self.get_lore_bundle([(kind, target_id)])
+        if not bundle:
             return Lore(entity=None, relationships=[], franchises=[], related_media=MediaLinks(), sources=[])
-        return self.get_lore(ref.id)
+        return bundle[0]
 
     def _resolve_relationships(self, rows: list[KnowledgeRelationship]) -> list[ResolvedRelationship]:
         """Löst Beziehungsziele zu Titel+Typ auf (1 Hop, keine weitere Traversierung — Dok 020 §6).

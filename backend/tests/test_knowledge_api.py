@@ -281,7 +281,7 @@ async def test_lore_missing_entity_returns_404(app_with_deps: tuple[Any, Session
 
 
 @pytest.mark.asyncio
-async def test_lore_by_person_id_without_link_returns_200_with_null_entity(
+async def test_lore_by_person_id_without_link_returns_200_with_empty_list(
     app_with_deps: tuple[Any, Session, Vault],
 ) -> None:
     app, _session, _vault = app_with_deps
@@ -290,9 +290,7 @@ async def test_lore_by_person_id_without_link_returns_200_with_null_entity(
         response = await client.get("/api/knowledge/lore", params={"person_id": 42})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "entity": None, "relationships": [], "franchises": [], "related_media": [], "sources": [],
-    }
+    assert response.json() == []
 
 
 @pytest.mark.asyncio
@@ -314,11 +312,13 @@ async def test_lore_by_person_id_resolves_linked_entity_and_media(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["entity"]["id"] == "actors/robert-downey-jr"
-    assert {ref["kind"]: ref["id"] for ref in body["related_media"]} == {"person": 42, "asset": 99}
-    person_ref = next(ref for ref in body["related_media"] if ref["kind"] == "person")
+    assert len(body) == 1
+    block = body[0]
+    assert block["entity"]["id"] == "actors/robert-downey-jr"
+    assert {ref["kind"]: ref["id"] for ref in block["related_media"]} == {"person": 42, "asset": 99}
+    person_ref = next(ref for ref in block["related_media"] if ref["kind"] == "person")
     assert person_ref["thumbnail_url"] == "/api/faces/7/thumbnail"
-    asset_ref = next(ref for ref in body["related_media"] if ref["kind"] == "asset")
+    asset_ref = next(ref for ref in block["related_media"] if ref["kind"] == "asset")
     assert asset_ref["thumbnail_url"] == "/api/assets/99/thumbnail"
 
 

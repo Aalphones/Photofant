@@ -12,14 +12,14 @@ import {
   type Observable,
 } from 'rxjs';
 import { JobsService, KnowledgeService } from '@photofant/services';
-import type { ChangelogEntryDto, EntityRefDto, ExplainabilityPayload, Job, LoreDto, MediaRefDto, PatchJobResponse, ResolvedRelationshipDto } from '@photofant/models';
+import type { ChangelogEntryDto, EntityRefDto, ExplainabilityPayload, Job, LoreDto, PatchJobResponse, ResolvedRelationshipDto } from '@photofant/models';
 import { ExplainabilityPopover, Icon } from '@photofant/ui';
 
 type LoreStatus = 'loading' | 'ready' | 'empty';
 
 interface LoreState {
   status: LoreStatus;
-  lore: LoreDto | null;
+  lores: LoreDto[];
 }
 
 // Lore-Panel (P25): zeigt das gebündelte Wissen zum Bild/zur Person rechts in der Lightbox.
@@ -27,6 +27,11 @@ interface LoreState {
 // Eigene Bilder · Quellen) — „Rollen"/„Verwandte Entitäten" aus Dok 050 §5 fallen bewusst
 // weg, ihre Info steckt in „Beziehungen" (keine Kopplung an domänenspezifische Typ-Strings).
 // Dockt als weitere Panel-Sektion an P15s Lightbox-Panel an (kein zweiter Container).
+//
+// Ein Bild kann mehrere Wissens-Blöcke tragen — einen je abgebildeter, mit Wissen
+// verknüpfter Person. Der Korrektur-/Erklär-Zustand ist deshalb nach Entity-id geschlüsselt
+// (jeweils genau einer offen zur Zeit), damit bei mehreren Blöcken nicht der falsche editiert
+// wird.
 @Component({
   selector: 'pf-lore-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,79 +66,83 @@ export class LorePanel {
     ]).pipe(
       switchMap(([assetId, personId]: [number | null, number | null, number]): Observable<LoreState> => {
         if (assetId == null && personId == null) {
-          return of({ status: 'empty', lore: null });
+          return of({ status: 'empty', lores: [] });
         }
         return this.knowledgeService
           .getLore({ assetId, personId })
           .pipe(
-            map((lore: LoreDto): LoreState => ({
-              status: lore.entity != null ? 'ready' : 'empty',
-              lore,
+            map((lores: LoreDto[]): LoreState => ({
+              status: lores.length > 0 ? 'ready' : 'empty',
+              lores,
             })),
-            startWith({ status: 'loading', lore: null } as LoreState),
+            startWith({ status: 'loading', lores: [] } as LoreState),
             catchError((error: unknown): Observable<LoreState> => {
               console.error('[LorePanel] Lore konnte nicht geladen werden:', error);
-              return of({ status: 'empty', lore: null });
+              return of({ status: 'empty', lores: [] });
             }),
           );
       }),
     ),
-    { initialValue: { status: 'loading', lore: null } as LoreState },
+    { initialValue: { status: 'loading', lores: [] } as LoreState },
   );
 
   protected readonly status = computed((): LoreStatus => this.state().status);
-  protected readonly entity = computed(() => this.state().lore?.entity ?? null);
+  protected readonly lores = computed((): LoreDto[] => this.state().lores);
 
-  protected readonly bio = computed((): string | null => {
-    const body = this.entity()?.body?.trim();
+  protected bioFor(lore: LoreDto): string | null {
+    const body = lore.entity?.body?.trim();
     return body ? body : null;
-  });
+  }
 
   // „Das stimmt nicht" macht nur bei auto/inferred-Werten Sinn — ein user-owned Wert ist
   // bereits die korrigierte Fassung (Ownership ist entity-weit, kein Per-Feld-Owner, siehe
   // KnowledgeService-Docstring).
-  protected readonly canCorrect = computed((): boolean => this.entity()?.owner !== 'user');
+  protected canCorrectFor(lore: LoreDto): boolean {
+    return lore.entity?.owner !== 'user';
+  }
 
+  // Beziehungen ohne die Franchise-Ziele — die stehen in ihrer eigenen Sektion. Dedup
+  // domänen-agnostisch über die Franchise-ids statt über den Typ-String "Franchise"
+  // (P25 Phase-1-Finding: franchises[] enthält Ziele zusätzlich zu relationships[]).
+  protected relationshipsFor(lore: LoreDto): ResolvedRelationshipDto[] {
+    const franchiseIds = new Set(lore.franchises.map((ref: EntityRefDto) => ref.id));
+    return lore.relationships.filter(
+      (relationship: ResolvedRelationshipDto) => !franchiseIds.has(relationship.target.id),
+    );
+  }
+
+  protected trackLore(lore: LoreDto): string {
+    return lore.entity?.id ?? '';
+  }
+
+  // Korrektur-Zustand — genau eine Bearbeitung offen zur Zeit, geschlüsselt über die
+  // Entity-id des gerade editierten Blocks.
+  protected readonly correctingEntityId = signal<string | null>(null);
   protected readonly correctingField = signal<string | null>(null);
   protected readonly correctionValue = signal('');
   protected readonly correctionReason = signal('');
   protected readonly correctionPending = signal(false);
   protected readonly correctionError = signal<string | null>(null);
 
-  protected readonly correctionExplainOpen = signal(false);
+  // Erklär-Popover ebenfalls pro Block geschlüsselt (id des offenen Popovers, sonst null).
+  protected readonly correctionExplainOpenId = signal<string | null>(null);
   protected readonly correctionExplainLoading = signal(false);
   protected readonly correctionExplainPayload = signal<ExplainabilityPayload | null>(null);
   private correctionExplainEntityId: string | null = null;
 
   constructor() {
-    // Schließt ein offenes „Warum geändert?"-Popover bei jedem Lore-Reload (Bildwechsel oder
-    // frische Korrektur) — sonst zeigt es kurz das Payload der vorigen Entity, bis der
-    // Entity-Id-Guard in `onCorrectionExplainOpen` beim nächsten Klick nachlädt.
+    // Schließt offene Korrektur/„Warum geändert?"-Zustände bei jedem Lore-Reload (Bildwechsel
+    // oder frische Korrektur) — sonst zeigt ein Popover kurz das Payload der vorigen Entity,
+    // bis der Entity-Id-Guard in `onCorrectionExplainOpen` beim nächsten Klick nachlädt.
     effect((): void => {
-      this.entity();
-      this.correctionExplainOpen.set(false);
+      this.lores();
+      this.correctingField.set(null);
+      this.correctingEntityId.set(null);
+      this.correctionExplainOpenId.set(null);
       this.correctionExplainPayload.set(null);
       this.correctionExplainLoading.set(false);
     });
   }
-
-  // Beziehungen ohne die Franchise-Ziele — die stehen in ihrer eigenen Sektion. Dedup
-  // domänen-agnostisch über die Franchise-ids statt über den Typ-String "Franchise"
-  // (P25 Phase-1-Finding: franchises[] enthält Ziele zusätzlich zu relationships[]).
-  protected readonly relationships = computed((): ResolvedRelationshipDto[] => {
-    const lore = this.state().lore;
-    if (lore == null) {
-      return [];
-    }
-    const franchiseIds = new Set(lore.franchises.map((ref: EntityRefDto) => ref.id));
-    return lore.relationships.filter(
-      (relationship: ResolvedRelationshipDto) => !franchiseIds.has(relationship.target.id),
-    );
-  });
-
-  protected readonly franchises = computed((): EntityRefDto[] => this.state().lore?.franchises ?? []);
-  protected readonly relatedMedia = computed((): MediaRefDto[] => this.state().lore?.related_media ?? []);
-  protected readonly sources = computed((): string[] => this.state().lore?.sources ?? []);
 
   protected readonly showEmptyState = computed((): boolean =>
     this.status() === 'empty' && this.hasPersonContext(),
@@ -171,7 +180,8 @@ export class LorePanel {
     }
   }
 
-  protected startCorrection(field: string, currentValue: string): void {
+  protected startCorrection(entityId: string, field: string, currentValue: string): void {
+    this.correctingEntityId.set(entityId);
     this.correctingField.set(field);
     this.correctionValue.set(currentValue);
     this.correctionReason.set('');
@@ -180,6 +190,7 @@ export class LorePanel {
 
   protected cancelCorrection(): void {
     this.correctingField.set(null);
+    this.correctingEntityId.set(null);
     this.correctionError.set(null);
   }
 
@@ -196,7 +207,7 @@ export class LorePanel {
   // dann gilt die Korrektur als übernommen und das Panel lädt die Lore neu.
   protected submitCorrection(): void {
     const field = this.correctingField();
-    const entityId = this.entity()?.id;
+    const entityId = this.correctingEntityId();
     const reason = this.correctionReason().trim();
     if (field == null || entityId == null || reason === '') {
       return;
@@ -224,6 +235,7 @@ export class LorePanel {
             return;
           }
           this.correctingField.set(null);
+          this.correctingEntityId.set(null);
           this.refreshTick.update((tick: number): number => tick + 1);
         },
         error: (): void => {
@@ -239,10 +251,8 @@ export class LorePanel {
   // Sichtbar, sobald ein Feld bereits korrigiert ist (`owner === 'user'`, das Gegenstück
   // zu `canCorrect`); lädt die Historie erst beim ersten Öffnen, danach pro Entity gecacht.
 
-  protected onCorrectionExplainOpen(): void {
-    this.correctionExplainOpen.set(true);
-    const entityId = this.entity()?.id;
-    if (entityId == null) { return; }
+  protected onCorrectionExplainOpen(entityId: string): void {
+    this.correctionExplainOpenId.set(entityId);
     if (this.correctionExplainEntityId === entityId && this.correctionExplainPayload() != null) {
       return;
     }
@@ -271,7 +281,7 @@ export class LorePanel {
   }
 
   protected onCorrectionExplainClose(): void {
-    this.correctionExplainOpen.set(false);
+    this.correctionExplainOpenId.set(null);
   }
 
   private buildCorrectionPayload(entry: ChangelogEntryDto | null): ExplainabilityPayload {

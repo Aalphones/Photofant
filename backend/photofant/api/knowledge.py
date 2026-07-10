@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from photofant.db.models import Asset, Face, KnowledgeChangelog, Person
+from photofant.db.models import Asset, AssetInstance, Face, KnowledgeChangelog, Person
 from photofant.db.session import get_session
 from photofant.jobs.knowledge_patch_job import enqueue_knowledge_patch
 from photofant.knowledge.changelog import ChangelogService
@@ -345,23 +345,53 @@ def _resolve_media_refs(session: Session, media_links: MediaLinks) -> list[Media
     return refs
 
 
-@router.get("/lore", response_model=LoreDto)
+def _person_ids_on_asset(session: Session, asset_id: int) -> list[int]:
+    """Personen, die auf einem Bild gezeigt werden. Die kanonische Zugehörigkeit läuft über
+    ``asset_instance`` (dieselbe Quelle wie die Bildzählung pro Person), nicht über rohe
+    Gesichter — die existieren auch ohne zugewiesene Person. Deterministisch sortiert."""
+    rows = session.execute(
+        select(AssetInstance.person_id)
+        .where(AssetInstance.asset_id == asset_id, AssetInstance.deleted_at.is_(None))
+        .distinct()
+        .order_by(AssetInstance.person_id)
+    ).all()
+    return [int(row[0]) for row in rows]
+
+
+@router.get("/lore", response_model=list[LoreDto])
 async def get_lore_for_media(
     session: DbSession,
     vault: VaultDep,
     asset_id: int | None = None,
     person_id: int | None = None,
-) -> LoreDto:
-    """Lore für ein Bild/eine Person (P25 Kontrakt) — ohne Verknüpfung 200 mit ``entity: null``,
-    kein 404 (anders als die entity-id-basierte ``/entities/{id}/lore`` unten)."""
+) -> list[LoreDto]:
+    """Gebündeltes Wissen zu einem Bild oder einer Person (P25, erweitert).
+
+    Genau einer von ``asset_id``/``person_id`` ist erforderlich. Für eine Person kommt
+    höchstens ein Block zurück (ihr verknüpftes Wissen). Für ein Bild werden die darauf
+    gezeigten Personen zu ihrem Wissen aufgelöst — plus ein evtl. direkt am Bild
+    verknüpftes Wissen —, sodass mehrere Blöcke entstehen können. Keine Verknüpfung ist
+    kein Fehler, sondern eine leere Liste (200, kein 404)."""
     if (asset_id is None) == (person_id is None):
         raise HTTPException(
             status_code=422, detail="Genau einer von asset_id/person_id ist erforderlich"
         )
     service = _service(session, vault)
-    lore = service.get_lore_for_media(asset_id=asset_id, person_id=person_id)
-    media_refs = _resolve_media_refs(session, lore.related_media) if lore.entity is not None else []
-    return LoreDto.from_lore(lore, media_refs)
+
+    if person_id is not None:
+        targets: list[tuple[str, int]] = [("person", person_id)]
+    else:
+        assert asset_id is not None  # durch die 422-Prüfung oben garantiert
+        targets = [
+            ("asset", asset_id),
+            *(("person", pid) for pid in _person_ids_on_asset(session, asset_id)),
+        ]
+
+    lores = service.get_lore_bundle(targets)
+    return [
+        LoreDto.from_lore(lore, _resolve_media_refs(session, lore.related_media))
+        for lore in lores
+    ]
 
 
 @router.get("/domains", response_model=list[DomainDto])

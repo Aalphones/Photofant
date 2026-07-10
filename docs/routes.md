@@ -1082,7 +1082,7 @@ comfyui.result_wait_timeout_seconds = 1800
 | *(ab P23, ungenutzt)* | `POST` | `/api/knowledge/entities/{id}/relationships` | `{ type, target, owner? }` | `EntityDto` (Beziehung angehängt, keine Duplikate) — 404/409/422 wie oben |
 | *(ab P23, ungenutzt)* | `DELETE` | `/api/knowledge/entities/{id}/relationships` | Query: `type`, `target`, `owner?` | `EntityDto` (Beziehung entfernt, idempotent) — 404/409 |
 | *(ab P23, ungenutzt)* | `GET` | `/api/knowledge/entities/{id}/lore` | — | `LoreDto` (Vollform, s.u.) — 404 bei unbekannter `id` |
-| Lore-Panel (P25 Phase 2, Kontrakt) | `GET` | `/api/knowledge/lore` | Query: genau eines von `asset_id`, `person_id` (sonst 422) | `LoreDto` — **200 mit `entity: null` ohne Verknüpfung** (kein 404) |
+| Lore-Panel (P25 Phase 2, Kontrakt) | `GET` | `/api/knowledge/lore` | Query: genau eines von `asset_id`, `person_id` (sonst 422) | `LoreDto[]` — je ein Block pro abgebildeter, mit Wissen verknüpfter Person (Bild) bzw. höchstens einer (Person); **200 mit leerer Liste ohne Verknüpfung** (kein 404) |
 | Lore-Panel „Das stimmt nicht" (P25 Phase 3) | `POST` | `/api/knowledge/entities/{id}/patch` | `PatchEntityRequest { field, value, reason }` — `field` muss eine der patchbaren Felder sein (`PATCHABLE_FIELDS` in `knowledge/service.py`), `owner` ist **kein** Request-Feld (fest `user`) | `{ job_id: string }` — startet `KnowledgePatchJob` **asynchron** (Job-Dock/SSE, gleiches Muster wie `/lookup`); 422 bei unbekanntem Feld vorab, Entity-404/Ownership-409 laufen als Job-Error, nicht als HTTP-Status |
 | Lore-Panel (Explainability, P25 Phase 3) | `GET` | `/api/knowledge/entities/{id}/changelog` | — | `ChangelogEntryDto[]` — Korrektur-Historie (neueste zuerst), geteilte Payload mit P26 Phase 3 (Warum?-Popover) |
 
