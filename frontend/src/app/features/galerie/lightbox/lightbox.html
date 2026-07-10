@@ -94,6 +94,93 @@
         (createRequested)="openKnowledgeCreate()"
       />
 
+            <!-- Gesichter -->
+      @if (faces().length > 0) {
+        <div class="panel-sec">
+          <div class="psec-title">Gesichter ({{ faces().length }})</div>
+
+          <div class="face-list">
+            @for (face of faces(); track face.id) {
+              <div class="face-item" [class.face-item--active]="quickAssignFace()?.id === face.id">
+                <button
+                  class="face-crop"
+                  (click)="selectQuickAssignFace(face)"
+                  [title]="'Schnellzuweisung für ' + faceLabel(face)"
+                >
+                  <img
+                    class="face-crop__img"
+                    [src]="'/api' + face.crop_url"
+                    [alt]="'Gesicht #' + face.id"
+                  />
+                  <div class="face-crop__border" [class.face-crop__border--manual]="isFaceManual(face)"></div>
+                </button>
+                <button
+                  class="face-del"
+                  (click)="deleteFaceFromAsset(face)"
+                  title="Gesicht löschen"
+                  aria-label="Gesicht löschen"
+                >
+                  <pf-icon name="x" [size]="11" />
+                </button>
+                <button
+                  class="face-info"
+                  (click)="openPersonPicker(face)"
+                  [title]="'Person zuordnen für ' + faceLabel(face)"
+                >
+                  <span class="face-name">{{ faceLabel(face) }}</span>
+                  <pf-icon name="pencil" [size]="11" />
+                </button>
+                <div class="face-meta">{{ faceScore(face) }} · {{ faceAge(face) }}</div>
+              </div>
+            }
+          </div>
+
+          <!-- Quick-Assign-Grid (Schnellzuweisung für das angeklickte Gesicht, Default: erstes) -->
+          @if (quickAssignFace(); as primaryFace) {
+            @if (quickMatches().length > 0) {
+              <div class="qa-label">
+                Beste Treffer für {{ faceLabel(primaryFace) }} — Schnellzuweisung
+              </div>
+              <div class="quick-assign">
+                @for (match of quickMatches(); track match.person_id) {
+                  <button
+                    class="quick-match"
+                    (click)="assignFaceToPerson(primaryFace.id, match.person_id)"
+                    [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
+                  >
+                    <img [src]="'/api/faces/' + match.best_face_id + '/thumbnail'" alt="" />
+                    <div class="qm-label">{{ firstName(match.person_name) }}</div>
+                    <div class="qm-score">{{ matchScorePercent(match.score) }}%</div>
+                  </button>
+                }
+              </div>
+            }
+            <button class="mini-btn face-more-btn" (click)="openPersonPicker(primaryFace)">
+              Weitere Personen…
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="panel-sec">
+          <div class="psec-title">Gesichter</div>
+          <div class="pbtn-row">
+            <button
+              class="pbtn pbtn--ghost"
+              [class.pbtn--loading]="retryingFaceExtraction()"
+              [disabled]="retryingFaceExtraction()"
+              (click)="retryFaceExtraction()"
+            >
+              <pf-icon name="refresh" [size]="15" />
+              {{ retryingFaceExtraction() ? 'Extraktion läuft…' : 'Extrahieren nochmal probieren' }}
+            </button>
+            <button class="pbtn pbtn--ghost" (click)="openPersonPickerAssetMode()">
+              <pf-icon name="user" [size]="15" />
+              Manuell Person zuordnen
+            </button>
+          </div>
+        </div>
+      }
+
       <!-- Empfehlungen (P26 + P36 zusammengeführt) — Graph-Empfehlungen und reine
            CLIP-Ähnlichkeit in einer Liste, damit nicht nur Bilder derselben Person auftauchen -->
       @if (showRecommendations()) {
@@ -377,93 +464,6 @@
               }
             </div>
           }
-        </div>
-      }
-
-      <!-- Gesichter -->
-      @if (faces().length > 0) {
-        <div class="panel-sec">
-          <div class="psec-title">Gesichter ({{ faces().length }})</div>
-
-          <div class="face-list">
-            @for (face of faces(); track face.id) {
-              <div class="face-item" [class.face-item--active]="quickAssignFace()?.id === face.id">
-                <button
-                  class="face-crop"
-                  (click)="selectQuickAssignFace(face)"
-                  [title]="'Schnellzuweisung für ' + faceLabel(face)"
-                >
-                  <img
-                    class="face-crop__img"
-                    [src]="'/api' + face.crop_url"
-                    [alt]="'Gesicht #' + face.id"
-                  />
-                  <div class="face-crop__border" [class.face-crop__border--manual]="isFaceManual(face)"></div>
-                </button>
-                <button
-                  class="face-del"
-                  (click)="deleteFaceFromAsset(face)"
-                  title="Gesicht löschen"
-                  aria-label="Gesicht löschen"
-                >
-                  <pf-icon name="x" [size]="11" />
-                </button>
-                <button
-                  class="face-info"
-                  (click)="openPersonPicker(face)"
-                  [title]="'Person zuordnen für ' + faceLabel(face)"
-                >
-                  <span class="face-name">{{ faceLabel(face) }}</span>
-                  <pf-icon name="pencil" [size]="11" />
-                </button>
-                <div class="face-meta">{{ faceScore(face) }} · {{ faceAge(face) }}</div>
-              </div>
-            }
-          </div>
-
-          <!-- Quick-Assign-Grid (Schnellzuweisung für das angeklickte Gesicht, Default: erstes) -->
-          @if (quickAssignFace(); as primaryFace) {
-            @if (quickMatches().length > 0) {
-              <div class="qa-label">
-                Beste Treffer für {{ faceLabel(primaryFace) }} — Schnellzuweisung
-              </div>
-              <div class="quick-assign">
-                @for (match of quickMatches(); track match.person_id) {
-                  <button
-                    class="quick-match"
-                    (click)="assignFaceToPerson(primaryFace.id, match.person_id)"
-                    [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
-                  >
-                    <img [src]="'/api/faces/' + match.best_face_id + '/thumbnail'" alt="" />
-                    <div class="qm-label">{{ firstName(match.person_name) }}</div>
-                    <div class="qm-score">{{ matchScorePercent(match.score) }}%</div>
-                  </button>
-                }
-              </div>
-            }
-            <button class="mini-btn face-more-btn" (click)="openPersonPicker(primaryFace)">
-              Weitere Personen…
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="panel-sec">
-          <div class="psec-title">Gesichter</div>
-          <div class="pbtn-row">
-            <button
-              class="pbtn pbtn--ghost"
-              [class.pbtn--loading]="retryingFaceExtraction()"
-              [disabled]="retryingFaceExtraction()"
-              (click)="retryFaceExtraction()"
-            >
-              <pf-icon name="refresh" [size]="15" />
-              {{ retryingFaceExtraction() ? 'Extraktion läuft…' : 'Extrahieren nochmal probieren' }}
-            </button>
-            <button class="pbtn pbtn--ghost" (click)="openPersonPickerAssetMode()">
-              <pf-icon name="user" [size]="15" />
-              Manuell Person zuordnen
-            </button>
-          </div>
         </div>
       }
 
