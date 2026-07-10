@@ -149,6 +149,34 @@ export class PersonsEffects {
     )
   );
 
+  readonly linkPersonEntity$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(personsActions.linkPersonEntity),
+      mergeMap(({ personId, entityId }) =>
+        this.personService.linkEntity(personId, entityId).pipe(
+          map((person: PersonDto) => personsActions.linkPersonEntitySuccess({ person })),
+          catchError((error: HttpErrorResponse) =>
+            of(personsActions.linkPersonEntityFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly unlinkPersonEntity$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(personsActions.unlinkPersonEntity),
+      mergeMap(({ personId, entityId }) =>
+        this.personService.unlinkEntity(personId, entityId).pipe(
+          map((person: PersonDto) => personsActions.unlinkPersonEntitySuccess({ person })),
+          catchError((error: HttpErrorResponse) =>
+            of(personsActions.unlinkPersonEntityFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
   readonly navigateAfterCreate$ = createEffect(
     () =>
       this.actions$.pipe(

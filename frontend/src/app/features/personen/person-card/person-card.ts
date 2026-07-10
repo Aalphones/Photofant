@@ -48,6 +48,8 @@ export class PersonCard {
   readonly dupeCheck = output<void>();
   readonly revealInFileBrowser = output<void>();
   readonly deleteClick = output<void>();
+  readonly linkEntityClick = output<void>();
+  readonly unlinkEntityClick = output<EntityRefDto>();
   readonly createKnowledge = output<TaskDto>();
   readonly snoozeNewPersonTask = output<number>();
   readonly dismissNewPersonTask = output<number>();
@@ -212,6 +214,20 @@ export class PersonCard {
     event.stopPropagation();
     this.menuOpen.set(false);
     this.deleteClick.emit();
+  }
+
+  protected onLinkEntityClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpen.set(false);
+    this.linkEntityClick.emit();
+  }
+
+  protected onUnlinkEntityClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpen.set(false);
+    const entity = this.person().linked_entity;
+    if (entity == null) { return; }
+    this.unlinkEntityClick.emit(entity);
   }
 
   protected onCreateKnowledgeClick(event: MouseEvent): void {

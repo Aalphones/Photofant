@@ -1,0 +1,113 @@
+:host {
+  display: contents;
+}
+
+.link-entity-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  background: oklch(0 0 0 / 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+}
+
+.link-entity-dialog__card {
+  background: var(--surface);
+  border-radius: 12px;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px oklch(0 0 0 / 0.25);
+}
+
+.link-entity-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.link-entity-dialog__title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.link-entity-dialog__close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--text-3);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-2);
+  }
+}
+
+.link-entity-dialog__body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.link-entity-dialog__input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-1);
+  border: none;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+}
+
+.link-entity-dialog__results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.link-entity-dialog__result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-2);
+  }
+}
+
+.link-entity-dialog__result-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-entity-dialog__result-type {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.link-entity-dialog__hint {
+  padding: 12px 4px;
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+}

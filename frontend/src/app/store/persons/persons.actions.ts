@@ -28,5 +28,11 @@ export const personsActions = createActionGroup({
     'Create Person':              props<{ name: string }>(),
     'Create Person Success':      props<{ person: PersonDto }>(),
     'Create Person Failure':      props<{ error: string }>(),
+    'Link Person Entity':         props<{ personId: number; entityId: string }>(),
+    'Link Person Entity Success': props<{ person: PersonDto }>(),
+    'Link Person Entity Failure': props<{ error: string }>(),
+    'Unlink Person Entity':         props<{ personId: number; entityId: string }>(),
+    'Unlink Person Entity Success': props<{ person: PersonDto }>(),
+    'Unlink Person Entity Failure': props<{ error: string }>(),
   },
 });

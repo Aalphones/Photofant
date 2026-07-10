@@ -129,6 +129,21 @@
             <pf-icon name="folder" [size]="13" />
             <span>Im Datei-Explorer öffnen</span>
           </button>
+          @if (person().linked_entity; as entity) {
+            <button class="person-card__menu-item" (click)="onLinkEntityClick($event)">
+              <pf-icon name="sparkle" [size]="13" />
+              <span>Wissen ändern…</span>
+            </button>
+            <button class="person-card__menu-item" (click)="onUnlinkEntityClick($event)">
+              <pf-icon name="x" [size]="13" />
+              <span>Verknüpfung lösen</span>
+            </button>
+          } @else {
+            <button class="person-card__menu-item" (click)="onLinkEntityClick($event)">
+              <pf-icon name="sparkle" [size]="13" />
+              <span>Mit Wissen verknüpfen…</span>
+            </button>
+          }
           <button class="person-card__menu-item" (click)="onDeleteClick($event)">
             <pf-icon name="refresh" [size]="13" />
             <span>Auflösen</span>

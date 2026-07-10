@@ -77,6 +77,17 @@ export const personsFeature = createFeature({
       ...state,
       error,
     })),
+    on(
+      personsActions.linkPersonEntitySuccess,
+      personsActions.unlinkPersonEntitySuccess,
+      (state: PersonsState, { person }) =>
+        adapter.updateOne({ id: person.id, changes: person }, state)
+    ),
+    on(
+      personsActions.linkPersonEntityFailure,
+      personsActions.unlinkPersonEntityFailure,
+      (state: PersonsState, { error }) => ({ ...state, error })
+    ),
   ),
   extraSelectors: ({ selectPersonsState }) => ({
     ...adapter.getSelectors(selectPersonsState),

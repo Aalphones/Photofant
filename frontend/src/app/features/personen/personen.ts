@@ -8,12 +8,13 @@ import {
   signal,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { CreateEntityRequest, Density, PersonDto, TaskDto } from '@photofant/models';
+import type { CreateEntityRequest, Density, EntityDto, EntityRefDto, PersonDto, TaskDto } from '@photofant/models';
 import { PersonService } from '@photofant/services';
 import { knowledgeActions, knowledgeSelectors, personsActions, personsSelectors } from '@photofant/store';
 import { Icon } from '@photofant/ui';
 import { EntityWizardDialog } from '../wissen/entity-wizard-dialog/entity-wizard-dialog';
 import { AlphabetRail } from './alphabet-rail/alphabet-rail';
+import { LinkEntityDialog } from './link-entity-dialog/link-entity-dialog';
 import { CreatePersonDialog } from './create-person-dialog/create-person-dialog';
 import { DeletePersonDialog } from './delete-person-dialog/delete-person-dialog';
 import { DupeCheckDialog } from './dupe-check-dialog/dupe-check-dialog';
@@ -40,6 +41,7 @@ const NO_GROUP = 'Ohne Gruppe';
     AlphabetRail,
     Icon,
     EntityWizardDialog,
+    LinkEntityDialog,
   ],
   templateUrl: './personen.html',
   styleUrl: './personen.scss',
@@ -100,6 +102,7 @@ export class Personen implements OnInit {
   protected readonly showMergeDialog = signal(false);
   protected readonly mergePreselectedFrom = signal<PersonDto | null>(null);
   protected readonly showCreateDialog = signal(false);
+  protected readonly linkEntityPerson = signal<PersonDto | null>(null);
   protected readonly splitPerson = signal<PersonDto | null>(null);
   protected readonly dupeCheckPerson = signal<PersonDto | null>(null);
   protected readonly deletePersonTarget = signal<PersonDto | null>(null);
@@ -291,6 +294,21 @@ export class Personen implements OnInit {
   protected onConfirmDelete(personId: number): void {
     this.store.dispatch(personsActions.deletePerson({ id: personId }));
     this.deletePersonTarget.set(null);
+  }
+
+  protected onLinkEntityClick(person: PersonDto): void {
+    this.linkEntityPerson.set(person);
+  }
+
+  protected onLinkEntitySelect(entity: EntityDto): void {
+    const person = this.linkEntityPerson();
+    if (person === null) { return; }
+    this.store.dispatch(personsActions.linkPersonEntity({ personId: person.id, entityId: entity.id }));
+    this.linkEntityPerson.set(null);
+  }
+
+  protected onUnlinkEntity(person: PersonDto, entity: EntityRefDto): void {
+    this.store.dispatch(personsActions.unlinkPersonEntity({ personId: person.id, entityId: entity.id }));
   }
 
   protected onCreatePerson(name: string): void {

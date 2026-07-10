@@ -75,6 +75,11 @@ export class PersonService {
     return this.http.post<PersonDto>(`/api/persons/${personId}/link-entity`, { entity_id: entityId });
   }
 
+  unlinkEntity(personId: number, entityId: string): Observable<PersonDto> {
+    const params = new HttpParams().set('entity_id', entityId);
+    return this.http.delete<PersonDto>(`/api/persons/${personId}/link-entity`, { params });
+  }
+
   bulkAssignPerson(personId: number, assetIds: number[]): Observable<PersonImportResponse> {
     return this.http.post<PersonImportResponse>(`/api/persons/${personId}/bulk-assign`, { asset_ids: assetIds });
   }

@@ -117,6 +117,8 @@
                     (dupeCheck)="onDupeCheck(person)"
                     (revealInFileBrowser)="onRevealInFileBrowser(person)"
                     (deleteClick)="onDeleteClick(person)"
+                    (linkEntityClick)="onLinkEntityClick(person)"
+                    (unlinkEntityClick)="onUnlinkEntity(person, $event)"
                     (createKnowledge)="onCreateKnowledge($event)"
                     (snoozeNewPersonTask)="onSnoozeNewPersonTask($event)"
                     (dismissNewPersonTask)="onDismissNewPersonTask($event)"
@@ -141,6 +143,8 @@
                 (dupeCheck)="onDupeCheck(person)"
                 (revealInFileBrowser)="onRevealInFileBrowser(person)"
                 (deleteClick)="onDeleteClick(person)"
+                (linkEntityClick)="onLinkEntityClick(person)"
+                (unlinkEntityClick)="onUnlinkEntity(person, $event)"
               />
             </div>
           }
@@ -202,5 +206,13 @@
     [prefill]="knowledgeWizardPrefill()"
     (close)="onCloseKnowledgeWizard()"
     (save)="onSaveKnowledgeEntity($event)"
+  />
+}
+
+@if (linkEntityPerson(); as person) {
+  <pf-link-entity-dialog
+    [person]="person"
+    (close)="linkEntityPerson.set(null)"
+    (select)="onLinkEntitySelect($event)"
   />
 }
