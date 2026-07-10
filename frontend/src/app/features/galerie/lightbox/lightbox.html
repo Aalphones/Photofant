@@ -94,13 +94,15 @@
         (createRequested)="openKnowledgeCreate()"
       />
 
-      <!-- Empfehlungen (P26 Phase 2) — dockt direkt unter dem Lore-Panel an -->
+      <!-- Empfehlungen (P26 + P36 zusammengeführt) — Graph-Empfehlungen und reine
+           CLIP-Ähnlichkeit in einer Liste, damit nicht nur Bilder derselben Person auftauchen -->
       @if (showRecommendations()) {
         <div class="panel-sec">
           <div class="psec-title">Empfehlungen</div>
           <pf-related-rail
-            [items]="recommendations().items"
-            [loading]="recommendations().status === 'computing'"
+            [items]="mergedRecommendationItems()"
+            [loading]="mergedRecommendationItems().length === 0 && (recommendations().status === 'computing' || relatedRail().loading)"
+            [emptyMessage]="relatedRail().emptyMessage"
             loadingMessage="Wird berechnet …"
             explainLabel="Warum?"
             [explainOpenId]="recommendationExplainOpenId()"
@@ -109,6 +111,11 @@
             (explainOpen)="onRecommendationExplainOpen($event)"
             (explainClose)="onRecommendationExplainClose()"
           />
+          @if (hasEmbedding()) {
+            <button class="rel-add" (click)="openMoreSimilar()">
+              <pf-icon name="compare" [size]="14" /> Mehr ähnliche Bilder
+            </button>
+          }
         </div>
       }
 
@@ -592,73 +599,6 @@
         <button class="rel-add" (click)="openRelationBrowser('edits')">
           <pf-icon name="plus" [size]="14" /> Edit verknüpfen
         </button>
-      </div>
-
-      <!-- Verwandte Assets (Lineage, P10 Phase 1) — read-only: Original → Editor-Versionen →
-           daraus extrahierte Gesichter → deren eigene Editor-Versionen -->
-      @if (lineage(); as lin) {
-        @if (lin.versions.length > 0 || lin.faces.length > 0) {
-          <div class="panel-sec">
-            <div class="psec-title">Verwandte Assets</div>
-
-            @if (lin.versions.length > 0) {
-              <div class="rel-dir-lbl">Editor-Versionen · {{ lin.versions.length }}</div>
-              @for (version of lin.versions; track version.id) {
-                <div class="rel-row">
-                  <div class="rr-thumb"><img [src]="version.thumbnail_url" alt="" /></div>
-                  <div class="rr-body">
-                    <div class="rr-id">
-                      {{ versionLabel(version) }}
-                      @if (version.is_current) { <span class="rel-tag rel-tag--orig">Aktiv</span> }
-                    </div>
-                  </div>
-                </div>
-              }
-            }
-
-            @if (lin.faces.length > 0) {
-              <div class="rel-dir-lbl rel-dir-lbl--spaced">Gesichter · {{ lin.faces.length }}</div>
-              @for (face of lin.faces; track face.id) {
-                <div class="rel-row">
-                  <div class="rr-thumb rr-thumb--face"><img [src]="'/api' + face.crop_url" alt="" /></div>
-                  <div class="rr-body">
-                    <div class="rr-id">{{ face.person_name ?? 'Unbekannt' }}</div>
-                  </div>
-                </div>
-                @for (faceVersion of face.versions; track faceVersion.id) {
-                  <div class="rel-row rel-row--nested">
-                    <div class="rr-thumb"><img [src]="faceVersion.thumbnail_url" alt="" /></div>
-                    <div class="rr-body">
-                      <div class="rr-id">{{ versionLabel(faceVersion) }}</div>
-                    </div>
-                  </div>
-                }
-              }
-            }
-          </div>
-        }
-      }
-
-      <!-- Ähnliche Bilder (Related-Rail, P36 — ersetzt das alte Similar-Overlay) -->
-      <div class="panel-sec">
-        <div class="psec-title">Ähnliche Bilder</div>
-        <pf-related-rail
-          [items]="relatedRail().items"
-          [loading]="relatedRail().loading"
-          [emptyMessage]="relatedRail().emptyMessage"
-          explainLabel="Warum nicht?"
-          [explainOpenId]="similarExplainOpenId()"
-          [explainPayload]="similarExplainPayload()"
-          [explainLoading]="similarExplainLoading()"
-          (cardClick)="openRelatedAsset($event)"
-          (explainOpen)="onSimilarExplainOpen($event)"
-          (explainClose)="onSimilarExplainClose()"
-        />
-        @if (relatedRail().items.length > 0) {
-          <button class="rel-add" (click)="openMoreSimilar()">
-            <pf-icon name="compare" [size]="14" /> Mehr ähnliche Bilder
-          </button>
-        }
       </div>
 
       } <!-- @if (isFaceMode()) Quelle / @else Beziehungen -->

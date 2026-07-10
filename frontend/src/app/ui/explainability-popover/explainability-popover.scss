@@ -19,11 +19,16 @@
 
 .expl-pop {
   position: fixed;
-  z-index: 100;
+  // 500: eigene Tier über allen Lightbox-Dialogen (Lightbox selbst 201, ihre Modals
+  // Person-Picker/VersionCompare/RelationBrowser 210) — das Popover muss immer obenauf
+  // sitzen, egal welcher Panel-Inhalt gerade offen ist. `--surface-1` gibt es im Theme
+  // nicht (nur `--surface`/`--surface-2`) — das war der eigentliche Bug: `var()` auf eine
+  // undefinierte Property fällt auf `transparent` zurück, das Popover war unlesbar.
+  z-index: 500;
   min-width: 180px;
   max-width: 260px;
   padding: 10px 12px;
-  background: var(--surface-1);
+  background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-s);
   box-shadow: var(--shadow-2);

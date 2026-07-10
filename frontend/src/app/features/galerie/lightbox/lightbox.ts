@@ -13,8 +13,8 @@ import { Router } from '@angular/router';
 import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, startWith, type Observable } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, EntityRefDto, ExplainabilityPayload, FaceDto, FaceMatch, Framing, PersonDto, RecommendationDto, RecommendationsResponse, RecommendationStatus, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto, WhyNotResponse } from '@photofant/models';
-import { recommendationMissingLabel, recommendationReasonLabel } from '@photofant/models';
+import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, EntityRefDto, ExplainabilityPayload, FaceDto, FaceMatch, Framing, PersonDto, RecommendationDto, RecommendationsResponse, RecommendationStatus, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import { recommendationReasonLabel } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, extractApiErrorMessage, PersonService, RecommendationService, SearchService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -231,26 +231,6 @@ export class Lightbox {
     ),
   );
 
-  // Verwandte Assets (P10 Phase 1) — Ableitungs-Baum aus version.parent_id/face.source_version_id.
-  // Nur im Asset-Modus (Gesichter-Modus hat bereits „Quelle" für den Rückbezug).
-  protected readonly lineage = toSignal(
-    combineLatest([
-      this.store.select(gallerySelectors.selectLightboxAsset),
-      toObservable(this.reloadTrigger),
-    ]).pipe(
-      switchMap(([asset]) =>
-        asset != null
-          ? this.assetService.getLineage(asset.id).pipe(
-              catchError((err: unknown) => {
-                console.error('[Lightbox] Lineage konnte nicht geladen werden:', err);
-                return of(null);
-              }),
-            )
-          : of(null)
-      ),
-    ),
-  );
-
   // ── Gesichter-Modus: gemeinsame Datenquellen für Stage + Versionen ────────
 
   protected readonly panelReady = computed((): boolean =>
@@ -287,9 +267,12 @@ export class Lightbox {
   protected readonly editingCaption  = signal(false);
   protected readonly captionDraft    = signal('');
 
-  // ── Related-Rail „Ähnliche Bilder" (P36, ersetzt das alte Similar-Overlay) ─
-  // Läuft an derselben Reload-Pipeline wie `detail`/`lineage`; im Gesichter-Modus liefert
-  // `selectLightboxAsset` null (lightboxId ist dort null), die Rail bleibt entsprechend leer.
+  // ── „Ähnliche Bilder" (P36) — seit dem Merge nur noch Datenquelle, kein eigener
+  // Rail-Abschnitt mehr im Template: reine CLIP-Nachbarschaft ergänzt die Graph-Empfehlungen
+  // um Bilder, die visuell ähnlich sind, aber (noch) kein Graph-Signal haben (z.B. andere
+  // Person, gleiche Szene) — sonst zeigt „Empfehlungen" nur Treffer derselben Person.
+  // Läuft an derselben Reload-Pipeline wie `detail`; im Gesichter-Modus liefert
+  // `selectLightboxAsset` null (lightboxId ist dort null), die Liste bleibt entsprechend leer.
   protected readonly relatedRail = toSignal(
     combineLatest([
       this.store.select(gallerySelectors.selectLightboxAsset),
@@ -301,7 +284,7 @@ export class Lightbox {
   );
 
   // ── Empfehlungen (P26 Phase 2) — dockt unter dem Lore-Panel an ────────────
-  // Läuft an derselben Reload-Pipeline wie `detail`/`lineage`/`relatedRail`. Im
+  // Läuft an derselben Reload-Pipeline wie `detail`/`relatedRail`. Im
   // Gesichter-Modus liefert `selectLightboxAsset` null, Empfehlungen bleiben entsprechend leer.
   protected readonly recommendations = toSignal(
     combineLatest([
@@ -313,11 +296,25 @@ export class Lightbox {
     { initialValue: { status: 'ready', items: [], raw: [] } as RecommendationsData },
   );
 
-  // „Keine Empfehlungen" -> Bereich entfällt komplett (AK); „computing" zeigt die Sektion
-  // dezent mit Lade-Text (related-rail übernimmt das über `loading`).
+  // Merge Graph-Empfehlungen + reine CLIP-Nachbarschaft in eine Liste (dedupliziert nach
+  // assetId, Empfehlungen zuerst — sie tragen die reichere Begründungskette). Ersetzt die
+  // frühere zweite Sektion „Ähnliche Bilder", die dieselben Bilder oft nochmal zeigte.
+  protected readonly mergedRecommendationItems = computed((): RelatedRailItem[] => {
+    const recommended = this.recommendations().items;
+    const seen = new Set(recommended.map((item: RelatedRailItem) => item.assetId));
+    const extraSimilar = this.relatedRail().items.filter(
+      (item: RelatedRailItem) => !seen.has(item.assetId),
+    );
+    return [...recommended, ...extraSimilar];
+  });
+
+  // „Keine Empfehlungen" -> Bereich entfällt komplett (AK); „computing"/Laden zeigt die
+  // Sektion dezent mit Lade-Text, sobald aus KEINER der beiden Quellen schon etwas da ist.
   protected readonly showRecommendations = computed((): boolean => {
-    const data = this.recommendations();
-    return data.status === 'computing' || data.items.length > 0;
+    const recommendationsData = this.recommendations();
+    return recommendationsData.status === 'computing'
+      || this.relatedRail().loading
+      || this.mergedRecommendationItems().length > 0;
   });
 
   // Job-Ids, für die bereits ein Reload angestoßen wurde — verhindert, dass ein einmal
@@ -719,12 +716,8 @@ export class Lightbox {
       this.showRelationBrowser.set(null);
       this.relationBrowserQuery.set('');
       this.relationBrowserSelected.set([]);
-      // Reset Explainability-Popover (P26 Phase 3) — Cache ist pro Quellbild gültig
+      // Reset Explainability-Popover (P26 Phase 3) — Payload ist pro Quellbild gültig
       this.recommendationExplainOpenId.set(null);
-      this.similarExplainOpenId.set(null);
-      this.similarExplainLoading.set(false);
-      this.similarExplainPayload.set(null);
-      this.whyNotCache.clear();
     });
 
     // Metadaten-Drafts aus `detail()` initialisieren (framing lebt nur dort) —
@@ -1156,11 +1149,13 @@ export class Lightbox {
     );
   }
 
-  // ── Explainability „Warum?"/„Warum nicht?" (P26 Phase 3) ──────────────────
-  // „Warum?" (Empfehlungs-Karte): Score/Reasons liegen schon lokal vor (aus `recommendations()`),
-  // kein zweiter Request nötig. „Warum nicht?" (Ähnliche-Bilder-Karte): live berechnet, nur auf
-  // Anfrage (Risiko „teuer", siehe README) — Ergebnis pro Zielbild gecacht, damit erneutes
-  // Öffnen desselben Popovers nicht erneut rechnet.
+  // ── Explainability „Warum?" (P26 Phase 3) ─────────────────────────────────
+  // Score/Reasons liegen für Graph-Empfehlungen schon lokal vor (aus `recommendations()`),
+  // kein Request nötig. Für die gemergten reinen CLIP-Treffer (kein `RecommendationDto`, da
+  // sie nur aus der Ähnlichkeitssuche kommen) gibt es einen schlankeren Fallback aus dem
+  // schon vorhandenen Score. „Warum nicht?" ist mit dem Merge entfallen — es gibt keine
+  // separate „nicht empfohlen"-Liste mehr, an der die Frage noch Sinn ergäbe; der Backend-
+  // Endpoint (`RecommendationService.whyNot`) bleibt für spätere/andere Konsumenten bestehen.
 
   protected readonly recommendationExplainOpenId = signal<number | null>(null);
 
@@ -1168,14 +1163,26 @@ export class Lightbox {
     const assetId = this.recommendationExplainOpenId();
     if (assetId == null) { return null; }
     const raw = this.recommendations().raw.find((item: RecommendationDto) => item.asset_id === assetId);
-    if (raw == null) { return null; }
-    return {
-      title: 'Warum empfohlen?',
-      confidencePercent: Math.round(raw.score * 100),
-      reasons: raw.reasons.map(recommendationReasonLabel),
-      missing: [],
-      meta: [],
-    };
+    if (raw != null) {
+      return {
+        title: 'Warum empfohlen?',
+        confidencePercent: Math.round(raw.score * 100),
+        reasons: raw.reasons.map(recommendationReasonLabel),
+        missing: [],
+        meta: [],
+      };
+    }
+    const similarItem = this.relatedRail().items.find((item: RelatedRailItem) => item.assetId === assetId);
+    if (similarItem != null) {
+      return {
+        title: 'Ähnliches Bild',
+        confidencePercent: Math.round(similarItem.score * 100),
+        reasons: ['✓ CLIP-Ähnlichkeit'],
+        missing: [],
+        meta: [],
+      };
+    }
+    return null;
   });
 
   protected onRecommendationExplainOpen(assetId: number): void {
@@ -1184,65 +1191,6 @@ export class Lightbox {
 
   protected onRecommendationExplainClose(): void {
     this.recommendationExplainOpenId.set(null);
-  }
-
-  protected readonly similarExplainOpenId = signal<number | null>(null);
-  protected readonly similarExplainLoading = signal(false);
-  protected readonly similarExplainPayload = signal<ExplainabilityPayload | null>(null);
-  private readonly whyNotCache = new Map<number, WhyNotResponse>();
-
-  protected onSimilarExplainOpen(targetAssetId: number): void {
-    this.similarExplainOpenId.set(targetAssetId);
-    const cached = this.whyNotCache.get(targetAssetId);
-    if (cached != null) {
-      this.similarExplainPayload.set(this.buildWhyNotPayload(cached));
-      return;
-    }
-    const sourceAssetId = this.asset()?.id;
-    if (sourceAssetId == null) { return; }
-    this.similarExplainLoading.set(true);
-    this.similarExplainPayload.set(null);
-    this.recommendationService.whyNot(sourceAssetId, targetAssetId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (response: WhyNotResponse): void => {
-          this.whyNotCache.set(targetAssetId, response);
-          this.similarExplainLoading.set(false);
-          // Guard: der Nutzer kann bis zur Antwort ein anderes Popover geöffnet/geschlossen
-          // haben — nicht das inzwischen falsche Payload einblenden.
-          if (this.similarExplainOpenId() === targetAssetId) {
-            this.similarExplainPayload.set(this.buildWhyNotPayload(response));
-          }
-        },
-        error: (err: unknown): void => {
-          console.error('[Lightbox] „Warum nicht?" konnte nicht berechnet werden:', err);
-          this.similarExplainLoading.set(false);
-          if (this.similarExplainOpenId() === targetAssetId) {
-            this.similarExplainPayload.set({
-              title: 'Warum nicht?',
-              confidencePercent: null,
-              reasons: [],
-              missing: [],
-              meta: [{ label: 'Fehler', value: 'Konnte nicht berechnet werden' }],
-            });
-          }
-        },
-      });
-  }
-
-  protected onSimilarExplainClose(): void {
-    this.similarExplainOpenId.set(null);
-    this.similarExplainLoading.set(false);
-  }
-
-  private buildWhyNotPayload(response: WhyNotResponse): ExplainabilityPayload {
-    return {
-      title: response.recommended ? 'Erfüllt die Empfehlungs-Schwelle' : 'Warum nicht empfohlen?',
-      confidencePercent: Math.round(response.score * 100),
-      reasons: response.reasons.map(recommendationReasonLabel),
-      missing: response.missing.map(recommendationMissingLabel),
-      meta: [],
-    };
   }
 
   // „mehr" — öffnet die Galerie im Reverse-Modus (Phase 2) zu genau diesem Bild. Nutzt
