@@ -1,0 +1,66 @@
+<button
+  #trigger
+  class="expl-pop__trigger"
+  type="button"
+  (click)="triggerClicked.emit()"
+  [title]="label()"
+  [attr.aria-label]="label()"
+  [attr.aria-expanded]="open()"
+>
+  <pf-icon name="info" [size]="11" />
+</button>
+
+@if (open()) {
+  <div
+    class="expl-pop"
+    role="dialog"
+    aria-label="Begründung"
+    [style.top.px]="position().top"
+    [style.left.px]="position().left"
+  >
+    <button class="expl-pop__close" type="button" (click)="close()" aria-label="Schließen">
+      <pf-icon name="x" [size]="12" />
+    </button>
+
+    @if (loading()) {
+      <div class="expl-pop__loading">Lädt…</div>
+    } @else {
+      @if (payload(); as data) {
+        <div class="expl-pop__title">{{ data.title }}</div>
+
+        @if (data.confidencePercent != null) {
+          <div class="expl-pop__confidence">Score {{ data.confidencePercent }}%</div>
+        }
+
+        @if (data.reasons.length > 0) {
+          <ul class="expl-pop__list">
+            @for (reason of data.reasons; track reason) {
+              <li>{{ reason }}</li>
+            }
+          </ul>
+        }
+
+        @if (data.missing.length > 0) {
+          <ul class="expl-pop__list expl-pop__list--missing">
+            @for (entry of data.missing; track entry) {
+              <li>{{ entry }}</li>
+            }
+          </ul>
+        }
+
+        @if (data.meta.length > 0) {
+          <dl class="expl-pop__meta">
+            @for (entry of data.meta; track entry.label) {
+              <div class="expl-pop__meta-row">
+                <dt>{{ entry.label }}</dt>
+                <dd>{{ entry.value }}</dd>
+              </div>
+            }
+          </dl>
+        }
+      } @else {
+        <div class="expl-pop__loading">Keine Begründung verfügbar.</div>
+      }
+    }
+  </div>
+}

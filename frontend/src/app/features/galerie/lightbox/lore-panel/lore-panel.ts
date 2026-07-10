@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   catchError,
@@ -12,8 +12,8 @@ import {
   type Observable,
 } from 'rxjs';
 import { JobsService, KnowledgeService } from '@photofant/services';
-import type { EntityRefDto, Job, LoreDto, MediaRefDto, PatchJobResponse, ResolvedRelationshipDto } from '@photofant/models';
-import { Icon } from '@photofant/ui';
+import type { ChangelogEntryDto, EntityRefDto, ExplainabilityPayload, Job, LoreDto, MediaRefDto, PatchJobResponse, ResolvedRelationshipDto } from '@photofant/models';
+import { ExplainabilityPopover, Icon } from '@photofant/ui';
 
 type LoreStatus = 'loading' | 'ready' | 'empty';
 
@@ -30,7 +30,7 @@ interface LoreState {
 @Component({
   selector: 'pf-lore-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon],
+  imports: [Icon, ExplainabilityPopover],
   templateUrl: './lore-panel.html',
   styleUrl: './lore-panel.scss',
 })
@@ -99,6 +99,23 @@ export class LorePanel {
   protected readonly correctionReason = signal('');
   protected readonly correctionPending = signal(false);
   protected readonly correctionError = signal<string | null>(null);
+
+  protected readonly correctionExplainOpen = signal(false);
+  protected readonly correctionExplainLoading = signal(false);
+  protected readonly correctionExplainPayload = signal<ExplainabilityPayload | null>(null);
+  private correctionExplainEntityId: string | null = null;
+
+  constructor() {
+    // Schließt ein offenes „Warum geändert?"-Popover bei jedem Lore-Reload (Bildwechsel oder
+    // frische Korrektur) — sonst zeigt es kurz das Payload der vorigen Entity, bis der
+    // Entity-Id-Guard in `onCorrectionExplainOpen` beim nächsten Klick nachlädt.
+    effect((): void => {
+      this.entity();
+      this.correctionExplainOpen.set(false);
+      this.correctionExplainPayload.set(null);
+      this.correctionExplainLoading.set(false);
+    });
+  }
 
   // Beziehungen ohne die Franchise-Ziele — die stehen in ihrer eigenen Sektion. Dedup
   // domänen-agnostisch über die Franchise-ids statt über den Typ-String "Franchise"
@@ -214,5 +231,76 @@ export class LorePanel {
           this.correctionError.set('Korrektur fehlgeschlagen');
         },
       });
+  }
+
+  // ── Explainability „Warum geändert?" (P26 Phase 3) ────────────────────────
+  // Dasselbe Popover-Bauteil wie die Empfehlungs-Karten (kein zweites Implementat, AK) —
+  // hier gefüttert aus dem Korrektur-Changelog (P25 Phase 3) statt aus Reason-Chains.
+  // Sichtbar, sobald ein Feld bereits korrigiert ist (`owner === 'user'`, das Gegenstück
+  // zu `canCorrect`); lädt die Historie erst beim ersten Öffnen, danach pro Entity gecacht.
+
+  protected onCorrectionExplainOpen(): void {
+    this.correctionExplainOpen.set(true);
+    const entityId = this.entity()?.id;
+    if (entityId == null) { return; }
+    if (this.correctionExplainEntityId === entityId && this.correctionExplainPayload() != null) {
+      return;
+    }
+    this.correctionExplainEntityId = entityId;
+    this.correctionExplainLoading.set(true);
+    this.correctionExplainPayload.set(null);
+    this.knowledgeService.getChangelog(entityId)
+      .pipe(take(1))
+      .subscribe({
+        next: (entries: ChangelogEntryDto[]): void => {
+          this.correctionExplainLoading.set(false);
+          const latest = entries.find((entry: ChangelogEntryDto) => entry.field === 'body') ?? entries[0] ?? null;
+          this.correctionExplainPayload.set(this.buildCorrectionPayload(latest));
+        },
+        error: (): void => {
+          this.correctionExplainLoading.set(false);
+          this.correctionExplainPayload.set({
+            title: 'Korrektur',
+            confidencePercent: null,
+            reasons: [],
+            missing: [],
+            meta: [{ label: 'Fehler', value: 'Historie konnte nicht geladen werden' }],
+          });
+        },
+      });
+  }
+
+  protected onCorrectionExplainClose(): void {
+    this.correctionExplainOpen.set(false);
+  }
+
+  private buildCorrectionPayload(entry: ChangelogEntryDto | null): ExplainabilityPayload {
+    if (entry == null) {
+      return {
+        title: 'Korrektur',
+        confidencePercent: null,
+        reasons: [],
+        missing: [],
+        meta: [{ label: 'Historie', value: 'Keine Einträge' }],
+      };
+    }
+    return {
+      title: 'Warum geändert?',
+      confidencePercent: null,
+      reasons: [],
+      missing: [],
+      meta: [
+        { label: 'Grund', value: entry.reason },
+        { label: 'Quelle', value: entry.source },
+        { label: 'Zeit', value: this.formatChangelogDate(entry.created_at) },
+        { label: 'Job', value: entry.job_id },
+      ],
+    };
+  }
+
+  private formatChangelogDate(dateStr: string): string {
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }).format(new Date(dateStr));
   }
 }

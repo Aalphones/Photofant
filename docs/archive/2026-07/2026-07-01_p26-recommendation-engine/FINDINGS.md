@@ -13,10 +13,12 @@
 - [x] → Phase 2: Eine Empfehlungs-Karte kann **mehrere** Signal-Häkchen tragen (same_person + same_role +
   same_film + clip gleichzeitig) — die Reason-Checkliste (Dok 050 §6) rendert alle vorhandenen `reasons`,
   nicht nur eins.
-- [ ] → Phase 3: „Warum nicht?" ist backendseitig fertig
+- [x] → Phase 3: „Warum nicht?" ist backendseitig fertig
   (`GET /api/recommendations/{source}/{target}/why-not` → `{ score, threshold, recommended, reasons[], missing[] }`).
   Phase 3 ist damit v.a. UI (Popover) + „Warum?" auf die vorhandene Reason-Chain der Karte.
-- [ ] → Phase 3: Reason-Chain-Struktur `{signal, detail, weight}` ist die geteilte Explainability-Payload
+- [x] → Phase 3: Reason-Chain-Struktur `{signal, detail, weight}` ist die geteilte Explainability-Payload
   (auch P25-Changelog). Der Plan-Kontrakt nennt `{ model?, capability?, reasons[], confidence, job }` —
   für P26 sind `model`/`capability` leer, `confidence` = `score`, `job` = die berechnende Job-Id (falls die
   UI sie braucht, aus dem Cache nachreichbar; Phase 1 liefert sie noch nicht mit der Karte).
+  **Aufgelöst:** kein Job-Feld am Empfehlungs-Popover (Cache hat keine `job_id`-Spalte, kein Fake-Wert) —
+  siehe Deviation in `phase-3-explainability.md`.

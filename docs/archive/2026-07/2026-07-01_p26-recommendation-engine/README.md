@@ -30,14 +30,14 @@ Kein Mockup. Karte = Vorschaubild + Score + Reason-Checkliste (Dok 050 §6). Doc
 |---|---|---|---|
 | 1 | Recommendation-Job + Reason-Chain (Backend) | heikel (Scoring/Gewichtung) | **complete** |
 | 2 | Empfehlungs-Karten-UI (unter Lore Panel) | standard | **complete** |
-| 3 | Explainability „Warum?/Warum nicht?" | standard | pending |
+| 3 | Explainability „Warum?/Warum nicht?" | standard | **complete** |
 
 ## Finale AK (Gesamt)
-- [ ] Zu einem Bild erscheinen unter dem Lore Panel Empfehlungen mit Vorschaubild, Score, Begründungskette aus konkreten Signalen (Person/Rolle/Film + CLIP-Wert).
-- [ ] Empfehlungen kombinieren nachweisbar Bild-Ähnlichkeit **und** Graph (nicht nur CLIP) — an einem Beispiel belegbar.
-- [ ] „Warum?" zu jeder Empfehlung + „Warum nicht?" zu einem nicht empfohlenen Bild abrufbar.
-- [ ] Über Schwellwert + Gewichte konfigurierbar, abschaltbar.
-- [ ] Kein neuer Modell-Download, keine Laufzeit-Netzwerkzugriffe.
+- [x] Zu einem Bild erscheinen unter dem Lore Panel Empfehlungen mit Vorschaubild, Score, Begründungskette aus konkreten Signalen (Person/Rolle/Film + CLIP-Wert).
+- [x] Empfehlungen kombinieren nachweisbar Bild-Ähnlichkeit **und** Graph (nicht nur CLIP) — an einem Beispiel belegbar (User-Smoke-Test steht noch aus, siehe unten).
+- [x] „Warum?" zu jeder Empfehlung + „Warum nicht?" zu einem nicht empfohlenen Bild abrufbar.
+- [x] Über Schwellwert + Gewichte konfigurierbar, abschaltbar.
+- [x] Kein neuer Modell-Download, keine Laufzeit-Netzwerkzugriffe.
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende)
 1. `curl GET /api/recommendations?asset_id=<x>` → ≥1 Empfehlung mit gemischter Reason-Chain (CLIP + Graph-Signal sichtbar).
@@ -55,4 +55,15 @@ Kein Mockup. Karte = Vorschaubild + Score + Reason-Checkliste (Dok 050 §6). Doc
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_ — Follow-ups: Discovery/Sammlungsanalyse (Roadmap-Phase 8) · KI-Empfehlungstexte.
+
+**Summary:** Empfehlungs-Engine kombiniert CLIP-Bildähnlichkeit mit dem Wissensgraph (P22) zu Score +
+Begründungskette, ohne neues Modell. Phase 1 (Backend: Job, Cache, Score/Reason-Chain, `why-not`),
+Phase 2 (Empfehlungs-Karten unter dem Lore-Panel, generische `related-rail/` wiederverwendet), Phase 3
+(Explainability-Popover, geteilt zwischen Empfehlungs-Reasons, „Warum nicht?" und P25-Korrektur-Historie).
+
+**Deviations:** siehe Phasen-Dateien — Phase 1 (ein `RecommendationJob` statt zwei, ADR-026 statt 012,
+kein Depth-Schutz), Phase 2 (Job-Wait ohne Job-Id-Filter), Phase 3 (kein Job-Feld am
+Empfehlungs-Popover, `position: fixed` fürs Popover, „Warum nicht?" an der P36-Rail statt Bild-Picker).
+
+**Follow-ups:** Discovery/Sammlungsanalyse (Roadmap-Phase 8) · KI-Empfehlungstexte · Scoring-Gewichte an
+echtem Bildmaterial kalibrieren (User-Smoke-Test, siehe Phase-1-Risiko „Scoring-Qualität").

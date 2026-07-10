@@ -58,6 +58,16 @@
           <pf-icon name="pencil" [size]="11" />
           Das stimmt nicht
         </button>
+      } @else if (ent.owner === 'user') {
+        <pf-explainability-popover
+          class="lore-correction-explain"
+          label="Warum geändert?"
+          [open]="correctionExplainOpen()"
+          [payload]="correctionExplainPayload()"
+          [loading]="correctionExplainLoading()"
+          (triggerClicked)="onCorrectionExplainOpen()"
+          (closeRequested)="onCorrectionExplainClose()"
+        />
       }
     }
   </div>

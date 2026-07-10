@@ -102,7 +102,12 @@
             [items]="recommendations().items"
             [loading]="recommendations().status === 'computing'"
             loadingMessage="Wird berechnet …"
+            explainLabel="Warum?"
+            [explainOpenId]="recommendationExplainOpenId()"
+            [explainPayload]="recommendationExplainPayload()"
             (cardClick)="openRelatedAsset($event)"
+            (explainOpen)="onRecommendationExplainOpen($event)"
+            (explainClose)="onRecommendationExplainClose()"
           />
         </div>
       }
@@ -641,7 +646,13 @@
           [items]="relatedRail().items"
           [loading]="relatedRail().loading"
           [emptyMessage]="relatedRail().emptyMessage"
+          explainLabel="Warum nicht?"
+          [explainOpenId]="similarExplainOpenId()"
+          [explainPayload]="similarExplainPayload()"
+          [explainLoading]="similarExplainLoading()"
           (cardClick)="openRelatedAsset($event)"
+          (explainOpen)="onSimilarExplainOpen($event)"
+          (explainClose)="onSimilarExplainClose()"
         />
         @if (relatedRail().items.length > 0) {
           <button class="rel-add" (click)="openMoreSimilar()">

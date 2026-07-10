@@ -21,6 +21,17 @@
             }
           </ul>
         }
+        @if (explainLabel(); as label) {
+          <pf-explainability-popover
+            class="rr-rail__explain"
+            [label]="label"
+            [open]="explainOpenId() === item.assetId"
+            [payload]="explainPayload()"
+            [loading]="explainLoading()"
+            (triggerClicked)="onExplainClick(item.assetId)"
+            (closeRequested)="explainClose.emit()"
+          />
+        }
       </div>
     }
   </div>

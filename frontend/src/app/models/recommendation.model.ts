@@ -25,6 +25,19 @@ export interface RecommendationsResponse {
   recommendations: RecommendationDto[];
 }
 
+// „Warum nicht?" (P26 Phase 3) — live berechnet, nur auf Anfrage (Risiko: teuer, siehe README).
+// `missing` nennt fehlende Signale mit `detail: ''` (nichts vorhanden) und `weight` = was das
+// Signal wert gewesen wäre, hätte es gegriffen.
+export interface WhyNotResponse {
+  source_asset_id: number;
+  target_asset_id: number;
+  score: number;
+  threshold: number;
+  recommended: boolean;
+  reasons: RecommendationReasonDto[];
+  missing: RecommendationReasonDto[];
+}
+
 const SIGNAL_LABELS: Record<RecommendationSignal, string> = {
   same_person: 'gleiche Person',
   same_role: 'gleiche Rolle',
@@ -36,4 +49,10 @@ const SIGNAL_LABELS: Record<RecommendationSignal, string> = {
 export function recommendationReasonLabel(reason: RecommendationReasonDto): string {
   const label = SIGNAL_LABELS[reason.signal] ?? reason.signal;
   return reason.signal === 'clip' ? `✓ ${label} ${reason.detail}` : `✓ ${label} (${reason.detail})`;
+}
+
+// „✗ gleiche Rolle (fehlt)" — Gegenstück für die `missing`-Liste im „Warum nicht?"-Popover.
+export function recommendationMissingLabel(reason: RecommendationReasonDto): string {
+  const label = SIGNAL_LABELS[reason.signal] ?? reason.signal;
+  return `✗ ${label} (fehlt)`;
 }

@@ -13,8 +13,8 @@ import { Router } from '@angular/router';
 import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, startWith, type Observable } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, EntityRefDto, FaceDto, FaceMatch, Framing, PersonDto, RecommendationDto, RecommendationsResponse, RecommendationStatus, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
-import { recommendationReasonLabel } from '@photofant/models';
+import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, EntityRefDto, ExplainabilityPayload, FaceDto, FaceMatch, Framing, PersonDto, RecommendationDto, RecommendationsResponse, RecommendationStatus, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto, WhyNotResponse } from '@photofant/models';
+import { recommendationMissingLabel, recommendationReasonLabel } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, extractApiErrorMessage, PersonService, RecommendationService, SearchService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
@@ -40,6 +40,9 @@ interface RelatedRailData {
 interface RecommendationsData {
   status: RecommendationStatus;
   items: RelatedRailItem[];
+  // Rohe DTOs neben der Rail-Projektion — das „Warum?"-Popover (P26 Phase 3) braucht Score/
+  // Reason-Detail, die beim Mappen auf `RelatedRailItem.reasons: {label}[]` verloren gehen.
+  raw: RecommendationDto[];
 }
 
 interface GenMetaEntry { key: string; value: string }
@@ -307,7 +310,7 @@ export class Lightbox {
     ]).pipe(
       switchMap(([asset]: [AssetDto | null, number]) => this.loadRecommendations(asset)),
     ),
-    { initialValue: { status: 'ready', items: [] } as RecommendationsData },
+    { initialValue: { status: 'ready', items: [], raw: [] } as RecommendationsData },
   );
 
   // „Keine Empfehlungen" -> Bereich entfällt komplett (AK); „computing" zeigt die Sektion
@@ -716,6 +719,12 @@ export class Lightbox {
       this.showRelationBrowser.set(null);
       this.relationBrowserQuery.set('');
       this.relationBrowserSelected.set([]);
+      // Reset Explainability-Popover (P26 Phase 3) — Cache ist pro Quellbild gültig
+      this.recommendationExplainOpenId.set(null);
+      this.similarExplainOpenId.set(null);
+      this.similarExplainLoading.set(false);
+      this.similarExplainPayload.set(null);
+      this.whyNotCache.clear();
     });
 
     // Metadaten-Drafts aus `detail()` initialisieren (framing lebt nur dort) —
@@ -1128,7 +1137,7 @@ export class Lightbox {
 
   private loadRecommendations(asset: AssetDto | null): Observable<RecommendationsData> {
     if (asset == null) {
-      return of({ status: 'ready', items: [] });
+      return of({ status: 'ready', items: [], raw: [] });
     }
     return this.recommendationService.getRecommendations(asset.id).pipe(
       map((response: RecommendationsResponse): RecommendationsData => ({
@@ -1138,12 +1147,102 @@ export class Lightbox {
           score: recommendation.score,
           reasons: recommendation.reasons.map((reason) => ({ label: recommendationReasonLabel(reason) })),
         })),
+        raw: response.recommendations,
       })),
       catchError((err: unknown) => {
         console.error('[Lightbox] Empfehlungen konnten nicht geladen werden:', err);
-        return of({ status: 'ready', items: [] } as RecommendationsData);
+        return of({ status: 'ready', items: [], raw: [] } as RecommendationsData);
       }),
     );
+  }
+
+  // ── Explainability „Warum?"/„Warum nicht?" (P26 Phase 3) ──────────────────
+  // „Warum?" (Empfehlungs-Karte): Score/Reasons liegen schon lokal vor (aus `recommendations()`),
+  // kein zweiter Request nötig. „Warum nicht?" (Ähnliche-Bilder-Karte): live berechnet, nur auf
+  // Anfrage (Risiko „teuer", siehe README) — Ergebnis pro Zielbild gecacht, damit erneutes
+  // Öffnen desselben Popovers nicht erneut rechnet.
+
+  protected readonly recommendationExplainOpenId = signal<number | null>(null);
+
+  protected readonly recommendationExplainPayload = computed((): ExplainabilityPayload | null => {
+    const assetId = this.recommendationExplainOpenId();
+    if (assetId == null) { return null; }
+    const raw = this.recommendations().raw.find((item: RecommendationDto) => item.asset_id === assetId);
+    if (raw == null) { return null; }
+    return {
+      title: 'Warum empfohlen?',
+      confidencePercent: Math.round(raw.score * 100),
+      reasons: raw.reasons.map(recommendationReasonLabel),
+      missing: [],
+      meta: [],
+    };
+  });
+
+  protected onRecommendationExplainOpen(assetId: number): void {
+    this.recommendationExplainOpenId.set(assetId);
+  }
+
+  protected onRecommendationExplainClose(): void {
+    this.recommendationExplainOpenId.set(null);
+  }
+
+  protected readonly similarExplainOpenId = signal<number | null>(null);
+  protected readonly similarExplainLoading = signal(false);
+  protected readonly similarExplainPayload = signal<ExplainabilityPayload | null>(null);
+  private readonly whyNotCache = new Map<number, WhyNotResponse>();
+
+  protected onSimilarExplainOpen(targetAssetId: number): void {
+    this.similarExplainOpenId.set(targetAssetId);
+    const cached = this.whyNotCache.get(targetAssetId);
+    if (cached != null) {
+      this.similarExplainPayload.set(this.buildWhyNotPayload(cached));
+      return;
+    }
+    const sourceAssetId = this.asset()?.id;
+    if (sourceAssetId == null) { return; }
+    this.similarExplainLoading.set(true);
+    this.similarExplainPayload.set(null);
+    this.recommendationService.whyNot(sourceAssetId, targetAssetId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response: WhyNotResponse): void => {
+          this.whyNotCache.set(targetAssetId, response);
+          this.similarExplainLoading.set(false);
+          // Guard: der Nutzer kann bis zur Antwort ein anderes Popover geöffnet/geschlossen
+          // haben — nicht das inzwischen falsche Payload einblenden.
+          if (this.similarExplainOpenId() === targetAssetId) {
+            this.similarExplainPayload.set(this.buildWhyNotPayload(response));
+          }
+        },
+        error: (err: unknown): void => {
+          console.error('[Lightbox] „Warum nicht?" konnte nicht berechnet werden:', err);
+          this.similarExplainLoading.set(false);
+          if (this.similarExplainOpenId() === targetAssetId) {
+            this.similarExplainPayload.set({
+              title: 'Warum nicht?',
+              confidencePercent: null,
+              reasons: [],
+              missing: [],
+              meta: [{ label: 'Fehler', value: 'Konnte nicht berechnet werden' }],
+            });
+          }
+        },
+      });
+  }
+
+  protected onSimilarExplainClose(): void {
+    this.similarExplainOpenId.set(null);
+    this.similarExplainLoading.set(false);
+  }
+
+  private buildWhyNotPayload(response: WhyNotResponse): ExplainabilityPayload {
+    return {
+      title: response.recommended ? 'Erfüllt die Empfehlungs-Schwelle' : 'Warum nicht empfohlen?',
+      confidencePercent: Math.round(response.score * 100),
+      reasons: response.reasons.map(recommendationReasonLabel),
+      missing: response.missing.map(recommendationMissingLabel),
+      meta: [],
+    };
   }
 
   // „mehr" — öffnet die Galerie im Reverse-Modus (Phase 2) zu genau diesem Bild. Nutzt

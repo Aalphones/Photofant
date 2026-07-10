@@ -16,3 +16,4 @@ export { ComfyuiImportDialog } from './comfyui-import-dialog/comfyui-import-dial
 export { ExportDialog } from './export-dialog/export-dialog';
 export type { ExportDialogFilters } from './export-dialog/export-dialog';
 export { AssignPersonDialog } from './assign-person-dialog/assign-person-dialog';
+export { ExplainabilityPopover } from './explainability-popover/explainability-popover';

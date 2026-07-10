@@ -24,8 +24,10 @@ export type {
   RecommendationDto,
   RecommendationStatus,
   RecommendationsResponse,
+  WhyNotResponse,
 } from './recommendation.model';
-export { recommendationReasonLabel } from './recommendation.model';
+export { recommendationReasonLabel, recommendationMissingLabel } from './recommendation.model';
+export type { ExplainabilityMetaEntry, ExplainabilityPayload } from './explainability.model';
 
 export type {
   Collection,
