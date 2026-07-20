@@ -42,12 +42,12 @@ One row per unique content-hash (canonical image).
 |---|---|---|
 | `id` | INTEGER PK | |
 | `content_hash` | TEXT UNIQUE | SHA-256 hex; indexed |
-| `source` | TEXT | `original \| sdxl \| flux \| ai_generated` |
+| `source` | TEXT | `original \| sdxl \| flux \| ai_generated`; indexed |
 | `width` | INTEGER | pixels |
 | `height` | INTEGER | pixels |
 | `file_size` | INTEGER | bytes |
 | `format` | TEXT | `png \| jpeg \| webp \| …` |
-| `framing` | TEXT | `close_up \| medium \| full_body \| …` (filled in P5) |
+| `framing` | TEXT | `close_up \| medium \| full_body \| …` (filled in P5); indexed |
 | `quality_score` | REAL | (filled in P5) |
 | `age` | INTEGER | from `buffalo_l` (filled in P7) |
 | `caption` | TEXT | Florence-2 caption (filled in P5 Phase 3) |
@@ -64,7 +64,8 @@ One row per unique content-hash (canonical image).
 | `processed_at` | DATETIME | last full pipeline run |
 
 Indexes: `ix_asset_content_hash` (unique), `ix_asset_created_at`, `ix_asset_original_id`
-(migration 0023, P21 Phase 1 — Stapel-Query resolviert `original_id`-Ketten pro Seite).
+(migration 0023, P21 Phase 1 — Stapel-Query resolviert `original_id`-Ketten pro Seite),
+`ix_asset_source`, `ix_asset_framing` (migration 0038 — Galerie-Filter „Quelle"/„Framing").
 
 ### `asset_instance` (migration 0002)
 
@@ -86,13 +87,14 @@ target instance and cleans up the source person's instance if no faces remain.
 | `asset_id` | INTEGER FK → `asset.id` | |
 | `person_id` | INTEGER FK → `person.id` | |
 | `path` | TEXT | absolute path; follows moves |
-| `favourite` | BOOLEAN | mirrors physical location in `favourites/` (P5: toggled via physical move) |
+| `favourite` | BOOLEAN | mirrors physical location in `favourites/` (P5: toggled via physical move); indexed |
 | `fixed_person` | BOOLEAN | manually sorted — no auto-redistribution |
 | `deleted_at` | DATETIME | soft-delete; NULL = active; indexed |
 | `missing_at` | DATETIME | reconcile marker (migration 0003); NULL = present; a timestamp = acknowledged-missing, hidden from the next FS↔DB scan |
 
 Unique constraint: `(asset_id, person_id)`. Indexes: `ix_asset_instance_deleted_at`,
-`ix_asset_instance_person_id` (migration 0030, P32 Phase 1 — Personen-Counts/Galerie-Filter/Namenssuche filtern über `person_id`).
+`ix_asset_instance_person_id` (migration 0030, P32 Phase 1 — Personen-Counts/Galerie-Filter/Namenssuche filtern über `person_id`),
+`ix_asset_instance_favourite` (migration 0038 — Galerie-Filter „Favoriten").
 
 **`path` + `deleted_at` semantics (P5).** `path` always tracks the file's *actual* on-disk
 location and is rewritten on every physical move (favourite, soft-delete, restore).
@@ -341,6 +343,10 @@ Zwei partielle Unique-Indizes (migration 0027 — ersetzt den ursprünglichen, z
 
 Grund für die Aufteilung: `face_suggestion`-Zeilen setzen `asset_a_id == asset_b_id` (kein "Paar", nur ein Gesicht) — ein Foto mit mehreren Gesichtern, die alle zur Review anstehen, konnte sonst nur die erste Zeile einfügen (UNIQUE-Verletzung auf `(type, asset_a_id, asset_b_id)` ab dem zweiten Gesicht desselben Fotos).
 
+Zusätzlich `ix_review_item_type_resolved_at` auf `(type, resolved_at)` (migration 0038) — die
+Review-Queue-Listen filtern durchgängig auf beide Spalten zusammen; die beiden partiellen
+Unique-Indizes oben sind auf andere Bedingungen gemünzt und bedienen diesen Zugriff nicht.
+
 Flow Duplikate (ADR-018; DINOv2 seit P37 Phase 4, ADR-024): Embedding-Job berechnet `dino_embedding` → Post-Embedding-Check via sqlite-vec-Suche auf `vec_asset_dino` (Cosine-Distance ≤ `dupe_dino_threshold`) legt bei Treffer ein `review_item` an → User entscheidet im Review-Tab. Läuft nur, wenn ein DINOv2-Modell aktiv ist (kein Fallback auf SigLIP2 — Duplikat-Erkennung ist Primärsignal, nicht Rerank). `dupe_clip_threshold` bleibt als Settings-Key inert für Rollback.
 
 Flow Gesichts-Vorschläge: Clustering/inkrementelles Matching (`photofant/clustering/engine.py`, `photofant/jobs/clustering_job.py`) legt für ein Gesicht mit `band == "review"` eine Zeile an → User entscheidet in der Review-Queue (`photofant/api/review_queue.py`: confirm/reject/reassign).
@@ -452,7 +458,7 @@ Ergebnis der Fusion — eine Zeile pro (Asset, zugewiesenem Label).
 | Column | Type | Notes |
 |---|---|---|
 | `asset_id` | INTEGER FK → `asset.id` | PK-Teil; indexed (`ix_asset_classification_asset_id`) |
-| `label_id` | INTEGER FK → `classification_label.id` ON DELETE CASCADE | PK-Teil |
+| `label_id` | INTEGER FK → `classification_label.id` ON DELETE CASCADE | PK-Teil; indexed (`ix_asset_classification_label_id`, migration 0038 — PK-Reihenfolge `(asset_id, label_id)` deckt Einzel-Filter auf `label_id` nicht) |
 | `category_id` | INTEGER FK → `classification_category.id` | denormalisiert für Filter/Facets; indexed (`ix_asset_classification_category_id`) |
 | `confidence` | FLOAT | nicht null; fusionierter Score |
 | `source` | TEXT | `clip` \| `wd14` \| `fused` — welche(s) Signal(e) den Score getragen haben |

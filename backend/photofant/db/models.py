@@ -39,12 +39,12 @@ class Asset(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     content_hash: Mapped[str] = mapped_column(Text, unique=True, nullable=False, index=True)
-    source: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)  # Galerie-Filter (Migration 0038)
     width: Mapped[int | None] = mapped_column(Integer, nullable=True)
     height: Mapped[int | None] = mapped_column(Integer, nullable=True)
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     format: Mapped[str | None] = mapped_column(Text, nullable=True)
-    framing: Mapped[str | None] = mapped_column(Text, nullable=True)
+    framing: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)  # Galerie-Filter (Migration 0038)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     caption: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -76,7 +76,9 @@ class AssetInstance(Base):
     asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), nullable=False)
     person_id: Mapped[int] = mapped_column(ForeignKey("person.id"), nullable=False, index=True)
     path: Mapped[str] = mapped_column(Text, nullable=False)
-    favourite: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    favourite: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="0", index=True
+    )  # Galerie-Filter (Migration 0038)
     fixed_person: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     missing_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -272,8 +274,8 @@ class AssetClassification(Base):
 
     asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), primary_key=True, index=True)
     label_id: Mapped[int] = mapped_column(
-        ForeignKey("classification_label.id", ondelete="CASCADE"), primary_key=True,
-    )
+        ForeignKey("classification_label.id", ondelete="CASCADE"), primary_key=True, index=True,
+    )  # PK-Reihenfolge (asset_id, label_id) deckt Einzel-Filter auf label_id nicht (Migration 0038)
     category_id: Mapped[int] = mapped_column(
         ForeignKey("classification_category.id"), nullable=False, index=True,
     )  # denormalisiert für Filter/Facets
@@ -398,6 +400,9 @@ class ReviewItem(Base):
             "uq_review_item_face_pending", "face_id",
             unique=True, sqlite_where=text("type = 'face_suggestion' AND resolved_at IS NULL"),
         ),
+        # Review-Queue-Listen filtern durchgängig auf beide Spalten zusammen; die beiden
+        # partial-unique Indizes oben bedienen dieses Paar nicht (Migration 0038).
+        Index("ix_review_item_type_resolved_at", "type", "resolved_at"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
