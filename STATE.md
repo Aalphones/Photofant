@@ -1,8 +1,17 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-20_recommendation-cache-invalidation/`
-**Phase:** 4/4 — Clustering (pending)
-**Nächster Schritt:** Phase 4 umsetzen (automatische Zuordnung nach Import invalidiert Empfehlungen — siehe `phase-4-clustering.md`, vermutlicher Hauptverursacher der Cache-Staleness).
+**Aktiver Plan:** (kein aktiver Plan — Backlog: `docs/planning/2026-07-01_p27-gemma-integration/`
+wartet auf User-Smoke, `docs/planning/2026-07-06_p34-mcp-wissensbasis/` blockiert bis dahin)
+**Phase:** —
+**Nächster Schritt:** Empfehlungs-Cache-Invalidierung (4/4 Phasen) ist fertig und archiviert —
+Smoke-Checkliste unten ausstehend (User). Danach ggf. P27-Smoke nachholen oder neuen Plan wählen.
+
+## Empfehlungs-Cache-Invalidierung abgeschlossen (alle 4 Phasen)
+
+Recommendation-Cache invalidiert jetzt gezielt bei manuellen Face-/Person-Aktionen,
+Wissensgraph-Verknüpfungen und automatischem Clustering nach Import. Archiviert nach
+`docs/archive/2026-07/2026-07-20_recommendation-cache-invalidation/`. Smoke-Checkliste
+(Wackelstellen zuerst, Clustering-Pfad an erster Stelle) steht in der README dort.
 
 ## Phase 3 erledigt (Wissensgraph-Verknüpfungen)
 

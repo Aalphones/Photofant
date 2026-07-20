@@ -105,16 +105,32 @@ Reihenfolge nach Konfidenz — zuerst prüfen, wo ich am unsichersten war:
 
 ## Summary
 
-_(beim Archivieren ausfüllen)_
+Alle 4 Phasen komplett. Recommendation-Cache invalidiert jetzt gezielt bei jeder
+Graph-relevanten Mutation: manuelle Face-/Person-Aktionen (Phase 2), Wissensgraph-
+Verknüpfungen (Phase 3) und automatisches Clustering nach Import (Phase 4 — vermutlicher
+Hauptverursacher der gemeldeten Staleness, da die meisten Personen-Zuordnungen automatisch
+laufen). `knowledge/service.py` blieb wie vereinbart frei von Person-/Asset-Imports.
 
 ## Files touched
 
-_(beim Archivieren ausfüllen)_
+- `backend/photofant/recommendation/context.py` — `assets_of_persons`, `assets_for_entity`
+- `backend/photofant/jobs/recommendation_job.py` — `invalidate_recommendations`
+- `backend/photofant/api/faces.py`, `api/persons.py`, `api/assets.py`, `api/review_queue.py`,
+  `jobs/bulk_assign_person_job.py` — Phase-2-Call-Sites
+- `backend/photofant/media/person_folders.py` — `split_faces`/`delete_person` auf TypedDict
+  umgestellt (Nebenbei-Fix, 5 vorbestehende mypy-Fehler behoben)
+- `backend/photofant/api/knowledge.py`, `jobs/knowledge_patch_job.py` — Phase-3-Call-Sites
+- `backend/photofant/clustering/engine.py`, `jobs/clustering_job.py` — Phase-4-Call-Sites
+- `docs/decisions/ADR-030-*.md` (Phase 1) · `docs/code-map.md` (Zeile „Empfehlungen")
+- Neue Testdateien: `test_recommendation_invalidation_{manual,knowledge,clustering}.py`
+  (6 + 5 + 4 Tests)
 
 ## Commits
 
-_(beim Archivieren ausfüllen)_
+`27d98a9` Phase 1 · `9c1be33` Phase 2 · `2523a8f` Phase 3 · `981a311` Phase 4
 
 ## Deviations from plan
 
-_(beim Archivieren ausfüllen)_
+- Phase 4: Plan-Annahme „HDBSCAN läuft mit einem Embedding leer durch" war ungenau —
+  echtes sklearn wirft bei `n_samples=1` `ValueError`. Im Pre-Match-Test zusätzlich
+  `_run_hdbscan` gestubbt, kein Effekt auf den geprüften Invalidierungs-Pfad.
