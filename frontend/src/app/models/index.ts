@@ -158,6 +158,13 @@ export type {
   KnowledgeImportExplainability,
   KnowledgeImportSuggestion,
   KnowledgeImportResult,
+  UpdateSuggestionRequest,
+  UpdateSuggestionResponse,
+  KnowledgeUpdateExplainability,
+  KnowledgeUpdateProposal,
+  KnowledgeUpdateResult,
+  AcceptUpdateSuggestionRequest,
+  AcceptUpdateSuggestionResponse,
 } from './knowledge.model';
 export { OWNERS, TASK_KINDS, TASK_STATUSES, AI_AUTONOMY_MODES } from './knowledge.model';
 

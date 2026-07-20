@@ -49,31 +49,100 @@
               </button>
             </div>
           </form>
+        } @else if (updateSuggestionEntityId() === ent.id) {
+          <p class="lore-bio">{{ bioFor(lore) }}</p>
+          <div class="lore-suggestion">
+            @if (updateSuggestionPending()) {
+              <p class="lore-suggestion__status">Gemma erstellt einen Vorschlag…</p>
+            } @else {
+              <!-- `as`-Bindungen sind laut Angular-Compiler (NG5002) nur auf dem primären
+                   @if erlaubt, nicht auf @else if — deshalb hier zwei unabhängige primäre
+                   @if-Blöcke statt einer @else-if-Kette (error/result schließen sich in der
+                   Komponenten-Logik gegenseitig aus, siehe requestUpdateSuggestion). -->
+              @if (updateSuggestionError(); as err) {
+                <p class="lore-correction__error">{{ err }}</p>
+                <div class="lore-correction__actions">
+                  <button class="lore-correction__cancel" type="button" (click)="cancelUpdateSuggestion()">
+                    Schließen
+                  </button>
+                </div>
+              }
+              @if (updateSuggestionResult(); as result) {
+                @if (result.proposal; as proposal) {
+                  <div class="lore-suggestion__diff">
+                    <p class="lore-suggestion__old">{{ result.old_body }}</p>
+                    <p class="lore-suggestion__new">{{ proposal.body }}</p>
+                  </div>
+                  <p class="lore-suggestion__reason">
+                    {{ result.explainability.reason }}
+                    @if (result.explainability.confidence; as confidence) {
+                      · {{ confidencePercent(confidence) }}% Konfidenz
+                    }
+                  </p>
+                  <div class="lore-correction__actions">
+                    <button
+                      class="lore-correction__save"
+                      type="button"
+                      [disabled]="updateAcceptPending()"
+                      (click)="acceptUpdateSuggestion()"
+                    >
+                      {{ updateAcceptPending() ? 'Übernimmt…' : 'Annehmen' }}
+                    </button>
+                    <button class="lore-correction__cancel" type="button" (click)="cancelUpdateSuggestion()">
+                      Ablehnen
+                    </button>
+                  </div>
+                } @else {
+                  <p class="lore-suggestion__status">
+                    Vorschlag verworfen: {{ result.validation_errors.join(', ') }}
+                  </p>
+                  <div class="lore-correction__actions">
+                    <button class="lore-correction__cancel" type="button" (click)="cancelUpdateSuggestion()">
+                      Schließen
+                    </button>
+                  </div>
+                }
+              }
+            }
+          </div>
         } @else {
           @if (bioFor(lore); as text) {
             <p class="lore-bio">{{ text }}</p>
           }
-          @if (canCorrectFor(lore)) {
-            <button
-              class="lore-correct"
-              type="button"
-              (click)="startCorrection(ent.id, 'body', bioFor(lore) ?? '')"
-              title="Das stimmt nicht"
-            >
-              <pf-icon name="pencil" [size]="11" />
-              Das stimmt nicht
-            </button>
-          } @else if (ent.owner === 'user') {
-            <pf-explainability-popover
-              class="lore-correction-explain"
-              label="Warum geändert?"
-              [open]="correctionExplainOpenId() === ent.id"
-              [payload]="correctionExplainPayload()"
-              [loading]="correctionExplainLoading()"
-              (triggerClicked)="onCorrectionExplainOpen(ent.id)"
-              (closeRequested)="onCorrectionExplainClose()"
-            />
-          }
+          <div class="lore-actions">
+            @if (canCorrectFor(lore)) {
+              <button
+                class="lore-correct"
+                type="button"
+                (click)="startCorrection(ent.id, 'body', bioFor(lore) ?? '')"
+                title="Das stimmt nicht"
+              >
+                <pf-icon name="pencil" [size]="11" />
+                Das stimmt nicht
+              </button>
+            } @else if (ent.owner === 'user') {
+              <pf-explainability-popover
+                class="lore-correction-explain"
+                label="Warum geändert?"
+                [open]="correctionExplainOpenId() === ent.id"
+                [payload]="correctionExplainPayload()"
+                [loading]="correctionExplainLoading()"
+                (triggerClicked)="onCorrectionExplainOpen(ent.id)"
+                (closeRequested)="onCorrectionExplainClose()"
+              />
+            }
+            @if (canRequestUpdateFor(lore)) {
+              <button
+                class="lore-correct"
+                type="button"
+                (click)="requestUpdateSuggestion(ent.id)"
+                title="Gemma schlägt eine Ergänzung vor"
+              >
+                <pf-icon name="sparkle" [size]="11" />
+                Ergänzen (KI)
+              </button>
+            }
+          </div>
         }
       </div>
 

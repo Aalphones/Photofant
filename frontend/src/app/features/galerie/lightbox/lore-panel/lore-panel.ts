@@ -12,7 +12,19 @@ import {
   type Observable,
 } from 'rxjs';
 import { JobsService, KnowledgeService } from '@photofant/services';
-import type { ChangelogEntryDto, EntityRefDto, ExplainabilityPayload, Job, LoreDto, PatchJobResponse, ResolvedRelationshipDto } from '@photofant/models';
+import type {
+  AcceptUpdateSuggestionResponse,
+  AiAutonomyDto,
+  ChangelogEntryDto,
+  EntityRefDto,
+  ExplainabilityPayload,
+  Job,
+  KnowledgeUpdateResult,
+  LoreDto,
+  PatchJobResponse,
+  ResolvedRelationshipDto,
+  UpdateSuggestionResponse,
+} from '@photofant/models';
 import { ExplainabilityPopover, Icon } from '@photofant/ui';
 
 type LoreStatus = 'loading' | 'ready' | 'empty';
@@ -135,10 +147,25 @@ export class LorePanel {
   protected readonly correctionExplainPayload = signal<ExplainabilityPayload | null>(null);
   private correctionExplainEntityId: string | null = null;
 
+  // ── KI-Ergänzung (P27 Phase 3) — „Ergänzen (KI)" ─────────────────────────
+  // Autonomie einmalig laden (dumme, self-contained Komponente ohne Store-Anbindung wie
+  // der Rest des Panels — kein Umweg über den Wizard-NgRx-Pfad nötig). Fehler degradieren
+  // still zu „aus", der Button bleibt dann versteckt statt einen kaputten Zustand zu zeigen.
+  protected readonly updateAutonomy = signal<AiAutonomyDto | null>(null);
+  protected readonly updateSuggestionEntityId = signal<string | null>(null);
+  protected readonly updateSuggestionPending = signal(false);
+  protected readonly updateSuggestionResult = signal<KnowledgeUpdateResult | null>(null);
+  protected readonly updateSuggestionError = signal<string | null>(null);
+  protected readonly updateAcceptPending = signal(false);
+
   constructor() {
-    // Schließt offene Korrektur/„Warum geändert?"-Zustände bei jedem Lore-Reload (Bildwechsel
-    // oder frische Korrektur) — sonst zeigt ein Popover kurz das Payload der vorigen Entity,
-    // bis der Entity-Id-Guard in `onCorrectionExplainOpen` beim nächsten Klick nachlädt.
+    this.knowledgeService.getAiAutonomy()
+      .pipe(take(1), catchError(() => of(null)))
+      .subscribe((autonomy: AiAutonomyDto | null): void => { this.updateAutonomy.set(autonomy); });
+
+    // Schließt offene Korrektur/„Warum geändert?"/KI-Ergänzung-Zustände bei jedem
+    // Lore-Reload (Bildwechsel oder frische Korrektur) — sonst zeigt ein Popover/Vorschlag
+    // kurz den Stand der vorigen Entity, bis der Entity-Id-Guard beim nächsten Klick nachlädt.
     effect((): void => {
       this.lores();
       this.correctingField.set(null);
@@ -146,7 +173,102 @@ export class LorePanel {
       this.correctionExplainOpenId.set(null);
       this.correctionExplainPayload.set(null);
       this.correctionExplainLoading.set(false);
+      this.updateSuggestionEntityId.set(null);
+      this.updateSuggestionResult.set(null);
+      this.updateSuggestionError.set(null);
+      this.updateSuggestionPending.set(false);
     });
+  }
+
+  // Dieselbe Bedingung wie „Das stimmt nicht": nur bei auto/inferred-Werten sinnvoll (ein
+  // user-owned Wert lehnt einen inferred-Schreibzugriff ohnehin über die Ownership-Prüfung
+  // ab). Zusätzlich abgeschaltet, wenn `ai.autonomy.knowledge_update === 'off'`.
+  protected canRequestUpdateFor(lore: LoreDto): boolean {
+    return this.canCorrectFor(lore) && this.updateAutonomy()?.knowledge_update !== 'off';
+  }
+
+  protected requestUpdateSuggestion(entityId: string): void {
+    this.updateSuggestionEntityId.set(entityId);
+    this.updateSuggestionResult.set(null);
+    this.updateSuggestionError.set(null);
+    this.updateSuggestionPending.set(true);
+    this.knowledgeService.requestUpdateSuggestion({ entity_id: entityId })
+      .pipe(
+        switchMap((response: UpdateSuggestionResponse): Observable<Job> =>
+          this.jobsService.streamJobs().pipe(
+            filter((job: Job): boolean =>
+              job.id === response.job_id && (job.state === 'done' || job.state === 'error'),
+            ),
+            take(1),
+          ),
+        ),
+      )
+      .subscribe({
+        next: (job: Job): void => {
+          this.updateSuggestionPending.set(false);
+          if (job.state === 'error') {
+            this.updateSuggestionError.set(job.error ?? 'Vorschlag fehlgeschlagen');
+            return;
+          }
+          if (job.result == null) {
+            this.updateSuggestionError.set('Vorschlag fehlgeschlagen');
+            return;
+          }
+          this.updateSuggestionResult.set(job.result as unknown as KnowledgeUpdateResult);
+        },
+        error: (): void => {
+          this.updateSuggestionPending.set(false);
+          this.updateSuggestionError.set('Vorschlag fehlgeschlagen');
+        },
+      });
+  }
+
+  protected confidencePercent(confidence: number): number {
+    return Math.round(confidence * 100);
+  }
+
+  protected cancelUpdateSuggestion(): void {
+    this.updateSuggestionEntityId.set(null);
+    this.updateSuggestionResult.set(null);
+    this.updateSuggestionError.set(null);
+  }
+
+  protected acceptUpdateSuggestion(): void {
+    const entityId = this.updateSuggestionEntityId();
+    const result = this.updateSuggestionResult();
+    const proposal = result?.proposal;
+    if (entityId == null || result == null || proposal == null) { return; }
+
+    this.updateAcceptPending.set(true);
+    this.updateSuggestionError.set(null);
+    this.knowledgeService
+      .acceptUpdateSuggestion({ entity_id: entityId, body: proposal.body, reason: result.explainability.reason })
+      .pipe(
+        switchMap((response: AcceptUpdateSuggestionResponse): Observable<Job> =>
+          this.jobsService.streamJobs().pipe(
+            filter((job: Job): boolean =>
+              job.id === response.job_id && (job.state === 'done' || job.state === 'error'),
+            ),
+            take(1),
+          ),
+        ),
+      )
+      .subscribe({
+        next: (job: Job): void => {
+          this.updateAcceptPending.set(false);
+          if (job.state === 'error') {
+            this.updateSuggestionError.set(job.error ?? 'Übernahme fehlgeschlagen');
+            return;
+          }
+          this.updateSuggestionEntityId.set(null);
+          this.updateSuggestionResult.set(null);
+          this.refreshTick.update((tick: number): number => tick + 1);
+        },
+        error: (): void => {
+          this.updateAcceptPending.set(false);
+          this.updateSuggestionError.set('Übernahme fehlgeschlagen');
+        },
+      });
   }
 
   protected readonly showEmptyState = computed((): boolean =>

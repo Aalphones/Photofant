@@ -41,7 +41,7 @@ Kein Mockup. KI-Vorschläge erscheinen **im vorhandenen** Wizard (P23) und Lore 
 |---|---|---|---|
 | 1 | AI-Layer + Gemma-Adapter + Prompt-Library (Backend) | heikel (Architektur + Modell-Runtime-Entscheidung) | ✅ complete |
 | 2 | KnowledgeImportJob — Gemma füllt den Wizard-Vorschlag | heikel | ✅ complete |
-| 3 | KnowledgeUpdateJob — Ergänzungs-Vorschläge im Lore Panel | standard | pending |
+| 3 | KnowledgeUpdateJob — Ergänzungs-Vorschläge im Lore Panel | standard | ✅ complete |
 | 4 | Interview-Mode für private Entities | heikel | pending |
 
 ## Finale AK (Gesamt)

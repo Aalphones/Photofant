@@ -179,6 +179,56 @@ export interface KnowledgeImportResult {
   validation_errors: string[];
 }
 
+// P27 Phase 3 — Anfrage für einen KI-Ergänzungsvorschlag zu einer bestehenden Entity
+// (Lore Panel „Ergänzen (KI)").
+export interface UpdateSuggestionRequest {
+  entity_id: string;
+}
+
+export interface UpdateSuggestionResponse {
+  job_id: string;
+}
+
+// P27 Phase 3 — Explainability eines Ergänzungsvorschlags (gleiche Form wie der Import).
+export interface KnowledgeUpdateExplainability {
+  model_id: string;
+  capability: string;
+  prompt_version: string | null;
+  duration_ms: number;
+  confidence: number | null;
+  reason: string;
+}
+
+// P27 Phase 3 — die vorgeschlagene Ergänzung. Nur `body` (FINDINGS Phase 2/3: ein rohes
+// Text-LM liefert für Aliase/Beziehungen nichts Verlässliches — dieselbe Einschränkung wie
+// beim Import-Vorschlag).
+export interface KnowledgeUpdateProposal {
+  body: string;
+}
+
+// P27 Phase 3 — Ergebnis des KnowledgeUpdateJob, über den Job-Stream geliefert. `proposal`
+// ist null, wenn der Validator den Vorschlag abgewiesen hat (`validation_errors` erklärt
+// warum); `old_body` liefert die Diff-Basis fürs Lore Panel.
+export interface KnowledgeUpdateResult {
+  proposal: KnowledgeUpdateProposal | null;
+  old_body: string;
+  explainability: KnowledgeUpdateExplainability;
+  validation_errors: string[];
+}
+
+// P27 Phase 3 — Annahme eines Ergänzungsvorschlags. Schreibt über den P25-Patch-Pfad mit
+// `owner=inferred` (serverseitig fixiert) — anders als `PatchEntityRequest`, das die
+// manuelle Nutzer-Korrektur ist (`owner=user`, fest im Backend).
+export interface AcceptUpdateSuggestionRequest {
+  entity_id: string;
+  body: string;
+  reason: string;
+}
+
+export interface AcceptUpdateSuggestionResponse {
+  job_id: string;
+}
+
 // P25 Phase 3 — Explainability-Eintrag einer Korrektur (geteilte Payload mit P26 Phase 3).
 export interface ChangelogEntryDto {
   id: number;

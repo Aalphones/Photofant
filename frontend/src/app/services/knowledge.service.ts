@@ -2,6 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import type {
+  AcceptUpdateSuggestionRequest,
+  AcceptUpdateSuggestionResponse,
   AiAutonomyDto,
   ChangelogEntryDto,
   CreateEntityRequest,
@@ -15,6 +17,8 @@ import type {
   TaskDto,
   TaskStatus,
   UpdateEntityRequest,
+  UpdateSuggestionRequest,
+  UpdateSuggestionResponse,
 } from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
@@ -102,5 +106,18 @@ export class KnowledgeService {
   // nur der `job_id`-Rückgabewert hier.
   requestImportSuggestion(request: ImportSuggestionRequest): Observable<ImportSuggestionResponse> {
     return this.http.post<ImportSuggestionResponse>('/api/knowledge/ai/import-suggestion', request);
+  }
+
+  // P27 Phase 3 — löst den KnowledgeUpdateJob aus (Gemma schlägt eine Ergänzung zur
+  // bestehenden Beschreibung vor, Lore Panel „Ergänzen (KI)"). Ergebnis über den Job-Stream.
+  requestUpdateSuggestion(request: UpdateSuggestionRequest): Observable<UpdateSuggestionResponse> {
+    return this.http.post<UpdateSuggestionResponse>('/api/knowledge/ai/update-suggestion', request);
+  }
+
+  // P27 Phase 3 — übernimmt einen bestätigten Ergänzungsvorschlag über den P25-Patch-Pfad
+  // mit owner=inferred (serverseitig fixiert) — anders als `patchEntity`, das immer
+  // owner=user setzt (manuelle Korrektur).
+  acceptUpdateSuggestion(request: AcceptUpdateSuggestionRequest): Observable<AcceptUpdateSuggestionResponse> {
+    return this.http.post<AcceptUpdateSuggestionResponse>('/api/knowledge/ai/update-suggestion/accept', request);
   }
 }
