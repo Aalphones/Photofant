@@ -39,7 +39,7 @@ die UI (nur In-Place-Bind, das Modell liegt schon).
 ## Phasen
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | GGUF-Runtime + Adapter + VRAM-Koordination | heikel (2. Runtime, Concurrency/VRAM, ADR) | pending |
+| 1 | GGUF-Runtime + Adapter + VRAM-Koordination | heikel (2. Runtime, Concurrency/VRAM, ADR) | complete |
 | 2 | Format-Routing + Manifest-Eintrag + In-Place-Bind | standard | pending |
 | 3 | Docs (ADR-029, ADR-028-Nachtrag, code-map, models.md) + Test | mechanisch | pending |
 

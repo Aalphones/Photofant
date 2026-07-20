@@ -41,6 +41,7 @@ from photofant.api import (
 )
 from photofant.config import get_models_dir
 from photofant.inference.generative_engine import generative_engine
+from photofant.inference.gguf_engine import gguf_engine
 from photofant.inference.session_manager import session_manager
 from photofant.jobs.download_job import scan_models_dir
 from photofant.jobs.face_folder_scan_job import enqueue_face_folder_scan
@@ -54,12 +55,13 @@ log = logging.getLogger(__name__)
 
 
 async def _idle_eviction_loop() -> None:
-    """Evict ONNX and generative sessions that have exceeded their idle timeout."""
+    """Evict ONNX, generative (torch) and GGUF sessions that exceeded their idle timeout."""
     while True:
         await asyncio.sleep(60)
         session_manager.evict_idle()
         ai_idle_timeout = load_settings()["ai"]["idleTimeoutSeconds"]
         generative_engine.evict_idle(ai_idle_timeout)
+        gguf_engine.evict_idle(ai_idle_timeout)
 
 
 @asynccontextmanager
@@ -100,6 +102,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await eviction_task
     await job_queue.stop()
     generative_engine.unload()
+    gguf_engine.unload()
     session_manager.shutdown()
 
 

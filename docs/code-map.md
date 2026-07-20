@@ -59,7 +59,7 @@ Pfade unten relativ zu `frontend/src/app/` bzw. `backend/photofant/`.
 | **App-Shell & Auth** | `app.component.ts`, `app.config.ts`, `app.routes.ts` · `shell/` (shell, nav-rail, top-bar) · `guards/auth.guard.ts` · `features/unlock/` · `services/auth.service.ts` | `main.py` · `api/auth.py`, `api/health.py`, `api/info.py` |
 | **Jobs / Queue** (alles Langsame) | `ui/job-dock/`, `ui/job-pill/`, `ui/rerun-dialog/` · `store/jobs/` · `services/jobs.service.ts` · `models/job.model.ts` | `api/jobs.py` · `jobs/queue.py` · `jobs/rerun_job.py` |
 | **DB & Persistenz** | — | `db/` (engine, session, models, cache, vector_index, face_vector_index) · `alembic/versions/` (Migrationen) |
-| **Inferenz-Infra** | `ui/gated-feature/` (Feature-Gating) | `inference/` (interfaces, preprocessing, session_manager, generative_engine; KI-Layer: capabilities, tools, prompt_library, adapters/gemma) · `models/loader.py` |
+| **Inferenz-Infra** | `ui/gated-feature/` (Feature-Gating) | `inference/` (interfaces, preprocessing, session_manager, generative_engine [torch], gguf_engine [llama.cpp, 2. Runtime]; KI-Layer: capabilities, tools, prompt_library, adapters/{gemma,gemma_gguf}) · `models/loader.py` |
 | **UI-Bausteine** | `ui/icon/`, `ui/shortcut-legend/` · `services/shortcut.service.ts` | — |
 
 ## Wo was wohnt (Faustregeln)

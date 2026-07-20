@@ -258,6 +258,15 @@ nvtx = [
 ]
 
 [[package]]
+name = "diskcache"
+version = "5.6.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/21/1c1ffc1a039ddcc459db43cc108658f32c57d271d7289a2794e401d0fdb6/diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc", size = 67916, upload-time = "2023-08-31T06:12:00.316Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/27/4570e78fc0bf5ea0ca45eb1de3818a23787af9b390c0b0a0033a1b8236f9/diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19", size = 45550, upload-time = "2023-08-31T06:11:58.822Z" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.137.0"
 source = { registry = "https://pypi.org/simple" }
@@ -499,6 +508,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/37/33/8a745436944947575b584231750a41417de1a38cf6a2e9251d1065651c09/librt-0.11.0-cp312-cp312-win_amd64.whl", hash = "sha256:75672f0bc524ede266287d532d7923dbce94c7514ad07627bac3d0c6d92cc4d9", size = 119831, upload-time = "2026-05-10T18:16:09.174Z" },
     { url = "https://files.pythonhosted.org/packages/59/67/a6739ac96e28b7855808bdb0370e250606104a859750d209e5a0716fe7ab/librt-0.11.0-cp312-cp312-win_arm64.whl", hash = "sha256:2f10cf143e4a9bb0f4f5af568a00df94a2d69ef41c2579584454bb0fe5cc642c", size = 103470, upload-time = "2026-05-10T18:16:10.369Z" },
 ]
+
+[[package]]
+name = "llama-cpp-python"
+version = "0.3.34"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "diskcache" },
+    { name = "jinja2" },
+    { name = "numpy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c1/2f/46487e949da42b31847853793ddbfd44c7414e94d4364c9a41f91f30af27/llama_cpp_python-0.3.34.tar.gz", hash = "sha256:d849d286d808284f1d3ec1bd6875572430d29d1f9574a010232caa4e9cef0e35", size = 71617302, upload-time = "2026-07-12T04:33:41.928Z" }
 
 [[package]]
 name = "mako"
@@ -867,6 +888,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+gemma-gguf = [
+    { name = "llama-cpp-python" },
+]
 generative = [
     { name = "accelerate" },
     { name = "safetensors" },
@@ -892,6 +916,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "huggingface-hub", specifier = ">=0.26" },
+    { name = "llama-cpp-python", marker = "extra == 'gemma-gguf'", specifier = ">=0.3" },
     { name = "mcp", specifier = ">=1.2" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "onnxruntime-gpu", specifier = ">=1.20" },
@@ -911,7 +936,7 @@ requires-dist = [
     { name = "transformers", marker = "extra == 'generative'", specifier = ">=4.44" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
 ]
-provides-extras = ["generative"]
+provides-extras = ["generative", "gemma-gguf"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -117,6 +117,12 @@ class GenerativeEngine:
             from transformers import AutoModelForCausalLM
             model_cls = AutoModelForCausalLM
 
+        # Cross-unload (ADR-029): exactly one heavy model resident across BOTH
+        # runtimes — evict the GGUF slot before this one takes VRAM. Lazy import
+        # against the import cycle (gguf_engine imports this module back).
+        from photofant.inference.gguf_engine import gguf_engine
+        gguf_engine.unload()
+
         with self._lock:
             self._evict_locked()
 

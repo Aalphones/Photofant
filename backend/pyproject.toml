@@ -33,6 +33,16 @@ generative = [
     "safetensors>=0.4",
     "sentencepiece>=0.2",
 ]
+# 2. Inferenz-Runtime neben `generative` (ADR-029) — llama.cpp für GGUF-Gemma.
+# `uv add` zieht per Default ein CPU-only-Wheel; für CUDA-Offload (Pflicht für ein
+# 12B-Modell) das prebuilt-CUDA-Wheel des Projekts installieren, z.B.:
+#   uv pip install llama-cpp-python --extra-index-url \
+#     https://abetlen.github.io/llama-cpp-python/whl/cu121
+# (Index/CUDA-Version an die lokale Treiber-Version anpassen — Plan B, falls das
+# Default-Wheel beim Smoke-Test #1 CPU-only lädt.)
+gemma-gguf = [
+    "llama-cpp-python>=0.3",
+]
 
 [build-system]
 requires = ["hatchling"]

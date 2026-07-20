@@ -122,3 +122,26 @@ class TextGenerator(Protocol):
     def generate(self, prompt: str, *, system: str | None = None, max_new_tokens: int = 512) -> str:
         """Return generated text. `system` is an optional instruction prepended to the turn."""
         ...
+
+
+@runtime_checkable
+class VisionTextGenerator(TextGenerator, Protocol):
+    """A `TextGenerator` that can also reason over an image (P35 Vision-Naht).
+
+    Same pattern as `TextEmbedder(Embedder)`: a capability that only some concrete
+    adapters have, checked structurally (`isinstance(gen, VisionTextGenerator)`)
+    rather than assumed. A plain-text adapter (no vision component bound) simply
+    does not implement `generate_with_image` and stays a `TextGenerator`. No job
+    or capability calls this today — the seam is defined so a later vision job
+    (caption/ask-about-image) needs no runtime or adapter rework.
+    """
+
+    def generate_with_image(
+        self, image: np.ndarray, prompt: str, *, system: str | None = None, max_new_tokens: int = 512
+    ) -> str:
+        """Return generated text conditioned on *image* plus *prompt*.
+
+        image: uint8 RGB array (H, W, 3). `system` is an optional instruction
+        prepended to the turn, same convention as `TextGenerator.generate`.
+        """
+        ...
