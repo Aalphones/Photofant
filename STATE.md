@@ -1,12 +1,11 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-01_p27-gemma-integration/`
-**Phase:** 4/4 — Interview-Mode für private Entities (pending)
-**Nächster Schritt:** Phase 4 starten — geführter Interview-Dialog im Wizard-Rahmen für
-private Personen; aus den Antworten entsteht eine Markdown-Entity ohne Web-Vermischung
-(ADR-009). FINDINGS für Phase 4 lesen (Autonomie-Gate-Muster an `interview` hängen,
-`INTERVIEW`-Capability hat bewusst kein Such-/Lese-Tool, Schreibpfad via ToolRegistry).
-Phase-4-Komplexität: heikel.
+**Aktiver Plan:** `docs/planning/2026-07-01_p27-gemma-integration/` — **alle 4 Phasen ✅ complete**
+**Phase:** 4/4 — Interview-Mode für private Entities (✅ complete, committet)
+**Nächster Schritt:** Plan-Ende. Ausstehend: (1) User-Smoke von P27 (Checkliste in der
+README, Wackelstellen zuerst) — Gemma muss dafür geladen/verfügbar sein; (2) Archivieren
+nach grünem Smoke (`git mv` → `docs/archive/2026-07/`, README-Bottom-Sektionen füllen).
+Danach STATE auf den nächsten Plan zeigen (Backlog: p34-mcp-wissensbasis, blockiert).
 
 ## Phase 1 erledigt (KI-Layer Backend)
 
