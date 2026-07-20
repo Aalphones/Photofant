@@ -152,6 +152,14 @@ weiter „Suche läuft…", P26 „Wird berechnet …") und die Reasons-Liste ve
 Leer-Text) — Dok 050 nennt diesen Fall nicht explizit, aber „Bereich entfällt" steht so im
 Plan-Kontrakt (`phase-2-recommendation-cards.md`). Entscheidung Sascha (2026-07-10).
 
+**Eigener „Wissen"-Tab (2026-07-20) — Design-Lücke-erfunden (freihändig, freigegeben):** Kein
+Mockup (beide Sektionen waren schon freihändig erfunden, s.o.). Lore-Panel + Empfehlungen liefen
+bisher als Teil des „Übersicht"-Tabs, direkt über den Metadaten. Auf Wunsch in einen eigenen
+vierten Tab „Wissen" verschoben (Reihenfolge: Übersicht · Wissen · Gesichter · Versionen) — nur
+Markup-Verschiebung in `lightbox.html`, keine neue Komponente, kein Backend-Bezug. Zusätzlich:
+„Tags" steht in „Übersicht" jetzt vor „Caption" (vorher umgekehrt). Entscheidung Sascha
+(2026-07-20).
+
 ---
 
 ### Personen-View

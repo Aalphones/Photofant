@@ -202,8 +202,9 @@ export class Lightbox {
 
   protected readonly showGenMeta = signal(false);
 
-  // Panel-Tabs (Übersicht/Gesichter/Versionen) — Gesichter-Tab existiert nur im Asset-Modus
-  protected readonly activeTab = signal<'overview' | 'people' | 'versions'>('overview');
+  // Panel-Tabs (Übersicht/Wissen/Gesichter/Versionen) — Gesichter-Tab existiert nur im
+  // Asset-Modus. „Wissen" bündelt Lore-Panel + Empfehlungen (vorher Teil von Übersicht).
+  protected readonly activeTab = signal<'overview' | 'knowledge' | 'people' | 'versions'>('overview');
 
   // Reload trigger: bump to force a fresh detail fetch
   private readonly reloadTrigger = signal(0);

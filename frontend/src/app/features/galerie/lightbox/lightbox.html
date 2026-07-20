@@ -94,6 +94,13 @@
         >
           Übersicht
         </button>
+        <button
+          class="panel-tab"
+          [class.active]="activeTab() === 'knowledge'"
+          (click)="activeTab.set('knowledge')"
+        >
+          Wissen
+        </button>
         @if (!isFaceMode()) {
           <button
             class="panel-tab"
@@ -118,41 +125,6 @@
       <div class="panel-body">
 
         @if (activeTab() === 'overview') {
-
-          <!-- Wissen zum Inhalt (P25 Lore-Panel) — dockt als weitere Panel-Sektion an -->
-          <pf-lore-panel
-            [assetId]="isFaceMode() ? null : (asset()?.id ?? null)"
-            [personId]="isFaceMode() ? (faceDetail()?.person_id ?? null) : null"
-            [hasPersonContext]="isFaceMode() ? (faceDetail()?.person_id != null) : faces().length > 0"
-            [refreshKey]="loreRefreshKey()"
-            (entitySelected)="openLinkedEntity($event)"
-            (createRequested)="openKnowledgeCreate()"
-          />
-
-          <!-- Empfehlungen (P26 + P36 zusammengeführt) — Graph-Empfehlungen und reine
-               CLIP-Ähnlichkeit in einer Liste, damit nicht nur Bilder derselben Person auftauchen -->
-          @if (showRecommendations()) {
-            <div class="panel-sec">
-              <div class="psec-title">Empfehlungen</div>
-              <pf-related-rail
-                [items]="mergedRecommendationItems()"
-                [loading]="mergedRecommendationItems().length === 0 && (recommendations().status === 'computing' || relatedRail().loading)"
-                [emptyMessage]="relatedRail().emptyMessage"
-                loadingMessage="Wird berechnet …"
-                explainLabel="Warum?"
-                [explainOpenId]="recommendationExplainOpenId()"
-                [explainPayload]="recommendationExplainPayload()"
-                (cardClick)="openRelatedAsset($event)"
-                (explainOpen)="onRecommendationExplainOpen($event)"
-                (explainClose)="onRecommendationExplainClose()"
-              />
-              @if (hasEmbedding()) {
-                <button class="rel-add" (click)="openMoreSimilar()">
-                  <pf-icon name="compare" [size]="14" /> Mehr ähnliche Bilder
-                </button>
-              }
-            </div>
-          }
 
           @if (!isFaceMode()) {
 
@@ -266,34 +238,6 @@
             </div>
           }
 
-          <!-- Caption (editierbar) -->
-          <div class="panel-sec">
-            <div class="psec-title psec-title--row">
-              Caption
-              @if (!editingCaption()) {
-                <button class="psec-edit-btn" (click)="startCaptionEdit()" aria-label="Caption bearbeiten">
-                  <pf-icon name="pencil" [size]="12" />
-                </button>
-              }
-            </div>
-            @if (editingCaption()) {
-              <textarea
-                class="caption-editor"
-                [value]="captionDraft()"
-                (input)="captionDraft.set($any($event.target).value)"
-                (keydown.escape)="cancelCaptionEdit()"
-                (blur)="saveCaptionEdit()"
-                rows="4"
-                autofocus
-              ></textarea>
-              <div class="caption-edit-hint">Enter bestätigt nicht — Tab oder Klick außen speichert</div>
-            } @else if (caption()) {
-              <p class="caption-text" (click)="startCaptionEdit()">{{ caption() }}</p>
-            } @else {
-              <p class="caption-empty" (click)="startCaptionEdit()">Noch keine Caption — klicken zum Hinzufügen</p>
-            }
-          </div>
-
           <!-- Tags (editierbar) -->
           <div class="panel-sec">
             <div class="psec-title">Tags</div>
@@ -353,6 +297,34 @@
             </div>
           </div>
 
+          <!-- Caption (editierbar) -->
+          <div class="panel-sec">
+            <div class="psec-title psec-title--row">
+              Caption
+              @if (!editingCaption()) {
+                <button class="psec-edit-btn" (click)="startCaptionEdit()" aria-label="Caption bearbeiten">
+                  <pf-icon name="pencil" [size]="12" />
+                </button>
+              }
+            </div>
+            @if (editingCaption()) {
+              <textarea
+                class="caption-editor"
+                [value]="captionDraft()"
+                (input)="captionDraft.set($any($event.target).value)"
+                (keydown.escape)="cancelCaptionEdit()"
+                (blur)="saveCaptionEdit()"
+                rows="4"
+                autofocus
+              ></textarea>
+              <div class="caption-edit-hint">Enter bestätigt nicht — Tab oder Klick außen speichert</div>
+            } @else if (caption()) {
+              <p class="caption-text" (click)="startCaptionEdit()">{{ caption() }}</p>
+            } @else {
+              <p class="caption-empty" (click)="startCaptionEdit()">Noch keine Caption — klicken zum Hinzufügen</p>
+            }
+          </div>
+
           <!-- Klassifizierung -->
           @if (classificationsByCategory().length > 0) {
             <div class="panel-sec">
@@ -375,6 +347,45 @@
           }
 
           } <!-- @if (!isFaceMode()) — Metadaten … Klassifizierung -->
+
+        }
+
+        @if (activeTab() === 'knowledge') {
+
+          <!-- Wissen zum Inhalt (P25 Lore-Panel) — dockt als weitere Panel-Sektion an -->
+          <pf-lore-panel
+            [assetId]="isFaceMode() ? null : (asset()?.id ?? null)"
+            [personId]="isFaceMode() ? (faceDetail()?.person_id ?? null) : null"
+            [hasPersonContext]="isFaceMode() ? (faceDetail()?.person_id != null) : faces().length > 0"
+            [refreshKey]="loreRefreshKey()"
+            (entitySelected)="openLinkedEntity($event)"
+            (createRequested)="openKnowledgeCreate()"
+          />
+
+          <!-- Empfehlungen (P26 + P36 zusammengeführt) — Graph-Empfehlungen und reine
+               CLIP-Ähnlichkeit in einer Liste, damit nicht nur Bilder derselben Person auftauchen -->
+          @if (showRecommendations()) {
+            <div class="panel-sec">
+              <div class="psec-title">Empfehlungen</div>
+              <pf-related-rail
+                [items]="mergedRecommendationItems()"
+                [loading]="mergedRecommendationItems().length === 0 && (recommendations().status === 'computing' || relatedRail().loading)"
+                [emptyMessage]="relatedRail().emptyMessage"
+                loadingMessage="Wird berechnet …"
+                explainLabel="Warum?"
+                [explainOpenId]="recommendationExplainOpenId()"
+                [explainPayload]="recommendationExplainPayload()"
+                (cardClick)="openRelatedAsset($event)"
+                (explainOpen)="onRecommendationExplainOpen($event)"
+                (explainClose)="onRecommendationExplainClose()"
+              />
+              @if (hasEmbedding()) {
+                <button class="rel-add" (click)="openMoreSimilar()">
+                  <pf-icon name="compare" [size]="14" /> Mehr ähnliche Bilder
+                </button>
+              }
+            </div>
+          }
 
         }
 
