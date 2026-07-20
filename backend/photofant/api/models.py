@@ -20,6 +20,7 @@ from photofant.models.loader import ManifestEntry, get_manifest_entry, load_mani
 from photofant.models.validation import (
     ModelErrorCode,
     ModelValidationError,
+    validate_companion_file,
     validate_component_model,
     validate_in_place,
 )
@@ -287,6 +288,27 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Comp
                 },
             ) from error
 
+        # Optional companion file (Vision-Naht, ADR-029) — e.g. GGUF `mmproj`. Only
+        # honored when the manifest slot actually declares one; a random `components`
+        # key on an unrelated model is silently ignored, not persisted.
+        mmproj_declared = any(file_info.get("role") == "mmproj" for file_info in entry.files)
+        components: dict[str, str] | None = None
+        if mmproj_declared and body.components and body.components.get("mmproj"):
+            mmproj_path = body.components["mmproj"]
+            try:
+                await asyncio.to_thread(validate_companion_file, mmproj_path, label="mmproj (Vision)")
+            except ModelValidationError as error:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": error.code,
+                        "expected": error.expected,
+                        "found": error.found,
+                        "next_step": error.next_step,
+                    },
+                ) from error
+            components = {"mmproj": mmproj_path}
+
         row = session.query(ModelRegistry).filter(ModelRegistry.manifest_id == entry.id).first()
         if row is None:
             row = ModelRegistry(manifest_id=entry.id)
@@ -297,6 +319,7 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Comp
         row.variant = entry.variant
         row.format = entry.format
         row.path = body.path
+        row.components = components
         row.sha256 = validation.sha256
         row.managed = False
         row.enabled = True
@@ -306,7 +329,10 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Comp
         session.commit()
         session.refresh(row)
 
-        log.info("Registered in-place model %s at %s", entry.id, body.path)
+        log.info(
+            "Registered in-place model %s at %s%s",
+            entry.id, body.path, " (+mmproj)" if components else "",
+        )
 
     dto = ModelDto(
         id=entry.id,

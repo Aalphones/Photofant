@@ -135,7 +135,7 @@ Core + optional AI models known to the app. Each row links to a manifest entry v
 | `variant` | TEXT | `default \| fp16 \| fp8 \| gguf-q4 \| …` |
 | `format` | TEXT | `onnx \| onnx_bundle \| onnx_folder \| safetensors \| gguf` |
 | `path` | TEXT | absolute path to file or folder; NULL for component-only models |
-| `components` | JSON | named component paths (e.g. Flux: `{"diffusion": …, "text_encoder": …, "vae": …}`) |
+| `components` | JSON | named component paths (e.g. Flux: `{"diffusion": …, "text_encoder": …, "vae": …}`); also carries an optional single-file companion for non-component models, e.g. GGUF `{"mmproj": …}` (P35/ADR-029 Vision-Naht) |
 | `sha256` | TEXT | managed: verified at download; in-place: informative only |
 | `managed` | BOOLEAN | `1` = app manages file in `models_dir`; `0` = in-place reference, never touched |
 | `caption_mode` | TEXT | captioner only: `task_token \| instruct \| instruct_guided` (§12.6) |

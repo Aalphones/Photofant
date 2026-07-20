@@ -11,13 +11,18 @@ Every generation returns a `GenerationResult` carrying the explainability payloa
 """
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass
 from enum import StrEnum
 
 from photofant.inference.adapters.gemma import resolve_gemma
+from photofant.inference.adapters.gemma_gguf import resolve_gemma_gguf
 from photofant.inference.interfaces import TextGenerator
+from photofant.models.loader import get_manifest_entry
 from photofant.settings import load_settings
+
+log = logging.getLogger(__name__)
 
 
 class Capability(StrEnum):
@@ -60,10 +65,26 @@ _AUTONOMY_KEY: dict[Capability, str] = {
 
 
 def resolve_generator(capability: Capability) -> TextGenerator | None:
-    """Return the `TextGenerator` mapped to *capability*, or None if not enabled."""
+    """Return the `TextGenerator` mapped to *capability*, or None if not enabled.
+
+    Picks the runtime adapter by the bound model's manifest `format` (ADR-029) —
+    `safetensors` goes through torch (`gemma.py`), `gguf` through llama.cpp
+    (`gemma_gguf.py`). The caller never knows which runtime backs the capability.
+    """
     ai = load_settings()["ai"]
     manifest_id = ai["capabilityMap"].get(capability.value) or ai["gemmaModel"]
-    return resolve_gemma(manifest_id)
+    entry = get_manifest_entry(manifest_id)
+    if entry is None:
+        log.debug("No manifest entry for %r — skipping", manifest_id)
+        return None
+
+    if entry.format == "safetensors":
+        return resolve_gemma(manifest_id)
+    if entry.format == "gguf":
+        return resolve_gemma_gguf(manifest_id)
+
+    log.warning("Unknown text-generator format %r for %r — skipping", entry.format, manifest_id)
+    return None
 
 
 def autonomy_for(capability: Capability) -> str:

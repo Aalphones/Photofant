@@ -352,6 +352,22 @@
       "requires_license_ack": true,
       "tier": "generativ",
       "_download_note": "Ersetzt google/gemma-3-4b-it (gated, 401 ohne HF-Token/Lizenz-Zustimmung) durch den öffentlichen mlabonne-Finetune — gleiches Basismodell, gleiche Architektur/Format, keine Auth nötig."
+    },
+    {
+      "id": "gemma-3-12b-obliterated-gguf",
+      "role": "text_generator",
+      "name": "Gemma 3 12B Obliterated (GGUF, Q4_K_M)",
+      "variant": "in_place",
+      "format": "gguf",
+      "files": [
+        { "filename": "Gemma-4-12B-OBLITERATED-Q4_K_M.gguf" },
+        { "filename": "mmproj-BF16.gguf", "optional": true, "role": "mmproj" }
+      ],
+      "size_bytes": 7600000000,
+      "license_note": "Gemma Terms of Use (Community-Finetune, abliteriert) — kein gated Repo, kein HF-Token nötig; nur In-Place-Bind, kein Download über die App",
+      "requires_license_ack": true,
+      "tier": "generativ",
+      "_download_note": "Kein Managed-Download — reiner In-Place-Bind auf ein bereits lokal vorhandenes GGUF (P35/ADR-029). `mmproj-BF16.gguf` ist optional (Vision-Naht, noch keine konsumierende Fähigkeit)."
     }
   ]
 }

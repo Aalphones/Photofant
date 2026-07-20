@@ -495,6 +495,26 @@ def _probe_gguf(path: Path) -> None:
         ) from error
 
 
+def validate_companion_file(raw_path: str, *, label: str) -> str:
+    """Validate an optional companion file that has no manifest slot of its own.
+
+    Used for the GGUF `mmproj` bind (ADR-029 Vision-Naht): existence + GGUF magic
+    only, not the full five-stage pipeline (which needs a `ManifestEntry` to build
+    a `ValidationSpec` from — a bare companion file has none). Returns the sha256
+    for the registry row.
+    """
+    path = Path(raw_path)
+    if not path.is_file():
+        raise ModelValidationError(
+            ModelErrorCode.NOT_FOUND,
+            expected=f"eine Datei für {label}",
+            found="ein Ordner statt einer Datei" if path.is_dir() else "Pfad existiert nicht",
+            next_step=f"Korrekten Pfad zur {label}-Datei angeben.",
+        )
+    _probe_gguf(path)
+    return compute_sha256(path)
+
+
 def validate_in_place(entry: ManifestEntry, raw_path: str) -> InPlaceValidation:
     """Run all five stages in order; return the primary path + informative hash.
 
