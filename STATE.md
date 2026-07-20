@@ -1,9 +1,14 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-20_p35-gemma-gguf-runtime/` — Phase 1/3 + 2/3 ✅
-complete und committet (`1ac7d01`, `ad39592`).
-**Nächster Schritt:** Phase 3/3 (Docs: ADR-029, ADR-028-Nachtrag, code-map, models.md + Test,
-Komplexität: mechanisch, Modell-Empfehlung: `sonnet`).
+**Aktiver Plan:** (keiner) — P35 (Gemma-GGUF-Runtime) alle 3 Phasen ✅ complete, archiviert
+nach `docs/archive/2026-07/2026-07-20_p35-gemma-gguf-runtime/`.
+**Nächster Schritt:** Backlog wählen (siehe unten) oder `/session-review`.
+
+## Smoke-Test P35 ausstehend (User)
+
+GGUF-Gemma-Runtime real prüfen (CUDA-Wheel, VRAM-Wechsel, Chat-Template, Idle-Unload,
+Manifest-Bind, mmproj) — Checkliste (Wackelstellen zuerst):
+`docs/archive/2026-07/2026-07-20_p35-gemma-gguf-runtime/README.md`.
 
 ## Backlog — Lightbox-Smoke ausstehend (User)
 

@@ -64,3 +64,8 @@ Default bei 120 s, sodass sich das Captioner-Verhalten nur ändert, wenn der Nut
 - `ai.idleTimeoutSeconds` regelt den ganzen Generativ-Slot, nicht Gemma allein. Bewusster
   Trade-off zugunsten „eine Mechanik" statt eines Per-Modell-Timeouts; falls je ein
   getrenntes Timing gebraucht wird, ist das ein späterer, isolierter Schritt.
+
+## Nachtrag (P35, ADR-029)
+
+GGUF-Adapter als zweite Runtime umgesetzt (P35, ADR-029) — torch bleibt der
+Default-Pfad, keine Entscheidung hier revidiert.

@@ -41,16 +41,18 @@ die UI (nur In-Place-Bind, das Modell liegt schon).
 |---|---|---|---|
 | 1 | GGUF-Runtime + Adapter + VRAM-Koordination | heikel (2. Runtime, Concurrency/VRAM, ADR) | complete |
 | 2 | Format-Routing + Manifest-Eintrag + In-Place-Bind | standard | complete |
-| 3 | Docs (ADR-029, ADR-028-Nachtrag, code-map, models.md) + Test | mechanisch | pending |
+| 3 | Docs (ADR-029, ADR-028-Nachtrag, code-map, models.md) + Test | mechanisch | complete |
 
 ## Finale AK (Gesamt)
-- [ ] Ein Job mit Fähigkeit `TEXT_GENERATION` läuft gegen das gebundene GGUF-Modell und liefert Text — **ohne** Änderung am Job-Code.
-- [ ] Während das GGUF-Modell resident ist, ist **kein** torch-Captioner resident und umgekehrt (VRAM-Invariante nachweisbar via `nvidia-smi`).
-- [ ] Nach `ai.idleTimeoutSeconds` Leerlauf wird das GGUF-Modell entladen, VRAM fällt zurück.
-- [ ] Das Umstellen zwischen safetensors-Gemma und GGUF-Gemma ist eine **Settings-/Bind-Änderung**, kein Code-Eingriff.
-- [ ] torch/transformers-Pfad (ADR-028, JoyCaption/Qwen-VL/safetensors-Gemma) funktioniert unverändert.
-- [ ] Offline gewahrt: das Modell ist ein In-Place-Bind auf den lokalen Pfad, kein Laufzeit-Netz.
-- [ ] **Vision-Naht steht:** `VisionTextGenerator` ist definiert; die GGUF-Engine kann einen `mmproj` optional mitladen; der GGUF-Adapter erfüllt `VisionTextGenerator`, wenn ein mmproj gebunden ist. **Keine** Fähigkeit/Job nutzt Bild-Input — die Nachrüstung eines Vision-Jobs braucht **keinen** Runtime- oder Adapter-Umbau (nachweisbar: ein `isinstance`-Check reicht als Konsument).
+- [ ] Ein Job mit Fähigkeit `TEXT_GENERATION` läuft gegen das gebundene GGUF-Modell und liefert Text — **ohne** Änderung am Job-Code. *(Code-seitig verdrahtet, aber nur per echtem Modell-Load prüfbar — Smoke #1.)*
+- [ ] Während das GGUF-Modell resident ist, ist **kein** torch-Captioner resident und umgekehrt (VRAM-Invariante nachweisbar via `nvidia-smi`). *(Smoke #2.)*
+- [ ] Nach `ai.idleTimeoutSeconds` Leerlauf wird das GGUF-Modell entladen, VRAM fällt zurück. *(Smoke #4.)*
+- [x] Das Umstellen zwischen safetensors-Gemma und GGUF-Gemma ist eine **Settings-/Bind-Änderung**, kein Code-Eingriff. *(`resolve_generator`-Format-Weiche, per Test verifiziert.)*
+- [x] torch/transformers-Pfad (ADR-028, JoyCaption/Qwen-VL/safetensors-Gemma) funktioniert unverändert. *(unangetastet, kein Codepfad geändert.)*
+- [ ] Offline gewahrt: das Modell ist ein In-Place-Bind auf den lokalen Pfad, kein Laufzeit-Netz. *(baulich erfüllt, Bind selbst noch nicht am echten Modell geprüft — Smoke #5.)*
+- [x] **Vision-Naht steht:** `VisionTextGenerator` ist definiert; die GGUF-Engine kann einen `mmproj` optional mitladen; der GGUF-Adapter erfüllt `VisionTextGenerator`, wenn ein mmproj gebunden ist. **Keine** Fähigkeit/Job nutzt Bild-Input — die Nachrüstung eines Vision-Jobs braucht **keinen** Runtime- oder Adapter-Umbau (nachweisbar: ein `isinstance`-Check reicht als Konsument, per Test verifiziert).
+
+**Rest-AK sind allesamt Runtime-Wackelstellen** (CUDA-Wheel, echtes VRAM-Verhalten, echtes Idle-Timing, echter In-Place-Bind) — der komplette Code-Kern ist gebaut/getestet; die Smoke-Checkliste unten deckt genau diese Lücke.
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende — Wackelstellen zuerst)
 1. **[Wackelstelle] `llama-cpp-python` mit CUDA installierbar?** Nach Phase 1: `cd backend && uv run python -c "from llama_cpp import Llama; print('ok')"` — importiert es? Und lädt das 12B-Q4 auf die GPU (nicht CPU-Fallback)? Prüfen: beim ersten `generate` zeigt der llama.cpp-Log `offloaded N/N layers to GPU`.
@@ -84,4 +86,24 @@ denen der neue Slot mitverwaltet wird.
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_
+
+**Summary:** GGUF/llama.cpp als zweite Text-Runtime neben torch eingehängt (`gguf_engine.py`,
+`adapters/gemma_gguf.py`), Cross-Unload-VRAM-Koordination (ADR-029), Format-Weiche in
+`resolve_generator` (safetensors vs. gguf), Manifest-/In-Place-Bind fürs 12B-GGUF, Vision-Naht
+vorgelegt (`VisionTextGenerator`, mmproj optional) ohne Konsument. Docs nachgezogen (ADR-028-
+Nachtrag, code-map, models.md), Format-Weiche + Vision-Naht per Test abgesichert.
+
+**Deviations:** 12B-Q4 statt der ursprünglich eingeplanten 4B-Variante (mehr VRAM-Bedarf, siehe
+ADR-029-Konsequenzen) — kein Blocker, Q4 passt allein auf die 3060.
+
+**Files touched:** `inference/gguf_engine.py`, `inference/adapters/gemma_gguf.py`,
+`inference/adapters/gemma.py` (unverändert, Referenz), `inference/interfaces.py`
+(`VisionTextGenerator`), `inference/capabilities.py` (Format-Weiche), `main.py` (Idle-Loop +
+Shutdown um GGUF-Slot erweitert), `pyproject.toml` (Extra-Group `gemma-gguf`),
+`docs/decisions/029-gguf-gemma-runtime.md` (neu), `docs/decisions/028-gemma-runtime.md`
+(Nachtrag), `docs/code-map.md`, `docs/models.md`, `backend/tests/test_capability_format_routing.py`
+(neu).
+
+**Follow-ups:** Smoke-Checkliste unten steht noch aus (CUDA-Wheel, VRAM-Wechsel, Chat-Template,
+Idle-Unload, Manifest-Bind, mmproj) — **User prüft**, siehe unten. Vision-*Feature* (Job/
+Capability/UI) bleibt bewusst Backlog, die Naht ist gelegt.
