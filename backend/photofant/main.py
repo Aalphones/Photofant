@@ -46,7 +46,7 @@ from photofant.jobs.face_folder_scan_job import enqueue_face_folder_scan
 from photofant.jobs.queue import job_queue
 from photofant.mcp.server import mcp_server, mount_mcp
 from photofant.models.loader import load_manifest
-from photofant.settings import ensure_settings_file
+from photofant.settings import ensure_settings_file, load_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger(__name__)
@@ -57,7 +57,8 @@ async def _idle_eviction_loop() -> None:
     while True:
         await asyncio.sleep(60)
         session_manager.evict_idle()
-        generative_engine.evict_idle()
+        ai_idle_timeout = load_settings()["ai"]["idleTimeoutSeconds"]
+        generative_engine.evict_idle(ai_idle_timeout)
 
 
 @asynccontextmanager

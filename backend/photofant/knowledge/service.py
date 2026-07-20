@@ -14,6 +14,7 @@ entscheidet (z.B. UI zeigt eine Auswahl).
 """
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from typing import Any
 
@@ -163,6 +164,20 @@ class KnowledgeService:
         self.vault.save_entity(entity, domain)
         self.entities.upsert_from_vault(entity)
         return entity
+
+    def validate_patch(self, entity_id: str, patch: dict[str, Any]) -> list[str]:
+        """Dry-run: prüft ein vorgeschlagenes Patch gegen die Domäne, ohne zu schreiben.
+
+        Rückgrat der P27-Sicherheitsregel „KI schlägt vor, Nutzer bestätigt" — der
+        Import-/Update-Job zeigt das Ergebnis, erst nach Bestätigung schreibt
+        ``update_entity``. Leere Liste = valide. Kein Ownership-Check hier; das ist
+        die Schreibhürde in ``update_entity``, nicht die Validierung.
+        """
+        entity = self._require_entity(entity_id)
+        candidate = copy.deepcopy(entity)
+        _apply_patch(candidate, patch)
+        domain = self.vault.load_domain(candidate.domain)
+        return validate_entity(candidate, domain)
 
     def delete_entity(self, entity_id: str) -> None:
         entity = self._require_entity(entity_id)

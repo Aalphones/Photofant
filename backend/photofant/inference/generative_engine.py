@@ -81,12 +81,17 @@ class GenerativeEngine:
         torch_dtype: str = "float16",
         device: str = "cuda",
         extra_model_kwargs: dict[str, Any] | None = None,
+        load_processor: bool = True,
     ) -> tuple[Any, Any]:
-        """Load a transformers model + processor pair, evicting any current pipeline.
+        """Load a transformers model + companion (processor or tokenizer), evicting any current pipeline.
 
-        Used for heavy captioners (Qwen2.5-VL, JoyCaption) that are pure
-        transformers models rather than diffusers pipelines. Returns (model, processor).
-        VRAM coordination is the same as for diffusers: one model at a time.
+        Used for heavy captioners (Qwen2.5-VL, JoyCaption) and the Gemma text LM
+        (P27) — all pure transformers models sharing one VRAM slot: loading a new
+        one evicts the current one. Returns (model, companion).
+
+        `load_processor=True` loads an `AutoProcessor` (multimodal captioners).
+        `load_processor=False` loads an `AutoTokenizer` instead — a text-only LM
+        like Gemma has no processor, that is a multimodal concept.
         """
         availability = check_generative_available()
         if availability is not GenerativeAvailability.AVAILABLE:
@@ -126,31 +131,42 @@ class GenerativeEngine:
         model = model.to(device)
         model.eval()
 
-        from transformers import AutoProcessor
-        processor = AutoProcessor.from_pretrained(model_path)
+        if load_processor:
+            from transformers import AutoProcessor
+            companion = AutoProcessor.from_pretrained(model_path)
+        else:
+            from transformers import AutoTokenizer
+            companion = AutoTokenizer.from_pretrained(model_path)
 
         with self._lock:
             self._current = _PipelineEntry(
-                pipeline=(model, processor),
+                pipeline=(model, companion),
                 model_id=model_id,
                 pipeline_type=f"transformers:{model_class_name}",
             )
 
         log.info("Transformers model ready: %s", model_id)
-        return model, processor
+        return model, companion
 
     def unload(self) -> None:
         """Explicitly unload the current pipeline and free VRAM."""
         with self._lock:
             self._evict_locked()
 
-    def evict_idle(self) -> None:
-        """Evict the pipeline if it has been idle longer than the timeout."""
+    def evict_idle(self, idle_timeout: float | None = None) -> None:
+        """Evict the pipeline if it has been idle longer than the timeout.
+
+        `idle_timeout` overrides the instance default per call — the app's idle
+        loop passes `ai.idleTimeoutSeconds` so the resident generative model
+        (Gemma or a heavy captioner, one slot at a time) honours the user's
+        configured unload delay without a restart.
+        """
+        timeout = self._idle_timeout if idle_timeout is None else idle_timeout
         now = time.monotonic()
         with self._lock:
             if self._current is None:
                 return
-            if (now - self._current.last_used) > self._idle_timeout:
+            if (now - self._current.last_used) > timeout:
                 log.info(
                     "Evicting idle generative pipeline: %s (idle %.0fs)",
                     self._current.model_id,

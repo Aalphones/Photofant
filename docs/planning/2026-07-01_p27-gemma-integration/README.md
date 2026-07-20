@@ -26,9 +26,10 @@ Gemma sieht immer nur den aktuell nötigen Kontext (Dok 001 §4), besitzt kein d
 - **Explainability** (erweitert die P26-geteilte Payload): jeder KI-Aufruf liefert Modell, Capability, Prompt-Version, Dauer, Confidence, Begründung (Dok 040 §12).
 
 ## Reservierte Entscheidungen & Settings
-**ADR (real anlegen; nächste freie nach ADR-012 = 013, 014):**
-- **ADR-013** — AI-Layer: Capability-/Tool-Registry + ModelManager; Jobs kennen nur Fähigkeiten.
-- **ADR-014** — Gemma-Laufzeit (🔴 **offene Entscheidung, in Phase 1 zu fällen**): torch/transformers (wie Heavy-Captioner) **vs.** GGUF-Runtime (llama.cpp) auf RTX 3060; Prompt-Library als Markdown. Lizenz-/Offline-Constraints prüfen (Gemma-Terms, `HF_HUB_OFFLINE`, keine Binaries im Repo — Bezug nur über Settings-UI).
+**ADR:** Die im Plan reservierten Nummern 013/014 waren belegt (comfyui-edit, wissens-lookup) —
+echte freie Nummern **027/028** genommen (Muster wie P22 010→025, P26 012→026; 020 hält P34).
+- **ADR-027** — AI-Layer: Capability-/Tool-Registry; Jobs kennen nur Fähigkeiten. *(Phase 1 angelegt: `docs/decisions/027-ai-capability-layer.md`.)*
+- **ADR-028** — Gemma-Laufzeit **entschieden: torch/transformers** auf dem bestehenden `GenerativeEngine`-Slot (GGUF/llama.cpp verworfen — dritte Runtime + Binaries + neuer Lade-Pfad). Offline via `HF_HUB_OFFLINE`, Modellbezug nur über die Modell-Verwaltung, kein Repo-Binary. *(`docs/decisions/028-gemma-runtime.md`.)*
 
 **settings.json (vorab freigeben):** `ai.gemmaModel` (Binding/Variante) · `ai.idleTimeoutSeconds` (Idle-Unload) · `ai.capabilityMap` (Capability→Modell) · `ai.autonomy` (pro Funktion: aus/nachfragen/auto — Konzept-ADR-008) · `ai.promptLibraryPath` (Default `<vault>/prompts`).
 
@@ -38,7 +39,7 @@ Kein Mockup. KI-Vorschläge erscheinen **im vorhandenen** Wizard (P23) und Lore 
 ## Phasen
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | AI-Layer + Gemma-Adapter + Prompt-Library (Backend) | heikel (Architektur + Modell-Runtime-Entscheidung) | pending |
+| 1 | AI-Layer + Gemma-Adapter + Prompt-Library (Backend) | heikel (Architektur + Modell-Runtime-Entscheidung) | ✅ complete |
 | 2 | KnowledgeImportJob — Gemma füllt den Wizard-Vorschlag | heikel | pending |
 | 3 | KnowledgeUpdateJob — Ergänzungs-Vorschläge im Lore Panel | standard | pending |
 | 4 | Interview-Mode für private Entities | heikel | pending |

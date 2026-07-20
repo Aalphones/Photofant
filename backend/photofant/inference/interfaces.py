@@ -103,3 +103,22 @@ class FaceEngine(Protocol):
     def detect(self, image: np.ndarray) -> list[dict]:
         """Return a list of face dicts (bbox, embedding, …)."""
         ...
+
+
+@runtime_checkable
+class TextGenerator(Protocol):
+    """Generates text from a prompt — the LLM contract for the AI layer (P27).
+
+    Text-only by design (no image). Concrete adapters (Gemma) ride the shared
+    generative model lifecycle. Jobs never depend on a concrete generator; they
+    request a `Capability` and get one of these back.
+    """
+
+    @property
+    def model_id(self) -> str:
+        """The manifest id of the backing model — for the explainability payload."""
+        ...
+
+    def generate(self, prompt: str, *, system: str | None = None, max_new_tokens: int = 512) -> str:
+        """Return generated text. `system` is an optional instruction prepended to the turn."""
+        ...

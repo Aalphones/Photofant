@@ -76,6 +76,20 @@ class RecommendationSettings(TypedDict):
     weights: RecommendationWeights  # Signal-Gewichte, an realem Bild-Set kalibrierbar
 
 
+class AiAutonomySettings(TypedDict):
+    knowledge_import: str       # off | ask | auto — KI füllt den Wizard-Vorschlag (P27 Phase 2)
+    knowledge_update: str       # off | ask | auto — KI schlägt Ergänzungen vor (P27 Phase 3)
+    interview: str              # off | ask | auto — Interview-Mode für private Personen (P27 Phase 4)
+
+
+class AiSettings(TypedDict):
+    gemmaModel: str             # Manifest-id des Default-Text-Modells (Capability-Fallback)
+    idleTimeoutSeconds: int     # Idle-Unload-Verzögerung des generativen Modell-Slots (Gemma/Captioner)
+    capabilityMap: dict[str, str]  # Capability-Name → Manifest-id; leer = alles auf gemmaModel (ADR-027)
+    autonomy: AiAutonomySettings   # pro KI-Funktion abschaltbar (Konzept-ADR-008)
+    promptLibraryPath: str      # Override-Ordner für Prompts; leer = mitgelieferte Defaults
+
+
 class AppSettings(TypedDict):
     _schema_version: int
     data_root: str | None
@@ -118,6 +132,7 @@ class AppSettings(TypedDict):
     rerank: RerankSettings
     knowledge: KnowledgeSettings
     recommendations: RecommendationSettings
+    ai: AiSettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -216,6 +231,19 @@ SETTINGS_DEFAULTS: AppSettings = {
             "clip_similarity": 0.2,
         },
     },
+    # KI-Layer (P27, ADR-027/028). Default-Autonomie „ask": KI-Aktionen werden
+    # angeboten, aber nie ohne Bestätigung geschrieben. `off` = wieder manuelles MVP.
+    "ai": {
+        "gemmaModel": "gemma-3-4b-it",
+        "idleTimeoutSeconds": 120,
+        "capabilityMap": {},
+        "autonomy": {
+            "knowledge_import": "ask",
+            "knowledge_update": "ask",
+            "interview": "ask",
+        },
+        "promptLibraryPath": "",
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -261,6 +289,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "rerank": dict,
     "knowledge": dict,
     "recommendations": dict,
+    "ai": dict,
 }
 
 

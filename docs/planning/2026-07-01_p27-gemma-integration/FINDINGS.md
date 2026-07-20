@@ -2,4 +2,24 @@
 
 > Format: `- [ ] → Phase N: <Erkenntnis>`. Mechanik: `mode-implementing`.
 
-_(leer bei Plan-Erstellung)_
+- [x] Phase 1: **ADR-Nummern korrigiert** — Plan reservierte 013/014, beide belegt. Real
+  angelegt als **027** (AI-Layer) + **028** (Gemma-Runtime). README + code-map nachgezogen.
+- [x] Phase 1 (Chesterton): **`load_transformers_model` lud immer einen `AutoProcessor`** —
+  ein Multimodal-Konzept, das ein reines Text-LM (Gemma) nicht hat. Additiver
+  `load_processor`-Schalter (Default `True`, Captioner unberührt); `False` lädt `AutoTokenizer`.
+- [ ] → Phase 2/3: **Explainability-Confidence ist bei roher Textgenerierung `None`**
+  (`GenerationResult.confidence`). Import-/Update-Job muss eine **Patch-Confidence** selbst
+  ableiten und in die Payload + den Changelog-Eintrag (P25-Pfad) schreiben.
+- [ ] → Phase 2/3/4: **Schreibpfad steht** — `ToolRegistry(service, owner)` + der Service-
+  Trockenlauf `validate_patch()`. Jobs: KI-Vorschlag → `ValidatePatch` (zeigen) → Nutzer-Go →
+  `PatchEntity`/P25-`KnowledgePatchJob` mit passendem `owner` (Autonomie → `inferred`/`web`,
+  nie `user`). `autonomy_for(capability)` liefert `off|ask|auto` fürs Gating.
+- [ ] → Phase 4: **`INTERVIEW` hat in der Tool-Registry bewusst kein Such-/Lese-Tool**
+  (`_CAPABILITY_TOOLS`) — private Personen nicht mit Bestand/Web vermischen (ADR-009). Beim
+  Bauen des Interview-Flows nicht nachträglich Tools freischalten.
+- [ ] → Phase 2/3/4 (Kontrakt-Abweichung, minor): `ai.promptLibraryPath`-Default ist **leer =
+  mitgelieferte Prompts** (`inference/prompts/*.md`), nicht `<vault>/prompts`. Offline-tauglich
+  ohne Seeding; der Nutzer kann per Pfad auf einen eigenen Ordner umbiegen.
+- [ ] → Phase 2/3/4: **`ai.idleTimeoutSeconds` steuert den ganzen Generativ-Slot** (Gemma
+  *und* Captioner — genau ein Modell resident), nicht Gemma allein (ADR-028). Kein Per-Modell-
+  Timeout; falls je nötig, isolierter Folge-Schritt.

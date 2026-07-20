@@ -338,6 +338,19 @@
           }
         ]
       }
+    },
+    {
+      "id": "gemma-3-4b-it",
+      "role": "text_generator",
+      "name": "Gemma 3 4B Instruct",
+      "variant": "default",
+      "format": "safetensors",
+      "hf_repo": "google/gemma-3-4b-it",
+      "files": [],
+      "size_bytes": 8600000000,
+      "license_note": "Gemma Terms of Use — Lizenz bestätigen; Modellbezug nur über die Modell-Verwaltung, kein Repo-Binary",
+      "requires_license_ack": true,
+      "tier": "generativ"
     }
   ]
 }
