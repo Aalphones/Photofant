@@ -19,6 +19,9 @@ const {
   selectSuggestionLoading,
   selectSuggestionResult,
   selectSuggestionError,
+  selectInterviewLoading,
+  selectInterviewResult,
+  selectInterviewError,
 } = knowledgeFeature;
 
 export const knowledgeSelectors = {
@@ -40,4 +43,7 @@ export const knowledgeSelectors = {
   selectSuggestionLoading,
   selectSuggestionResult,
   selectSuggestionError,
+  selectInterviewLoading,
+  selectInterviewResult,
+  selectInterviewError,
 };

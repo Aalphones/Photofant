@@ -32,6 +32,11 @@ class Domain:
     name: str
     entity_types: dict[str, EntityType]
     relationship_types: frozenset[str]
+    # Privat markierte Domänen (``private: true`` in der YAML) tragen Wissen über
+    # reale, dem Nutzer bekannte Personen/Haustiere. Sie sind vom Web-Import-Pfad
+    # ausgeschlossen (Konzept-ADR-009): so eine Entity darf nie mit Fremd-/Web-Wissen
+    # angereichert werden, nur aus dem Interview-Mode (P27 Phase 4) entstehen.
+    private: bool = False
 
     def has_entity_type(self, type_name: str) -> bool:
         return type_name in self.entity_types
@@ -73,7 +78,22 @@ def load_domain(path: Path) -> Domain:
 
     entity_types = _parse_entity_types(raw.get("entity_types"), path)
     relationship_types = _parse_relationship_types(raw.get("relationship_types"), path)
-    return Domain(name=name, entity_types=entity_types, relationship_types=relationship_types)
+    private = _parse_private(raw.get("private"), path)
+    return Domain(
+        name=name,
+        entity_types=entity_types,
+        relationship_types=relationship_types,
+        private=private,
+    )
+
+
+def _parse_private(raw: Any, path: Path) -> bool:
+    """Optionaler ``private``-Schalter — fehlt er, ist die Domäne öffentlich."""
+    if raw is None:
+        return False
+    if not isinstance(raw, bool):
+        raise DomainLoadError(f"'private' muss true/false sein, war {raw!r} in {path}")
+    return raw
 
 
 def _parse_entity_types(raw: Any, path: Path) -> dict[str, EntityType]:

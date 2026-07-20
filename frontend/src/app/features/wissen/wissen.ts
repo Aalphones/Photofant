@@ -1,14 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { AiAutonomyMode, CreateEntityRequest, EntityDto, ImportSuggestionRequest, TaskDto, UpdateEntityRequest } from '@photofant/models';
+import type { AiAutonomyMode, CreateEntityRequest, DomainDto, EntityDto, ImportSuggestionRequest, InterviewSynthesizeRequest, TaskDto, UpdateEntityRequest } from '@photofant/models';
 import { knowledgeActions, knowledgeSelectors } from '@photofant/store';
 import { Icon } from '../../ui/icon/icon';
 import { EntityWizardDialog } from './entity-wizard-dialog/entity-wizard-dialog';
+import { InterviewDialog } from './interview-dialog/interview-dialog';
 import { WorkQueue } from './work-queue/work-queue';
 
 @Component({
   selector: 'pf-wissen',
-  imports: [Icon, EntityWizardDialog, WorkQueue],
+  imports: [Icon, EntityWizardDialog, InterviewDialog, WorkQueue],
   templateUrl: './wissen.html',
   styleUrl: './wissen.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +38,20 @@ export class Wissen {
   protected readonly suggestionLoading = this.store.selectSignal(knowledgeSelectors.selectSuggestionLoading);
   protected readonly suggestionResult = this.store.selectSignal(knowledgeSelectors.selectSuggestionResult);
   protected readonly suggestionError = this.store.selectSignal(knowledgeSelectors.selectSuggestionError);
+
+  // P27 Phase 4 — Interview-Mode für private Personen. Nur angeboten, wenn die Funktion
+  // nicht abgeschaltet ist UND eine private Domäne existiert (Konzept-ADR-009).
+  protected readonly interviewAutonomy = computed((): AiAutonomyMode => this.aiAutonomy()?.interview ?? 'off');
+  protected readonly hasPrivateDomain = computed((): boolean =>
+    this.domains().some((domain: DomainDto) => domain.private)
+  );
+  protected readonly showInterviewButton = computed((): boolean =>
+    this.interviewAutonomy() !== 'off' && this.hasPrivateDomain()
+  );
+  protected readonly interviewLoading = this.store.selectSignal(knowledgeSelectors.selectInterviewLoading);
+  protected readonly interviewResult = this.store.selectSignal(knowledgeSelectors.selectInterviewResult);
+  protected readonly interviewError = this.store.selectSignal(knowledgeSelectors.selectInterviewError);
+  protected readonly showInterview = signal(false);
 
   protected readonly showWizard = signal(false);
   // Gesetzt, wenn der Wizard eine bestehende Entity bearbeitet (z.B. aus der Aufgabe
@@ -70,6 +85,7 @@ export class Wissen {
     effect(() => {
       if (this.lastCreatedEntity() === null && this.lastUpdatedEntity() === null) { return; }
       this.showWizard.set(false);
+      this.showInterview.set(false);
       this.editingEntity.set(null);
       const task = this.activeTask();
       if (task !== null) {
@@ -77,6 +93,21 @@ export class Wissen {
         this.activeTask.set(null);
       }
     });
+  }
+
+  protected openInterview(): void {
+    this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.resetInterview());
+    this.showInterview.set(true);
+  }
+
+  protected closeInterview(): void {
+    this.store.dispatch(knowledgeActions.resetInterview());
+    this.showInterview.set(false);
+  }
+
+  protected onRequestInterview(request: InterviewSynthesizeRequest): void {
+    this.store.dispatch(knowledgeActions.requestInterview({ request }));
   }
 
   protected openWizard(): void {

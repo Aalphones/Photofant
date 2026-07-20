@@ -11,6 +11,8 @@ import type {
   EntityDto,
   ImportSuggestionRequest,
   ImportSuggestionResponse,
+  InterviewSynthesizeRequest,
+  InterviewSynthesizeResponse,
   LoreDto,
   PatchEntityRequest,
   PatchJobResponse,
@@ -106,6 +108,13 @@ export class KnowledgeService {
   // nur der `job_id`-Rückgabewert hier.
   requestImportSuggestion(request: ImportSuggestionRequest): Observable<ImportSuggestionResponse> {
     return this.http.post<ImportSuggestionResponse>('/api/knowledge/ai/import-suggestion', request);
+  }
+
+  // P27 Phase 4 — löst den InterviewJob aus (Gemma fasst die Interview-Antworten zu einem
+  // Beschreibungsvorschlag für eine private Person/ein Haustier zusammen). Ergebnis über
+  // den Job-Stream, deshalb nur der `job_id`-Rückgabewert hier.
+  requestInterviewSynthesis(request: InterviewSynthesizeRequest): Observable<InterviewSynthesizeResponse> {
+    return this.http.post<InterviewSynthesizeResponse>('/api/knowledge/ai/interview', request);
   }
 
   // P27 Phase 3 — löst den KnowledgeUpdateJob aus (Gemma schlägt eine Ergänzung zur

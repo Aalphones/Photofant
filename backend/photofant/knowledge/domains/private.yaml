@@ -1,0 +1,28 @@
+# Domäne "Private" — Wissen über reale, dir bekannte Personen und Haustiere.
+# Anders als "Movies" ist sie als privat markiert: solche Entities werden NIE mit
+# Web-/Fremdwissen angereichert (Konzept-ADR-009). Sie entstehen nur über den
+# Interview-Mode (P27 Phase 4) oder das manuelle Anlegen — nie über den KI-Import.
+# Wird beim ersten Vault-Zugriff nach <vault>/domains/private.yaml kopiert und ist
+# danach frei editierbar (Beziehungstypen an die eigene Familie/Freundeskreis anpassen).
+name: Private
+private: true
+
+# 'name' steht im Frontmatter (type:), 'folder' ist der Ordner (Plural) im Vault.
+entity_types:
+  - name: Person
+    folder: people
+  - name: Pet
+    folder: pets
+
+# Beziehungstypen für den privaten Kreis. Der Knowledge Graph wird ausschließlich
+# aus diesen Beziehungen erzeugt.
+relationship_types:
+  - family
+  - partner
+  - parent_of
+  - child_of
+  - sibling_of
+  - friend
+  - colleague
+  - owner_of
+  - pet_of

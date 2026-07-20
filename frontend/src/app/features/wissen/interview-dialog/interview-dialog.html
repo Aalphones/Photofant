@@ -1,0 +1,166 @@
+<div class="iv-scrim" (click)="onBackdrop($event)">
+  <div class="iv-modal" (click)="$event.stopPropagation()">
+    <div class="iv-head">
+      <div class="iv-head__icon">
+        <pf-icon name="sparkle" [size]="18" />
+      </div>
+      <div class="iv-head__info">
+        <div class="iv-title">Private Person anlegen</div>
+        <div class="iv-sub">Geführtes Interview — bleibt lokal, keine Web-Quellen.</div>
+      </div>
+      <button class="iv-close" type="button" (click)="close.emit()" aria-label="Schließen">
+        <pf-icon name="x" [size]="17" />
+      </button>
+    </div>
+
+    @if (privateDomains().length === 0) {
+      <div class="iv-body">
+        <div class="iv-empty">
+          Keine private Domäne konfiguriert. Lege im Vault eine Domäne mit
+          <code>private: true</code> an (z.B. die mitgelieferte „Private").
+        </div>
+      </div>
+      <div class="iv-foot">
+        <button class="iv-btn iv-btn--ghost" type="button" (click)="close.emit()">Schließen</button>
+      </div>
+    } @else if (phase() === 'synthesizing') {
+      <div class="iv-body iv-body--center">
+        <div class="iv-spinner"></div>
+        <div class="iv-synth-text">Gemma fasst deine Antworten zusammen…</div>
+      </div>
+    } @else if (phase() === 'summary') {
+      <div class="iv-body">
+        @if (result()?.suggestion; as suggestion) {
+          <div class="iv-summary">
+            <div class="iv-summary__label">Vorschlag für <strong>{{ name() }}</strong> ({{ selectedType() }})</div>
+            <p class="iv-summary__body">{{ suggestion.body }}</p>
+
+            @if (result()?.explainability; as explainability) {
+              <div class="iv-meta">
+                <pf-icon name="info" [size]="12" />
+                <span>
+                  {{ explainability.reason }}
+                  · Modell {{ explainability.model_id }}
+                  · Prompt v{{ explainability.prompt_version ?? '?' }}
+                  @if (explainability.confidence !== null) {
+                    · Konfidenz {{ confidencePercent(explainability.confidence) }}%
+                  }
+                </span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="iv-error">
+            @if (result()?.validation_errors?.length) {
+              Vorschlag abgewiesen: {{ result()?.validation_errors?.join('; ') }}
+            } @else {
+              {{ error() ?? 'Das Interview lieferte kein verwertbares Ergebnis.' }}
+            }
+          </div>
+        }
+
+        @if (saveError(); as saveErr) {
+          <div class="iv-error">{{ saveErr }}</div>
+        }
+      </div>
+      <div class="iv-foot">
+        <button class="iv-btn iv-btn--ghost" type="button" (click)="editAnswers()">
+          <pf-icon name="chevronUp" [size]="14" />
+          Antworten anpassen
+        </button>
+        @if (result()?.suggestion) {
+          <button class="iv-btn iv-btn--primary" type="button" [disabled]="isSaving()" (click)="onConfirm()">
+            <pf-icon name="check" [size]="14" />
+            {{ isSaving() ? 'Speichert…' : 'Anlegen' }}
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="iv-body">
+        <div class="iv-progress">Schritt {{ stepIndex() + 1 }} von {{ totalSteps() }}</div>
+
+        @if (atIntro()) {
+          <div class="iv-row">
+            <div class="iv-field iv-field--type">
+              <label class="iv-label" for="iv-type">Typ</label>
+              <select
+                id="iv-type"
+                class="iv-select"
+                [value]="selectedType()"
+                [disabled]="entityTypes().length === 0"
+                (change)="selectedType.set($any($event.target).value)"
+              >
+                @for (entityType of entityTypes(); track entityType.name) {
+                  <option [value]="entityType.name">{{ entityType.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="iv-field iv-field--name">
+              <label class="iv-label" for="iv-name">Name</label>
+              <input
+                id="iv-name"
+                class="iv-input"
+                type="text"
+                placeholder="z.B. Oma Erna"
+                [value]="name()"
+                (input)="name.set($any($event.target).value)"
+                (blur)="nameTouched.set(true)"
+              />
+              @if (nameError(); as err) {
+                <div class="iv-field-error">{{ err }}</div>
+              }
+            </div>
+          </div>
+
+          @if (privateDomains().length > 1) {
+            <div class="iv-field">
+              <label class="iv-label" for="iv-domain">Domäne</label>
+              <select
+                id="iv-domain"
+                class="iv-select"
+                [value]="selectedDomain()"
+                (change)="onDomainChange($any($event.target).value)"
+              >
+                @for (domain of privateDomains(); track domain.name) {
+                  <option [value]="domain.name">{{ domain.name }}</option>
+                }
+              </select>
+            </div>
+          }
+        } @else {
+          <div class="iv-field">
+            <label class="iv-label" for="iv-answer">{{ currentQuestion() }}</label>
+            <textarea
+              id="iv-answer"
+              class="iv-textarea"
+              rows="4"
+              placeholder="Deine Antwort (leer lassen zum Überspringen)…"
+              [value]="currentAnswer()"
+              (input)="setCurrentAnswer($any($event.target).value)"
+            ></textarea>
+          </div>
+        }
+      </div>
+      <div class="iv-foot">
+        @if (atIntro()) {
+          <button class="iv-btn iv-btn--ghost" type="button" (click)="close.emit()">Abbrechen</button>
+        } @else {
+          <button class="iv-btn iv-btn--ghost" type="button" (click)="back()">
+            <pf-icon name="chevronUp" [size]="14" />
+            Zurück
+          </button>
+        }
+        <button
+          class="iv-btn iv-btn--primary"
+          type="button"
+          [disabled]="atIntro() && !canAdvanceIntro()"
+          (click)="next()"
+        >
+          {{ atLastQuestion() ? 'Zusammenfassen' : 'Weiter' }}
+          <pf-icon name="chevronDown" [size]="14" />
+        </button>
+      </div>
+    }
+  </div>
+</div>

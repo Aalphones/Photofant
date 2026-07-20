@@ -5,7 +5,9 @@ import type {
   DomainDto,
   EntityDto,
   ImportSuggestionRequest,
+  InterviewSynthesizeRequest,
   KnowledgeImportResult,
+  KnowledgeInterviewResult,
   TaskDto,
   UpdateEntityRequest,
 } from '@photofant/models';
@@ -46,5 +48,13 @@ export const knowledgeActions = createActionGroup({
     'Import Suggestion Ready':  props<{ result: KnowledgeImportResult }>(),
     'Import Suggestion Failed': props<{ error: string }>(),
     'Reset Import Suggestion':  emptyProps(),
+    // P27 Phase 4 — Interview-Mode für private Personen
+    'Request Interview':         props<{ request: InterviewSynthesizeRequest }>(),
+    'Request Interview Success': props<{ jobId: string }>(),
+    'Request Interview Failure': props<{ error: string }>(),
+    // Ergebnis des Interview-Jobs, aus dem Job-Stream herauskorreliert
+    'Interview Ready':  props<{ result: KnowledgeInterviewResult }>(),
+    'Interview Failed': props<{ error: string }>(),
+    'Reset Interview':  emptyProps(),
   },
 });

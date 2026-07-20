@@ -144,7 +144,7 @@ async def test_create_entity_persists_body_as_markdown(app_with_deps: tuple[Any,
 
 
 @pytest.mark.asyncio
-async def test_list_domains_returns_seeded_movies_domain(
+async def test_list_domains_returns_seeded_domains(
     app_with_deps: tuple[Any, Session, Vault]
 ) -> None:
     app, _session, _vault = app_with_deps
@@ -154,10 +154,19 @@ async def test_list_domains_returns_seeded_movies_domain(
 
     assert response.status_code == 200
     domains = response.json()
-    assert [domain["name"] for domain in domains] == ["Movies"]
-    movies = domains[0]
+    by_name = {domain["name"]: domain for domain in domains}
+    # Zwei mitgelieferte Domänen seit P27 Phase 4: die öffentliche „Movies" und die als
+    # privat markierte „Private" (Interview-Mode, Konzept-ADR-009).
+    assert {"Movies", "Private"} <= set(by_name)
+
+    movies = by_name["Movies"]
+    assert movies["private"] is False
     assert {entity_type["name"] for entity_type in movies["entity_types"]} >= {"Actor", "Movie"}
     assert "plays" in movies["relationship_types"]
+
+    private = by_name["Private"]
+    assert private["private"] is True
+    assert {entity_type["name"] for entity_type in private["entity_types"]} >= {"Person", "Pet"}
 
 
 @pytest.mark.asyncio

@@ -100,6 +100,7 @@ class DomainDto(BaseModel):
     name: str
     entity_types: list[EntityTypeDto]
     relationship_types: list[str]
+    private: bool = False
 
     @classmethod
     def from_domain(cls, domain: Domain) -> DomainDto:
@@ -110,6 +111,7 @@ class DomainDto(BaseModel):
                 for entity_type in domain.entity_types.values()
             ],
             relationship_types=sorted(domain.relationship_types),
+            private=domain.private,
         )
 
 

@@ -27,6 +27,13 @@
   color: var(--text-3);
 }
 
+.wi-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .wi-new-btn {
   display: flex;
   align-items: center;
@@ -41,6 +48,22 @@
   flex-shrink: 0;
   &:hover { background: var(--accent-press); }
   &:disabled { opacity: .5; cursor: not-allowed; }
+}
+
+.wi-interview-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-s);
+  background: var(--accent-weak);
+  border: 1px solid var(--accent-line);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  &:hover { background: var(--accent); color: var(--bg); }
 }
 
 .wi-last-created {

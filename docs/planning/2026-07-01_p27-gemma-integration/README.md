@@ -42,7 +42,7 @@ Kein Mockup. KI-Vorschläge erscheinen **im vorhandenen** Wizard (P23) und Lore 
 | 1 | AI-Layer + Gemma-Adapter + Prompt-Library (Backend) | heikel (Architektur + Modell-Runtime-Entscheidung) | ✅ complete |
 | 2 | KnowledgeImportJob — Gemma füllt den Wizard-Vorschlag | heikel | ✅ complete |
 | 3 | KnowledgeUpdateJob — Ergänzungs-Vorschläge im Lore Panel | standard | ✅ complete |
-| 4 | Interview-Mode für private Entities | heikel | pending |
+| 4 | Interview-Mode für private Entities | heikel | ✅ complete |
 
 ## Finale AK (Gesamt)
 - [ ] Ein Job fordert eine Capability an (nicht ein Modell); der ModelManager lädt Gemma lazy, generiert, und entlädt nach Idle-Timeout (VRAM wieder frei — nachweisbar).

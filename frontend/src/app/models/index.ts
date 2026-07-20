@@ -165,6 +165,12 @@ export type {
   KnowledgeUpdateResult,
   AcceptUpdateSuggestionRequest,
   AcceptUpdateSuggestionResponse,
+  InterviewAnswer,
+  InterviewSynthesizeRequest,
+  InterviewSynthesizeResponse,
+  KnowledgeInterviewExplainability,
+  KnowledgeInterviewSuggestion,
+  KnowledgeInterviewResult,
 } from './knowledge.model';
 export { OWNERS, TASK_KINDS, TASK_STATUSES, AI_AUTONOMY_MODES } from './knowledge.model';
 

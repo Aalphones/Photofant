@@ -1,6 +1,6 @@
 import { createEntityAdapter, type EntityAdapter, type EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
-import type { AiAutonomyDto, DomainDto, EntityDto, KnowledgeImportResult, TaskDto } from '@photofant/models';
+import type { AiAutonomyDto, DomainDto, EntityDto, KnowledgeImportResult, KnowledgeInterviewResult, TaskDto } from '@photofant/models';
 import { knowledgeActions } from './knowledge.actions';
 
 export interface TasksState extends EntityState<TaskDto> {
@@ -30,6 +30,11 @@ export interface KnowledgeState extends EntityState<DomainDto> {
   suggestionLoading: boolean;
   suggestionResult: KnowledgeImportResult | null;
   suggestionError: string | null;
+  // P27 Phase 4 — Interview-Mode (eigener Job-Kanal, gleiche Stream-Korrelation)
+  interviewJobId: string | null;
+  interviewLoading: boolean;
+  interviewResult: KnowledgeInterviewResult | null;
+  interviewError: string | null;
 }
 
 const adapter: EntityAdapter<DomainDto> = createEntityAdapter<DomainDto>({
@@ -58,6 +63,10 @@ const initialState: KnowledgeState = adapter.getInitialState({
   suggestionLoading: false,
   suggestionResult: null,
   suggestionError: null,
+  interviewJobId: null,
+  interviewLoading: false,
+  interviewResult: null,
+  interviewError: null,
 });
 
 export const knowledgeFeature = createFeature({
@@ -202,6 +211,45 @@ export const knowledgeFeature = createFeature({
       suggestionResult: null,
       suggestionError: null,
       suggestionJobId: null,
+    })),
+    // P27 Phase 4 — Interview-Mode. Gleiche Warte-Mechanik wie der Import-Vorschlag:
+    // interviewLoading bleibt bis der Job-Stream das Ergebnis liefert (der Success-Ack
+    // trägt nur die Job-Id).
+    on(knowledgeActions.requestInterview, (state: KnowledgeState) => ({
+      ...state,
+      interviewLoading: true,
+      interviewError: null,
+      interviewResult: null,
+      interviewJobId: null,
+    })),
+    on(knowledgeActions.requestInterviewSuccess, (state: KnowledgeState, { jobId }) => ({
+      ...state,
+      interviewJobId: jobId,
+    })),
+    on(knowledgeActions.requestInterviewFailure, (state: KnowledgeState, { error }) => ({
+      ...state,
+      interviewLoading: false,
+      interviewError: error,
+      interviewJobId: null,
+    })),
+    on(knowledgeActions.interviewReady, (state: KnowledgeState, { result }) => ({
+      ...state,
+      interviewLoading: false,
+      interviewResult: result,
+      interviewJobId: null,
+    })),
+    on(knowledgeActions.interviewFailed, (state: KnowledgeState, { error }) => ({
+      ...state,
+      interviewLoading: false,
+      interviewError: error,
+      interviewJobId: null,
+    })),
+    on(knowledgeActions.resetInterview, (state: KnowledgeState) => ({
+      ...state,
+      interviewLoading: false,
+      interviewResult: null,
+      interviewError: null,
+      interviewJobId: null,
     })),
   ),
   extraSelectors: ({ selectKnowledgeState }) => {

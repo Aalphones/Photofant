@@ -93,6 +93,9 @@ export interface DomainDto {
   name: string;
   entity_types: EntityType[];
   relationship_types: string[];
+  // P27 Phase 4 — private Domänen (reale Personen/Haustiere) laufen nie über den
+  // Web-Import; sie entstehen über den Interview-Mode (Konzept-ADR-009).
+  private: boolean;
 }
 
 export const TASK_KINDS = ['new_person', 'missing_entity', 'confirm_relationship', 'review_recommendation', 'incomplete_entity'] as const;
@@ -227,6 +230,59 @@ export interface AcceptUpdateSuggestionRequest {
 
 export interface AcceptUpdateSuggestionResponse {
   job_id: string;
+}
+
+// P27 Phase 4 — Interview-Mode für private Personen. Ein beantwortetes Frage-Paar aus dem
+// geführten Dialog (kein freies Chat — festes Fragen-Skript im Wizard-Rahmen).
+export interface InterviewAnswer {
+  question: string;
+  answer: string;
+}
+
+// P27 Phase 4 — synthetisiert aus den Interview-Antworten einen Entity-Vorschlag. `domain`
+// muss privat sein (Backend-Guard). `person_ids`/`asset_ids` verknüpfen optional die
+// bekannte Photofant-Person/-Aufnahme.
+export interface InterviewSynthesizeRequest {
+  title: string;
+  domain: string;
+  type: string;
+  answers: InterviewAnswer[];
+  person_ids?: number[];
+  asset_ids?: number[];
+}
+
+export interface InterviewSynthesizeResponse {
+  job_id: string;
+}
+
+// P27 Phase 4 — Explainability der Interview-Zusammenfassung (gleiche Form wie Import/Update).
+export interface KnowledgeInterviewExplainability {
+  model_id: string;
+  capability: string;
+  prompt_version: string | null;
+  duration_ms: number;
+  confidence: number | null;
+  reason: string;
+}
+
+// P27 Phase 4 — der aus den Antworten synthetisierte Vorschlag (nur bestätigungspflichtig,
+// wie der Import-Vorschlag). Aliase/Beziehungen bleiben leer — ein rohes Text-LM liefert
+// dafür nichts Verlässliches (FINDINGS Phase 2/3).
+export interface KnowledgeInterviewSuggestion {
+  title: string;
+  type: string;
+  domain: string;
+  aliases: string[];
+  relationships: Relationship[];
+  body: string;
+}
+
+// P27 Phase 4 — Ergebnis des InterviewJob, über den Job-Stream geliefert. `suggestion` ist
+// null, wenn der Validator den Kandidaten abgewiesen hat (`validation_errors` erklärt warum).
+export interface KnowledgeInterviewResult {
+  suggestion: KnowledgeInterviewSuggestion | null;
+  explainability: KnowledgeInterviewExplainability;
+  validation_errors: string[];
 }
 
 // P25 Phase 3 — Explainability-Eintrag einer Korrektur (geteilte Payload mit P26 Phase 3).

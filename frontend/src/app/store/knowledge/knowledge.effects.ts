@@ -3,7 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { catchError, filter, map, mergeMap, of, switchMap, withLatestFrom } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { AiAutonomyDto, DomainDto, EntityDto, ImportSuggestionResponse, Job, KnowledgeImportResult, TaskDto } from '@photofant/models';
+import type { AiAutonomyDto, DomainDto, EntityDto, ImportSuggestionResponse, InterviewSynthesizeResponse, Job, KnowledgeImportResult, KnowledgeInterviewResult, TaskDto } from '@photofant/models';
 import { KnowledgeService } from '@photofant/services';
 import { jobsActions } from '../jobs/jobs.actions';
 import { knowledgeActions } from './knowledge.actions';
@@ -168,6 +168,51 @@ export class KnowledgeEffects {
         }
         return knowledgeActions.importSuggestionReady({
           result: job.result as unknown as KnowledgeImportResult,
+        });
+      }),
+    )
+  );
+
+  // P27 Phase 4 — Interview-Mode. Löst den InterviewJob aus (Gemma fasst die Antworten
+  // zusammen); das Ergebnis kommt wie beim Import über den Job-Stream.
+  readonly requestInterview$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(knowledgeActions.requestInterview),
+      switchMap(({ request }) =>
+        this.knowledgeService.requestInterviewSynthesis(request).pipe(
+          map((response: InterviewSynthesizeResponse) =>
+            knowledgeActions.requestInterviewSuccess({ jobId: response.job_id })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(knowledgeActions.requestInterviewFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  // Denselben Job-Stream-Korrelations-Trick wie beim Import: den erwarteten Interview-Job
+  // aus dem Strom aller Job-Updates herausfischen und done/error in ein Ergebnis wandeln.
+  readonly correlateInterviewJob$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      withLatestFrom(this.store.select(knowledgeFeature.selectInterviewJobId)),
+      filter(([{ job }, jobId]: [{ job: Job }, string | null]) =>
+        jobId !== null && job.id === jobId && (job.state === 'done' || job.state === 'error')
+      ),
+      map(([{ job }]: [{ job: Job }, string | null]) => {
+        if (job.state === 'error') {
+          return knowledgeActions.interviewFailed({
+            error: job.error ?? 'Das Interview ist fehlgeschlagen.',
+          });
+        }
+        if (job.result === null) {
+          return knowledgeActions.interviewFailed({
+            error: 'Das Interview lieferte kein Ergebnis.',
+          });
+        }
+        return knowledgeActions.interviewReady({
+          result: job.result as unknown as KnowledgeInterviewResult,
         });
       }),
     )

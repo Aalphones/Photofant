@@ -3,10 +3,18 @@
     <h1 class="wi-title">Wissen</h1>
     <p class="wi-sub">Personen, Filme und andere Wissenseinheiten der Bibliothek.</p>
   </div>
-  <button class="wi-new-btn" type="button" [disabled]="domainsLoading() && domains().length === 0" (click)="openWizard()">
-    <pf-icon name="plus" [size]="15" />
-    Neue Entity
-  </button>
+  <div class="wi-actions">
+    @if (showInterviewButton()) {
+      <button class="wi-interview-btn" type="button" (click)="openInterview()">
+        <pf-icon name="sparkle" [size]="15" />
+        Private Person (Interview)
+      </button>
+    }
+    <button class="wi-new-btn" type="button" [disabled]="domainsLoading() && domains().length === 0" (click)="openWizard()">
+      <pf-icon name="plus" [size]="15" />
+      Neue Entity
+    </button>
+  </div>
 </div>
 
 @if (lastCreatedEntity(); as entity) {
@@ -67,5 +75,19 @@
     (save)="onSave($event)"
     (update)="onUpdate($event)"
     (requestSuggestion)="onRequestSuggestion($event)"
+  />
+}
+
+@if (showInterview()) {
+  <pf-interview-dialog
+    [domains]="domains()"
+    [isSaving]="isSaving()"
+    [saveError]="saveError()"
+    [loading]="interviewLoading()"
+    [result]="interviewResult()"
+    [error]="interviewError()"
+    (close)="closeInterview()"
+    (requestInterview)="onRequestInterview($event)"
+    (save)="onSave($event)"
   />
 }
