@@ -59,8 +59,13 @@
     [saveError]="saveError()"
     [prefill]="wizardPrefill()"
     [editEntity]="editingEntity()"
+    [importAutonomy]="importAutonomy()"
+    [suggestionLoading]="suggestionLoading()"
+    [suggestionResult]="suggestionResult()"
+    [suggestionError]="suggestionError()"
     (close)="closeWizard()"
     (save)="onSave($event)"
     (update)="onUpdate($event)"
+    (requestSuggestion)="onRequestSuggestion($event)"
   />
 }

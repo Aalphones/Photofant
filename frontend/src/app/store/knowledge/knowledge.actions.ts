@@ -1,5 +1,14 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import type { CreateEntityRequest, DomainDto, EntityDto, TaskDto, UpdateEntityRequest } from '@photofant/models';
+import type {
+  AiAutonomyDto,
+  CreateEntityRequest,
+  DomainDto,
+  EntityDto,
+  ImportSuggestionRequest,
+  KnowledgeImportResult,
+  TaskDto,
+  UpdateEntityRequest,
+} from '@photofant/models';
 
 export const knowledgeActions = createActionGroup({
   source: 'Knowledge',
@@ -26,5 +35,16 @@ export const knowledgeActions = createActionGroup({
     'Dismiss Task':          props<{ taskId: number }>(),
     'Dismiss Task Success':  props<{ task: TaskDto }>(),
     'Dismiss Task Failure':  props<{ error: string }>(),
+    // P27 Phase 2 — KI-Vorschlag im Wizard
+    'Load Ai Autonomy':          emptyProps(),
+    'Load Ai Autonomy Success':  props<{ autonomy: AiAutonomyDto }>(),
+    'Load Ai Autonomy Failure':  props<{ error: string }>(),
+    'Request Import Suggestion':         props<{ request: ImportSuggestionRequest }>(),
+    'Request Import Suggestion Success': props<{ jobId: string }>(),
+    'Request Import Suggestion Failure': props<{ error: string }>(),
+    // Ergebnis des Import-Jobs, aus dem Job-Stream herauskorreliert
+    'Import Suggestion Ready':  props<{ result: KnowledgeImportResult }>(),
+    'Import Suggestion Failed': props<{ error: string }>(),
+    'Reset Import Suggestion':  emptyProps(),
   },
 });

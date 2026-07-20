@@ -1,6 +1,6 @@
 import { createEntityAdapter, type EntityAdapter, type EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
-import type { DomainDto, EntityDto, TaskDto } from '@photofant/models';
+import type { AiAutonomyDto, DomainDto, EntityDto, KnowledgeImportResult, TaskDto } from '@photofant/models';
 import { knowledgeActions } from './knowledge.actions';
 
 export interface TasksState extends EntityState<TaskDto> {
@@ -24,6 +24,12 @@ export interface KnowledgeState extends EntityState<DomainDto> {
   lastUpdatedEntity: EntityDto | null;
   tasks: TasksState;
   entityList: EntityListState;
+  // P27 Phase 2 — KI-Vorschlag im Wizard
+  aiAutonomy: AiAutonomyDto | null;
+  suggestionJobId: string | null;      // Job, dessen Ergebnis wir aus dem Stream erwarten
+  suggestionLoading: boolean;
+  suggestionResult: KnowledgeImportResult | null;
+  suggestionError: string | null;
 }
 
 const adapter: EntityAdapter<DomainDto> = createEntityAdapter<DomainDto>({
@@ -47,6 +53,11 @@ const initialState: KnowledgeState = adapter.getInitialState({
   lastUpdatedEntity: null,
   tasks: taskAdapter.getInitialState({ loading: false, error: null }),
   entityList: entityAdapter.getInitialState({ loading: false, error: null }),
+  aiAutonomy: null,
+  suggestionJobId: null,
+  suggestionLoading: false,
+  suggestionResult: null,
+  suggestionError: null,
 });
 
 export const knowledgeFeature = createFeature({
@@ -148,6 +159,49 @@ export const knowledgeFeature = createFeature({
     on(knowledgeActions.dismissTaskFailure, (state: KnowledgeState, { error }) => ({
       ...state,
       tasks: { ...state.tasks, error },
+    })),
+    on(knowledgeActions.loadAiAutonomySuccess, (state: KnowledgeState, { autonomy }) => ({
+      ...state,
+      aiAutonomy: autonomy,
+    })),
+    // Anfrage läuft: warten, bis der Job-Stream das Ergebnis liefert (suggestionLoading
+    // bleibt auch nach dem Success-Ack an, bis der Job fertig ist — der Success trägt nur
+    // die Job-Id, noch nicht den Vorschlag).
+    on(knowledgeActions.requestImportSuggestion, (state: KnowledgeState) => ({
+      ...state,
+      suggestionLoading: true,
+      suggestionError: null,
+      suggestionResult: null,
+      suggestionJobId: null,
+    })),
+    on(knowledgeActions.requestImportSuggestionSuccess, (state: KnowledgeState, { jobId }) => ({
+      ...state,
+      suggestionJobId: jobId,
+    })),
+    on(knowledgeActions.requestImportSuggestionFailure, (state: KnowledgeState, { error }) => ({
+      ...state,
+      suggestionLoading: false,
+      suggestionError: error,
+      suggestionJobId: null,
+    })),
+    on(knowledgeActions.importSuggestionReady, (state: KnowledgeState, { result }) => ({
+      ...state,
+      suggestionLoading: false,
+      suggestionResult: result,
+      suggestionJobId: null,
+    })),
+    on(knowledgeActions.importSuggestionFailed, (state: KnowledgeState, { error }) => ({
+      ...state,
+      suggestionLoading: false,
+      suggestionError: error,
+      suggestionJobId: null,
+    })),
+    on(knowledgeActions.resetImportSuggestion, (state: KnowledgeState) => ({
+      ...state,
+      suggestionLoading: false,
+      suggestionResult: null,
+      suggestionError: null,
+      suggestionJobId: null,
     })),
   ),
   extraSelectors: ({ selectKnowledgeState }) => {

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import AsyncGenerator
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -21,6 +21,7 @@ class JobDto(BaseModel):
     progress: float
     state: str
     error: str | None
+    result: dict[str, Any] | None = None
 
 
 def _to_dto(status: JobStatus) -> JobDto:
@@ -31,6 +32,7 @@ def _to_dto(status: JobStatus) -> JobDto:
         progress=status.progress,
         state=status.state,
         error=status.error,
+        result=status.result,
     )
 
 

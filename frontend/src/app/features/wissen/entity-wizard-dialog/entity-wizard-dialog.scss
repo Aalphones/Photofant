@@ -134,6 +134,51 @@
   padding: 8px 10px;
 }
 
+.ew-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ew-ai__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-s);
+  background: var(--accent-weak);
+  border: 1px solid var(--accent-line);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  &:hover:not(:disabled) { background: var(--accent); color: var(--bg); }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+
+.ew-ai__hint {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.ew-ai__error {
+  font-size: 11.5px;
+  color: var(--danger);
+  background: var(--danger-weak);
+  border-radius: var(--radius-s);
+  padding: 6px 8px;
+}
+
+.ew-ai__meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.45;
+}
+
 .ew-details-toggle {
   display: flex;
   align-items: center;

@@ -11,10 +11,13 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
 import type {
+  AiAutonomyMode,
   CreateEntityRequest,
   DomainDto,
   EntityDto,
   EntityType,
+  ImportSuggestionRequest,
+  KnowledgeImportResult,
   Relationship,
   UpdateEntityRequest,
 } from '@photofant/models';
@@ -37,10 +40,16 @@ export class EntityWizardDialog {
   // (z.B. aus der Aufgabe "Entity noch ohne Inhalt"). Typ/Domäne sind dann gesperrt,
   // das Backend lehnt eine Änderung dieser Felder ohnehin ab (`_apply_patch`).
   readonly editEntity = input<EntityDto | null>(null);
+  // P27 Phase 2 — KI-Vorschlag. `off` blendet die Aktion aus; `ask`/`auto` bieten sie an.
+  readonly importAutonomy = input<AiAutonomyMode>('off');
+  readonly suggestionLoading = input<boolean>(false);
+  readonly suggestionResult = input<KnowledgeImportResult | null>(null);
+  readonly suggestionError = input<string | null>(null);
 
   readonly close = output<void>();
   readonly save = output<CreateEntityRequest>();
   readonly update = output<{ entityId: string; patch: UpdateEntityRequest }>();
+  readonly requestSuggestion = output<ImportSuggestionRequest>();
 
   private readonly knowledgeService = inject(KnowledgeService);
 
@@ -89,6 +98,23 @@ export class EntityWizardDialog {
 
   protected readonly isEditMode = computed((): boolean => this.editEntity() !== null);
 
+  // KI-Vorschlag nur beim Anlegen (nicht beim Bearbeiten) und nur wenn die Funktion nicht
+  // abgeschaltet ist — Import läuft ausschließlich über öffentliche Domänen (AK Phase 2).
+  protected readonly showSuggestionButton = computed((): boolean =>
+    !this.isEditMode() && this.importAutonomy() !== 'off'
+  );
+
+  protected readonly canRequestSuggestion = computed((): boolean =>
+    this.showSuggestionButton() &&
+    this.title().trim().length > 0 &&
+    this.selectedType().trim().length > 0 &&
+    !this.suggestionLoading()
+  );
+
+  // Der zuletzt bereits eingearbeitete Vorschlag — verhindert, dass derselbe Ergebnis-
+  // Effekt die (evtl. schon vom Nutzer geänderten) Felder erneut überschreibt.
+  private appliedResult: KnowledgeImportResult | null = null;
+
   protected readonly canSave = computed((): boolean =>
     this.title().trim().length > 0 &&
     this.selectedType().trim().length > 0 &&
@@ -122,6 +148,35 @@ export class EntityWizardDialog {
       this.selectedType.set(prefill.type ?? initialDomain.entity_types[0]?.name ?? '');
       this.title.set(prefill.title ?? '');
     });
+
+    // Trifft ein KI-Vorschlag ein, die Felder als bestätigungspflichtige Vorbelegung setzen
+    // (nur die inhaltlichen — Typ/Domäne/Titel bleiben die Nutzer-Wahl). Jeder Vorschlag ist
+    // ein neues Objekt aus dem Store, deshalb reicht die Referenz-Prüfung gegen Doppel-Anwenden.
+    effect(() => {
+      const result = this.suggestionResult();
+      if (result === null || result === this.appliedResult) { return; }
+      this.appliedResult = result;
+      const suggestion = result.suggestion;
+      if (suggestion === null) { return; }
+      this.description.set(suggestion.body);
+      this.aliases.set([...suggestion.aliases]);
+      this.relationships.set([...suggestion.relationships]);
+      this.detailsOpen.set(true);
+    });
+  }
+
+  protected confidencePercent(confidence: number): number {
+    return Math.round(confidence * 100);
+  }
+
+  protected onRequestSuggestion(): void {
+    if (!this.canRequestSuggestion()) { return; }
+    const request: ImportSuggestionRequest = {
+      title: this.title().trim(),
+      domain: this.selectedDomain(),
+      type: this.selectedType(),
+    };
+    this.requestSuggestion.emit(request);
   }
 
   protected onDomainChange(domainName: string): void {

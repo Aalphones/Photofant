@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { CreateEntityRequest, EntityDto, TaskDto, UpdateEntityRequest } from '@photofant/models';
+import type { AiAutonomyMode, CreateEntityRequest, EntityDto, ImportSuggestionRequest, TaskDto, UpdateEntityRequest } from '@photofant/models';
 import { knowledgeActions, knowledgeSelectors } from '@photofant/store';
 import { Icon } from '../../ui/icon/icon';
 import { EntityWizardDialog } from './entity-wizard-dialog/entity-wizard-dialog';
@@ -31,6 +31,13 @@ export class Wissen {
   protected readonly tasksLoading = this.store.selectSignal(knowledgeSelectors.selectTasksLoading);
   protected readonly tasksError = this.store.selectSignal(knowledgeSelectors.selectTasksError);
 
+  // P27 Phase 2 — KI-Vorschlag im Wizard
+  private readonly aiAutonomy = this.store.selectSignal(knowledgeSelectors.selectAiAutonomy);
+  protected readonly importAutonomy = computed((): AiAutonomyMode => this.aiAutonomy()?.knowledge_import ?? 'off');
+  protected readonly suggestionLoading = this.store.selectSignal(knowledgeSelectors.selectSuggestionLoading);
+  protected readonly suggestionResult = this.store.selectSignal(knowledgeSelectors.selectSuggestionResult);
+  protected readonly suggestionError = this.store.selectSignal(knowledgeSelectors.selectSuggestionError);
+
   protected readonly showWizard = signal(false);
   // Gesetzt, wenn der Wizard eine bestehende Entity bearbeitet (z.B. aus der Aufgabe
   // "Entity noch ohne Inhalt") statt eine neue anzulegen.
@@ -56,6 +63,7 @@ export class Wissen {
     this.store.dispatch(knowledgeActions.loadDomains());
     this.store.dispatch(knowledgeActions.loadTasks());
     this.store.dispatch(knowledgeActions.loadEntities());
+    this.store.dispatch(knowledgeActions.loadAiAutonomy());
 
     // Wizard schließt sich selbst, sobald Anlegen ODER Bearbeiten erfolgreich war; kam
     // er aus einer Aufgabe, wird die Aufgabe im selben Zug aufgelöst.
@@ -73,15 +81,21 @@ export class Wissen {
 
   protected openWizard(): void {
     this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.resetImportSuggestion());
     this.activeTask.set(null);
     this.editingEntity.set(null);
     this.showWizard.set(true);
   }
 
   protected closeWizard(): void {
+    this.store.dispatch(knowledgeActions.resetImportSuggestion());
     this.showWizard.set(false);
     this.activeTask.set(null);
     this.editingEntity.set(null);
+  }
+
+  protected onRequestSuggestion(request: ImportSuggestionRequest): void {
+    this.store.dispatch(knowledgeActions.requestImportSuggestion({ request }));
   }
 
   protected onSave(request: CreateEntityRequest): void {
@@ -96,6 +110,7 @@ export class Wissen {
   // der Work-Queue.
   protected openEntityForEdit(entity: EntityDto): void {
     this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.resetImportSuggestion());
     this.activeTask.set(null);
     this.editingEntity.set(entity);
     this.showWizard.set(true);
@@ -103,6 +118,7 @@ export class Wissen {
 
   protected resolveTaskViaWizard(task: TaskDto): void {
     this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.resetImportSuggestion());
     this.activeTask.set(task);
     // "Entity noch ohne Inhalt" verweist auf eine bestehende Entity (`entity_id` im
     // Task-Kontext) -> Wizard im Edit-Modus öffnen statt eine neue anzulegen.

@@ -15,6 +15,10 @@ const {
   selectEntityDictionary,
   selectEntitiesLoading,
   selectEntitiesError,
+  selectAiAutonomy,
+  selectSuggestionLoading,
+  selectSuggestionResult,
+  selectSuggestionError,
 } = knowledgeFeature;
 
 export const knowledgeSelectors = {
@@ -32,4 +36,8 @@ export const knowledgeSelectors = {
   selectEntityDictionary,
   selectEntitiesLoading,
   selectEntitiesError,
+  selectAiAutonomy,
+  selectSuggestionLoading,
+  selectSuggestionResult,
+  selectSuggestionError,
 };

@@ -127,6 +127,58 @@ export interface PatchJobResponse {
   job_id: string;
 }
 
+// P27 Phase 2 — KI-gestützte Wissenspflege. Autonomie-Stufe pro KI-Funktion (Konzept-ADR-008):
+// `off` blendet die KI-Aktion aus, `ask`/`auto` bieten sie an.
+export const AI_AUTONOMY_MODES = ['off', 'ask', 'auto'] as const;
+export type AiAutonomyMode = typeof AI_AUTONOMY_MODES[number];
+
+export interface AiAutonomyDto {
+  knowledge_import: AiAutonomyMode;
+  knowledge_update: AiAutonomyMode;
+  interview: AiAutonomyMode;
+}
+
+// P27 Phase 2 — Anfrage für einen KI-Vorschlag (füllt die Wizard-Felder vor).
+export interface ImportSuggestionRequest {
+  title: string;
+  domain: string;
+  type: string;
+  person_ids?: number[];
+  asset_ids?: number[];
+}
+
+export interface ImportSuggestionResponse {
+  job_id: string;
+}
+
+// P27 Phase 2 — Explainability eines KI-Vorschlags (Modell, Prompt-Version, Confidence, Grund).
+export interface KnowledgeImportExplainability {
+  model_id: string;
+  capability: string;
+  prompt_version: string | null;
+  duration_ms: number;
+  confidence: number | null;
+  reason: string;
+}
+
+// P27 Phase 2 — der von Gemma vorgeschlagene Feld-Satz (nur bestätigungspflichtiger Vorschlag).
+export interface KnowledgeImportSuggestion {
+  title: string;
+  type: string;
+  domain: string;
+  aliases: string[];
+  relationships: Relationship[];
+  body: string;
+}
+
+// P27 Phase 2 — Ergebnis des KnowledgeImportJob, über den Job-Stream geliefert. `suggestion`
+// ist null, wenn der Validator den Vorschlag abgewiesen hat (`validation_errors` erklärt warum).
+export interface KnowledgeImportResult {
+  suggestion: KnowledgeImportSuggestion | null;
+  explainability: KnowledgeImportExplainability;
+  validation_errors: string[];
+}
+
 // P25 Phase 3 — Explainability-Eintrag einer Korrektur (geteilte Payload mit P26 Phase 3).
 export interface ChangelogEntryDto {
   id: number;

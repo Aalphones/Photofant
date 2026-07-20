@@ -2,10 +2,13 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import type {
+  AiAutonomyDto,
   ChangelogEntryDto,
   CreateEntityRequest,
   DomainDto,
   EntityDto,
+  ImportSuggestionRequest,
+  ImportSuggestionResponse,
   LoreDto,
   PatchEntityRequest,
   PatchJobResponse,
@@ -86,5 +89,18 @@ export class KnowledgeService {
 
   getChangelog(entityId: string): Observable<ChangelogEntryDto[]> {
     return this.http.get<ChangelogEntryDto[]>(`/api/knowledge/entities/${entityId}/changelog`);
+  }
+
+  // P27 Phase 2 — aktuelle Autonomie-Stufe je KI-Funktion (steuert das Ein-/Ausblenden
+  // der KI-Aktionen im Wizard/Panel).
+  getAiAutonomy(): Observable<AiAutonomyDto> {
+    return this.http.get<AiAutonomyDto>('/api/knowledge/ai/autonomy');
+  }
+
+  // P27 Phase 2 — löst den KnowledgeImportJob aus (Gemma füllt den Wizard-Vorschlag).
+  // Läuft asynchron über die Job-Queue; das Ergebnis kommt über den Job-Stream, deshalb
+  // nur der `job_id`-Rückgabewert hier.
+  requestImportSuggestion(request: ImportSuggestionRequest): Observable<ImportSuggestionResponse> {
+    return this.http.post<ImportSuggestionResponse>('/api/knowledge/ai/import-suggestion', request);
   }
 }

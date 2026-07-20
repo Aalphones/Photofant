@@ -151,8 +151,15 @@ export type {
   PatchEntityRequest,
   PatchJobResponse,
   ChangelogEntryDto,
+  AiAutonomyMode,
+  AiAutonomyDto,
+  ImportSuggestionRequest,
+  ImportSuggestionResponse,
+  KnowledgeImportExplainability,
+  KnowledgeImportSuggestion,
+  KnowledgeImportResult,
 } from './knowledge.model';
-export { OWNERS, TASK_KINDS, TASK_STATUSES } from './knowledge.model';
+export { OWNERS, TASK_KINDS, TASK_STATUSES, AI_AUTONOMY_MODES } from './knowledge.model';
 
 export type {
   ClassificationMode,

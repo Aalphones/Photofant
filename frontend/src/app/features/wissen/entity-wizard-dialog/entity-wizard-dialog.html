@@ -47,6 +47,45 @@
         </div>
       </div>
 
+      @if (showSuggestionButton()) {
+        <div class="ew-ai">
+          <button
+            class="ew-ai__btn"
+            type="button"
+            [disabled]="!canRequestSuggestion()"
+            (click)="onRequestSuggestion()"
+          >
+            <pf-icon name="sparkle" [size]="14" />
+            {{ suggestionLoading() ? 'Gemma denkt nach…' : 'KI-Vorschlag' }}
+          </button>
+          <span class="ew-ai__hint">Titel eingeben, dann füllt Gemma die Beschreibung als Vorschlag vor.</span>
+
+          @if (suggestionError(); as error) {
+            <div class="ew-ai__error">{{ error }}</div>
+          }
+
+          @if (suggestionResult(); as result) {
+            @if (result.validation_errors.length > 0) {
+              <div class="ew-ai__error">
+                Vorschlag abgewiesen: {{ result.validation_errors.join('; ') }}
+              </div>
+            } @else if (result.suggestion !== null) {
+              <div class="ew-ai__meta">
+                <pf-icon name="info" [size]="12" />
+                <span>
+                  {{ result.explainability.reason }}
+                  · Modell {{ result.explainability.model_id }}
+                  · Prompt v{{ result.explainability.prompt_version ?? '?' }}
+                  @if (result.explainability.confidence !== null) {
+                    · Konfidenz {{ confidencePercent(result.explainability.confidence) }}%
+                  }
+                </span>
+              </div>
+            }
+          }
+        </div>
+      }
+
       <button class="ew-details-toggle" type="button" (click)="toggleDetails()">
         <pf-icon [name]="detailsOpen() ? 'chevronUp' : 'chevronDown'" [size]="14" />
         Weitere Details

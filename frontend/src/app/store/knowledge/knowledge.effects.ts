@@ -1,14 +1,18 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, mergeMap, of, switchMap } from 'rxjs';
+import { Store } from '@ngrx/store';
+import { catchError, filter, map, mergeMap, of, switchMap, withLatestFrom } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { DomainDto, EntityDto, TaskDto } from '@photofant/models';
+import type { AiAutonomyDto, DomainDto, EntityDto, ImportSuggestionResponse, Job, KnowledgeImportResult, TaskDto } from '@photofant/models';
 import { KnowledgeService } from '@photofant/services';
+import { jobsActions } from '../jobs/jobs.actions';
 import { knowledgeActions } from './knowledge.actions';
+import { knowledgeFeature } from './knowledge.reducer';
 
 @Injectable()
 export class KnowledgeEffects {
   private readonly actions$ = inject(Actions);
+  private readonly store = inject(Store);
   private readonly knowledgeService = inject(KnowledgeService);
 
   readonly loadDomains$ = createEffect(() =>
@@ -106,6 +110,66 @@ export class KnowledgeEffects {
           ),
         )
       ),
+    )
+  );
+
+  // P27 Phase 2 — KI-Vorschlag im Wizard
+  readonly loadAiAutonomy$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(knowledgeActions.loadAiAutonomy),
+      switchMap(() =>
+        this.knowledgeService.getAiAutonomy().pipe(
+          map((autonomy: AiAutonomyDto) => knowledgeActions.loadAiAutonomySuccess({ autonomy })),
+          catchError((error: HttpErrorResponse) =>
+            of(knowledgeActions.loadAiAutonomyFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  readonly requestImportSuggestion$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(knowledgeActions.requestImportSuggestion),
+      // switchMap: nur der zuletzt angeforderte Vorschlag zählt (ein zweiter Klick verwirft den ersten)
+      switchMap(({ request }) =>
+        this.knowledgeService.requestImportSuggestion(request).pipe(
+          map((response: ImportSuggestionResponse) =>
+            knowledgeActions.requestImportSuggestionSuccess({ jobId: response.job_id })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(knowledgeActions.requestImportSuggestionFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  // Der Import-Job liefert sein Ergebnis über den Job-Stream (kein eigener Kanal). Hier
+  // fischen wir aus dem Strom aller Job-Updates genau den erwarteten Job heraus und wandeln
+  // sein Fertig-/Fehler-Signal in ein Vorschlags-Ergebnis um.
+  readonly correlateSuggestionJob$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      withLatestFrom(this.store.select(knowledgeFeature.selectSuggestionJobId)),
+      filter(([{ job }, jobId]: [{ job: Job }, string | null]) =>
+        jobId !== null && job.id === jobId && (job.state === 'done' || job.state === 'error')
+      ),
+      map(([{ job }]: [{ job: Job }, string | null]) => {
+        if (job.state === 'error') {
+          return knowledgeActions.importSuggestionFailed({
+            error: job.error ?? 'Der KI-Vorschlag ist fehlgeschlagen.',
+          });
+        }
+        if (job.result === null) {
+          return knowledgeActions.importSuggestionFailed({
+            error: 'Der KI-Vorschlag lieferte kein Ergebnis.',
+          });
+        }
+        return knowledgeActions.importSuggestionReady({
+          result: job.result as unknown as KnowledgeImportResult,
+        });
+      }),
     )
   );
 }

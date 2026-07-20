@@ -46,6 +46,7 @@ class JobKind(StrEnum):
     CAPTIONS = "captions"
     KNOWLEDGE_LOOKUP = "knowledge_lookup"
     KNOWLEDGE_PATCH = "knowledge_patch"
+    KNOWLEDGE_IMPORT = "knowledge_import"
     RECOMMENDATION = "recommendation"
 
 
@@ -57,6 +58,11 @@ class JobStatus:
     progress: float = 0.0
     state: JobState = JobState.QUEUED
     error: str | None = None
+    # Optionale strukturierte Ausgabe eines Jobs, die über den Job-Stream zum Frontend
+    # zurückfließt (P27: der KI-Vorschlag füllt den Wizard). Die meisten Jobs sind reine
+    # Sackgassen und lassen das None — nur wer ein Ergebnis liefert, setzt es via
+    # ``set_result`` vor Abschluss.
+    result: dict[str, Any] | None = None
 
 
 CoroFactory = Callable[["JobStatus"], Coroutine[Any, Any, None]]
@@ -223,6 +229,15 @@ class JobQueue:
         status.progress = progress
         status.state = state
         status.error = error
+        self._notify(status)
+
+    def set_result(self, status: JobStatus, result: dict[str, Any]) -> None:
+        """Hängt einem Job seine strukturierte Ausgabe an und meldet sie über den Stream.
+
+        Vor dem abschließenden ``DONE``-Update aufrufen — das Ergebnis reist so mit der
+        Fertig-Meldung zum Frontend (der Snapshot spielt es auch bei Reconnect wieder ein).
+        """
+        status.result = result
         self._notify(status)
 
     def _notify(self, status: JobStatus) -> None:

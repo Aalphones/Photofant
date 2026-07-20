@@ -23,3 +23,17 @@
 - [ ] → Phase 2/3/4: **`ai.idleTimeoutSeconds` steuert den ganzen Generativ-Slot** (Gemma
   *und* Captioner — genau ein Modell resident), nicht Gemma allein (ADR-028). Kein Per-Modell-
   Timeout; falls je nötig, isolierter Folge-Schritt.
+- [x] Phase 2: **KI-Vorschlag reist über den Job-Stream** (mit User entschieden). Neu:
+  `JobStatus.result`/`job_queue.set_result` + `JobDto.result` + Frontend `Job.result`
+  (generisch `Record<string,unknown>`). Der Job setzt sein Ergebnis vor dem DONE-Update;
+  ein Store-Effekt (`correlateSuggestionJob$`) fischt genau den erwarteten `job_id` aus dem
+  Strom aller Job-Updates und wandelt done/error in ein Vorschlags-Ergebnis um. **Phase 3/4
+  erben diesen Kanal** — kein neuer Endpunkt nötig, nur ein eigener Ergebnis-Typ + Job-Kind.
+- [ ] → Phase 3/4: **Autonomie-Gate-Muster steht** — `api/knowledge_ai.py` mit
+  `GET /knowledge/ai/autonomy` (Frontend blendet Aktionen bei `off` aus) + der jeweiligen
+  Auslöse-Route, die zusätzlich serverseitig `autonomy_for(...) == "off"` → 409 prüft. Phase 3
+  (Update) hängt sich an dieselbe Autonomie-Abfrage (`knowledge_update`), Phase 4 an `interview`.
+- [ ] → Phase 3/4: **Import füllt nur die Beschreibung** (Gemma-Absatz); Aliase/Beziehungen
+  bleiben leer im Vorschlag. Ein rohes Text-LM liefert dafür nichts Verlässliches. Wenn Phase 3
+  reichere Vorschläge will, den **Prompt** dafür bauen (strukturierte Ausgabe), nicht die
+  Feld-Ableitung im Job hart verdrahten — der Suggestion-Typ trägt die Felder bereits.
