@@ -109,3 +109,17 @@ Neue Datei `backend/tests/test_recommendation_invalidation_clustering.py`:
 Keine zusätzlichen — Phase 1 deckt `code-map.md`/ADR ab.
 
 ## Report-Back
+
+`run_initial_clustering` sammelt jetzt `changed_face_ids` in beiden Zweigen (Pre-Match,
+HDBSCAN) und ruft `invalidate_recommendations` mit den betroffenen Asset-IDs direkt vor
+`session.commit()` auf. `run_incremental_match` ruft es im `auto`-Zweig direkt nach dem
+`session.flush()` für `face.person_id` auf (nicht im `review`-Zweig).
+
+Neue Testdatei `test_recommendation_invalidation_clustering.py` (4 Tests, grün: Pre-Match,
+HDBSCAN, Incremental-Auto, Incremental-Review-Negativtest). Plan-Annahme korrigiert: „HDBSCAN
+läuft mit einem Embedding leer durch" stimmt nicht — echtes sklearn wirft bei `n_samples=1`
+`ValueError`. Im Pre-Match-Test daher `_run_hdbscan` zusätzlich gestubbt (Testziel unberührt,
+nur die HDBSCAN-Mechanik selbst wird dort nicht geprüft).
+
+ruff grün, mypy: dieselben 5 vorbestehenden Fehler wie vor der Änderung (0 neue) —
+verifiziert per `git stash`-Vergleich.

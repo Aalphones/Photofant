@@ -65,6 +65,11 @@ def run_incremental_match(face_id: int) -> None:
             face.person_id = result.person_id
             session.flush()
 
+            if face.asset_id is not None:
+                from photofant.jobs.recommendation_job import invalidate_recommendations
+
+                invalidate_recommendations(session, [face.asset_id])
+
             from photofant.config import get_data_root
             from photofant.media.person_folders import materialize_assignment, move_face_crops_to_person
 

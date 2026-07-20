@@ -143,6 +143,7 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
     # the incremental match that runs right after import.
     matched_auto = 0
     matched_review = 0
+    changed_face_ids: set[int] = set()
 
     for face_id in face_ids:
         if face_id in fixed_face_ids:
@@ -155,6 +156,7 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
 
         if result.band == "auto" and result.person_id is not None:
             face.person_id = result.person_id
+            changed_face_ids.add(face_id)
             matched_auto += 1
             log.info(
                 "Face %d pre-matched (auto) to person %d (score=%.3f)",
@@ -245,10 +247,24 @@ def run_initial_clustering(session: Session) -> dict[str, int]:
 
         for face in faces_from_unknown:
             face.person_id = person.id
+            changed_face_ids.add(face.id)
             faces_assigned += 1
 
     noise_indices = [index for index, cluster_label in enumerate(labels) if cluster_label == -1]
     noise_count = len(noise_indices)
+
+    if changed_face_ids:
+        from photofant.jobs.recommendation_job import invalidate_recommendations
+
+        affected_assets = {
+            int(row[0])
+            for row in session.execute(
+                select(Face.asset_id).where(
+                    Face.id.in_(changed_face_ids), Face.asset_id.isnot(None)
+                )
+            ).all()
+        }
+        invalidate_recommendations(session, affected_assets)
 
     session.commit()
     log.info(
