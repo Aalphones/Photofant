@@ -96,7 +96,27 @@ Ergänzung zu `test_recommendation_scoring.py`, falls dort schon ein passendes F
 
 ## Doc-Updates
 
-- [ ] `docs/decisions/030-recommendation-cache-invalidierung.md` neu
-- [ ] `docs/code-map.md` — Zeile „Empfehlungen" ergänzt
+- [x] `docs/decisions/030-recommendation-cache-invalidierung.md` neu
+- [x] `docs/code-map.md` — Zeile „Empfehlungen" ergänzt
 
 ## Report-Back
+
+**Status:** ✅ complete (2026-07-20)
+
+- `assets_of_persons` öffentlich (Rename, Verhalten unverändert), `assets_for_entity` neu
+  in `context.py` — zwei Bulk-Queries, kein N+1.
+- `invalidate_recommendations` neu in `recommendation_job.py`, löscht Quelle **und** Ziel
+  (Kern-Fix ggü. dem alten Löschmuster, das nur `source_asset_id` traf).
+- **Deviation vom Plantext:** zusätzlich Index `ix_recommendation_target` auf
+  `recommendation_cache.recommended_asset_id` (Model + Migration 0039) — die neue Filterung
+  auf dieser Spalte war sonst ein Full-Table-Scan; Projekt-Konvention
+  (`docs/conventions/python.md`, „Filter-Spalten kriegen ihren Index im selben Change")
+  verlangt das explizit. Nicht im Plan-AK stehend, aber direkte Konsequenz der neuen Query.
+- ADR-030 hält TTL/Rebuild-Button als verworfene Alternativen fest, referenziert ADR-026.
+- Tests: 6 neu (3× `invalidate_recommendations`, 2× `assets_for_entity`, siehe oben) — alle
+  grün. `ruff` grün. `mypy --strict`: 7 vorbestehende Fehler in `models.py`/`context.py`
+  (unrelated `type: ignore`/`Row`-Typing, verifiziert per `git stash` gegen `master` —
+  keine Regression, nicht Teil dieser Phase).
+- Volle Backend-Suite: 372 grün, 13 rot — alle 13 vorbestehend auf `master` (comfyui-Run-Worker
+  + ein caption-config-Test), verifiziert per `git stash`. Baseline-Gate erfüllt (nichts neu
+  kaputt), Fixes außerhalb Scope.

@@ -434,6 +434,7 @@ class Recommendation(Base):
             "source_asset_id", "recommended_asset_id", name="uq_recommendation_source_target"
         ),
         Index("ix_recommendation_source", "source_asset_id"),
+        Index("ix_recommendation_target", "recommended_asset_id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

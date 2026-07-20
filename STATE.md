@@ -1,8 +1,13 @@
 # STATE
 
-**Aktiver Plan:** (keiner) — P35 (Gemma-GGUF-Runtime) alle 3 Phasen ✅ complete, archiviert
-nach `docs/archive/2026-07/2026-07-20_p35-gemma-gguf-runtime/`.
-**Nächster Schritt:** Backlog wählen (siehe unten) oder `/session-review`.
+**Aktiver Plan:** `docs/planning/2026-07-20_recommendation-cache-invalidation/`
+**Phase:** 2/4 — Manuelle Face-/Person-Aktionen (pending)
+**Nächster Schritt:** Phase 2 umsetzen (faces, assets, persons, review-queue, bulk-assign rufen `invalidate_recommendations` vor ihrem Commit).
+
+## Vorheriger Stand (P35 abgeschlossen)
+
+P35 (Gemma-GGUF-Runtime) alle 3 Phasen ✅ complete, archiviert nach
+`docs/archive/2026-07/2026-07-20_p35-gemma-gguf-runtime/`.
 
 ## Smoke-Test P35 ausstehend (User)
 

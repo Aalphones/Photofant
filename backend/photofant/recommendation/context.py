@@ -102,7 +102,7 @@ def gather_graph_candidates(session: Session, source_context: AssetGraphContext)
     macht der Aufrufer.
     """
     candidates: set[int] = set()
-    candidates |= _assets_of_persons(session, list(source_context.persons))
+    candidates |= assets_of_persons(session, list(source_context.persons))
 
     # Entities, über die geteilte Rollen/Filme laufen: die Quell-Rollen selbst, die Filme
     # selbst (direkt verknüpfte Assets), und alle Entities, die auf einen der Filme zeigen.
@@ -123,9 +123,22 @@ def gather_graph_candidates(session: Session, source_context: AssetGraphContext)
         ).all()
         candidates |= {target_id for kind, target_id in link_rows if kind == "asset"}
         linked_person_ids = [target_id for kind, target_id in link_rows if kind == "person"]
-        candidates |= _assets_of_persons(session, linked_person_ids)
+        candidates |= assets_of_persons(session, linked_person_ids)
 
     return candidates
+
+
+def assets_for_entity(session: Session, entity_id: str) -> set[int]:
+    """Assets, die eine Änderung an dieser Entity (Relationship oder Media-Link) betrifft:
+    direkt verknüpfte Assets plus aktive Assets aller mit ihr verknüpften Personen."""
+    rows = session.execute(
+        select(KnowledgeMediaLink.kind, KnowledgeMediaLink.target_id).where(
+            KnowledgeMediaLink.entity_id == entity_id
+        )
+    ).all()
+    direct_assets = {target_id for kind, target_id in rows if kind == "asset"}
+    person_ids = [target_id for kind, target_id in rows if kind == "person"]
+    return direct_assets | assets_of_persons(session, person_ids)
 
 
 # ----------------------------------------------------------------------------
@@ -203,7 +216,7 @@ def _entity_titles(session: Session, entity_ids: set[str]) -> dict[str, str]:
     return dict(rows)
 
 
-def _assets_of_persons(session: Session, person_ids: list[int]) -> set[int]:
+def assets_of_persons(session: Session, person_ids: list[int]) -> set[int]:
     """Aktive Assets, die einer der Personen zugeordnet sind."""
     if not person_ids:
         return set()

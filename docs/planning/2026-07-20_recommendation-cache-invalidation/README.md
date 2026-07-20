@@ -46,7 +46,7 @@ lebt deshalb **immer im Aufrufer** (`api/knowledge.py`, `api/persons.py`, `api/a
 
 | Phase | Thema | Rating | Status |
 |---|---|---|---|
-| 1 | Core-Utility (`assets_of_persons`, `assets_for_entity`, `invalidate_recommendations`) + ADR | standard | pending |
+| 1 | Core-Utility (`assets_of_persons`, `assets_for_entity`, `invalidate_recommendations`) + ADR | standard | complete |
 | 2 | Manuelle Face-/Person-Aktionen (faces, assets, persons, review-queue, bulk-assign) | standard | pending |
 | 3 | Wissensgraph-Verknüpfungen (link-entity, relationships, knowledge-patch) | standard | pending |
 | 4 | Clustering (automatische Zuordnung nach Import — vermutlicher Hauptverursacher) | standard | pending |

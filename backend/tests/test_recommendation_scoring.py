@@ -19,7 +19,7 @@ from photofant.db.models import (
     KnowledgeRelationship,
     Person,
 )
-from photofant.recommendation.context import build_context
+from photofant.recommendation.context import assets_for_entity, build_context
 from photofant.recommendation.scoring import (
     SIGNAL_CLIP,
     SIGNAL_SAME_FILM,
@@ -192,3 +192,23 @@ def test_compute_recommendations_empty_when_disabled(db_session: Session) -> Non
     _seed_mcu_graph(db_session)
 
     assert compute_recommendations(db_session, 100, _settings(enabled=False)) == []
+
+
+def test_assets_for_entity_returns_direct_and_person_linked_assets(db_session: Session) -> None:
+    _seed_mcu_graph(db_session)
+    # Direkter Asset-Link auf dieselbe Entity zusätzlich zum Personen-Link aus dem MCU-Graph.
+    _add_asset(db_session, 104)
+    db_session.add(
+        KnowledgeMediaLink(entity_id="characters/tony-stark", kind="asset", target_id=104)
+    )
+    db_session.commit()
+
+    # characters/tony-stark ist mit Person 10 (RDJ, Assets 100+101) UND direkt mit Asset 104
+    # verknüpft.
+    assert assets_for_entity(db_session, "characters/tony-stark") == {100, 101, 104}
+
+
+def test_assets_for_entity_empty_when_unlinked(db_session: Session) -> None:
+    _seed_mcu_graph(db_session)
+
+    assert assets_for_entity(db_session, "characters/does-not-exist") == set()
