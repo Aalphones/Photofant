@@ -231,6 +231,7 @@ export class PersonCard {
   }
 
   protected onCreateKnowledgeClick(event: MouseEvent): void {
+    event.preventDefault();
     event.stopPropagation();
     const task = this.newPersonTask();
     if (task === null) { return; }
@@ -238,6 +239,7 @@ export class PersonCard {
   }
 
   protected onSnoozeNewPersonClick(event: MouseEvent): void {
+    event.preventDefault();
     event.stopPropagation();
     const task = this.newPersonTask();
     if (task === null) { return; }
@@ -245,6 +247,7 @@ export class PersonCard {
   }
 
   protected onDismissNewPersonClick(event: MouseEvent): void {
+    event.preventDefault();
     event.stopPropagation();
     const task = this.newPersonTask();
     if (task === null) { return; }
@@ -252,9 +255,12 @@ export class PersonCard {
   }
 
   // P24 Phase 3: verknüpfte Entity im Chip anklicken -> Wissens-Sicht. Chip liegt (wie
-  // Menü/Editoren) innerhalb des kartenweiten <a>, deshalb stopPropagation gegen den
-  // Galerie-Navigate — gleiches Muster wie bei den übrigen Aktionsbuttons hier.
+  // Menü/Editoren) innerhalb des kartenweiten <a>. stopPropagation allein reicht hier NICHT —
+  // die native <a>-Navigation ist eine Default-Action des Klick-Events und wird nur durch
+  // preventDefault() verhindert, nicht durch gestoppte Propagation (die blockt nur Angulars
+  // eigenen RouterLink-Handler, der sonst seinerseits preventDefault() aufgerufen hätte).
   protected onEntityChipClick(event: MouseEvent, entity: EntityRefDto): void {
+    event.preventDefault();
     event.stopPropagation();
     this.router.navigate(['/wissen'], { queryParams: { entity: entity.id } });
   }
