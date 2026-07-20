@@ -224,7 +224,7 @@ Button ohne Wirkung).
 
 ## Commits
 
-*(nach Commit ausfüllen)*
+`47566fc` — feat(lightbox): rebuild detail panel as tabbed layout (beide Phasen)
 
 ## Deviations from plan
 
