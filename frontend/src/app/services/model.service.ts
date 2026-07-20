@@ -52,10 +52,15 @@ export class ModelService {
     );
   }
 
-  registerLocal(manifestId: string, path: string): Observable<RegisterLocalResponse> {
+  registerLocal(
+    manifestId: string,
+    path: string,
+    components?: Record<string, string>,
+  ): Observable<RegisterLocalResponse> {
     return this.http.post<RegisterLocalResponse>('/api/models/register-local', {
       manifest_id: manifestId,
       path,
+      ...(components ? { components } : {}),
     });
   }
 

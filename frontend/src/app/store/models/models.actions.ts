@@ -22,7 +22,7 @@ export const modelsActions = createActionGroup({
     'Download Model':            props<{ manifestId: string; licenseAck: boolean }>(),
     'Download Model Success':    props<{ jobId: string; manifestId: string }>(),
     'Download Model Failure':    props<{ manifestId: string; error: string }>(),
-    'Register Local':            props<{ manifestId: string; path: string }>(),
+    'Register Local':            props<{ manifestId: string; path: string; components?: Record<string, string> }>(),
     'Register Local Components': props<{ manifestId: string; components: Record<string, string> }>(),
     'Register Local Success':    props<{ model: ModelDto; warnings: string[] }>(),
     'Register Local Failure':    props<{ manifestId: string; error: string; code: string }>(),

@@ -221,8 +221,8 @@ export class ModelsEffects {
   readonly registerLocal$ = createEffect(() =>
     this.actions$.pipe(
       ofType(modelsActions.registerLocal),
-      switchMap(({ manifestId, path }) =>
-        this.modelService.registerLocal(manifestId, path).pipe(
+      switchMap(({ manifestId, path, components }) =>
+        this.modelService.registerLocal(manifestId, path, components).pipe(
           map((response) => modelsActions.registerLocalSuccess({ model: response.model, warnings: response.warnings })),
           catchError((error: HttpErrorResponse) => {
             const detail = error.error as { code?: string } | null;

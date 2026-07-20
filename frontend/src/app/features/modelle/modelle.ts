@@ -83,10 +83,11 @@ export class Modelle {
     }));
   }
 
-  protected onBindConfirm(event: { model: ModelView; path: string }): void {
+  protected onBindConfirm(event: { model: ModelView; path: string; mmprojPath?: string }): void {
     this.store.dispatch(modelsActions.registerLocal({
       manifestId: event.model.id,
       path: event.path,
+      ...(event.mmprojPath ? { components: { mmproj: event.mmprojPath } } : {}),
     }));
   }
 

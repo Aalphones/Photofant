@@ -172,6 +172,7 @@
 }
 
 .bd-req { color: var(--warn); font-weight: 700; }
+.bd-optional { color: var(--text-3); font-weight: 400; text-transform: none; letter-spacing: 0; }
 
 .bd-validating {
   display: inline-flex;

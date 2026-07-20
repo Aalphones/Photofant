@@ -16,11 +16,12 @@ export class BindDialog {
   readonly bindError = input<ModelBindError | null>(null);
   readonly bindWarnings = input<string[]>([]);
   readonly isPending = input<boolean>(false);
-  readonly confirm = output<{ model: ModelView; path: string }>();
+  readonly confirm = output<{ model: ModelView; path: string; mmprojPath?: string }>();
   readonly confirmComponents = output<{ model: ModelView; components: Record<string, string> }>();
   readonly cancel = output<void>();
 
   protected readonly path = signal<string>('');
+  protected readonly mmprojPath = signal<string>('');
   protected readonly componentPaths = signal<Record<string, string>>({});
 
   protected readonly roleMeta = computed(() =>
@@ -66,7 +67,12 @@ export class BindDialog {
     if (this.isComponentModel()) {
       this.confirmComponents.emit({ model: this.model(), components: this.componentPaths() });
     } else {
-      this.confirm.emit({ model: this.model(), path: this.path().trim() });
+      const mmprojPath = this.mmprojPath().trim();
+      this.confirm.emit({
+        model: this.model(),
+        path: this.path().trim(),
+        ...(mmprojPath ? { mmprojPath } : {}),
+      });
     }
   }
 

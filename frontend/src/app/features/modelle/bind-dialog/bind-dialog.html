@@ -63,6 +63,29 @@
           Die Datei wird weder kopiert noch verändert.
         </div>
       </div>
+
+      @if (model().mmproj_slot) {
+        <div class="bd-field">
+          <label class="bd-field-lbl" for="bd-mmproj">
+            Vision-Modell (mmproj) <span class="bd-optional">— optional</span>
+          </label>
+          <div class="bd-path-row">
+            <pf-icon name="folder" [size]="15" class="bd-path-icon" />
+            <input
+              id="bd-mmproj"
+              class="bd-input"
+              type="text"
+              placeholder="/pfad/zu/mmproj-BF16.gguf"
+              [(ngModel)]="mmprojPath"
+              [disabled]="isPending()"
+              (keydown.enter)="handleConfirm()"
+            />
+          </div>
+          <div class="bd-path-hint">
+            Aktiviert die Bild-Eingabe für dieses Modell (Vision-Naht). Leer lassen, wenn nicht vorhanden.
+          </div>
+        </div>
+      }
     }
 
     @if (errorMessage()) {

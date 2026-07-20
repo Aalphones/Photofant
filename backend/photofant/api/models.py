@@ -62,6 +62,7 @@ class ModelDto(BaseModel):
     license_note: str | None
     caption_mode: str | None
     capabilities: dict[str, Any] | None
+    mmproj_slot: bool
 
 
 class CapabilitiesDto(BaseModel):
@@ -71,6 +72,14 @@ class CapabilitiesDto(BaseModel):
     semantic_search: bool
     rembg: bool
     heavy_caption: bool
+
+
+def _has_mmproj_slot(entry: ManifestEntry) -> bool:
+    """True if the manifest entry declares an optional `mmproj` companion file.
+
+    Drives whether the frontend bind dialog shows the Vision-Naht field (ADR-029).
+    """
+    return any(file_info.get("role") == "mmproj" for file_info in entry.files)
 
 
 def _derive_status(entry: ManifestEntry, row: ModelRegistry | None) -> ModelStatus:
@@ -132,6 +141,7 @@ def list_models(session: DbSession) -> list[ModelDto]:
             license_note=entry.license_note,
             caption_mode=entry.caption_mode,
             capabilities=entry.capabilities,
+            mmproj_slot=_has_mmproj_slot(entry),
         ))
 
     return result
@@ -291,7 +301,7 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Comp
         # Optional companion file (Vision-Naht, ADR-029) — e.g. GGUF `mmproj`. Only
         # honored when the manifest slot actually declares one; a random `components`
         # key on an unrelated model is silently ignored, not persisted.
-        mmproj_declared = any(file_info.get("role") == "mmproj" for file_info in entry.files)
+        mmproj_declared = _has_mmproj_slot(entry)
         components: dict[str, str] | None = None
         if mmproj_declared and body.components and body.components.get("mmproj"):
             mmproj_path = body.components["mmproj"]
@@ -351,6 +361,7 @@ async def register_local(body: RegisterLocalRequest, session: DbSession) -> Comp
         license_note=entry.license_note,
         caption_mode=entry.caption_mode,
         capabilities=entry.capabilities,
+        mmproj_slot=_has_mmproj_slot(entry),
     )
     return ComponentWarningResponse(model=dto, warnings=warnings)
 

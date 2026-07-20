@@ -20,6 +20,7 @@ export interface ModelDto {
   license_note: string | null;
   caption_mode: string | null;
   capabilities: CapabilityDescriptor | null;
+  mmproj_slot: boolean;
 }
 
 export interface ModelView extends ModelDto {
