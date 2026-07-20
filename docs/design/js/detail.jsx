@@ -178,7 +178,7 @@
             React.createElement(Avatar, { personId: p.id, size: 34 }),
             React.createElement("div", { className: "pp-row-name" }, p.name),
             p.count > 0 && React.createElement("span", { className: "pp-row-count" }, p.count + " Foto" + (p.count === 1 ? "" : "s")),
-            p.id === currentId && React.createElement(Icon, { name: "check", size: 15, style: { color: "var(--accent)", marginLeft: p.count > 0 ? 0 : "auto" } })))))); 
+            p.id === currentId && React.createElement(Icon, { name: "check", size: 15, style: { color: "var(--accent)", marginLeft: p.count > 0 ? 0 : "auto" } }))))));
   }
 
   // small round pencil/affordance button
@@ -229,6 +229,7 @@
     const [relPick, setRelPick] = useState(null); // null | "origin" | "edits"
     const [verDrag, setVerDrag] = useState(false);
     const [showCompare, setShowCompare] = useState(false);
+    const [tab, setTab] = useState("overview"); // "overview" | "people" | "versions"
     const matches = useMemo(() => topMatches(asset), [asset.id]);
     // header person = the first detected face (read-only display)
     const headPid = asset.faces.length ? asset.faces[0].personId : asset.personId;
@@ -238,6 +239,7 @@
       setShowMeta(asset.source !== "original");
       setEditCap(false); setEditFace(-1); setRelPick(null);
       setCapDraft(asset.caption);
+      setTab("overview");
     }, [asset.id]);
 
     useEffect(() => {
@@ -283,6 +285,12 @@
     const sceneName = PF.SCENES[asset.scene].name;
     const meta = asset.generationMeta;
 
+    const tabs = [
+      { id: "overview", label: "Übersicht" },
+      { id: "people", label: "Gesichter", badge: asset.faces.length },
+      { id: "versions", label: "Versionen", badge: asset.versions.length },
+    ];
+
     return React.createElement(React.Fragment, null,
       React.createElement("div", { className: "lb-scrim", onClick: onClose }),
       React.createElement("div", { className: "lb" },
@@ -293,9 +301,7 @@
           React.createElement("div", { className: "lb-toolbar" },
             React.createElement("button", { className: "lb-tool" + (asset.favourite ? " on" : ""), title: "Favorit (F)", onClick: () => onToggleFav(asset.id) },
               React.createElement(Icon, { name: "star", size: 18, fill: asset.favourite })),
-            React.createElement("button", { className: "lb-tool", title: "Bearbeiten (E)", onClick: () => { onEdit && onEdit(asset); onClose && onClose(); } }, React.createElement(Icon, { name: "crop", size: 18 })),
-            React.createElement("button", { className: "lb-tool", title: "Vergleichen", onClick: () => setShowCompare(true) }, React.createElement(Icon, { name: "compare", size: 18 })),
-            React.createElement("button", { className: "lb-tool", title: "Exportieren" }, React.createElement(Icon, { name: "export", size: 18 }))),
+            React.createElement("button", { className: "lb-tool", title: "Vergleichen", onClick: () => setShowCompare(true) }, React.createElement(Icon, { name: "compare", size: 18 }))),
           React.createElement("button", { className: "lb-nav prev", onClick: onPrev }, React.createElement(Icon, { name: "arrowLeft", size: 22 })),
           React.createElement("button", { className: "lb-nav next", onClick: onNext }, React.createElement(Icon, { name: "arrowRight", size: 22 })),
           React.createElement(ZoomImg, { asset }),
@@ -303,8 +309,8 @@
 
         // ---------- panel ----------
         React.createElement("div", { className: "panel" },
-          // header: person + date
-          React.createElement("div", { className: "panel-sec", style: { display: "flex", alignItems: "center", gap: 12 } },
+          // header: person + date (fixed, tab-independent)
+          React.createElement("div", { className: "panel-sec panel-fixed", style: { display: "flex", alignItems: "center", gap: 12 } },
             React.createElement(Avatar, { personId: headPid, size: 40 }),
             React.createElement("div", { style: { minWidth: 0, flex: 1 } },
               React.createElement("div", { style: { fontWeight: 600, fontSize: 14 } }, PF.personName(headPid)),
@@ -314,162 +320,173 @@
             React.createElement("div", { style: { marginLeft: "auto", display: "flex", gap: 6 } },
               asset.favourite && React.createElement("span", { style: { color: "var(--gold)" } }, React.createElement(Icon, { name: "star", size: 18, fill: true })))),
 
-          // caption (editable)
-          React.createElement(Section, { title: "Caption", action: editCap ? null : "Bearbeiten", onAction: () => { setCapDraft(asset.caption); setEditCap(true); } },
-            editCap
-              ? React.createElement("div", { className: "cap-edit" },
-                  React.createElement("textarea", {
-                    autoFocus: true, value: capDraft, rows: 3,
-                    onChange: (e) => setCapDraft(e.target.value),
-                    onKeyDown: (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveCaption(); if (e.key === "Escape") setEditCap(false); },
-                  }),
-                  React.createElement("div", { className: "cap-edit-row" },
-                    React.createElement("button", { className: "mini-btn", onClick: () => setEditCap(false) }, "Abbrechen"),
-                    React.createElement("button", { className: "mini-btn primary", onClick: saveCaption }, React.createElement(Icon, { name: "check", size: 13 }), "Speichern")))
-              : React.createElement(React.Fragment, null,
-                  React.createElement("div", { className: "caption-txt" }, asset.caption),
-                  React.createElement("div", { className: "caption-src" }, "↳ " + asset.captioner))),
+          // tab bar (fixed, tab-independent)
+          React.createElement("div", { className: "panel-tabs" },
+            tabs.map((t) => React.createElement("button", {
+              key: t.id, className: "panel-tab" + (tab === t.id ? " active" : ""), onClick: () => setTab(t.id),
+            }, t.label, t.badge != null && React.createElement("span", { className: "tab-badge" }, t.badge)))),
 
-          // tags
-          React.createElement(Section, { title: "Tags · " + asset.tags.length },
-            React.createElement("div", { className: "tagwrap" },
-              asset.tags.map((t) => React.createElement("span", { key: t.name, className: "tg" + (t.kind === "manual" ? " manual" : "") },
-                t.name,
-                React.createElement("span", { className: "tx", onClick: () => removeTag(t.name) }, React.createElement(Icon, { name: "x", size: 12 })))),
-              adding
-                ? React.createElement("input", {
-                    autoFocus: true, className: "tg", style: { width: 110, outline: "none", color: "var(--text)" },
-                    value: newTag, placeholder: "tag…",
-                    onChange: (e) => setNewTag(e.target.value),
-                    onKeyDown: (e) => { if (e.key === "Enter") addTag(); if (e.key === "Escape") { setAdding(false); setNewTag(""); } },
-                    onBlur: addTag,
-                  })
-                : React.createElement("span", { className: "tg tg-add", onClick: () => setAdding(true) },
-                    React.createElement(Icon, { name: "plus", size: 12 }), "Tag"))),
+          // scrollable per-tab content
+          React.createElement("div", { className: "panel-body" },
+            tab === "overview" && React.createElement(React.Fragment, null,
+              // metadata
+              React.createElement(Section, { title: "Metadaten" },
+                React.createElement("dl", { className: "kv" },
+                  React.createElement("dt", null, "Quelle"),
+                  React.createElement("dd", null,
+                    React.createElement("select", { className: "kv-select", value: asset.source, onChange: (e) => setSource(e.target.value) },
+                      ["original", "sdxl", "flux"].map((s) => React.createElement("option", { key: s, value: s }, PF.sourceLabel(s))))),
+                  React.createElement("dt", null, "Originalvorlage"),
+                  React.createElement("dd", null,
+                    asset.originalId != null
+                      ? React.createElement("span", { className: "orig-chip" },
+                          React.createElement("span", { className: "orig-thumb" }, React.createElement(Img, { src: (allAssets.find((a) => a.id === asset.originalId) || asset).photo, bg: asset.bg })),
+                          "#" + asset.originalId,
+                          React.createElement("button", { className: "orig-x", title: "Zuordnung ändern", onClick: () => setRelPick("origin") }, React.createElement(Icon, { name: "pencil", size: 11 })))
+                      : React.createElement("button", { className: "orig-link", onClick: () => setRelPick("origin") },
+                          React.createElement(Icon, { name: "link", size: 13 }), "Zuordnen")),
+                  React.createElement("dt", null, "Framing"),
+                  React.createElement("dd", null,
+                    React.createElement("select", { className: "kv-select", value: asset.framing, onChange: (e) => setFraming(e.target.value) },
+                      ["close_up", "medium", "full_body"].map((f) => React.createElement("option", { key: f, value: f }, PF.framingLabel(f))))),
+                  React.createElement("dt", null, "Auflösung"), React.createElement("dd", null, asset.dims.w + "×" + asset.dims.h),
+                  React.createElement("dt", null, "Seitenverhältnis"), React.createElement("dd", null, asset.ar.w + ":" + asset.ar.h),
+                  React.createElement("dt", null, "Format"), React.createElement("dd", null, asset.format.toUpperCase()),
+                  React.createElement("dt", null, "Größe"), React.createElement("dd", null, (asset.fileSize / 1024).toFixed(1) + " MB"),
+                  React.createElement("dt", null, "Qualität"), React.createElement("dd", null,
+                    React.createElement("span", { style: { color: asset.quality > 0.75 ? "var(--good)" : asset.quality > 0.55 ? "var(--warn)" : "var(--text-2)" } }, Math.round(asset.quality * 100) + " / 100")),
+                  React.createElement("dt", null, "Hash"), React.createElement("dd", { style: { color: "var(--text-3)" } }, "sha256:" + (asset.id * 8821 + 100003).toString(16).padStart(8, "0").slice(0, 8) + "…"))),
 
-          // faces + top matches
-          React.createElement(Section, { title: "Gesichter · " + asset.faces.length },
-            React.createElement("div", { className: "faces-strip", style: { marginBottom: asset.faces.length ? 14 : 0 } },
-              asset.faces.map((f, i) => React.createElement("div", { className: "face-item ed-row", key: i },
-                React.createElement("div", { className: "face-thumb" },
-                  React.createElement(Img, { src: f.cropUrl || PF.personPhoto(f.personId), bg: PF.personBg(f.personId) }),
-                  React.createElement("div", { style: { position: "absolute", inset: 0, boxShadow: "inset 0 0 0 2px " + (f.manual ? "var(--good)" : "var(--accent-line)") } }),
-                  React.createElement("button", { className: "face-del", title: "Gesicht entfernen", onClick: () => removeFace(i) },
-                    React.createElement(Icon, { name: "x", size: 11 }))),
-                React.createElement("div", { className: "face-name face-name-ed", onClick: () => setEditFace(i), title: "Person zuordnen" },
-                  PF.personName(f.personId), React.createElement(Icon, { name: "pencil", size: 11, style: { opacity: .5 } })),
-                React.createElement("div", { className: "face-score" }, (f.manual ? "manuell" : Math.round(f.score * 100) + "%") + " · " + f.age + "J")))),
-            // top-5 quick matches for first face
-            asset.faces.length > 0 && React.createElement(React.Fragment, null,
-              React.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 8, marginTop: 8 } }, "Beste Treffer — Schnellzuweisung"),
-              React.createElement("div", { className: "quick-assign", style: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 } },
-                matches.slice(0, 5).map((m) => React.createElement("button", {
-                  key: m.id, className: "quick-match", onClick: () => setFacePerson(0, m.id), title: "Person für Gesicht 1 zuweisen",
+              // generation meta viewer
+              meta && React.createElement("div", { className: "panel-sec" },
+                React.createElement("div", { className: "psec-title", style: { cursor: "pointer" }, onClick: () => setShowMeta((s) => !s) },
+                  React.createElement(Icon, { name: "sparkle", size: 13 }), "Generierungs-Metadaten",
+                  React.createElement("span", { className: "chev", style: { marginLeft: "auto", color: "var(--text-3)", transform: showMeta ? "" : "rotate(-90deg)" } }, React.createElement(Icon, { name: "chevronDown", size: 14 }))),
+                showMeta && React.createElement("div", { className: "gmeta" },
+                  React.createElement("div", null, React.createElement("span", { className: "gk" }, "model: "), meta.model),
+                  React.createElement("div", null, React.createElement("span", { className: "gk" }, "sampler: "), meta.sampler, "  ",
+                    React.createElement("span", { className: "gk" }, "steps: "), meta.steps, "  ",
+                    React.createElement("span", { className: "gk" }, "cfg: "), meta.cfg),
+                  React.createElement("div", null, React.createElement("span", { className: "gk" }, "seed: "), meta.seed, "  ",
+                    React.createElement("span", { className: "gk" }, "size: "), meta.size),
+                  React.createElement("span", { className: "gk" }, "prompt:"),
+                  React.createElement("span", { className: "prompt" }, meta.prompt))),
+
+              // tags
+              React.createElement(Section, { title: "Tags · " + asset.tags.length },
+                React.createElement("div", { className: "tagwrap" },
+                  asset.tags.map((t) => React.createElement("span", { key: t.name, className: "tg" + (t.kind === "manual" ? " manual" : "") },
+                    t.name,
+                    React.createElement("span", { className: "tx", onClick: () => removeTag(t.name) }, React.createElement(Icon, { name: "x", size: 12 })))),
+                  adding
+                    ? React.createElement("input", {
+                        autoFocus: true, className: "tg", style: { width: 110, outline: "none", color: "var(--text)" },
+                        value: newTag, placeholder: "tag…",
+                        onChange: (e) => setNewTag(e.target.value),
+                        onKeyDown: (e) => { if (e.key === "Enter") addTag(); if (e.key === "Escape") { setAdding(false); setNewTag(""); } },
+                        onBlur: addTag,
+                      })
+                    : React.createElement("span", { className: "tg tg-add", onClick: () => setAdding(true) },
+                        React.createElement(Icon, { name: "plus", size: 12 }), "Tag"))),
+
+              // caption (editable)
+              React.createElement(Section, { title: "Caption", action: editCap ? null : "Bearbeiten", onAction: () => { setCapDraft(asset.caption); setEditCap(true); } },
+                editCap
+                  ? React.createElement("div", { className: "cap-edit" },
+                      React.createElement("textarea", {
+                        autoFocus: true, value: capDraft, rows: 3,
+                        onChange: (e) => setCapDraft(e.target.value),
+                        onKeyDown: (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveCaption(); if (e.key === "Escape") setEditCap(false); },
+                      }),
+                      React.createElement("div", { className: "cap-edit-row" },
+                        React.createElement("button", { className: "mini-btn", onClick: () => setEditCap(false) }, "Abbrechen"),
+                        React.createElement("button", { className: "mini-btn primary", onClick: saveCaption }, React.createElement(Icon, { name: "check", size: 13 }), "Speichern")))
+                  : React.createElement(React.Fragment, null,
+                      React.createElement("div", { className: "caption-txt" }, asset.caption),
+                      React.createElement("div", { className: "caption-src" }, "↳ " + asset.captioner)))),
+
+            tab === "people" && React.createElement(React.Fragment, null,
+              // faces + top matches
+              React.createElement(Section, { title: "Gesichter · " + asset.faces.length },
+                React.createElement("div", { className: "faces-strip", style: { marginBottom: asset.faces.length ? 14 : 0 } },
+                  asset.faces.map((f, i) => React.createElement("div", { className: "face-item ed-row", key: i },
+                    React.createElement("div", { className: "face-thumb" },
+                      React.createElement(Img, { src: f.cropUrl || PF.personPhoto(f.personId), bg: PF.personBg(f.personId) }),
+                      React.createElement("div", { style: { position: "absolute", inset: 0, boxShadow: "inset 0 0 0 2px " + (f.manual ? "var(--good)" : "var(--accent-line)") } }),
+                      React.createElement("button", { className: "face-del", title: "Gesicht entfernen", onClick: () => removeFace(i) },
+                        React.createElement(Icon, { name: "x", size: 11 }))),
+                    React.createElement("div", { className: "face-name face-name-ed", onClick: () => setEditFace(i), title: "Person zuordnen" },
+                      PF.personName(f.personId), React.createElement(Icon, { name: "pencil", size: 11, style: { opacity: .5 } })),
+                    React.createElement("div", { className: "face-score" }, (f.manual ? "manuell" : Math.round(f.score * 100) + "%") + " · " + f.age + "J")))),
+                // top-5 quick matches for first face
+                asset.faces.length > 0 && React.createElement(React.Fragment, null,
+                  React.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 8, marginTop: 8 } }, "Beste Treffer — Schnellzuweisung"),
+                  React.createElement("div", { className: "quick-assign", style: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 } },
+                    matches.slice(0, 5).map((m) => React.createElement("button", {
+                      key: m.id, className: "quick-match", onClick: () => setFacePerson(0, m.id), title: "Person für Gesicht 1 zuweisen",
+                    },
+                      React.createElement("div", { style: { position: "relative", width: 48, height: 48, borderRadius: 6, overflow: "hidden", flex: "none" } },
+                        React.createElement(Img, { src: PF.personPhoto(m.id), bg: PF.personBg(m.id) })),
+                      React.createElement("div", { className: "qm-label" }, PF.personName(m.id).split(" ")[0]),
+                      React.createElement("div", { className: "qm-score" }, Math.round(m.score * 100) + "%"))))),
+                // show more detailed matches + full search option
+                React.createElement("div", { className: "face-assign-opts", style: { marginTop: 12, display: "flex", gap: 6 } },
+                  React.createElement("button", { className: "mini-btn", onClick: () => setEditFace(asset.faces.length > 0 ? 0 : -1) }, "Weitere Personen…"),
+                  asset.faces.length > 1 && React.createElement("button", { className: "mini-btn", onClick: () => setEditFace(-1) }, "Weitere Gesichter…")))),
+
+            tab === "versions" && React.createElement(React.Fragment, null,
+              // versions
+              React.createElement(Section, { title: "Versionen · " + asset.versions.length, action: "Vergleichen" },
+                React.createElement("div", { className: "vers" },
+                  asset.versions.map((v, i) => React.createElement("div", {
+                    key: i, className: "vrow" + (i === curVer ? " cur" : ""), onClick: () => setCurVer(i),
+                  },
+                    React.createElement("div", { className: "vthumb" },
+                      React.createElement(Img, { src: asset.photo, bg: asset.bg }),
+                      v.type === "upscale" && React.createElement("div", { style: { position: "absolute", inset: 0, boxShadow: "inset 0 0 0 2px oklch(0.50 0.13 152 / .8)" } })),
+                    React.createElement("div", { style: { minWidth: 0, flex: 1 } },
+                      React.createElement("div", { className: "vname" }, v.label,
+                        i === curVer && React.createElement("span", { className: "vtag cur" }, "aktiv")),
+                      React.createElement("div", { className: "vmeta" }, v.res + " · " + v.when.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) +
+                        (v.params && v.params.strength ? " · str " + v.params.strength : "") +
+                        (v.params && v.params.model ? " · " + v.params.model : ""))),
+                    React.createElement("button", { className: "iconbtn", style: { width: 28, height: 28 }, onClick: (e) => e.stopPropagation() },
+                      React.createElement(Icon, { name: "rotate", size: 14 }))))),
+                React.createElement("button", {
+                  className: "lb-newver" + (verDrag ? " drag" : ""), title: "Neue Version importieren",
+                  onClick: openNewVersion,
+                  onDragEnter: (e) => { e.preventDefault(); setVerDrag(true); }, onDragOver: (e) => e.preventDefault(),
+                  onDragLeave: (e) => { e.preventDefault(); setVerDrag(false); }, onDrop: onVerDrop,
                 },
-                  React.createElement("div", { style: { position: "relative", width: 48, height: 48, borderRadius: 6, overflow: "hidden", flex: "none" } },
-                    React.createElement(Img, { src: PF.personPhoto(m.id), bg: PF.personBg(m.id) })),
-                  React.createElement("div", { className: "qm-label" }, PF.personName(m.id).split(" ")[0]),
-                  React.createElement("div", { className: "qm-score" }, Math.round(m.score * 100) + "%"))))),
-            // show more detailed matches + full search option
-            React.createElement("div", { className: "face-assign-opts", style: { marginTop: 12, display: "flex", gap: 6 } },
-              React.createElement("button", { className: "mini-btn", onClick: () => setEditFace(asset.faces.length > 0 ? 0 : -1) }, "Weitere Personen…"),
-              asset.faces.length > 1 && React.createElement("button", { className: "mini-btn", onClick: () => setEditFace(-1) }, "Weitere Gesichter…"))),
+                  React.createElement("div", { className: "nv-ico" }, React.createElement(Icon, { name: "upload", size: 16 })),
+                  React.createElement("div", { style: { minWidth: 0, flex: 1 } },
+                    React.createElement("div", { className: "nv-t" }, "Neue Version ergänzen"),
+                    React.createElement("div", { className: "nv-s" }, asset.source === "original" ? "Edit hierher ziehen oder klicken" : "Original/Edit hierher ziehen oder klicken")))),
 
-          // versions
-          React.createElement(Section, { title: "Versionen · " + asset.versions.length, action: "Vergleichen" },
-            React.createElement("div", { className: "vers" },
-              asset.versions.map((v, i) => React.createElement("div", {
-                key: i, className: "vrow" + (i === curVer ? " cur" : ""), onClick: () => setCurVer(i),
-              },
-                React.createElement("div", { className: "vthumb" },
-                  React.createElement(Img, { src: asset.photo, bg: asset.bg }),
-                  v.type === "upscale" && React.createElement("div", { style: { position: "absolute", inset: 0, boxShadow: "inset 0 0 0 2px oklch(0.50 0.13 152 / .8)" } })),
-                React.createElement("div", { style: { minWidth: 0, flex: 1 } },
-                  React.createElement("div", { className: "vname" }, v.label,
-                    i === curVer && React.createElement("span", { className: "vtag cur" }, "aktiv")),
-                  React.createElement("div", { className: "vmeta" }, v.res + " · " + v.when.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) +
-                    (v.params && v.params.strength ? " · str " + v.params.strength : "") +
-                    (v.params && v.params.model ? " · " + v.params.model : ""))),
-                React.createElement("button", { className: "iconbtn", style: { width: 28, height: 28 }, onClick: (e) => e.stopPropagation() },
-                  React.createElement(Icon, { name: "rotate", size: 14 }))))),
-            React.createElement("button", {
-              className: "lb-newver" + (verDrag ? " drag" : ""), title: "Neue Version importieren",
-              onClick: openNewVersion,
-              onDragEnter: (e) => { e.preventDefault(); setVerDrag(true); }, onDragOver: (e) => e.preventDefault(),
-              onDragLeave: (e) => { e.preventDefault(); setVerDrag(false); }, onDrop: onVerDrop,
-            },
-              React.createElement("div", { className: "nv-ico" }, React.createElement(Icon, { name: "upload", size: 16 })),
-              React.createElement("div", { style: { minWidth: 0, flex: 1 } },
-                React.createElement("div", { className: "nv-t" }, "Neue Version ergänzen"),
-                React.createElement("div", { className: "nv-s" }, asset.source === "original" ? "Edit hierher ziehen oder klicken" : "Original/Edit hierher ziehen oder klicken")))),
-
-          // relations: original + linked edits (retroactively add/remove)
-          React.createElement(Section, { title: "Beziehungen" },
-            React.createElement("div", { className: "rel-dir-lbl", style: { margin: "0 0 7px" } }, "Originalvorlage"),
-            asset.originalId != null && allAssets.find((a) => a.id === asset.originalId)
-              ? (() => { const o = allAssets.find((a) => a.id === asset.originalId); return React.createElement("div", { className: "rel-row" },
-                  React.createElement("div", { className: "rr-thumb" }, React.createElement(Img, { src: o.photo, bg: o.bg })),
+              // relations: original + linked edits (retroactively add/remove)
+              React.createElement(Section, { title: "Beziehungen" },
+                React.createElement("div", { className: "rel-dir-lbl", style: { margin: "0 0 7px" } }, "Originalvorlage"),
+                asset.originalId != null && allAssets.find((a) => a.id === asset.originalId)
+                  ? (() => { const o = allAssets.find((a) => a.id === asset.originalId); return React.createElement("div", { className: "rel-row" },
+                      React.createElement("div", { className: "rr-thumb" }, React.createElement(Img, { src: o.photo, bg: o.bg })),
+                      React.createElement("div", { className: "rr-body" },
+                        React.createElement("div", { className: "rr-id" }, "#" + o.id, React.createElement("span", { className: "rel-tag orig" }, "Original")),
+                        React.createElement("div", { className: "rr-cap" }, o.caption)),
+                      React.createElement("button", { className: "iconbtn", style: { width: 28, height: 28 }, title: "Anderes Original wählen", onClick: () => setRelPick("origin") }, React.createElement(Icon, { name: "pencil", size: 13 })),
+                      React.createElement("button", { className: "rr-x", title: "Zuordnung entfernen", onClick: () => setOriginal(null) }, React.createElement(Icon, { name: "x", size: 15 }))); })()
+                  : React.createElement("button", { className: "rel-add", style: { height: 42 }, onClick: () => setRelPick("origin") }, React.createElement(Icon, { name: "link", size: 15 }), "Original zuordnen"),
+                React.createElement("div", { className: "rel-dir-lbl", style: { margin: "14px 0 7px" } }, "Verknüpfte Edits · " + linkedEdits.length),
+                linkedEdits.map((e) => React.createElement("div", { className: "rel-row", key: e.id },
+                  React.createElement("div", { className: "rr-thumb" }, React.createElement(Img, { src: e.photo, bg: e.bg })),
                   React.createElement("div", { className: "rr-body" },
-                    React.createElement("div", { className: "rr-id" }, "#" + o.id, React.createElement("span", { className: "rel-tag orig" }, "Original")),
-                    React.createElement("div", { className: "rr-cap" }, o.caption)),
-                  React.createElement("button", { className: "iconbtn", style: { width: 28, height: 28 }, title: "Anderes Original wählen", onClick: () => setRelPick("origin") }, React.createElement(Icon, { name: "pencil", size: 13 })),
-                  React.createElement("button", { className: "rr-x", title: "Zuordnung entfernen", onClick: () => setOriginal(null) }, React.createElement(Icon, { name: "x", size: 15 }))); })()
-              : React.createElement("button", { className: "rel-add", style: { height: 42 }, onClick: () => setRelPick("origin") }, React.createElement(Icon, { name: "link", size: 15 }), "Original zuordnen"),
-            React.createElement("div", { className: "rel-dir-lbl", style: { margin: "14px 0 7px" } }, "Verknüpfte Edits · " + linkedEdits.length),
-            linkedEdits.map((e) => React.createElement("div", { className: "rel-row", key: e.id },
-              React.createElement("div", { className: "rr-thumb" }, React.createElement(Img, { src: e.photo, bg: e.bg })),
-              React.createElement("div", { className: "rr-body" },
-                React.createElement("div", { className: "rr-id" }, "#" + e.id, React.createElement("span", { className: "rel-tag edit" }, PF.sourceLabel(e.source))),
-                React.createElement("div", { className: "rr-cap" }, e.caption)),
-              React.createElement("button", { className: "rr-x", title: "Verknüpfung entfernen", onClick: () => onUpdateAsset(e.id, { originalId: null }) }, React.createElement(Icon, { name: "x", size: 15 })))),
-            React.createElement("button", { className: "rel-add", style: { height: 42, marginTop: linkedEdits.length ? 4 : 0 }, onClick: () => setRelPick("edits") }, React.createElement(Icon, { name: "plus", size: 15 }), "Edit verknüpfen")),
+                    React.createElement("div", { className: "rr-id" }, "#" + e.id, React.createElement("span", { className: "rel-tag edit" }, PF.sourceLabel(e.source))),
+                    React.createElement("div", { className: "rr-cap" }, e.caption)),
+                  React.createElement("button", { className: "rr-x", title: "Verknüpfung entfernen", onClick: () => onUpdateAsset(e.id, { originalId: null }) }, React.createElement(Icon, { name: "x", size: 15 })))),
+                React.createElement("button", { className: "rel-add", style: { height: 42, marginTop: linkedEdits.length ? 4 : 0 }, onClick: () => setRelPick("edits") }, React.createElement(Icon, { name: "plus", size: 15 }), "Edit verknüpfen")))),
 
-          // metadata
-          React.createElement(Section, { title: "Metadaten" },
-            React.createElement("dl", { className: "kv" },
-              React.createElement("dt", null, "Quelle"),
-              React.createElement("dd", null,
-                React.createElement("select", { className: "kv-select", value: asset.source, onChange: (e) => setSource(e.target.value) },
-                  ["original", "sdxl", "flux"].map((s) => React.createElement("option", { key: s, value: s }, PF.sourceLabel(s))))),
-              React.createElement("dt", null, "Originalvorlage"),
-              React.createElement("dd", null,
-                asset.originalId != null
-                  ? React.createElement("span", { className: "orig-chip" },
-                      React.createElement("span", { className: "orig-thumb" }, React.createElement(Img, { src: (allAssets.find((a) => a.id === asset.originalId) || asset).photo, bg: asset.bg })),
-                      "#" + asset.originalId,
-                      React.createElement("button", { className: "orig-x", title: "Zuordnung ändern", onClick: () => setRelPick("origin") }, React.createElement(Icon, { name: "pencil", size: 11 })))
-                  : React.createElement("button", { className: "orig-link", onClick: () => setRelPick("origin") },
-                      React.createElement(Icon, { name: "link", size: 13 }), "Zuordnen")),
-              React.createElement("dt", null, "Framing"),
-              React.createElement("dd", null,
-                React.createElement("select", { className: "kv-select", value: asset.framing, onChange: (e) => setFraming(e.target.value) },
-                  ["close_up", "medium", "full_body"].map((f) => React.createElement("option", { key: f, value: f }, PF.framingLabel(f))))),
-              React.createElement("dt", null, "Auflösung"), React.createElement("dd", null, asset.dims.w + "×" + asset.dims.h),
-              React.createElement("dt", null, "Seitenverhältnis"), React.createElement("dd", null, asset.ar.w + ":" + asset.ar.h),
-              React.createElement("dt", null, "Format"), React.createElement("dd", null, asset.format.toUpperCase()),
-              React.createElement("dt", null, "Größe"), React.createElement("dd", null, (asset.fileSize / 1024).toFixed(1) + " MB"),
-              React.createElement("dt", null, "Qualität"), React.createElement("dd", null,
-                React.createElement("span", { style: { color: asset.quality > 0.75 ? "var(--good)" : asset.quality > 0.55 ? "var(--warn)" : "var(--text-2)" } }, Math.round(asset.quality * 100) + " / 100")),
-              React.createElement("dt", null, "Hash"), React.createElement("dd", { style: { color: "var(--text-3)" } }, "sha256:" + (asset.id * 8821 + 100003).toString(16).padStart(8, "0").slice(0, 8) + "…"))),
-
-          // generation meta viewer
-          meta && React.createElement("div", { className: "panel-sec" },
-            React.createElement("div", { className: "psec-title", style: { cursor: "pointer" }, onClick: () => setShowMeta((s) => !s) },
-              React.createElement(Icon, { name: "sparkle", size: 13 }), "Generierungs-Metadaten",
-              React.createElement("span", { className: "chev", style: { marginLeft: "auto", color: "var(--text-3)", transform: showMeta ? "" : "rotate(-90deg)" } }, React.createElement(Icon, { name: "chevronDown", size: 14 }))),
-            showMeta && React.createElement("div", { className: "gmeta" },
-              React.createElement("div", null, React.createElement("span", { className: "gk" }, "model: "), meta.model),
-              React.createElement("div", null, React.createElement("span", { className: "gk" }, "sampler: "), meta.sampler, "  ",
-                React.createElement("span", { className: "gk" }, "steps: "), meta.steps, "  ",
-                React.createElement("span", { className: "gk" }, "cfg: "), meta.cfg),
-              React.createElement("div", null, React.createElement("span", { className: "gk" }, "seed: "), meta.seed, "  ",
-                React.createElement("span", { className: "gk" }, "size: "), meta.size),
-              React.createElement("span", { className: "gk" }, "prompt:"),
-              React.createElement("span", { className: "prompt" }, meta.prompt))),
-
-          // actions
+          // actions (fixed, tab-independent)
           React.createElement("div", { className: "pbtn-row" },
-            React.createElement("button", { className: "pbtn ghost" }, React.createElement(Icon, { name: "crop", size: 16 }), "Bearbeiten"),
+            React.createElement("button", { className: "pbtn ghost", onClick: () => { onEdit && onEdit(asset); onClose && onClose(); } }, React.createElement(Icon, { name: "crop", size: 16 }), "Bearbeiten"),
             React.createElement("button", { className: "pbtn primary" }, React.createElement(Icon, { name: "export", size: 16 }), "Exportieren")))),
       relPick === "origin" && React.createElement(window.RelationBrowser, {
         assets: allAssets, multi: false,

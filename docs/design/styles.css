@@ -463,11 +463,30 @@ input { font-family: inherit; }
 .lb-tool.on { color: var(--gold); }
 
 /* detail panel */
-.panel { background: var(--bg); border-left: 1px solid var(--line); overflow-y: auto; display: flex; flex-direction: column; }
+.panel { background: var(--bg); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
 .panel-sec { padding: 16px 18px; border-bottom: 1px solid var(--line); }
 .panel-sec:last-child { border-bottom: none; }
+.panel-fixed { flex: none; }
 .psec-title { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .psec-title .pt-act { margin-left: auto; color: var(--accent); font-size: 11px; letter-spacing: 0; text-transform: none; font-weight: 500; cursor: pointer; }
+
+/* tab bar */
+.panel-tabs { display: flex; flex: none; border-bottom: 1px solid var(--line); padding: 0 8px; }
+.panel-tab {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  height: 42px; font-size: 12px; font-weight: 600; color: var(--text-3);
+  background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer;
+}
+.panel-tab:hover { color: var(--text-2); }
+.panel-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.panel-tab .tab-badge {
+  font-size: 10px; font-weight: 700; font-family: var(--mono); color: var(--text-3);
+  background: var(--surface-2); border-radius: 999px; padding: 1px 6px; min-width: 16px; text-align: center;
+}
+.panel-tab.active .tab-badge { color: var(--accent); }
+
+/* scrollable body between fixed header/tabs and fixed action buttons */
+.panel-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 .kv { display: grid; grid-template-columns: 92px 1fr; gap: 7px 10px; font-size: 12px; }
 .kv dt { color: var(--text-3); }
@@ -530,7 +549,7 @@ input { font-family: inherit; }
 .gmeta .gk { color: var(--accent); }
 .gmeta .prompt { color: var(--text); display: block; margin-top: 4px; white-space: pre-wrap; }
 
-.pbtn-row { display: flex; gap: 8px; padding: 14px 18px; }
+.pbtn-row { display: flex; gap: 8px; padding: 14px 18px; flex: none; border-top: 1px solid var(--line); }
 .pbtn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; border-radius: 9px; font-size: 13px; font-weight: 600; }
 .pbtn.primary { background: var(--accent); color: #fff; }
 .pbtn.primary:hover { background: var(--accent-press); }
@@ -845,7 +864,6 @@ input { font-family: inherit; }
   .panel {
     position: absolute; top: 44vh; left: 0; right: 0; bottom: 0;
     border-left: none; border-top: 1px solid var(--line-2);
-    overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
 
   /* job dock → bottom sheet (fixed to viewport, with scrim + grabber) */
