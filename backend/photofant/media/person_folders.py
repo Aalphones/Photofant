@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import shutil
 from pathlib import Path
+from typing import TypedDict
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -22,6 +23,19 @@ from sqlalchemy.orm import Session
 from photofant.db.models import Asset, AssetInstance, Face, Person, SmartTrigger
 
 log = logging.getLogger(__name__)
+
+
+class SplitFacesResult(TypedDict):
+    new_person_id: int | None
+    faces_moved: int
+    instances_created: int
+    asset_ids: list[int]
+
+
+class DeletePersonResult(TypedDict):
+    faces_moved: int
+    instances_moved: int
+    asset_ids: list[int]
 
 _PERSON_SUBFOLDERS = ["photos", "favourites", "faces", "edits"]
 
@@ -728,7 +742,7 @@ def delete_person(
     session: Session,
     person_id: int,
     data_root: Path,
-) -> dict[str, object]:
+) -> DeletePersonResult:
     """Delete a person completely — faces and photos move to _unknown, folder + row are gone.
 
     Unlike merge_persons (name carry-over, fixed_person untouched), a deleted
@@ -951,13 +965,13 @@ def split_faces(
     source_person_id: int,
     face_ids: list[int],
     data_root: Path,
-) -> dict[str, int | None]:
+) -> SplitFacesResult:
     """Split selected faces from a person into a new person.
 
     Creates a new Person, reassigns the given faces, and materializes
     the new person folder with the affected asset instances.
 
-    Returns {new_person_id, faces_moved, instances_created}.
+    Returns {new_person_id, faces_moved, instances_created, asset_ids}.
     """
     source_person = session.get(Person, source_person_id)
     if source_person is None:
@@ -992,7 +1006,7 @@ def split_faces(
         session.delete(new_person)
         session.flush()
         log.warning("split_faces: no faces moved from person %d — cleaned up empty person", source_person_id)
-        return {"new_person_id": None, "faces_moved": 0, "instances_created": 0}
+        return {"new_person_id": None, "faces_moved": 0, "instances_created": 0, "asset_ids": []}
 
     affected_assets = session.execute(
         select(Face.asset_id)
@@ -1051,4 +1065,5 @@ def split_faces(
         "new_person_id": new_person.id,
         "faces_moved": faces_moved,
         "instances_created": instances_created,
+        "asset_ids": [int(row[0]) for row in affected_assets],
     }

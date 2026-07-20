@@ -484,6 +484,10 @@ async def delete_face(face_id: int, session: DbSession) -> None:
 
         prune_orphaned_instances(session, asset_id, get_data_root())
 
+        from photofant.jobs.recommendation_job import invalidate_recommendations
+
+        invalidate_recommendations(session, [asset_id])
+
     session.commit()
 
     if asset_id is not None:
@@ -531,6 +535,11 @@ async def assign_face(
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    if result["asset_id"] is not None:
+        from photofant.jobs.recommendation_job import invalidate_recommendations
+
+        invalidate_recommendations(session, [result["asset_id"]])
 
     session.commit()
 

@@ -64,6 +64,11 @@ def _assign_one_asset(
             move_face_crops_to_person(session, asset_id, target_person_id, data_root)
 
         prune_orphaned_instances(session, asset_id, data_root)
+
+        from photofant.jobs.recommendation_job import invalidate_recommendations
+
+        invalidate_recommendations(session, [asset_id])
+
         session.commit()
         return True
 

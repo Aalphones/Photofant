@@ -1,8 +1,16 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-20_recommendation-cache-invalidation/`
-**Phase:** 2/4 — Manuelle Face-/Person-Aktionen (pending)
-**Nächster Schritt:** Phase 2 umsetzen (faces, assets, persons, review-queue, bulk-assign rufen `invalidate_recommendations` vor ihrem Commit).
+**Phase:** 3/4 — Wissensgraph-Verknüpfungen (pending)
+**Nächster Schritt:** Phase 3 umsetzen (link-entity, relationships, knowledge-patch rufen `invalidate_recommendations` vor ihrem Commit — siehe `phase-3-wissensgraph.md`).
+
+## Phase 2 erledigt (Manuelle Face-/Person-Aktionen)
+
+Alle 9 Call-Sites (faces/assets/persons/review-queue/bulk-assign) invalidieren jetzt vor ihrem
+Commit. Nebenbei `split_faces`/`delete_person` in `person_folders.py` von losen Dicts auf
+`TypedDict` umgestellt (5 vorbestehende mypy-Fehler dabei mitbehoben). Neue Testdatei
+`test_recommendation_invalidation_manual.py` (6 Tests, grün). ruff grün, mypy keine neuen
+Fehler, 46/46 relevante Tests grün. Details: `phase-2-manuelle-aktionen.md` (Report-Back).
 
 ## Vorheriger Stand (P35 abgeschlossen)
 

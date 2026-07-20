@@ -390,6 +390,11 @@ async def merge_persons_endpoint(body: MergeRequest, session: DbSession) -> Merg
     ).fetchall()
     asset_ids = [int(row[0]) for row in affected_assets]
     if asset_ids:
+        from photofant.jobs.recommendation_job import invalidate_recommendations
+
+        invalidate_recommendations(session, asset_ids)
+        session.commit()
+
         from photofant.jobs.collections_job import enqueue_reevaluate_assets
         asyncio.ensure_future(enqueue_reevaluate_assets(asset_ids))
 
@@ -424,8 +429,13 @@ async def delete_person_endpoint(person_id: int, session: DbSession, vault: Vaul
     session.commit()
     log.info("Deleted person %d", person_id)
 
-    asset_ids = result.pop("asset_ids", [])
+    asset_ids = result["asset_ids"]
     if asset_ids:
+        from photofant.jobs.recommendation_job import invalidate_recommendations
+
+        invalidate_recommendations(session, asset_ids)
+        session.commit()
+
         from photofant.jobs.collections_job import enqueue_reevaluate_assets
         asyncio.ensure_future(enqueue_reevaluate_assets(asset_ids))
 
@@ -535,6 +545,17 @@ async def split_person(person_id: int, body: SplitRequest, session: DbSession) -
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     session.commit()
+
+    asset_ids = result["asset_ids"]
+    if asset_ids:
+        from photofant.jobs.recommendation_job import invalidate_recommendations
+
+        invalidate_recommendations(session, asset_ids)
+        session.commit()
+
+        from photofant.jobs.collections_job import enqueue_reevaluate_assets
+        asyncio.ensure_future(enqueue_reevaluate_assets(asset_ids))
+
     return SplitResultDto(
         new_person_id=result["new_person_id"],
         faces_moved=result["faces_moved"],

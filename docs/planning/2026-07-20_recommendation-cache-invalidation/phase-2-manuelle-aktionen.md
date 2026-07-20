@@ -93,3 +93,26 @@ prüfen, dass die Zeile weg ist. Mindestens:
 Keine — Phase 1 hat `code-map.md` bereits aktualisiert, diese Phase ändert nur Call-Sites.
 
 ## Report-Back
+
+**Status: complete.**
+
+Alle 9 Call-Sites ergänzt (`faces.py::delete_face/assign_face`, `assets.py::assign_person_to_asset`,
+`persons.py::merge_persons_endpoint/delete_person_endpoint/split_person`,
+`person_folders.py::split_faces` um `asset_ids`, `review_queue.py::resolve_face_review` alle
+3 Zweige, `bulk_assign_person_job.py::_assign_one_asset`).
+
+**Abweichung vom Plan:** `split_faces` (Rückgabe) und `delete_person` hatten vorher lose
+typisierte Dicts (`dict[str, int | None]` bzw. `dict[str, object]`). Die neue `asset_ids`-Zeile
+hätte diese Union weiter aufgeweicht und neue mypy-Fehler an den Call-Sites erzeugt — stattdessen
+`SplitFacesResult`/`DeletePersonResult` als `TypedDict` eingeführt (`person_folders.py`). Netto-Effekt:
+5 vorbestehende mypy-Fehler an genau diesen Stellen sind mitverschwunden (32 → 27 Fehler in den
+6 berührten Dateien, keiner davon neu).
+
+Neue Testdatei `test_recommendation_invalidation_manual.py` (6 Tests) — ruft die Endpunkt-Funktionen
+direkt auf (kein HTTP-Layer), physische Datei-Operationen laufen ohne echte Dateien defensiv durch
+(bereits in `test_person_folders.py` abgedeckt). Deckt alle 5 geforderten Szenarien plus
+`bulk_assign_person_job` extra.
+
+ruff: grün. mypy: keine neuen Fehler (siehe oben). Tests: 46/46 grün
+(neue Datei + alle betroffenen Bestandsdateien), 13 Baseline-rote Tests (comfyui/caption_config,
+unabhängig von diesem Plan) unverändert rot — verifiziert per `git stash`.

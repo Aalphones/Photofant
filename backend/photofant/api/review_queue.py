@@ -139,6 +139,12 @@ async def resolve_face_review(
 
         item.resolved_at = _now_utc()
         item.resolution = "confirmed"
+
+        if face.asset_id is not None:
+            from photofant.jobs.recommendation_job import invalidate_recommendations
+
+            invalidate_recommendations(session, [face.asset_id])
+
         session.commit()
 
         from photofant.jobs.collections_job import enqueue_reevaluate_assets
@@ -184,6 +190,12 @@ async def resolve_face_review(
 
         item.resolved_at = _now_utc()
         item.resolution = "rejected"
+
+        if face.asset_id is not None:
+            from photofant.jobs.recommendation_job import invalidate_recommendations
+
+            invalidate_recommendations(session, [face.asset_id])
+
         session.commit()
 
         log.info("Face %d rejected → _unknown", face_id)
@@ -206,6 +218,12 @@ async def resolve_face_review(
 
         item.resolved_at = _now_utc()
         item.resolution = f"reassigned:{target_person_id}"
+
+        if face.asset_id is not None:
+            from photofant.jobs.recommendation_job import invalidate_recommendations
+
+            invalidate_recommendations(session, [face.asset_id])
+
         session.commit()
 
         if face.asset_id is not None:

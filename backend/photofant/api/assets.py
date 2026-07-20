@@ -1369,6 +1369,10 @@ async def assign_person_to_asset(
             detail=f"Could not assign asset {asset_id} to person {body.person_id} — file missing or IO error",
         )
 
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+
+    invalidate_recommendations(session, [asset_id])
+
     session.commit()
     log.info("assign_person_to_asset: asset %d → person %d", asset_id, body.person_id)
 
