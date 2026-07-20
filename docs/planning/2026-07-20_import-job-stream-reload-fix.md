@@ -4,7 +4,7 @@
 
 | Phase | Thema | Modul | Rating | Status |
 |---|---|---|---|---|
-| 1 | SSE-Reconnect für den Job-Stream | Frontend | standard | pending |
+| 1 | SSE-Reconnect für den Job-Stream | Frontend | standard | complete |
 
 ## Ausgangsbefund (Kontext, nicht nochmal recherchieren)
 
@@ -92,6 +92,23 @@ zu vermeiden). Vom User abgelehnt: Modelle bleiben bewusst strikt lazy-load + id
 bleibt — ein Warmup beim Start würde dauerhaft VRAM belegen, nur weil die App läuft. Phase 2 ersatzlos
 gestrichen; der Ruckler selbst ist kein Bug, nur der tote Reconnect danach.
 
+## Summary
+
+`onerror` beendet die SSE-Verbindung zum Job-Stream nur noch, wenn der Browser selbst aufgegeben hat
+(`readyState === CLOSED`); ein transienter Aussetzer lässt den nativen Reconnect ungestört laufen.
+Zusätzlich holt `retry({ delay: 3000 })` im Effekt einen echten Terminal-Error nach 3s zurück. Kein
+Eingriff ins Modell-Ladeverhalten (bleibt lazy-load + idle-evict, ADR-002).
+
+## Files touched
+
+- `frontend/src/app/services/jobs.service.ts` — `onerror`-Handler auf `readyState`-Check umgestellt.
+- `frontend/src/app/store/jobs/jobs.effects.ts` — `retry({ delay: 3000 })` vor `catchError` ergänzt.
+
+## Commits
+
+- `docs(planning): add plan for import job-stream reload fix`
+- (Implementierungs-Commit folgt)
+
 ## Follow-ups
 
-_(beim Umsetzen/Archivieren ausfüllen)_
+Keine.

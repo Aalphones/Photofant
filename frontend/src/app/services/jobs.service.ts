@@ -25,9 +25,15 @@ export class JobsService {
         observer.next(job);
       });
 
+      // EventSource reconnected von sich aus nach einem Verbindungsabbruch (readyState
+      // wechselt auf CONNECTING). Nur bei CLOSED hat der Browser selbst aufgegeben — erst
+      // dann geben wir terminal auf, statt jeden kurzen Aussetzer hart zu beenden.
       source.onerror = (): void => {
-        source.close();
-        observer.error(new Error('SSE connection failed'));
+        if (source.readyState === EventSource.CLOSED) {
+          observer.error(new Error('SSE connection failed'));
+        } else {
+          console.warn('[jobs] SSE reconnecting…');
+        }
       };
 
       return (): void => source.close();
