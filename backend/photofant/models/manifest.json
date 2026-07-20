@@ -342,15 +342,16 @@
     {
       "id": "gemma-3-4b-it",
       "role": "text_generator",
-      "name": "Gemma 3 4B Instruct",
+      "name": "Gemma 3 4B Instruct (abliterated, uncensored)",
       "variant": "default",
       "format": "safetensors",
-      "hf_repo": "google/gemma-3-4b-it",
+      "hf_repo": "mlabonne/gemma-3-4b-it-abliterated",
       "files": [],
       "size_bytes": 8600000000,
-      "license_note": "Gemma Terms of Use — Lizenz bestätigen; Modellbezug nur über die Modell-Verwaltung, kein Repo-Binary",
+      "license_note": "Gemma Terms of Use (Community-Finetune) — kein gated Repo, kein HF-Token nötig; Zensur-Guardrails per Abliteration entfernt",
       "requires_license_ack": true,
-      "tier": "generativ"
+      "tier": "generativ",
+      "_download_note": "Ersetzt google/gemma-3-4b-it (gated, 401 ohne HF-Token/Lizenz-Zustimmung) durch den öffentlichen mlabonne-Finetune — gleiches Basismodell, gleiche Architektur/Format, keine Auth nötig."
     }
   ]
 }
