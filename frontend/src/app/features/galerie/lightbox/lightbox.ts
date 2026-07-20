@@ -202,6 +202,9 @@ export class Lightbox {
 
   protected readonly showGenMeta = signal(false);
 
+  // Panel-Tabs (Übersicht/Gesichter/Versionen) — Gesichter-Tab existiert nur im Asset-Modus
+  protected readonly activeTab = signal<'overview' | 'people' | 'versions'>('overview');
+
   // Reload trigger: bump to force a fresh detail fetch
   private readonly reloadTrigger = signal(0);
 
@@ -712,6 +715,7 @@ export class Lightbox {
       const asset: AssetDto | null = this.asset();
       this.lightboxFaceId(); // auch bei Wechsel zwischen/innerhalb Gesichter-Modus zurücksetzen
       this.showGenMeta.set(asset?.source != null && asset.source !== 'original');
+      this.activeTab.set('overview');
       this.selectedQuickAssignFaceId.set(null);
       // Reset editing state when navigating
       this.addingTag.set(false);

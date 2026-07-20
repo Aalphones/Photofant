@@ -67,8 +67,8 @@
   <div class="panel">
     @if (panelReady()) {
 
-      <!-- Header: Avatar + Personenname + Datum -->
-      <div class="panel-sec panel-header">
+      <!-- Header: Avatar + Personenname + Datum (fix, tab-unabhängig) -->
+      <div class="panel-sec panel-header panel-fixed">
         <div class="ph-avatar">
           @if (headerAvatarUrl(); as avatarUrl) {
             <img class="ph-avatar__img" [src]="avatarUrl" alt="" />
@@ -85,524 +85,567 @@
         }
       </div>
 
-      <!-- Wissen zum Inhalt (P25 Lore-Panel) — dockt als weitere Panel-Sektion an -->
-      <pf-lore-panel
-        [assetId]="isFaceMode() ? null : (asset()?.id ?? null)"
-        [personId]="isFaceMode() ? (faceDetail()?.person_id ?? null) : null"
-        [hasPersonContext]="isFaceMode() ? (faceDetail()?.person_id != null) : faces().length > 0"
-        [refreshKey]="loreRefreshKey()"
-        (entitySelected)="openLinkedEntity($event)"
-        (createRequested)="openKnowledgeCreate()"
-      />
-
-            <!-- Gesichter -->
-      @if (faces().length > 0) {
-        <div class="panel-sec">
-          <div class="psec-title">Gesichter ({{ faces().length }})</div>
-
-          <div class="face-list">
-            @for (face of faces(); track face.id) {
-              <div class="face-item" [class.face-item--active]="quickAssignFace()?.id === face.id">
-                <button
-                  class="face-crop"
-                  (click)="selectQuickAssignFace(face)"
-                  [title]="'Schnellzuweisung für ' + faceLabel(face)"
-                >
-                  <img
-                    class="face-crop__img"
-                    [src]="'/api' + face.crop_url"
-                    [alt]="'Gesicht #' + face.id"
-                  />
-                  <div class="face-crop__border" [class.face-crop__border--manual]="isFaceManual(face)"></div>
-                </button>
-                <button
-                  class="face-del"
-                  (click)="deleteFaceFromAsset(face)"
-                  title="Gesicht löschen"
-                  aria-label="Gesicht löschen"
-                >
-                  <pf-icon name="x" [size]="11" />
-                </button>
-                <button
-                  class="face-info"
-                  (click)="openPersonPicker(face)"
-                  [title]="'Person zuordnen für ' + faceLabel(face)"
-                >
-                  <span class="face-name">{{ faceLabel(face) }}</span>
-                  <pf-icon name="pencil" [size]="11" />
-                </button>
-                <div class="face-meta">{{ faceScore(face) }} · {{ faceAge(face) }}</div>
-              </div>
-            }
-          </div>
-
-          <!-- Quick-Assign-Grid (Schnellzuweisung für das angeklickte Gesicht, Default: erstes) -->
-          @if (quickAssignFace(); as primaryFace) {
-            @if (quickMatches().length > 0) {
-              <div class="qa-label">
-                Beste Treffer für {{ faceLabel(primaryFace) }} — Schnellzuweisung
-              </div>
-              <div class="quick-assign">
-                @for (match of quickMatches(); track match.person_id) {
-                  <button
-                    class="quick-match"
-                    (click)="assignFaceToPerson(primaryFace.id, match.person_id)"
-                    [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
-                  >
-                    <img [src]="'/api/faces/' + match.best_face_id + '/thumbnail'" alt="" />
-                    <div class="qm-label">{{ firstName(match.person_name) }}</div>
-                    <div class="qm-score">{{ matchScorePercent(match.score) }}%</div>
-                  </button>
-                }
-              </div>
-            }
-            <button class="mini-btn face-more-btn" (click)="openPersonPicker(primaryFace)">
-              Weitere Personen…
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="panel-sec">
-          <div class="psec-title">Gesichter</div>
-          <div class="pbtn-row">
-            <button
-              class="pbtn pbtn--ghost"
-              [class.pbtn--loading]="retryingFaceExtraction()"
-              [disabled]="retryingFaceExtraction()"
-              (click)="retryFaceExtraction()"
-            >
-              <pf-icon name="refresh" [size]="15" />
-              {{ retryingFaceExtraction() ? 'Extraktion läuft…' : 'Extrahieren nochmal probieren' }}
-            </button>
-            <button class="pbtn pbtn--ghost" (click)="openPersonPickerAssetMode()">
-              <pf-icon name="user" [size]="15" />
-              Manuell Person zuordnen
-            </button>
-          </div>
-        </div>
-      }
-
-      <!-- Empfehlungen (P26 + P36 zusammengeführt) — Graph-Empfehlungen und reine
-           CLIP-Ähnlichkeit in einer Liste, damit nicht nur Bilder derselben Person auftauchen -->
-      @if (showRecommendations()) {
-        <div class="panel-sec">
-          <div class="psec-title">Empfehlungen</div>
-          <pf-related-rail
-            [items]="mergedRecommendationItems()"
-            [loading]="mergedRecommendationItems().length === 0 && (recommendations().status === 'computing' || relatedRail().loading)"
-            [emptyMessage]="relatedRail().emptyMessage"
-            loadingMessage="Wird berechnet …"
-            explainLabel="Warum?"
-            [explainOpenId]="recommendationExplainOpenId()"
-            [explainPayload]="recommendationExplainPayload()"
-            (cardClick)="openRelatedAsset($event)"
-            (explainOpen)="onRecommendationExplainOpen($event)"
-            (explainClose)="onRecommendationExplainClose()"
-          />
-          @if (hasEmbedding()) {
-            <button class="rel-add" (click)="openMoreSimilar()">
-              <pf-icon name="compare" [size]="14" /> Mehr ähnliche Bilder
-            </button>
-          }
-        </div>
-      }
-
-      @if (!isFaceMode()) {
-
-      <!-- Aktionen -->
-      <div class="panel-sec">
-        <div class="psec-title">Aktionen</div>
-        <div class="pbtn-row">
-          <button class="pbtn pbtn--ghost" (click)="deleteAsset()" aria-label="In den Papierkorb">
-            <pf-icon name="trash" [size]="15" />
-            Papierkorb
-          </button>
-          <button class="pbtn pbtn--ghost" (click)="openRerunDialog()">
-            <pf-icon name="refresh" [size]="15" />
-            Klassifizieren
-          </button>
-        </div>
-        <div class="pbtn-row">
+      <!-- Tab-Leiste (fix, tab-unabhängig) -->
+      <div class="panel-tabs">
+        <button
+          class="panel-tab"
+          [class.active]="activeTab() === 'overview'"
+          (click)="activeTab.set('overview')"
+        >
+          Übersicht
+        </button>
+        @if (!isFaceMode()) {
           <button
-            class="pbtn pbtn--ghost"
-            (click)="revealInExplorer()"
-            title="Datei im Windows Explorer anzeigen und markieren"
+            class="panel-tab"
+            [class.active]="activeTab() === 'people'"
+            (click)="activeTab.set('people')"
           >
-            <pf-icon name="folder" [size]="15" />
-            Im Explorer anzeigen
+            Gesichter
+            <span class="tab-badge">{{ faces().length }}</span>
           </button>
-        </div>
-        @if (canUpscale()) {
-          <div class="pbtn-row">
-            <button
-              class="pbtn pbtn--ghost"
-              [class.pbtn--loading]="isUpscaling()"
-              [disabled]="isUpscaling()"
-              (click)="triggerUpscale()"
-            >
-              <pf-icon name="refresh" [size]="15" />
-              {{ isUpscaling() ? 'Upscale läuft…' : 'Upscale' }}
-            </button>
-          </div>
-          @if (upscaleError()) {
-            <div class="upscale-error">{{ upscaleError() }}</div>
-          }
         }
+        <button
+          class="panel-tab"
+          [class.active]="activeTab() === 'versions'"
+          (click)="activeTab.set('versions')"
+        >
+          Versionen
+          <span class="tab-badge">{{ activeVersions().length }}</span>
+        </button>
       </div>
 
-      <!-- Metadaten -->
-      <div class="panel-sec">
-        <div class="psec-title">Metadaten</div>
-        <dl class="kv">
-          <dt>ID</dt>
-          <dd>
-            #{{ asset()!.id }}
-            @if (stageVersion(); as version) {
-              <span class="kv-version-id">· Version #{{ version.id }}</span>
-            }
-          </dd>
+      <!-- Scrollbarer Body — nur dieser Bereich scrollt, nicht das ganze Panel -->
+      <div class="panel-body">
 
-          <dt>Quelle</dt>
-          <dd>
-            <select
-              class="kv-select"
-              [value]="sourceDraft() ?? ''"
-              (change)="onSourceChange($any($event.target).value)"
-            >
-              <option value="original">Original</option>
-              <option value="flux">FLUX</option>
-              <option value="sdxl">SDXL</option>
-            </select>
-          </dd>
+        @if (activeTab() === 'overview') {
 
-          <dt>Originalvorlage</dt>
-          <dd>
-            @if (detail()?.original_id != null) {
-              <span class="orig-chip">
-                <img class="orig-thumb" [src]="originalThumbnailUrl()" alt="" />
-                #{{ detail()!.original_id }}
-                <button class="orig-edit" (click)="openRelationBrowser('origin')" aria-label="Anderes Original wählen">
-                  <pf-icon name="pencil" [size]="11" />
+          <!-- Wissen zum Inhalt (P25 Lore-Panel) — dockt als weitere Panel-Sektion an -->
+          <pf-lore-panel
+            [assetId]="isFaceMode() ? null : (asset()?.id ?? null)"
+            [personId]="isFaceMode() ? (faceDetail()?.person_id ?? null) : null"
+            [hasPersonContext]="isFaceMode() ? (faceDetail()?.person_id != null) : faces().length > 0"
+            [refreshKey]="loreRefreshKey()"
+            (entitySelected)="openLinkedEntity($event)"
+            (createRequested)="openKnowledgeCreate()"
+          />
+
+          <!-- Empfehlungen (P26 + P36 zusammengeführt) — Graph-Empfehlungen und reine
+               CLIP-Ähnlichkeit in einer Liste, damit nicht nur Bilder derselben Person auftauchen -->
+          @if (showRecommendations()) {
+            <div class="panel-sec">
+              <div class="psec-title">Empfehlungen</div>
+              <pf-related-rail
+                [items]="mergedRecommendationItems()"
+                [loading]="mergedRecommendationItems().length === 0 && (recommendations().status === 'computing' || relatedRail().loading)"
+                [emptyMessage]="relatedRail().emptyMessage"
+                loadingMessage="Wird berechnet …"
+                explainLabel="Warum?"
+                [explainOpenId]="recommendationExplainOpenId()"
+                [explainPayload]="recommendationExplainPayload()"
+                (cardClick)="openRelatedAsset($event)"
+                (explainOpen)="onRecommendationExplainOpen($event)"
+                (explainClose)="onRecommendationExplainClose()"
+              />
+              @if (hasEmbedding()) {
+                <button class="rel-add" (click)="openMoreSimilar()">
+                  <pf-icon name="compare" [size]="14" /> Mehr ähnliche Bilder
                 </button>
-              </span>
-            } @else {
-              <button class="orig-link" (click)="openRelationBrowser('origin')">
-                <pf-icon name="link" [size]="13" /> Zuordnen
-              </button>
-            }
-          </dd>
-
-          <dt>Framing</dt>
-          <dd>
-            <select
-              class="kv-select"
-              [value]="framingDraft() ?? ''"
-              (change)="onFramingChange($any($event.target).value)"
-            >
-              <option value="" disabled>—</option>
-              <option value="close_up">{{ framingLabel('close_up') }}</option>
-              <option value="medium">{{ framingLabel('medium') }}</option>
-              <option value="full_body">{{ framingLabel('full_body') }}</option>
-            </select>
-          </dd>
-
-          <dt>Auflösung</dt><dd>{{ dimensions() }}</dd>
-          <dt>Seitenverhältnis</dt><dd>{{ aspectRatio() }}</dd>
-          <dt>Format</dt><dd>{{ asset()?.format?.toUpperCase() ?? '—' }}</dd>
-          <dt>Größe</dt><dd>{{ fileSize() }}</dd>
-          <dt>Qualität</dt>
-          <dd>
-            @if (qualityDisplay(); as quality) {
-              <span [class]="qualityClass()">{{ quality }} / 100</span>
-            } @else {
-              <span>—</span>
-            }
-          </dd>
-          <dt>Hash</dt><dd class="kv-hash">{{ hashShort() }}</dd>
-          @if (detail()?.linked_entity; as entity) {
-            <dt>Verknüpfte Entity</dt>
-            <dd>
-              <button
-                class="tag-chip entity-chip"
-                type="button"
-                [title]="'Verknüpft mit ' + entity.title + ' (' + entity.type + ') — zur Wissens-Sicht'"
-                (click)="openLinkedEntity(entity)"
-              >
-                <pf-icon name="sparkle" [size]="11" />
-                {{ entity.title }}
-                <span class="entity-chip__type">{{ entity.type }}</span>
-              </button>
-            </dd>
-          }
-        </dl>
-      </div>
-
-      <!-- Generierungs-Metadaten -->
-      @if (genMeta(); as meta) {
-        <div class="panel-sec">
-          <button class="psec-title psec-title--btn" (click)="toggleGenMeta()">
-            <pf-icon name="sparkle" [size]="13" />
-            Generierungs-Metadaten
-            <span class="psec-chev" [class.psec-chev--open]="showGenMeta()">
-              <pf-icon name="chevronDown" [size]="14" />
-            </span>
-          </button>
-          @if (showGenMeta()) {
-            <div class="gmeta">
-              @for (entry of meta; track entry.key) {
-                <div class="gmeta-row">
-                  <span class="gk">{{ entry.key }}:</span>
-                  <span class="gv">{{ entry.value }}</span>
-                </div>
               }
             </div>
           }
-        </div>
-      }
 
-      <!-- Caption (editierbar) -->
-      <div class="panel-sec">
-        <div class="psec-title psec-title--row">
-          Caption
-          @if (!editingCaption()) {
-            <button class="psec-edit-btn" (click)="startCaptionEdit()" aria-label="Caption bearbeiten">
-              <pf-icon name="pencil" [size]="12" />
-            </button>
-          }
-        </div>
-        @if (editingCaption()) {
-          <textarea
-            class="caption-editor"
-            [value]="captionDraft()"
-            (input)="captionDraft.set($any($event.target).value)"
-            (keydown.escape)="cancelCaptionEdit()"
-            (blur)="saveCaptionEdit()"
-            rows="4"
-            autofocus
-          ></textarea>
-          <div class="caption-edit-hint">Enter bestätigt nicht — Tab oder Klick außen speichert</div>
-        } @else if (caption()) {
-          <p class="caption-text" (click)="startCaptionEdit()">{{ caption() }}</p>
-        } @else {
-          <p class="caption-empty" (click)="startCaptionEdit()">Noch keine Caption — klicken zum Hinzufügen</p>
-        }
-      </div>
+          @if (!isFaceMode()) {
 
-      <!-- Tags (editierbar) -->
-      <div class="panel-sec">
-        <div class="psec-title">Tags</div>
+          <!-- Metadaten -->
+          <div class="panel-sec">
+            <div class="psec-title">Metadaten</div>
+            <dl class="kv">
+              <dt>ID</dt>
+              <dd>
+                #{{ asset()!.id }}
+                @if (stageVersion(); as version) {
+                  <span class="kv-version-id">· Version #{{ version.id }}</span>
+                }
+              </dd>
 
-        <div class="tag-list">
-          @for (tag of displayTags(); track tag.id) {
-            <span
-              class="tag-chip"
-              [class.tag-chip--manual]="tag.kind === 'manual'"
-              [title]="tag.kind === 'manual' ? 'Manuell hinzugefügt' : ''"
-            >
-              @if (tag.kind === 'manual') {
-                <span class="tag-chip__dot"></span>
-              }
-              {{ tag.name.replaceAll('_', ' ') }}
-              <button
-                class="tag-chip__remove"
-                (click)="removeTag(tag.id)"
-                [attr.aria-label]="'Tag ' + tag.name + ' entfernen'"
-              >
-                <pf-icon name="x" [size]="10" />
-              </button>
-            </span>
-          }
+              <dt>Quelle</dt>
+              <dd>
+                <select
+                  class="kv-select"
+                  [value]="sourceDraft() ?? ''"
+                  (change)="onSourceChange($any($event.target).value)"
+                >
+                  <option value="original">Original</option>
+                  <option value="flux">FLUX</option>
+                  <option value="sdxl">SDXL</option>
+                </select>
+              </dd>
 
-          <!-- Add-Tag-Button / Input -->
-          @if (addingTag()) {
-            <div class="tag-add-wrap">
-              <input
-                class="tag-add-input"
-                [value]="tagInputValue()"
-                (input)="tagInputValue.set($any($event.target).value)"
-                (keydown)="onTagInputKeyDown($event)"
-                (blur)="confirmAddTag()"
-                placeholder="Tag eingeben…"
-                autofocus
-              />
-              @if (tagSuggestions().length > 0) {
-                <div class="tag-suggestions">
-                  @for (suggestion of tagSuggestions(); track suggestion.id) {
-                    <button
-                      class="tag-suggestion"
-                      (mousedown)="pickSuggestion(suggestion.name)"
-                    >
-                      {{ suggestion.name.replace('_', ' ') }}
-                      <span class="tag-suggestion__count">{{ suggestion.count }}</span>
+              <dt>Originalvorlage</dt>
+              <dd>
+                @if (detail()?.original_id != null) {
+                  <span class="orig-chip">
+                    <img class="orig-thumb" [src]="originalThumbnailUrl()" alt="" />
+                    #{{ detail()!.original_id }}
+                    <button class="orig-edit" (click)="openRelationBrowser('origin')" aria-label="Anderes Original wählen">
+                      <pf-icon name="pencil" [size]="11" />
                     </button>
+                  </span>
+                } @else {
+                  <button class="orig-link" (click)="openRelationBrowser('origin')">
+                    <pf-icon name="link" [size]="13" /> Zuordnen
+                  </button>
+                }
+              </dd>
+
+              <dt>Framing</dt>
+              <dd>
+                <select
+                  class="kv-select"
+                  [value]="framingDraft() ?? ''"
+                  (change)="onFramingChange($any($event.target).value)"
+                >
+                  <option value="" disabled>—</option>
+                  <option value="close_up">{{ framingLabel('close_up') }}</option>
+                  <option value="medium">{{ framingLabel('medium') }}</option>
+                  <option value="full_body">{{ framingLabel('full_body') }}</option>
+                </select>
+              </dd>
+
+              <dt>Auflösung</dt><dd>{{ dimensions() }}</dd>
+              <dt>Seitenverhältnis</dt><dd>{{ aspectRatio() }}</dd>
+              <dt>Format</dt><dd>{{ asset()?.format?.toUpperCase() ?? '—' }}</dd>
+              <dt>Größe</dt><dd>{{ fileSize() }}</dd>
+              <dt>Qualität</dt>
+              <dd>
+                @if (qualityDisplay(); as quality) {
+                  <span [class]="qualityClass()">{{ quality }} / 100</span>
+                } @else {
+                  <span>—</span>
+                }
+              </dd>
+              <dt>Hash</dt><dd class="kv-hash">{{ hashShort() }}</dd>
+              @if (detail()?.linked_entity; as entity) {
+                <dt>Verknüpfte Entity</dt>
+                <dd>
+                  <button
+                    class="tag-chip entity-chip"
+                    type="button"
+                    [title]="'Verknüpft mit ' + entity.title + ' (' + entity.type + ') — zur Wissens-Sicht'"
+                    (click)="openLinkedEntity(entity)"
+                  >
+                    <pf-icon name="sparkle" [size]="11" />
+                    {{ entity.title }}
+                    <span class="entity-chip__type">{{ entity.type }}</span>
+                  </button>
+                </dd>
+              }
+            </dl>
+          </div>
+
+          <!-- Generierungs-Metadaten -->
+          @if (genMeta(); as meta) {
+            <div class="panel-sec">
+              <button class="psec-title psec-title--btn" (click)="toggleGenMeta()">
+                <pf-icon name="sparkle" [size]="13" />
+                Generierungs-Metadaten
+                <span class="psec-chev" [class.psec-chev--open]="showGenMeta()">
+                  <pf-icon name="chevronDown" [size]="14" />
+                </span>
+              </button>
+              @if (showGenMeta()) {
+                <div class="gmeta">
+                  @for (entry of meta; track entry.key) {
+                    <div class="gmeta-row">
+                      <span class="gk">{{ entry.key }}:</span>
+                      <span class="gv">{{ entry.value }}</span>
+                    </div>
                   }
                 </div>
               }
             </div>
-          } @else {
-            <button class="tag-add-btn" (click)="openAddTag()" aria-label="Tag hinzufügen">
-              <pf-icon name="plus" [size]="12" />
-            </button>
           }
-        </div>
-      </div>
 
-      <!-- Klassifizierung -->
-      @if (classificationsByCategory().length > 0) {
-        <div class="panel-sec">
-          <div class="psec-title">Klassifizierung</div>
-          @for (group of classificationsByCategory(); track group.category_id) {
-            <div class="pclass-group">
-              <div class="pclass-group__title">{{ group.category_name }}</div>
-              @for (item of group.items; track item.label_id) {
-                <div class="pclass-row">
-                  <span class="pclass-row__label">{{ item.label_name }}</span>
-                  <div class="pclass-row__bar">
-                    <div class="pclass-row__fill" [style.width.%]="confidencePercent(item.confidence)"></div>
-                  </div>
-                  <span class="pclass-row__pct">{{ confidencePercent(item.confidence) }}%</span>
+          <!-- Caption (editierbar) -->
+          <div class="panel-sec">
+            <div class="psec-title psec-title--row">
+              Caption
+              @if (!editingCaption()) {
+                <button class="psec-edit-btn" (click)="startCaptionEdit()" aria-label="Caption bearbeiten">
+                  <pf-icon name="pencil" [size]="12" />
+                </button>
+              }
+            </div>
+            @if (editingCaption()) {
+              <textarea
+                class="caption-editor"
+                [value]="captionDraft()"
+                (input)="captionDraft.set($any($event.target).value)"
+                (keydown.escape)="cancelCaptionEdit()"
+                (blur)="saveCaptionEdit()"
+                rows="4"
+                autofocus
+              ></textarea>
+              <div class="caption-edit-hint">Enter bestätigt nicht — Tab oder Klick außen speichert</div>
+            } @else if (caption()) {
+              <p class="caption-text" (click)="startCaptionEdit()">{{ caption() }}</p>
+            } @else {
+              <p class="caption-empty" (click)="startCaptionEdit()">Noch keine Caption — klicken zum Hinzufügen</p>
+            }
+          </div>
+
+          <!-- Tags (editierbar) -->
+          <div class="panel-sec">
+            <div class="psec-title">Tags</div>
+
+            <div class="tag-list">
+              @for (tag of displayTags(); track tag.id) {
+                <span
+                  class="tag-chip"
+                  [class.tag-chip--manual]="tag.kind === 'manual'"
+                  [title]="tag.kind === 'manual' ? 'Manuell hinzugefügt' : ''"
+                >
+                  @if (tag.kind === 'manual') {
+                    <span class="tag-chip__dot"></span>
+                  }
+                  {{ tag.name.replaceAll('_', ' ') }}
+                  <button
+                    class="tag-chip__remove"
+                    (click)="removeTag(tag.id)"
+                    [attr.aria-label]="'Tag ' + tag.name + ' entfernen'"
+                  >
+                    <pf-icon name="x" [size]="10" />
+                  </button>
+                </span>
+              }
+
+              <!-- Add-Tag-Button / Input -->
+              @if (addingTag()) {
+                <div class="tag-add-wrap">
+                  <input
+                    class="tag-add-input"
+                    [value]="tagInputValue()"
+                    (input)="tagInputValue.set($any($event.target).value)"
+                    (keydown)="onTagInputKeyDown($event)"
+                    (blur)="confirmAddTag()"
+                    placeholder="Tag eingeben…"
+                    autofocus
+                  />
+                  @if (tagSuggestions().length > 0) {
+                    <div class="tag-suggestions">
+                      @for (suggestion of tagSuggestions(); track suggestion.id) {
+                        <button
+                          class="tag-suggestion"
+                          (mousedown)="pickSuggestion(suggestion.name)"
+                        >
+                          {{ suggestion.name.replace('_', ' ') }}
+                          <span class="tag-suggestion__count">{{ suggestion.count }}</span>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <button class="tag-add-btn" (click)="openAddTag()" aria-label="Tag hinzufügen">
+                  <pf-icon name="plus" [size]="12" />
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Klassifizierung -->
+          @if (classificationsByCategory().length > 0) {
+            <div class="panel-sec">
+              <div class="psec-title">Klassifizierung</div>
+              @for (group of classificationsByCategory(); track group.category_id) {
+                <div class="pclass-group">
+                  <div class="pclass-group__title">{{ group.category_name }}</div>
+                  @for (item of group.items; track item.label_id) {
+                    <div class="pclass-row">
+                      <span class="pclass-row__label">{{ item.label_name }}</span>
+                      <div class="pclass-row__bar">
+                        <div class="pclass-row__fill" [style.width.%]="confidencePercent(item.confidence)"></div>
+                      </div>
+                      <span class="pclass-row__pct">{{ confidencePercent(item.confidence) }}%</span>
+                    </div>
+                  }
                 </div>
               }
             </div>
           }
-        </div>
-      }
 
-      } <!-- @if (!isFaceMode()) — Aktionen … Gesichter -->
+          } <!-- @if (!isFaceMode()) — Metadaten … Klassifizierung -->
 
-      <!-- Versionen (gemeinsam für Asset- und Gesichter-Modus) -->
-      <div class="panel-sec">
-        <div class="psec-title psec-title--row">
-          Versionen · {{ activeVersions().length }}
-          @if (!isFaceMode()) {
-            <button class="psec-act" (click)="openVersionCompare()">Vergleichen</button>
-          }
-        </div>
-        <div class="vers">
-          @for (version of activeVersions(); track version.id) {
-            <div class="vrow" [class.vrow--cur]="version.is_current">
-              <div class="vthumb"><img [src]="version.thumbnail_url" alt="" /></div>
-              <div class="vinfo">
-                <div class="vname">
-                  {{ versionLabel(version) }}
-                  @if (version.is_current) { <span class="vtag vtag--cur">Aktiv</span> }
-                </div>
-                <div class="vmeta">{{ versionMeta(version) }}</div>
+        }
+
+        @if (!isFaceMode() && activeTab() === 'people') {
+
+          <!-- Gesichter -->
+          @if (faces().length > 0) {
+            <div class="panel-sec">
+              <div class="psec-title">Gesichter ({{ faces().length }})</div>
+
+              <div class="face-list">
+                @for (face of faces(); track face.id) {
+                  <div class="face-item" [class.face-item--active]="quickAssignFace()?.id === face.id">
+                    <button
+                      class="face-crop"
+                      (click)="selectQuickAssignFace(face)"
+                      [title]="'Schnellzuweisung für ' + faceLabel(face)"
+                    >
+                      <img
+                        class="face-crop__img"
+                        [src]="'/api' + face.crop_url"
+                        [alt]="'Gesicht #' + face.id"
+                      />
+                      <div class="face-crop__border" [class.face-crop__border--manual]="isFaceManual(face)"></div>
+                    </button>
+                    <button
+                      class="face-del"
+                      (click)="deleteFaceFromAsset(face)"
+                      title="Gesicht löschen"
+                      aria-label="Gesicht löschen"
+                    >
+                      <pf-icon name="x" [size]="11" />
+                    </button>
+                    <button
+                      class="face-info"
+                      (click)="openPersonPicker(face)"
+                      [title]="'Person zuordnen für ' + faceLabel(face)"
+                    >
+                      <span class="face-name">{{ faceLabel(face) }}</span>
+                      <pf-icon name="pencil" [size]="11" />
+                    </button>
+                    <div class="face-meta">{{ faceScore(face) }} · {{ faceAge(face) }}</div>
+                  </div>
+                }
+              </div>
+
+              <!-- Quick-Assign-Grid (Schnellzuweisung für das angeklickte Gesicht, Default: erstes) -->
+              @if (quickAssignFace(); as primaryFace) {
+                @if (quickMatches().length > 0) {
+                  <div class="qa-label">
+                    Beste Treffer für {{ faceLabel(primaryFace) }} — Schnellzuweisung
+                  </div>
+                  <div class="quick-assign">
+                    @for (match of quickMatches(); track match.person_id) {
+                      <button
+                        class="quick-match"
+                        (click)="assignFaceToPerson(primaryFace.id, match.person_id)"
+                        [title]="'Zuweisen zu ' + (match.person_name ?? 'Person #' + match.person_id)"
+                      >
+                        <img [src]="'/api/faces/' + match.best_face_id + '/thumbnail'" alt="" />
+                        <div class="qm-label">{{ firstName(match.person_name) }}</div>
+                        <div class="qm-score">{{ matchScorePercent(match.score) }}%</div>
+                      </button>
+                    }
+                  </div>
+                }
+                <button class="mini-btn face-more-btn" (click)="openPersonPicker(primaryFace)">
+                  Weitere Personen…
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="panel-sec">
+              <div class="psec-title">Gesichter</div>
+              <div class="pbtn-row">
+                <button
+                  class="pbtn pbtn--ghost"
+                  [class.pbtn--loading]="retryingFaceExtraction()"
+                  [disabled]="retryingFaceExtraction()"
+                  (click)="retryFaceExtraction()"
+                >
+                  <pf-icon name="refresh" [size]="15" />
+                  {{ retryingFaceExtraction() ? 'Extraktion läuft…' : 'Extrahieren nochmal probieren' }}
+                </button>
+                <button class="pbtn pbtn--ghost" (click)="openPersonPickerAssetMode()">
+                  <pf-icon name="user" [size]="15" />
+                  Manuell Person zuordnen
+                </button>
               </div>
             </div>
           }
-        </div>
-        <button class="lb-newver" title="Neue Version importieren (Drag-Drop folgt)">
-          <pf-icon name="upload" [size]="16" />
-          <div>
-            <div class="nv-t">Neue Version ergänzen</div>
-            <div class="nv-s">Edit hierher ziehen oder klicken</div>
-          </div>
-        </button>
-      </div>
 
-      @if (isFaceMode()) {
+        }
 
-      <!-- Aktionen (Gesichter-Modus): reduziertes Set passend zu FaceDetailDto -->
-      <div class="panel-sec">
-        <div class="psec-title">Aktionen</div>
-        <div class="pbtn-row">
-          <button class="pbtn pbtn--ghost" (click)="openFacePersonPicker()">
-            <pf-icon name="face" [size]="15" />
-            Person zuweisen
-          </button>
-          <button class="pbtn pbtn--ghost" (click)="deleteFaceInFaceMode()" aria-label="Gesicht löschen">
-            <pf-icon name="trash" [size]="15" />
-            Löschen
-          </button>
-        </div>
-        <div class="pbtn-row">
-          <button
-            class="pbtn pbtn--ghost"
-            (click)="revealInExplorer()"
-            title="Datei im Windows Explorer anzeigen und markieren"
-          >
-            <pf-icon name="folder" [size]="15" />
-            Im Explorer anzeigen
-          </button>
-        </div>
-      </div>
+        @if (activeTab() === 'versions') {
 
-      <!-- Quelle (Gesichter-Modus): Link zurück zum Asset, aus dem dieses Face extrahiert wurde -->
-      <div class="panel-sec">
-        <div class="psec-title">Quelle</div>
-        @if (faceDetail()?.source_asset_id; as sourceAssetId) {
-          <button class="rel-row" (click)="openSourceAsset(sourceAssetId)" title="Zum Quellbild">
-            <div class="rr-thumb"><img [src]="'/api/assets/' + sourceAssetId + '/thumbnail?size=256'" alt="" /></div>
-            <div class="rr-body">
-              <div class="rr-id">#{{ sourceAssetId }} <span class="rel-tag rel-tag--orig">Quellbild</span></div>
+          <!-- Versionen (gemeinsam für Asset- und Gesichter-Modus) -->
+          <div class="panel-sec">
+            <div class="psec-title psec-title--row">
+              Versionen · {{ activeVersions().length }}
+              @if (!isFaceMode()) {
+                <button class="psec-act" (click)="openVersionCompare()">Vergleichen</button>
+              }
             </div>
-          </button>
+            <div class="vers">
+              @for (version of activeVersions(); track version.id) {
+                <div class="vrow" [class.vrow--cur]="version.is_current">
+                  <div class="vthumb"><img [src]="version.thumbnail_url" alt="" /></div>
+                  <div class="vinfo">
+                    <div class="vname">
+                      {{ versionLabel(version) }}
+                      @if (version.is_current) { <span class="vtag vtag--cur">Aktiv</span> }
+                    </div>
+                    <div class="vmeta">{{ versionMeta(version) }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+            <button class="lb-newver" title="Neue Version importieren (Drag-Drop folgt)">
+              <pf-icon name="upload" [size]="16" />
+              <div>
+                <div class="nv-t">Neue Version ergänzen</div>
+                <div class="nv-s">Edit hierher ziehen oder klicken</div>
+              </div>
+            </button>
+          </div>
+
+          @if (isFaceMode()) {
+
+          <!-- Quelle (Gesichter-Modus): Link zurück zum Asset, aus dem dieses Face extrahiert wurde -->
+          <div class="panel-sec">
+            <div class="psec-title">Quelle</div>
+            @if (faceDetail()?.source_asset_id; as sourceAssetId) {
+              <button class="rel-row" (click)="openSourceAsset(sourceAssetId)" title="Zum Quellbild">
+                <div class="rr-thumb"><img [src]="'/api/assets/' + sourceAssetId + '/thumbnail?size=256'" alt="" /></div>
+                <div class="rr-body">
+                  <div class="rr-id">#{{ sourceAssetId }} <span class="rel-tag rel-tag--orig">Quellbild</span></div>
+                </div>
+              </button>
+            } @else {
+              <div class="rel-empty">Keine Quelle bekannt — manuell importiertes Gesicht</div>
+            }
+          </div>
+
+          } @else {
+
+          <!-- Beziehungen -->
+          <div class="panel-sec">
+            <div class="psec-title">Beziehungen</div>
+
+            <div class="rel-dir-lbl">Originalvorlage</div>
+            @if (detail()?.original_id != null) {
+              <div
+                class="rel-row rel-row--clickable"
+                role="button"
+                tabindex="0"
+                title="Zum Original öffnen"
+                (click)="openSourceAsset(detail()!.original_id!)"
+                (keydown.enter)="openSourceAsset(detail()!.original_id!)"
+              >
+                <div class="rr-thumb"><img [src]="originalThumbnailUrl()" alt="" /></div>
+                <div class="rr-body">
+                  <div class="rr-id">#{{ detail()!.original_id }} <span class="rel-tag rel-tag--orig">Original</span></div>
+                </div>
+                <button class="rr-edit" (click)="$event.stopPropagation(); openRelationBrowser('origin')" title="Anderes Original wählen" aria-label="Anderes Original wählen">
+                  <pf-icon name="pencil" [size]="13" />
+                </button>
+                <button class="rr-x" (click)="$event.stopPropagation(); removeOriginal()" title="Zuordnung entfernen" aria-label="Zuordnung entfernen">
+                  <pf-icon name="x" [size]="14" />
+                </button>
+              </div>
+            } @else {
+              <button class="rel-add" (click)="openRelationBrowser('origin')">
+                <pf-icon name="link" [size]="14" /> Original zuordnen
+              </button>
+            }
+
+            <div class="rel-dir-lbl rel-dir-lbl--spaced">
+              Verknüpfte Edits · {{ detail()?.linked_edits?.length ?? 0 }}
+            </div>
+            @for (edit of detail()?.linked_edits ?? []; track edit.id) {
+              <div
+                class="rel-row rel-row--clickable"
+                role="button"
+                tabindex="0"
+                title="Zum Edit öffnen"
+                (click)="openSourceAsset(edit.id)"
+                (keydown.enter)="openSourceAsset(edit.id)"
+              >
+                <div class="rr-thumb"><img [src]="editThumbnailUrl(edit)" alt="" /></div>
+                <div class="rr-body">
+                  <div class="rr-id">#{{ edit.id }} <span class="rel-tag rel-tag--edit">{{ sourceLabelFor(edit.source) }}</span></div>
+                </div>
+                <button class="rr-x" (click)="$event.stopPropagation(); removeEditLink(edit.id)" title="Verknüpfung entfernen" aria-label="Verknüpfung entfernen">
+                  <pf-icon name="x" [size]="14" />
+                </button>
+              </div>
+            }
+            <button class="rel-add" (click)="openRelationBrowser('edits')">
+              <pf-icon name="plus" [size]="14" /> Edit verknüpfen
+            </button>
+          </div>
+
+          } <!-- @if (isFaceMode()) Quelle / @else Beziehungen -->
+
+        }
+
+      </div>
+
+      <!-- Aktionen (fix, tab-unabhängig — immer erreichbar egal welcher Tab aktiv ist) -->
+      <div class="panel-actions-fixed">
+        @if (!isFaceMode()) {
+          <div class="pbtn-row">
+            <button class="pbtn pbtn--ghost" (click)="deleteAsset()" aria-label="In den Papierkorb">
+              <pf-icon name="trash" [size]="15" />
+              Papierkorb
+            </button>
+            <button class="pbtn pbtn--ghost" (click)="openRerunDialog()">
+              <pf-icon name="refresh" [size]="15" />
+              Klassifizieren
+            </button>
+          </div>
+          <div class="pbtn-row">
+            <button
+              class="pbtn pbtn--ghost"
+              (click)="revealInExplorer()"
+              title="Datei im Windows Explorer anzeigen und markieren"
+            >
+              <pf-icon name="folder" [size]="15" />
+              Im Explorer anzeigen
+            </button>
+          </div>
+          @if (canUpscale()) {
+            <div class="pbtn-row">
+              <button
+                class="pbtn pbtn--ghost"
+                [class.pbtn--loading]="isUpscaling()"
+                [disabled]="isUpscaling()"
+                (click)="triggerUpscale()"
+              >
+                <pf-icon name="refresh" [size]="15" />
+                {{ isUpscaling() ? 'Upscale läuft…' : 'Upscale' }}
+              </button>
+            </div>
+            @if (upscaleError()) {
+              <div class="upscale-error">{{ upscaleError() }}</div>
+            }
+          }
         } @else {
-          <div class="rel-empty">Keine Quelle bekannt — manuell importiertes Gesicht</div>
-        }
-      </div>
-
-      } @else {
-
-      <!-- Beziehungen -->
-      <div class="panel-sec">
-        <div class="psec-title">Beziehungen</div>
-
-        <div class="rel-dir-lbl">Originalvorlage</div>
-        @if (detail()?.original_id != null) {
-          <div
-            class="rel-row rel-row--clickable"
-            role="button"
-            tabindex="0"
-            title="Zum Original öffnen"
-            (click)="openSourceAsset(detail()!.original_id!)"
-            (keydown.enter)="openSourceAsset(detail()!.original_id!)"
-          >
-            <div class="rr-thumb"><img [src]="originalThumbnailUrl()" alt="" /></div>
-            <div class="rr-body">
-              <div class="rr-id">#{{ detail()!.original_id }} <span class="rel-tag rel-tag--orig">Original</span></div>
-            </div>
-            <button class="rr-edit" (click)="$event.stopPropagation(); openRelationBrowser('origin')" title="Anderes Original wählen" aria-label="Anderes Original wählen">
-              <pf-icon name="pencil" [size]="13" />
+          <div class="pbtn-row">
+            <button class="pbtn pbtn--ghost" (click)="openFacePersonPicker()">
+              <pf-icon name="face" [size]="15" />
+              Person zuweisen
             </button>
-            <button class="rr-x" (click)="$event.stopPropagation(); removeOriginal()" title="Zuordnung entfernen" aria-label="Zuordnung entfernen">
-              <pf-icon name="x" [size]="14" />
+            <button class="pbtn pbtn--ghost" (click)="deleteFaceInFaceMode()" aria-label="Gesicht löschen">
+              <pf-icon name="trash" [size]="15" />
+              Löschen
             </button>
           </div>
-        } @else {
-          <button class="rel-add" (click)="openRelationBrowser('origin')">
-            <pf-icon name="link" [size]="14" /> Original zuordnen
-          </button>
-        }
-
-        <div class="rel-dir-lbl rel-dir-lbl--spaced">
-          Verknüpfte Edits · {{ detail()?.linked_edits?.length ?? 0 }}
-        </div>
-        @for (edit of detail()?.linked_edits ?? []; track edit.id) {
-          <div
-            class="rel-row rel-row--clickable"
-            role="button"
-            tabindex="0"
-            title="Zum Edit öffnen"
-            (click)="openSourceAsset(edit.id)"
-            (keydown.enter)="openSourceAsset(edit.id)"
-          >
-            <div class="rr-thumb"><img [src]="editThumbnailUrl(edit)" alt="" /></div>
-            <div class="rr-body">
-              <div class="rr-id">#{{ edit.id }} <span class="rel-tag rel-tag--edit">{{ sourceLabelFor(edit.source) }}</span></div>
-            </div>
-            <button class="rr-x" (click)="$event.stopPropagation(); removeEditLink(edit.id)" title="Verknüpfung entfernen" aria-label="Verknüpfung entfernen">
-              <pf-icon name="x" [size]="14" />
+          <div class="pbtn-row">
+            <button
+              class="pbtn pbtn--ghost"
+              (click)="revealInExplorer()"
+              title="Datei im Windows Explorer anzeigen und markieren"
+            >
+              <pf-icon name="folder" [size]="15" />
+              Im Explorer anzeigen
             </button>
           </div>
         }
-        <button class="rel-add" (click)="openRelationBrowser('edits')">
-          <pf-icon name="plus" [size]="14" /> Edit verknüpfen
-        </button>
       </div>
-
-      } <!-- @if (isFaceMode()) Quelle / @else Beziehungen -->
 
     }
   </div>

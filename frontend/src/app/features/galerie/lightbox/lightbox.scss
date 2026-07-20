@@ -101,7 +101,7 @@ pf-zoom-stage {
 .panel {
   background: var(--bg);
   border-left: 1px solid var(--line);
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 
@@ -116,10 +116,79 @@ pf-zoom-stage {
   border-bottom: 1px solid var(--line);
 }
 
+.panel-fixed {
+  flex: none;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+// ── Tab-Leiste ──────────────────────────────────────────────────────────────
+
+.panel-tabs {
+  display: flex;
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  padding: 0 8px;
+}
+
+.panel-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 42px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+
+  &:hover { color: var(--text-2); }
+
+  &.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+}
+
+.tab-badge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--mono);
+  color: var(--text-3);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 1px 6px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.panel-tab.active .tab-badge {
+  color: var(--accent);
+}
+
+// Scrollbarer Bereich zwischen Tab-Leiste und fixer Aktions-Fußzeile — der einzige
+// Teil des Panels, der scrollt (nicht mehr das ganze Panel wie vor dem Tab-Umbau).
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+// Fixe Aktions-Fußzeile unten am Panel — bleibt sichtbar, egal welcher Tab aktiv ist
+.panel-actions-fixed {
+  flex: none;
+  border-top: 1px solid var(--line);
+  padding: 14px 18px;
 }
 
 .ph-avatar {

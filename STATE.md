@@ -1,10 +1,17 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-20_p35-gemma-gguf-runtime/`
-**Phase:** 1/3 — GGUF-Runtime + Adapter + VRAM-Koordination (✅ complete, ungecommittet)
-**Nächster Schritt:** Committen (siehe unten), dann `/clear` (Pflicht, private-Profil) —
-danach Phase 2/3 (Format-Routing + Manifest-Eintrag + In-Place-Bind, Komplexität: standard,
-Modell-Empfehlung: `sonnet`).
+**Aktiver Plan:** `docs/planning/2026-07-20_lightbox-tabbed-panel.md` — beide Phasen ✅ complete,
+`ng build` grün. **Noch offen:** User-Smoke-Test (Checkliste steht im Plan, Wackelstellen
+zuerst), danach Archivieren.
+**Nächster Schritt:** Nach grünem Smoke-Test archivieren (`git mv` → `docs/archive/2026-07/`),
+danach weiter mit P35 Phase 2/3 (siehe Backlog unten).
+
+## Backlog — P35 (Phase 1 committet, Phase 2 offen)
+
+Plan `docs/planning/2026-07-20_p35-gemma-gguf-runtime/` — Phase 1/3 (GGUF-Runtime + Adapter +
+VRAM-Koordination) ✅ complete **und committet** (`1ac7d01`). Nächster Schritt: Phase 2/3
+(Format-Routing + Manifest-Eintrag + In-Place-Bind, Komplexität: standard, Modell-Empfehlung:
+`sonnet`).
 
 ## Phase 1 erledigt (GGUF-Runtime + Adapter + VRAM-Koordination)
 
