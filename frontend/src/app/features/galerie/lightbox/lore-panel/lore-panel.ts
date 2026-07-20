@@ -48,6 +48,10 @@ export class LorePanel {
   // Ob Wissen hier überhaupt sinnvoll wäre (Bild zeigt Personen) — steuert, ob der
   // „Noch kein Wissen — anlegen"-Zustand erscheint oder das Panel still ausgeblendet bleibt.
   readonly hasPersonContext = input(false);
+  // Von außen hochgezählt (Lightbox), wenn eine neu angelegte Entity mit der Person
+  // verknüpft wurde — assetId/personId ändern sich dabei nicht, ohne diesen Trigger
+  // bliebe das Panel auf dem alten „kein Wissen"-Stand hängen.
+  readonly refreshKey = input<number>(0);
 
   readonly entitySelected = output<EntityRefDto>();
   readonly createRequested = output<void>();
@@ -63,8 +67,9 @@ export class LorePanel {
       toObservable(this.assetId),
       toObservable(this.personId),
       toObservable(this.refreshTick),
+      toObservable(this.refreshKey),
     ]).pipe(
-      switchMap(([assetId, personId]: [number | null, number | null, number]): Observable<LoreState> => {
+      switchMap(([assetId, personId]: [number | null, number | null, number, number]): Observable<LoreState> => {
         if (assetId == null && personId == null) {
           return of({ status: 'empty', lores: [] });
         }

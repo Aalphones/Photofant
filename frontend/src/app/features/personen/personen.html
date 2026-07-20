@@ -135,6 +135,7 @@
               <pf-person-card
                 [person]="person"
                 [viewMode]="viewMode()"
+                [newPersonTask]="newPersonTaskByPersonId().get(person.id) ?? null"
                 (rename)="onRename($event)"
                 (setGroup)="onSetGroup($event)"
                 (importFiles)="onImportFiles($event)"
@@ -145,6 +146,9 @@
                 (deleteClick)="onDeleteClick(person)"
                 (linkEntityClick)="onLinkEntityClick(person)"
                 (unlinkEntityClick)="onUnlinkEntity(person, $event)"
+                (createKnowledge)="onCreateKnowledge($event)"
+                (snoozeNewPersonTask)="onSnoozeNewPersonTask($event)"
+                (dismissNewPersonTask)="onDismissNewPersonTask($event)"
               />
             </div>
           }

@@ -13,17 +13,18 @@ import { Router } from '@angular/router';
 import { combineLatest, forkJoin, of, switchMap, catchError, debounceTime, map, startWith, type Observable } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
-import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, EntityRefDto, ExplainabilityPayload, FaceDto, FaceMatch, Framing, PersonDto, RecommendationDto, RecommendationsResponse, RecommendationStatus, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
+import type { AssetClassification, AssetDetailDto, AssetDto, AssetLinkSummary, AssetsPage, ComfyUIImportResponse, ComfyUIWorkflow, CreateEntityRequest, EntityDto, EntityRefDto, ExplainabilityPayload, FaceDto, FaceMatch, Framing, PersonDto, RecommendationDto, RecommendationsResponse, RecommendationStatus, RelatedRailItem, SemanticSearchResponse, TagDto, TagListItem, VersionDto } from '@photofant/models';
 import { recommendationReasonLabel } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, extractApiErrorMessage, PersonService, RecommendationService, SearchService, TagService } from '@photofant/services';
 import { ShortcutService } from '../../../services/shortcut.service';
 import { ComfyuiImportDialog, Icon, RerunDialog } from '@photofant/ui';
 import type { RerunPayload } from '@photofant/ui';
-import { comfyuiActions, comfyuiSelectors, filtersActions, galleryActions, gallerySelectors, jobsSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
+import { comfyuiActions, comfyuiSelectors, filtersActions, galleryActions, gallerySelectors, jobsSelectors, knowledgeActions, knowledgeSelectors, personsActions, personsSelectors, presetsActions, presetsSelectors } from '@photofant/store';
 import { ZoomStage } from './zoom-stage';
 import { RelatedRail } from './related-rail/related-rail';
 import { LorePanel } from './lore-panel/lore-panel';
 import { Editor } from '../../editor/editor';
+import { EntityWizardDialog } from '../../wissen/entity-wizard-dialog/entity-wizard-dialog';
 
 // Anzahl Vorschläge in der Lightbox-Rail — spiegelt `reverseSearch.similarLimit` (Default
 // 10, `backend/photofant/settings.py`). Kein Frontend-Config-Read nötig: der „mehr"-Sprung
@@ -129,7 +130,7 @@ function formatDate(dateStr: string | null): string {
 @Component({
   selector: 'pf-lightbox',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ZoomStage, Icon, RerunDialog, RelatedRail, LorePanel, ComfyuiImportDialog, Editor],
+  imports: [ZoomStage, Icon, RerunDialog, RelatedRail, LorePanel, ComfyuiImportDialog, Editor, EntityWizardDialog],
   templateUrl: './lightbox.html',
   styleUrl: './lightbox.scss',
 })
@@ -150,6 +151,21 @@ export class Lightbox {
   protected readonly showRerunDialog = signal(false);
   protected readonly showComfyuiImportDialog = signal(false);
   protected readonly showEditorModal = signal(false);
+
+  // ── Wissen anlegen (P25 Lore-Panel „anlegen") ─────────────────────────────
+  // Öffnet den Entity-Wizard inline in der Lightbox statt zu `/wissen` zu navigieren —
+  // die alte Navigation hing unter der Guard-Leerpfad-Route und landete bei einer
+  // Guard-Re-Prüfung riskant auf /entsperren statt auf dem Formular.
+  protected readonly showKnowledgeWizard = signal(false);
+  protected readonly knowledgeDomains = this.store.selectSignal(knowledgeSelectors.selectDomains);
+  protected readonly isSavingKnowledgeEntity = this.store.selectSignal(knowledgeSelectors.selectIsSaving);
+  protected readonly knowledgeSaveError = this.store.selectSignal(knowledgeSelectors.selectSaveError);
+  private readonly lastCreatedKnowledgeEntity = this.store.selectSignal(knowledgeSelectors.selectLastCreatedEntity);
+  private readonly pendingKnowledgeCreate = signal(false);
+  private readonly knowledgeCreateTargetPersonId = signal<number | null>(null);
+  // Bump nach erfolgreicher Verknüpfung -> Lore-Panel lädt neu (dessen eigene Inputs
+  // assetId/personId ändern sich sonst nicht, ein reines reloadTrigger-Bump reicht nicht).
+  protected readonly loreRefreshKey = signal(0);
 
   // ── VersionCompare-Modal ──────────────────────────────────────────────────
   protected readonly showVersionCompare = signal(false);
@@ -771,6 +787,28 @@ export class Lightbox {
         this.relationBrowserLoading.set(false);
       });
 
+    // P25 Lore-Panel „anlegen": sobald die im Wizard angelegte Entity im Store landet,
+    // mit der Zielperson verknüpfen (Face-Modus: das offene Face; Asset-Modus: die Person
+    // des ersten Gesichts) und den Wizard schließen. `pendingKnowledgeCreate` verhindert,
+    // dass eine bereits verarbeitete Entity (z.B. aus der Personen-Seite) hier erneut greift.
+    effect((): void => {
+      const entity: EntityDto | null = this.lastCreatedKnowledgeEntity();
+      if (entity == null || !this.pendingKnowledgeCreate()) { return; }
+      this.pendingKnowledgeCreate.set(false);
+      this.showKnowledgeWizard.set(false);
+      const personId = this.knowledgeCreateTargetPersonId();
+      this.knowledgeCreateTargetPersonId.set(null);
+      if (personId == null) { return; }
+      this.personService.linkEntity(personId, entity.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => { this.loreRefreshKey.update((count: number) => count + 1); },
+          error: (err: unknown) => {
+            console.error('[Lightbox] Neue Entity konnte nicht mit der Person verknüpft werden:', err);
+          },
+        });
+    });
+
     const onKeyDown = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
@@ -869,10 +907,28 @@ export class Lightbox {
     this.router.navigate(['/wissen'], { queryParams: { entity: entity.id } });
   }
 
-  // P25 Lore-Panel: „anlegen" im Leer-Zustand -> Wissens-Seite (der Wizard liegt dort).
+  // P25 Lore-Panel: „anlegen" im Leer-Zustand -> Wizard inline öffnen (siehe Effect oben).
+  // Zielperson für die spätere Verknüpfung wird hier festgehalten, weil sie beim
+  // Wizard-Schließen (Face-/Asset-Modus-Wechsel möglich) sonst nicht mehr verfügbar wäre.
   protected openKnowledgeCreate(): void {
-    this.close();
-    this.router.navigate(['/wissen']);
+    this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.loadDomains());
+    this.knowledgeCreateTargetPersonId.set(
+      this.isFaceMode() ? (this.faceDetail()?.person_id ?? null) : (this.firstFace()?.person_id ?? null)
+    );
+    this.pendingKnowledgeCreate.set(false);
+    this.showKnowledgeWizard.set(true);
+  }
+
+  protected onCloseKnowledgeWizard(): void {
+    this.showKnowledgeWizard.set(false);
+    this.pendingKnowledgeCreate.set(false);
+    this.knowledgeCreateTargetPersonId.set(null);
+  }
+
+  protected onSaveKnowledgeEntity(request: CreateEntityRequest): void {
+    this.pendingKnowledgeCreate.set(true);
+    this.store.dispatch(knowledgeActions.createEntity({ request }));
   }
 
   protected onEditorClosed(): void {

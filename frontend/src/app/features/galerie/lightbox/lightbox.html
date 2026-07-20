@@ -90,6 +90,7 @@
         [assetId]="isFaceMode() ? null : (asset()?.id ?? null)"
         [personId]="isFaceMode() ? (faceDetail()?.person_id ?? null) : null"
         [hasPersonContext]="isFaceMode() ? (faceDetail()?.person_id != null) : faces().length > 0"
+        [refreshKey]="loreRefreshKey()"
         (entitySelected)="openLinkedEntity($event)"
         (createRequested)="openKnowledgeCreate()"
       />
@@ -848,6 +849,16 @@
       </div>
     </div>
   </div>
+}
+
+@if (showKnowledgeWizard()) {
+  <pf-entity-wizard-dialog
+    [domains]="knowledgeDomains()"
+    [isSaving]="isSavingKnowledgeEntity()"
+    [saveError]="knowledgeSaveError()"
+    (close)="onCloseKnowledgeWizard()"
+    (save)="onSaveKnowledgeEntity($event)"
+  />
 }
 
 @if (showRerunDialog()) {
