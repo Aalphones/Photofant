@@ -116,3 +116,19 @@ Neue Datei `backend/tests/test_recommendation_invalidation_knowledge.py`:
 Keine zusätzlichen — Phase 1 deckt `code-map.md`/ADR ab.
 
 ## Report-Back
+
+Alle 7 Call-Sites umgesetzt: `persons.py::link_person_entity`/`unlink_person_entity`
+(`assets_of_persons`-Fan-out), `assets.py::link_asset_entity`/`unlink_asset_entity`
+(direktes Asset), `knowledge.py::create_relationship`/`remove_relationship`
+(`assets_for_entity` nach dem Service-Call), `update_entity` (Vorher/Nachher-Union bei
+`relationships`/`media_links`-Patch, sonst No-op), `delete_entity` (Assets vor dem
+Löschen ermittelt), `knowledge_patch_job.py::_run_patch` (gleiches Vorher/Nachher-Muster
+fürs Single-Field-Patch). `knowledge/service.py` unverändert (Architektur-Grenze hält).
+
+Neue Testdatei `test_recommendation_invalidation_knowledge.py` (5 Tests, u.a. der
+Konfidenz-Check `media_links`-Removal alt+neu invalidiert, und ein Negativ-Test für
+reine Titel-Patches). Alle 5 grün. Voller Testlauf: 383 passed, 13 pre-existing Failures
+in `test_caption_config.py`/`test_comfyui_*.py` (unberührt von dieser Phase). ruff auf
+den geänderten Dateien sauber (ein Alt-Finding in `assets.py:1491`, weit weg von den
+Änderungen). mypy: keine neuen Fehler in den 4 geänderten Dateien (16 Alt-Fehler, alle
+außerhalb der geänderten Zeilen).

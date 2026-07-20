@@ -466,6 +466,11 @@ async def create_relationship(
         raise HTTPException(status_code=409, detail=str(error)) from error
     except (ValidationError, DomainLoadError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+    from photofant.recommendation.context import assets_for_entity
+
+    invalidate_recommendations(session, assets_for_entity(session, entity_id))
     return EntityDto.from_entity(entity)
 
 
@@ -485,6 +490,11 @@ async def remove_relationship(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except OwnershipConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+    from photofant.recommendation.context import assets_for_entity
+
+    invalidate_recommendations(session, assets_for_entity(session, entity_id))
     return EntityDto.from_entity(entity)
 
 
@@ -538,24 +548,39 @@ async def get_entity(entity_id: str, session: DbSession, vault: VaultDep) -> Ent
 async def update_entity(
     entity_id: str, body: UpdateEntityRequest, session: DbSession, vault: VaultDep
 ) -> EntityDto:
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+    from photofant.recommendation.context import assets_for_entity
+
     service = _service(session, vault)
     owner = _parse_owner(body.owner)
+    patch = body.to_patch()
+    needs_invalidation = bool({"relationships", "media_links"} & patch.keys())
+    before_ids = assets_for_entity(session, entity_id) if needs_invalidation else set()
     try:
-        entity = service.update_entity(entity_id, body.to_patch(), owner)
+        entity = service.update_entity(entity_id, patch, owner)
     except EntityNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except OwnershipConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     except (ValidationError, DomainLoadError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+    if needs_invalidation:
+        invalidate_recommendations(session, before_ids | assets_for_entity(session, entity_id))
     return EntityDto.from_entity(entity)
 
 
 @router.delete("/entities/{entity_id:path}", status_code=204)
 async def delete_entity(entity_id: str, session: DbSession, vault: VaultDep) -> Response:
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+    from photofant.recommendation.context import assets_for_entity
+
     service = _service(session, vault)
+    affected = assets_for_entity(session, entity_id)
     try:
         service.delete_entity(entity_id)
     except EntityNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+    invalidate_recommendations(session, affected)
     return Response(status_code=204)

@@ -1165,6 +1165,10 @@ async def link_asset_entity(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except OwnershipConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+
+    invalidate_recommendations(session, [asset_id])
     session.commit()
 
     log.info("Linked asset %d → entity %r", asset_id, body.entity_id)
@@ -1191,6 +1195,10 @@ async def unlink_asset_entity(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except OwnershipConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+
+    invalidate_recommendations(session, [asset_id])
     session.commit()
 
     log.info("Unlinked asset %d from entity %r", asset_id, entity_id)

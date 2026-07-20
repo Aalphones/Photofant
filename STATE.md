@@ -1,8 +1,16 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-20_recommendation-cache-invalidation/`
-**Phase:** 3/4 — Wissensgraph-Verknüpfungen (pending)
-**Nächster Schritt:** Phase 3 umsetzen (link-entity, relationships, knowledge-patch rufen `invalidate_recommendations` vor ihrem Commit — siehe `phase-3-wissensgraph.md`).
+**Phase:** 4/4 — Clustering (pending)
+**Nächster Schritt:** Phase 4 umsetzen (automatische Zuordnung nach Import invalidiert Empfehlungen — siehe `phase-4-clustering.md`, vermutlicher Hauptverursacher der Cache-Staleness).
+
+## Phase 3 erledigt (Wissensgraph-Verknüpfungen)
+
+Alle 7 Call-Sites (persons/assets link-entity, knowledge relationships/update/delete,
+knowledge-patch-job) invalidieren jetzt vor ihrem Commit — `assets_of_persons`/
+`assets_for_entity` aus Phase 1 wiederverwendet, `knowledge/service.py` bleibt
+unangetastet. Neue Testdatei `test_recommendation_invalidation_knowledge.py` (5 Tests,
+grün). ruff/mypy: keine neuen Fehler. Details: `phase-3-wissensgraph.md` (Report-Back).
 
 ## Phase 2 erledigt (Manuelle Face-/Person-Aktionen)
 

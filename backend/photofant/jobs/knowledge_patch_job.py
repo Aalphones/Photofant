@@ -42,6 +42,9 @@ def _jsonable(value: Any) -> Any:
 def _run_patch(
     job_id: str, entity_id: str, field: str, value: Any, reason: str, owner: Owner
 ) -> None:
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+    from photofant.recommendation.context import assets_for_entity
+
     vault = open_vault()
     with SessionLocal() as session:
         service = KnowledgeService(session, vault)
@@ -49,6 +52,9 @@ def _run_patch(
         if entity is None:
             raise EntityNotFoundError(f"Entity '{entity_id}' nicht gefunden")
         old_value = _jsonable(getattr(entity, field))
+
+        needs_invalidation = field in ("relationships", "media_links")
+        before_ids = assets_for_entity(session, entity_id) if needs_invalidation else set()
 
         service.update_entity(entity_id, {field: value}, owner)
 
@@ -61,6 +67,12 @@ def _run_patch(
             source=owner.value,
             job_id=job_id,
         )
+
+        if needs_invalidation:
+            invalidate_recommendations(
+                session, before_ids | assets_for_entity(session, entity_id)
+            )
+
         session.commit()
         log.info("knowledge_patch: '%s'.%s korrigiert (Job %s)", entity_id, field, job_id)
 
