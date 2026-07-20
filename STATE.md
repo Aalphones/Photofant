@@ -32,6 +32,9 @@ unabhängige Module — siehe Commit).
 
 ## Backlog (nach P27)
 
+- `docs/planning/2026-07-20_p35-gemma-gguf-runtime/` — **freigegeben, geparkt.** Bindet das lokale
+  GGUF-Gemma (12B, `D:\Models\OBLITERATUS\…`) als 2. Runtime neben torch (ADR-028 ergänzt, nicht
+  revidiert); Vision-Naht (mmproj) vorgesehen, Feature Backlog. 3 Phasen, Phase 1 heikel. Start: `/implement`.
 - `docs/planning/2026-07-06_p34-mcp-wissensbasis/` — blockiert bis MCP-Basisplan + P27 stehen.
 
 ## Smoke-Test P26 ausstehend (User)
