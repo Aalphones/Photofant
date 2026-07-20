@@ -39,6 +39,7 @@ class _GgufEntry:
     llama: Any
     model_id: str
     has_vision: bool
+    mmproj_path: str | None
     last_used: float = field(default_factory=time.monotonic)
 
 
@@ -118,6 +119,11 @@ class GgufEngine:
         README §Vision-Naht) — when set, the model is constructed with the matching
         vision chat handler; when the handler is unavailable or `mmproj_path` is
         None, it loads text-only. Returns the `Llama` instance.
+
+        Reuses the resident model when both *model_id* and *mmproj_path* already
+        match — every adapter calls this on each `generate`, and reloading a
+        4-12B GGUF from disk per call would otherwise dominate request latency
+        for no reason (mirrors the same fix in `GenerativeEngine`).
         """
         availability = check_gguf_available()
         if availability is not GgufAvailability.AVAILABLE:
@@ -125,6 +131,16 @@ class GgufEngine:
                 f"GGUF dependencies not available ({availability}). "
                 "Install with: uv pip install 'photofant[gemma-gguf]'"
             )
+
+        with self._lock:
+            if (
+                self._current is not None
+                and self._current.model_id == model_id
+                and self._current.mmproj_path == mmproj_path
+            ):
+                self._current.last_used = time.monotonic()
+                log.debug("Reusing resident GGUF model: %s", model_id)
+                return self._current.llama
 
         # Cross-unload (ADR-029): exactly one heavy model resident across BOTH
         # runtimes — evict the torch slot before this one takes VRAM. Lazy import
@@ -156,7 +172,9 @@ class GgufEngine:
         llama = Llama(**llama_kwargs)
 
         with self._lock:
-            self._current = _GgufEntry(llama=llama, model_id=model_id, has_vision=has_vision)
+            self._current = _GgufEntry(
+                llama=llama, model_id=model_id, has_vision=has_vision, mmproj_path=mmproj_path
+            )
 
         log.info("GGUF model ready: %s", model_id)
         return llama

@@ -14,7 +14,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +89,10 @@ class GenerativeEngine:
         (P27) — all pure transformers models sharing one VRAM slot: loading a new
         one evicts the current one. Returns (model, companion).
 
+        Reuses the resident pipeline when *model_id* is already loaded — every
+        adapter calls this on each `generate`/`caption`, and a 4-12B model reload
+        per call would otherwise dominate the request latency for no reason.
+
         `load_processor=True` loads an `AutoProcessor` (multimodal captioners).
         `load_processor=False` loads an `AutoTokenizer` instead — a text-only LM
         like Gemma has no processor, that is a multimodal concept.
@@ -99,6 +103,12 @@ class GenerativeEngine:
                 f"Generative dependencies not available ({availability}). "
                 "Install with: uv pip install photofant[generative]"
             )
+
+        with self._lock:
+            if self._current is not None and self._current.model_id == model_id:
+                self._current.last_used = time.monotonic()
+                log.debug("Reusing resident transformers model: %s", model_id)
+                return cast("tuple[Any, Any]", self._current.pipeline)
 
         import torch
         import transformers
