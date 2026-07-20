@@ -1,10 +1,9 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-20_p35-gemma-gguf-runtime/` — Phase 1/3 + 2/3 ✅
-complete. Phase 1 committet (`1ac7d01`), Phase 2 noch **nicht committet** (siehe unten).
-**Nächster Schritt:** Phase 2 committen (`mode-committing`), danach Phase 3/3 (Docs: ADR-029,
-ADR-028-Nachtrag, code-map, models.md + Test, Komplexität: mechanisch, Modell-Empfehlung:
-`sonnet`).
+complete und committet (`1ac7d01`, `ad39592`).
+**Nächster Schritt:** Phase 3/3 (Docs: ADR-029, ADR-028-Nachtrag, code-map, models.md + Test,
+Komplexität: mechanisch, Modell-Empfehlung: `sonnet`).
 
 ## Backlog — Lightbox-Smoke ausstehend (User)
 
