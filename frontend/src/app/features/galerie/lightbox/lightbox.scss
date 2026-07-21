@@ -186,9 +186,73 @@ pf-zoom-stage {
 
 // Fixe Aktions-Fußzeile unten am Panel — bleibt sichtbar, egal welcher Tab aktiv ist
 .panel-actions-fixed {
+  position: relative;
   flex: none;
   border-top: 1px solid var(--line);
   padding: 14px 18px;
+}
+
+// Burger-Toggle für die Aktionen — nur auf Mobile sichtbar (siehe Breakpoint unten).
+// Auf Desktop bleibt die Fußzeile wie bisher immer ausgeklappt.
+.panel-actions-toggle {
+  display: none;
+}
+
+.panel-actions-toggle__chev {
+  margin-left: auto;
+}
+
+.panel-actions-body {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 640px) {
+  // Eingeklappt: nur die schmale Toggle-Leiste kostet Höhe, der Rest bleibt dem
+  // scrollbaren Tab-Bereich (.panel-body) überlassen — vorher fraß die immer volle
+  // Fußzeile bei wenig Höhe den gesamten Scrollbereich weg.
+  .panel-actions-fixed {
+    padding: 0;
+  }
+
+  .panel-actions-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 44px;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    background: none;
+    border: none;
+    cursor: pointer;
+
+    &:hover { color: var(--text); }
+  }
+
+  // Aufgeklappt: als Overlay nach oben, statt dauerhaft Platz vom Scrollbereich
+  // abzuzwacken — schließt sich wieder über den Toggle, deckt den Tab-Inhalt also
+  // nur ab, wenn der User es aktiv anfordert.
+  .panel-actions-body {
+    display: none;
+  }
+
+  .panel-actions-fixed--open .panel-actions-body {
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    max-height: min(60vh, 360px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    padding: 14px 18px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.32);
+  }
 }
 
 .ph-avatar {

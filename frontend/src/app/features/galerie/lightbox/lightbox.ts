@@ -202,6 +202,16 @@ export class Lightbox {
 
   protected readonly showGenMeta = signal(false);
 
+  // Mobile: Aktions-Fußzeile hinter Burger-Toggle eingeklappt (siehe lightbox.scss
+  // Breakpoint 640px) — verhindert, dass die fixe Fußzeile bei wenig Höhe den
+  // gesamten Scrollbereich der Tabs überdeckt. Auf Desktop wirkungslos (Toggle
+  // per CSS ausgeblendet, Inhalt immer sichtbar).
+  protected readonly mobileActionsOpen = signal(false);
+
+  protected toggleMobileActions(): void {
+    this.mobileActionsOpen.update((open: boolean) => !open);
+  }
+
   // Panel-Tabs (Übersicht/Wissen/Gesichter/Versionen) — Gesichter-Tab existiert nur im
   // Asset-Modus. „Wissen" bündelt Lore-Panel + Empfehlungen (vorher Teil von Übersicht).
   protected readonly activeTab = signal<'overview' | 'knowledge' | 'people' | 'versions'>('overview');
@@ -717,6 +727,7 @@ export class Lightbox {
       this.lightboxFaceId(); // auch bei Wechsel zwischen/innerhalb Gesichter-Modus zurücksetzen
       this.showGenMeta.set(asset?.source != null && asset.source !== 'original');
       this.activeTab.set('overview');
+      this.mobileActionsOpen.set(false);
       this.selectedQuickAssignFaceId.set(null);
       // Reset editing state when navigating
       this.addingTag.set(false);

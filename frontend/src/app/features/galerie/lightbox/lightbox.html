@@ -595,67 +595,86 @@
 
       </div>
 
-      <!-- Aktionen (fix, tab-unabhängig — immer erreichbar egal welcher Tab aktiv ist) -->
-      <div class="panel-actions-fixed">
-        @if (!isFaceMode()) {
-          <div class="pbtn-row">
-            <button class="pbtn pbtn--ghost" (click)="deleteAsset()" aria-label="In den Papierkorb">
-              <pf-icon name="trash" [size]="15" />
-              Papierkorb
-            </button>
-            <button class="pbtn pbtn--ghost" (click)="openRerunDialog()">
-              <pf-icon name="refresh" [size]="15" />
-              Klassifizieren
-            </button>
-          </div>
-          <div class="pbtn-row">
-            <button
-              class="pbtn pbtn--ghost"
-              (click)="revealInExplorer()"
-              title="Datei im Windows Explorer anzeigen und markieren"
-            >
-              <pf-icon name="folder" [size]="15" />
-              Im Explorer anzeigen
-            </button>
-          </div>
-          @if (canUpscale()) {
+      <!-- Aktionen (fix, tab-unabhängig — immer erreichbar egal welcher Tab aktiv ist).
+           Auf Mobile hinter einem Burger-Toggle eingeklappt: sonst frisst die fixe
+           Fußzeile bei wenig Höhe den kompletten Scrollbereich der Tabs (siehe Bug-Report). -->
+      <div class="panel-actions-fixed" [class.panel-actions-fixed--open]="mobileActionsOpen()">
+        <button
+          type="button"
+          class="panel-actions-toggle"
+          (click)="toggleMobileActions()"
+          [attr.aria-expanded]="mobileActionsOpen()"
+          aria-controls="lb-actions-body"
+        >
+          <pf-icon name="menu" [size]="16" />
+          Aktionen
+          <pf-icon
+            [name]="mobileActionsOpen() ? 'chevronUp' : 'chevronDown'"
+            [size]="14"
+            class="panel-actions-toggle__chev"
+          />
+        </button>
+        <div class="panel-actions-body" id="lb-actions-body">
+          @if (!isFaceMode()) {
+            <div class="pbtn-row">
+              <button class="pbtn pbtn--ghost" (click)="deleteAsset()" aria-label="In den Papierkorb">
+                <pf-icon name="trash" [size]="15" />
+                Papierkorb
+              </button>
+              <button class="pbtn pbtn--ghost" (click)="openRerunDialog()">
+                <pf-icon name="refresh" [size]="15" />
+                Klassifizieren
+              </button>
+            </div>
             <div class="pbtn-row">
               <button
                 class="pbtn pbtn--ghost"
-                [class.pbtn--loading]="isUpscaling()"
-                [disabled]="isUpscaling()"
-                (click)="triggerUpscale()"
+                (click)="revealInExplorer()"
+                title="Datei im Windows Explorer anzeigen und markieren"
               >
-                <pf-icon name="refresh" [size]="15" />
-                {{ isUpscaling() ? 'Upscale läuft…' : 'Upscale' }}
+                <pf-icon name="folder" [size]="15" />
+                Im Explorer anzeigen
               </button>
             </div>
-            @if (upscaleError()) {
-              <div class="upscale-error">{{ upscaleError() }}</div>
+            @if (canUpscale()) {
+              <div class="pbtn-row">
+                <button
+                  class="pbtn pbtn--ghost"
+                  [class.pbtn--loading]="isUpscaling()"
+                  [disabled]="isUpscaling()"
+                  (click)="triggerUpscale()"
+                >
+                  <pf-icon name="refresh" [size]="15" />
+                  {{ isUpscaling() ? 'Upscale läuft…' : 'Upscale' }}
+                </button>
+              </div>
+              @if (upscaleError()) {
+                <div class="upscale-error">{{ upscaleError() }}</div>
+              }
             }
+          } @else {
+            <div class="pbtn-row">
+              <button class="pbtn pbtn--ghost" (click)="openFacePersonPicker()">
+                <pf-icon name="face" [size]="15" />
+                Person zuweisen
+              </button>
+              <button class="pbtn pbtn--ghost" (click)="deleteFaceInFaceMode()" aria-label="Gesicht löschen">
+                <pf-icon name="trash" [size]="15" />
+                Löschen
+              </button>
+            </div>
+            <div class="pbtn-row">
+              <button
+                class="pbtn pbtn--ghost"
+                (click)="revealInExplorer()"
+                title="Datei im Windows Explorer anzeigen und markieren"
+              >
+                <pf-icon name="folder" [size]="15" />
+                Im Explorer anzeigen
+              </button>
+            </div>
           }
-        } @else {
-          <div class="pbtn-row">
-            <button class="pbtn pbtn--ghost" (click)="openFacePersonPicker()">
-              <pf-icon name="face" [size]="15" />
-              Person zuweisen
-            </button>
-            <button class="pbtn pbtn--ghost" (click)="deleteFaceInFaceMode()" aria-label="Gesicht löschen">
-              <pf-icon name="trash" [size]="15" />
-              Löschen
-            </button>
-          </div>
-          <div class="pbtn-row">
-            <button
-              class="pbtn pbtn--ghost"
-              (click)="revealInExplorer()"
-              title="Datei im Windows Explorer anzeigen und markieren"
-            >
-              <pf-icon name="folder" [size]="15" />
-              Im Explorer anzeigen
-            </button>
-          </div>
-        }
+        </div>
       </div>
 
     }
