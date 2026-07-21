@@ -191,17 +191,41 @@ wie `import-suggestion`).
 ```
 
 ## AK dieser Phase
-- [ ] `ddgs` installiert, API gegen die installierte Version verifiziert (siehe Aufgabe 1).
-- [ ] `search_web()` liefert bei einer echten Testsuche (`"Tom Hanks actor"`) mindestens 1
+- [x] `ddgs` installiert, API gegen die installierte Version verifiziert (siehe Aufgabe 1).
+- [x] `search_web()` liefert bei einer echten Testsuche (`"Tom Hanks actor"`) mindestens 1
       Ergebnis mit gefülltem `title`/`url`/`snippet`.
-- [ ] `Capability.KNOWLEDGE_DISCOVERY` + `autonomy_for(Capability.KNOWLEDGE_DISCOVERY)`
+- [x] `Capability.KNOWLEDGE_DISCOVERY` + `autonomy_for(Capability.KNOWLEDGE_DISCOVERY)`
       liefert `"off"` ohne weitere Settings-Änderung (Default greift).
-- [ ] `PromptLibrary().get("knowledge_discovery")` liefert den Prompt mit `version == "1"`.
-- [ ] ADR-031 liegt unter `docs/decisions/031-web-recherche-netzwerkzugriff.md`.
+- [x] `PromptLibrary().get("knowledge_discovery")` liefert den Prompt mit `version == "1"`.
+- [x] ADR-031 liegt unter `docs/decisions/031-web-recherche-netzwerkzugriff.md`.
 
 ## Doc-Updates
-- [ ] `docs/code-map.md` — Zeile „KI-Layer / Gemma" um Phase-P38-Hinweis + neue Dateien
+- [x] `docs/code-map.md` — Zeile „KI-Layer / Gemma" um Phase-P38-Hinweis + neue Dateien
       (`web_search.py`, `prompts/knowledge_discovery.md`) ergänzen (nicht neu schreiben,
       anhängen).
 
 ## Report-Back
+
+**Status: complete (2026-07-21).**
+
+- **`ddgs` 9.14.4** installiert als Extra-Gruppe `web-discovery`. API gegen die installierte
+  Version geprüft: die Rückgabe-Dicts tragen `title` / `href` / `body` — genau die Form, die
+  der geplante Code erwartet. **Keine Anpassung nötig**, der `url`/`snippet`-Fallback bleibt
+  als Puffer für ältere/spätere Key-Namen drin.
+- **Nebenwirkung der Installation:** `uv add` hat die venv wieder auf die Lock-Datei
+  synchronisiert. Sie hing vorher an einem alten Repo-Pfad (`B:/photofant/backend`) und trug
+  ein von Hand nachinstalliertes `numpy 2.5.1`; beides steht jetzt wieder auf dem
+  gelockten Stand (`numpy 2.4.6`, Projekt aus dem aktuellen Pfad). Die Lock-Datei selbst hat
+  nur die neuen Websuche-Pakete dazubekommen, keine Versions-Downgrades.
+- **AK-Messung** (echte Läufe gegen die installierte Umgebung):
+  `autonomy_for(KNOWLEDGE_DISCOVERY)` → `'off'` · `PromptLibrary().get("knowledge_discovery")`
+  → `version '1'`, 1138 Zeichen · `search_web("Tom Hanks actor", 3)` → 3 Treffer mit gefülltem
+  Titel/URL/Snippet.
+- **P27-Amendment:** die Offline-AK im (inzwischen archivierten) P27-Plan trägt jetzt den
+  Verweis auf ADR-031 — die Offline-Garantie gilt weiter für alles außer dieser einen,
+  per Default abgeschalteten Fähigkeit.
+- **Gates:** ruff grün auf allen berührten Dateien. mypy meldet in `capabilities.py` genau
+  den **einen vorbestehenden** Fehler (Zeile 100 vor / 104 nach der Änderung — `.get()` auf
+  einem TypedDict mit variablem Key) — nicht neu, nicht angefasst.
+- **Abweichung vom Plan:** keine inhaltliche. Der Kommentar am neuen Settings-Feld steht über
+  der Zeile statt dahinter (die Inline-Variante riss die Zeilenlänge).

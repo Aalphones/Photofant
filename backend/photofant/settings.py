@@ -80,6 +80,9 @@ class AiAutonomySettings(TypedDict):
     knowledge_import: str       # off | ask | auto — KI füllt den Wizard-Vorschlag (P27 Phase 2)
     knowledge_update: str       # off | ask | auto — KI schlägt Ergänzungen vor (P27 Phase 3)
     interview: str              # off | ask | auto — Interview-Mode für private Personen (P27 Phase 4)
+    # off | auto — kein "ask": die Bestätigung sitzt im Wizard (Fakten abhaken), nicht
+    # hier im Schalter (P38, ADR-031)
+    discovery: str
 
 
 class AiSettings(TypedDict):
@@ -241,6 +244,9 @@ SETTINGS_DEFAULTS: AppSettings = {
             "knowledge_import": "ask",
             "knowledge_update": "ask",
             "interview": "ask",
+            # Default off: Web-Recherche ist der einzige Netzwerkzugriff der
+            # Wissensbasis und muss bewusst eingeschaltet werden (ADR-031).
+            "discovery": "off",
         },
         "promptLibraryPath": "",
     },

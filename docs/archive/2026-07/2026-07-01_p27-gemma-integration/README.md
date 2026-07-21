@@ -51,6 +51,10 @@ Kein Mockup. KI-Vorschläge erscheinen **im vorhandenen** Wizard (P23) und Lore 
 - [ ] Für eine private Person führt Gemma einen Interview-Dialog; aus den Antworten entsteht eine Markdown-Entity, ohne Web-Vermischung (ADR-009).
 - [ ] Jede KI-Funktion ist in den Einstellungen abschaltbar (aus/nachfragen/auto); bei „aus" verhält sich das System wie das manuelle MVP (P22–P25).
 - [ ] Offline-Garantie gewahrt: Modellbezug nur über die Settings-UI, keine Laufzeit-Netzwerkzugriffe.
+      *(Amendiert am 2026-07-21 durch ADR-031: die neue Capability `knowledge_discovery` darf bei
+      explizitem User-Klick eine Websuche machen — abgeschaltet per Default, alle anderen
+      Capabilities bleiben offline. Die Regel „Gemma schreibt nie ohne Bestätigung" bleibt
+      unangetastet.)*
 
 ## Smoke-Checkliste (du prüfst am Plan-Ende)
 1. Einen Job mit Capability `TextGeneration` auslösen → im Modell-/Job-Dock sehen: Gemma lädt, generiert, entlädt nach Idle (VRAM-Anzeige fällt zurück).

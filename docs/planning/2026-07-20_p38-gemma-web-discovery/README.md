@@ -12,7 +12,7 @@
 ## Phasen
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | Fundament — Web-Suche, Capability, Einstellung, ADR-031 | heikel | pending |
+| 1 | Fundament — Web-Suche, Capability, Einstellung, ADR-031 | heikel | ✅ complete |
 | 2 | Merkmale + Vollständigkeit (Schema, Felddefinitionen, ADR-032) | heikel | pending |
 | 3 | KnowledgeDiscoveryJob — Suche → Gemma → Fakten-**Vorschläge** | heikel | pending |
 | 4 | Routen + Guards + neue Aufgaben-Arten | standard | pending |

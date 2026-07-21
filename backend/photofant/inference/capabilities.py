@@ -32,6 +32,7 @@ class Capability(StrEnum):
     KNOWLEDGE_IMPORT = "knowledge_import"
     KNOWLEDGE_UPDATE = "knowledge_update"
     INTERVIEW = "interview"
+    KNOWLEDGE_DISCOVERY = "knowledge_discovery"
 
 
 class CapabilityUnavailableError(RuntimeError):
@@ -61,6 +62,7 @@ _AUTONOMY_KEY: dict[Capability, str] = {
     Capability.KNOWLEDGE_IMPORT: "knowledge_import",
     Capability.KNOWLEDGE_UPDATE: "knowledge_update",
     Capability.INTERVIEW: "interview",
+    Capability.KNOWLEDGE_DISCOVERY: "discovery",
 }
 
 
@@ -92,6 +94,8 @@ def autonomy_for(capability: Capability) -> str:
 
     Later phases gate on this: `off` means the KI action is not offered and the
     manual MVP path (P22–P25) stands in. TEXT_GENERATION has no gate → `auto`.
+    KNOWLEDGE_DISCOVERY knows only `off` | `auto` — its confirmation step sits in
+    the wizard (ticking facts), not in this switch (ADR-031).
     """
     key = _AUTONOMY_KEY.get(capability)
     if key is None:

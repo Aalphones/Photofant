@@ -58,6 +58,9 @@ gemma-gguf = [
     "nvidia-cuda-runtime-cu12; platform_system != 'Darwin'",
     "nvidia-cublas-cu12; platform_system != 'Darwin'",
 ]
+web-discovery = [
+    "ddgs>=9.0",
+]
 
 [build-system]
 requires = ["hatchling"]
