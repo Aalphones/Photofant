@@ -65,7 +65,11 @@ One row per unique content-hash (canonical image).
 
 Indexes: `ix_asset_content_hash` (unique), `ix_asset_created_at`, `ix_asset_original_id`
 (migration 0023, P21 Phase 1 — Stapel-Query resolviert `original_id`-Ketten pro Seite),
-`ix_asset_source`, `ix_asset_framing` (migration 0038 — Galerie-Filter „Quelle"/„Framing").
+`ix_asset_source`, `ix_asset_framing` (migration 0038 — Galerie-Filter „Quelle"/„Framing"),
+`ix_asset_sort_date` (migration 0041 — Ausdrucks-Index auf `coalesce(created_at, imported_at)`,
+dem Sortierschlüssel der Galerie; `ix_asset_created_at` greift dort nicht, weil die Spalte in
+einem Ausdruck steckt. **Braucht `ANALYZE`**, sonst nimmt der Planer ihn nicht — Migration 0041
+führt es mit aus).
 
 ### `asset_instance` (migration 0002)
 
