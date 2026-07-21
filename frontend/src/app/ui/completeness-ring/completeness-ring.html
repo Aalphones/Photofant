@@ -1,0 +1,13 @@
+<div
+  class="ring"
+  [style.width.px]="size()"
+  [style.height.px]="size()"
+  [style.--pct]="percent()"
+  [style.--thickness]="thicknessPx()"
+  role="img"
+  [attr.aria-label]="'Vollständigkeit ' + percent() + ' Prozent'"
+>
+  <div class="ring__gap">
+    <ng-content />
+  </div>
+</div>

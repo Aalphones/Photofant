@@ -1,9 +1,26 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-20_p38-gemma-web-discovery/`
-**Phase:** 5/8 — Wissen-Übersicht nach Design (Komplexität: standard → `sonnet` reicht)
-**Nächster Schritt:** `phase-5-wissen-uebersicht.md` lesen und umsetzen. Vorher `/clear`
+**Phase:** 6/8 — Wissen-Detail (Modal) nach Design (Komplexität: standard → `sonnet` reicht)
+**Nächster Schritt:** `phase-6-wissen-detail.md` lesen und umsetzen. Vorher `/clear`
 empfohlen (Session ist groß) — danach `/model sonnet`, `/implement` liest hier weiter.
+
+## Phase 5 erledigt (Wissen-Übersicht nach Design)
+
+Code fertig, `npx tsc --noEmit` grün, Produktions-Build läuft durch (vorbestehende
+Bundle-Budget-Warnung unverändert, keine Regression). Komplett neue Übersicht: Kopfzeile mit
+drei Knöpfen, Personen-Grid mit Vollständigkeits-Ring (`ui/completeness-ring/`, neu, auch für
+Phase 6/8 gedacht), Aufgaben-Reihe als Chip-Design (`work-queue/` umgebaut, „Später"/Snooze
+entfällt — im Design nicht vorgesehen), Sektion „Nicht verknüpfte Notizen" mit Personen-Suche
+(`link-entity-dialog` von `features/personen/` nach `ui/` verschoben + um einen zweiten Modus
+erweitert), Toast statt der beiden alten Bestätigungs-Banner. Reine Frontend-Phase, kein
+Live-Smoke nötig — Details/Abweichungen: `phase-5-wissen-uebersicht.md` → „Report-Back".
+
+**Zur Kenntnis (kein Blocker):** Entities in einer nicht-privaten Domäne ohne Personen-Link
+(z.B. eine Film-Entity) tauchen ab jetzt nirgends mehr in der Wissen-Übersicht auf — direkte
+Folge der personenzentrierten Neugestaltung, siehe Report-Back Phase 5 für Details.
+**Für Phase 6:** `EntityDto` hat kein Zeitstempel-Feld — „aktualisiert am {Datum}" im
+Detail-Kopf braucht entweder einen kleinen Backend-Zusatz oder muss entfallen (FINDINGS.md).
 
 ## Phase 4 erledigt (Routen + Guards + neue Aufgaben-Arten) — Live-Smoke steht aus
 

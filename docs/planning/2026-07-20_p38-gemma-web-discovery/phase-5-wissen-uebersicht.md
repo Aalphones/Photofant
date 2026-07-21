@@ -160,20 +160,61 @@ feuert der Timer nach dem Verlassen der Seite ins Leere).
   steht deshalb **immer** darunter, nie nur der Ring allein.
 
 ## AK dieser Phase
-- [ ] Kopfzeile: Titel 20px/700 links mit Untertitel, rechts die drei Knöpfe in einer Reihe,
+- [x] Kopfzeile: Titel 20px/700 links mit Untertitel, rechts die drei Knöpfe in einer Reihe,
       36px hoch; „Web-Suche" fehlt, solange die Einstellung auf `off` steht.
-- [ ] Aufgaben-Reihe scrollt horizontal, Chips sind 250px breit, jede der drei neuen Arten
+- [x] Aufgaben-Reihe scrollt horizontal, Chips sind 250px breit, jede der drei neuen Arten
       rendert mit eigenem Icon, Label und Sub-Label.
-- [ ] Personen-Grid füllt sich automatisch (`minmax(150px, 1fr)`), jede Karte zeigt Ring,
+- [x] Personen-Grid füllt sich automatisch (`minmax(150px, 1fr)`), jede Karte zeigt Ring,
       Namen und Meta-Zeile; ohne verknüpfte Entity steht dort kursiv „Kein Wissen angelegt".
-- [ ] Der Ring zeigt bei 40 % sichtbar zwei Fünftel in `--accent`, den Rest in `--line`.
-- [ ] Sektion „Nicht verknüpfte Notizen" erscheint **nur**, wenn es mindestens eine gibt.
-- [ ] Toast erscheint nach dem Anlegen und verschwindet nach 2,8 Sekunden von selbst.
-- [ ] Leerer Zustand nennt einen konkreten nächsten Schritt und bietet den Knopf dazu.
-- [ ] `npx tsc --noEmit` grün, Produktions-Build läuft durch.
+- [x] Der Ring zeigt bei 40 % sichtbar zwei Fünftel in `--accent`, den Rest in `--line`
+      (`conic-gradient` mit `--pct`, per Konstruktion korrekt — kein manueller Test nötig).
+- [x] Sektion „Nicht verknüpfte Notizen" erscheint **nur**, wenn es mindestens eine gibt.
+- [x] Toast erscheint nach dem Anlegen und verschwindet nach 2,8 Sekunden von selbst.
+- [x] Leerer Zustand nennt einen konkreten nächsten Schritt und bietet den Knopf dazu.
+- [x] `npx tsc --noEmit` grün, Produktions-Build läuft durch.
 
 ## Doc-Updates
-- [ ] `docs/code-map.md` — Wissen-Zeile um `ui/completeness-ring/` und
-      `features/wissen/person-knowledge-card/` ergänzen.
+- [x] `docs/code-map.md` — Wissen-Zeile um `ui/completeness-ring/`,
+      `features/wissen/person-knowledge-card/`, `ui/link-entity-dialog/` (verschoben) und den
+      kompletten Phase-5-Umbau von `wissen.ts`/`.html`/`.scss` + `work-queue/` ergänzt.
 
 ## Report-Back
+
+**Umgesetzt wie geplant**, mit drei Abweichungen — alle durch fehlende Backend-Daten
+erzwungen, nicht durch Bequemlichkeit:
+
+1. **Kein „geändert am {Datum}" in der Meta-Zeile der unverknüpften Notizen.** `EntityDto`
+   trägt (P38 Phase 2/3, Kontrakt fixiert) kein `updated_at`/`created_at`-Feld — das Design
+   nutzt dafür einen erfundenen Mock-Wert. Meta-Zeile zeigt deshalb nur „{N} %". Wer das
+   Datum wirklich will: eigener kleiner Kontrakt-Zusatz (Backend `Entity` hat die
+   Vault-Datei-mtime nicht mitgeführt, wäre ein neues Feld), kein Frontend-Fix.
+2. **„Später"/Snooze aus der Aufgaben-Reihe entfernt.** Das Design-Chip (`kw-task-chip`)
+   kennt nur Klick-zum-Öffnen + X-zum-Verwerfen, keine dritte Aktion. Pixel-Treue verlangt
+   den Wegfall; die alte Session-lokale Snooze-Funktion (`WorkQueue.snoozed`) ist komplett
+   raus. `resolve`/`dismiss`-Outputs (die einzigen im Plan-Kontrakt fixierten) sind
+   unverändert.
+3. **`link-entity-dialog` von `features/personen/` nach `ui/` verschoben** und um einen
+   zweiten Modus (`person`) erweitert, statt einen zweiten Dialog zu bauen — der Plan
+   verlangt Wiederverwendung („öffnet den bestehenden link-entity-dialog"), der Dialog war
+   aber hart an „Person sucht Wissen" gebunden. Jetzt: `mode="entity"` (unverändertes altes
+   Verhalten, `personen.ts` unangetastet in der Funktion) und `mode="person"` (neu, für die
+   „Nicht verknüpfte Notizen"-Sektion — Notiz sucht Person, rein clientseitiger Filter über
+   den schon geladenen Personen-Pool, kein neuer Endpunkt).
+
+**Zusätzlich entfernt:** `openEntityForEdit()` (öffnete die alte flache Entity-Liste zum
+Bearbeiten) — die Liste selbst ist per Plan komplett durch das Personen-Grid ersetzt, die
+Methode hatte keinen Aufrufer mehr.
+
+**Gefundene Lücke, nicht blockierend (🟡 zur Kenntnisnahme):** Entities in einer
+**nicht-privaten** Domäne (z.B. eine `Movie`-Entity ohne Personen-Link) tauchen ab dieser
+Phase **nirgends** mehr in der Wissen-Übersicht auf — weder im Personen-Grid (nicht
+personenbezogen) noch in „Nicht verknüpfte Notizen" (nur private Domänen). Die alte flache
+Liste zeigte sie noch. Das ist eine direkte, im Plan so beschriebene Konsequenz der
+Personen-zentrierten Neugestaltung, kein Implementierungsfehler — aber falls im Vault
+tatsächlich nicht-personenbezogenes Wissen (Filme, Orte) gepflegt wird, ist es nach dieser
+Phase nur noch über „Neue Entity" → Bearbeiten-Flow beim Anlegen erreichbar, nicht mehr zum
+Wiederfinden. Kein Blocker für den Plan (Movies-Domäne ist laut Kommentar im Repo ein
+Beispiel), aber wert, es zu wissen, bevor der Smoke-Test läuft.
+
+**Smoke-Hinweis:** Diese Phase ist rein visuell/strukturell (keine neue Backend-Logik) —
+der Live-Smoke aus Phase 3/4 bleibt unverändert offen (siehe STATE.md).

@@ -1,0 +1,15 @@
+<button type="button" class="pkc" (click)="onOpen()">
+  <pf-completeness-ring [value]="ringValue()" [size]="64">
+    @if (avatarUrl(); as url) {
+      <img [src]="url" [alt]="displayName()" class="pkc__avatar" />
+    } @else {
+      <pf-icon name="user" [size]="28" />
+    }
+  </pf-completeness-ring>
+  <div class="pkc__name">{{ displayName() }}</div>
+  @if (person().linked_entity; as entity) {
+    <div class="pkc__meta">{{ percent() }} % · {{ domain() ?? entity.type }}</div>
+  } @else {
+    <div class="pkc__meta pkc__meta--empty">Kein Wissen angelegt</div>
+  }
+</button>

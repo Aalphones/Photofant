@@ -9,22 +9,24 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 20px;
+  padding: 4px 0 18px;
 }
 
 .wi-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -.01em;
+  letter-spacing: -.015em;
   color: var(--text);
 }
 
 .wi-sub {
-  margin: 4px 0 0;
-  font-size: 13px;
+  margin: 6px 0 0;
+  font-size: 12.5px;
   color: var(--text-3);
+  max-width: 480px;
+  line-height: 1.5;
 }
 
 .wi-actions {
@@ -34,48 +36,37 @@
   flex-shrink: 0;
 }
 
-.wi-new-btn {
+.wi-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 34px;
+  gap: 7px;
+  height: 36px;
   padding: 0 14px;
-  border-radius: var(--radius-s);
-  background: var(--accent);
-  color: var(--bg);
-  font-size: 13px;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 12.5px;
   font-weight: 600;
+  white-space: nowrap;
   flex-shrink: 0;
-  &:hover { background: var(--accent-press); }
+
+  &:hover { background: var(--surface-hover); }
   &:disabled { opacity: .5; cursor: not-allowed; }
 }
 
-.wi-interview-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: var(--radius-s);
-  background: var(--accent-weak);
-  border: 1px solid var(--accent-line);
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
-  &:hover { background: var(--accent); color: var(--bg); }
-}
-
-.wi-last-created {
+.wi-toast {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  background: oklch(0.740 0.130 152 / .14);
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: oklch(0.55 0.15 150 / .14);
+  border: 1px solid oklch(0.55 0.15 150 / .35);
   color: var(--good);
-  border-radius: var(--radius-s);
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 500;
   width: fit-content;
 }
 
@@ -87,45 +78,89 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-}
-
-.wi-list {
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.wi-list__row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 16px;
-  width: 100%;
-  padding: 11px 14px;
-  border: none;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  color: var(--text);
-  font-size: 13.5px;
-  text-align: left;
-  cursor: pointer;
-
-  &:last-child { border-bottom: none; }
-  &:hover { background: var(--surface-2); }
+  gap: 14px;
 }
 
-.wi-list__title {
+.wi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.wi-unlinked {
+  margin-top: 26px;
+}
+
+.wi-unlinked__title {
+  margin: 0 0 10px;
+  font-size: 10.5px;
   font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+.wi-unlinked__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.wi-unlinked__card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px dashed var(--line-2);
+}
+
+.wi-unlinked__ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+
+.wi-unlinked__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.wi-unlinked__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.wi-list__type,
-.wi-list__domain {
+.wi-unlinked__meta {
+  font-size: 11px;
   color: var(--text-3);
-  font-size: 12.5px;
+  font-family: var(--mono);
+}
+
+.wi-unlinked__link-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--bg);
+
+  &:hover { background: var(--accent-press); }
 }

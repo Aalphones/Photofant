@@ -1,0 +1,49 @@
+:host {
+  display: contents;
+}
+
+.pkc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 18px 10px;
+  width: 100%;
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition: background .12s, border-color .12s;
+
+  &:hover {
+    background: var(--surface-hover);
+    border-color: var(--line-2);
+  }
+}
+
+.pkc__avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.pkc__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pkc__meta {
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--mono);
+}
+
+.pkc__meta--empty {
+  font-style: italic;
+  font-family: var(--font);
+}

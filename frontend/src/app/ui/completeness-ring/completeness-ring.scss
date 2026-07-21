@@ -1,0 +1,21 @@
+:host {
+  display: contents;
+}
+
+.ring {
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--line) 0);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.ring__gap {
+  width: calc(100% - var(--thickness) * 2);
+  height: calc(100% - var(--thickness) * 2);
+  border-radius: 50%;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}

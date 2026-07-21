@@ -17,3 +17,6 @@ export { ExportDialog } from './export-dialog/export-dialog';
 export type { ExportDialogFilters } from './export-dialog/export-dialog';
 export { AssignPersonDialog } from './assign-person-dialog/assign-person-dialog';
 export { ExplainabilityPopover } from './explainability-popover/explainability-popover';
+export { CompletenessRing } from './completeness-ring/completeness-ring';
+export { LinkEntityDialog } from './link-entity-dialog/link-entity-dialog';
+export type { LinkEntityDialogMode } from './link-entity-dialog/link-entity-dialog';

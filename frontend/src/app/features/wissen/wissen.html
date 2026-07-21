@@ -1,32 +1,39 @@
 <div class="wi-head">
   <div>
     <h1 class="wi-title">Wissen</h1>
-    <p class="wi-sub">Personen, Filme und andere Wissenseinheiten der Bibliothek.</p>
+    <p class="wi-sub">
+      Was du über die Menschen auf deinen Fotos weißt — von dir erzählt oder im Netz gefunden.
+    </p>
   </div>
   <div class="wi-actions">
     @if (showInterviewButton()) {
-      <button class="wi-interview-btn" type="button" (click)="openInterview()">
+      <button class="wi-btn" type="button" (click)="openInterview()">
         <pf-icon name="sparkle" [size]="15" />
-        Private Person (Interview)
+        Privates Interview
       </button>
     }
-    <button class="wi-new-btn" type="button" [disabled]="domainsLoading() && domains().length === 0" (click)="openWizard()">
+    @if (showWebSearchButton()) {
+      <button
+        class="wi-btn"
+        type="button"
+        title="Sucht öffentlich verfügbare Angaben zu einer Person — du entscheidest danach, was übernommen wird."
+        (click)="openWebSearchWizard()"
+      >
+        <pf-icon name="globe" [size]="15" />
+        Web-Suche
+      </button>
+    }
+    <button class="wi-btn" type="button" [disabled]="domainsLoading() && domains().length === 0" (click)="openWizard()">
       <pf-icon name="plus" [size]="15" />
       Neue Entity
     </button>
   </div>
 </div>
 
-@if (lastCreatedEntity(); as entity) {
-  <div class="wi-last-created">
-    <pf-icon name="check" [size]="15" />
-    <span><strong>{{ entity.title }}</strong> ({{ entity.type }}) angelegt.</span>
-  </div>
-}
-@if (lastUpdatedEntity(); as entity) {
-  <div class="wi-last-created">
-    <pf-icon name="check" [size]="15" />
-    <span><strong>{{ entity.title }}</strong> aktualisiert.</span>
+@if (toastMessage(); as message) {
+  <div class="wi-toast">
+    <pf-icon name="check" [size]="14" />
+    <span>{{ message }}</span>
   </div>
 }
 
@@ -42,21 +49,50 @@
   <div class="wi-empty">Domänen werden geladen…</div>
 } @else if (domains().length === 0) {
   <div class="wi-empty">Keine Domäne konfiguriert — ohne Domäne kann keine Entity angelegt werden.</div>
-} @else if (entitiesLoading() && entities().length === 0) {
+} @else if (personsLoading() && persons().length === 0) {
   <div class="wi-empty">Wissen wird geladen…</div>
-} @else if (entities().length === 0) {
+} @else if (knownPersons().length === 0) {
   <div class="wi-empty">
-    Noch keine Übersicht — leg über „Neue Entity" die erste Wissenseinheit an.
-  </div>
-} @else {
-  <div class="wi-list">
-    @for (entity of entities(); track entity.id) {
-      <button type="button" class="wi-list__row" (click)="openEntityForEdit(entity)">
-        <span class="wi-list__title">{{ entity.title }}</span>
-        <span class="wi-list__type">{{ entity.type }}</span>
-        <span class="wi-list__domain">{{ entity.domain }}</span>
+    <p>Noch nichts gespeichert. Fang mit einem privaten Interview an — fünf Fragen, zwei Minuten.</p>
+    @if (showInterviewButton()) {
+      <button class="wi-btn" type="button" (click)="openInterview()">
+        <pf-icon name="sparkle" [size]="15" />
+        Privates Interview
       </button>
     }
+  </div>
+} @else {
+  <div class="wi-grid">
+    @for (person of knownPersons(); track person.id) {
+      <pf-person-knowledge-card
+        [person]="person"
+        [domain]="person.linked_entity ? (entityDomainById()[person.linked_entity.id] ?? null) : null"
+        (openDetail)="openPersonDetail($event)"
+      />
+    }
+  </div>
+}
+
+@if (unlinkedEntities().length > 0) {
+  <div class="wi-unlinked">
+    <h2 class="wi-unlinked__title">Nicht verknüpfte Notizen</h2>
+    <div class="wi-unlinked__grid">
+      @for (entity of unlinkedEntities(); track entity.id) {
+        <div class="wi-unlinked__card">
+          <div class="wi-unlinked__ico">
+            <pf-icon name="book" [size]="16" />
+          </div>
+          <div class="wi-unlinked__body">
+            <div class="wi-unlinked__title">{{ entity.title }}</div>
+            <div class="wi-unlinked__meta">{{ unlinkedPercent(entity) }} %</div>
+          </div>
+          <button class="wi-unlinked__link-btn" type="button" (click)="openLinkPicker(entity)">
+            <pf-icon name="link" [size]="12" />
+            Verknüpfen
+          </button>
+        </div>
+      }
+    </div>
   </div>
 }
 
@@ -89,5 +125,15 @@
     (close)="closeInterview()"
     (requestInterview)="onRequestInterview($event)"
     (save)="onSave($event)"
+  />
+}
+
+@if (linkingEntity(); as entity) {
+  <pf-link-entity-dialog
+    mode="person"
+    [entityTitle]="entity.title"
+    [persons]="persons()"
+    (close)="closeLinkPicker()"
+    (selectPerson)="onLinkNoteToPerson($event)"
   />
 }

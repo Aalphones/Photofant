@@ -16,7 +16,7 @@
 | 2 | Merkmale + Vollständigkeit (Schema, Felddefinitionen, ADR-032) | heikel | ✅ complete |
 | 3 | KnowledgeDiscoveryJob — Suche → Gemma → Fakten-**Vorschläge** | heikel | 🟡 Code+Tests fertig, Live-Check blockiert (kein Modell gebunden) |
 | 4 | Routen + Guards + neue Aufgaben-Arten | standard | 🟡 Code fertig, Live-Smoke steht aus |
-| 5 | Wissen-Übersicht nach Design | standard | pending |
+| 5 | Wissen-Übersicht nach Design | standard | ✅ complete |
 | 6 | Wissen-Detail (Modal) nach Design | standard | pending |
 | 7 | Wizards — Interview + Web-Suche mit Fakten-Bestätigung | standard | pending |
 | 8 | Personen-Karte + Lightbox-Wissen-Tab | standard | pending |
