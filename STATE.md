@@ -52,3 +52,6 @@ amendiert. ruff grün, keine neuen mypy-Fehler. Details: `phase-1-fundament.md` 
 ## Backlog
 
 - `docs/planning/2026-07-06_p34-mcp-wissensbasis/` — blockiert bis MCP-Basisplan steht.
+- `docs/planning/2026-07-21_asset-embeddings-auslagern.md` — Galerie-Performance, letzter
+  großer Hebel (Bild-Tabelle 90,8 → 11 MB, alle Voll-Abfragen 3-5× schneller). Bereit zum
+  Start, hängt an nichts.
