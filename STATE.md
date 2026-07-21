@@ -67,6 +67,11 @@ Gemma muss dafür geladen/verfügbar sein; (2) Archivieren nach grünem Smoke
 
 ## Backlog (nach P35)
 
+- `docs/planning/2026-07-20_p38-gemma-web-discovery/` — **8 Phasen, freigegeben, wartet auf
+  Umsetzung.** Wissen-Bereich: Web-Recherche mit Fakten-Bestätigung (Phase 1-4) + die komplette
+  Wissens-Oberfläche aus dem Design-Handoff (Phase 5-8, Bundle liegt im Plan unter `design/`).
+  Phase 2 (Merkmale mit eigenem Owner + Vollständigkeit) ist die Schema-Änderung, auf der
+  fast alles andere steht — nicht überspringen.
 - `docs/planning/2026-07-06_p34-mcp-wissensbasis/` — blockiert bis MCP-Basisplan + P27 stehen.
 
 ## Smoke-Test P26 ausstehend (User)

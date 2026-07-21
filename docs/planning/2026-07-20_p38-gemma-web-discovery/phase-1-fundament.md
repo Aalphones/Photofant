@@ -2,6 +2,12 @@
 
 **Komplexität:** heikel (Architektur-Entscheidung: neue externe Abhängigkeit, ADR-Amendment).
 
+> **Geändert am 2026-07-21:** Web-Fakten werden bestätigt statt automatisch geschrieben
+> (README, „Vorgeschichte" Punkt 2). ADR-031 regelt deshalb nur noch den **Netzwerkzugriff**;
+> die Schreib-Ausnahme von der P27-Kernregel entfällt ersatzlos. Prompt und Ausgabeformat
+> liefern jetzt einzelne **Fakten** (Feld/Wert/Quelle/Konfidenz) statt eines fertigen
+> Beschreibungs-Absatzes — die Fakten landen in den Merkmalen aus Phase 2.
+
 ## Kontext (lesen vor dem Start)
 - `backend/photofant/inference/capabilities.py` — `Capability`-Enum, `resolve_generator`,
   `generate()`, `autonomy_for()`, `_AUTONOMY_KEY`-Mapping. Neue Capability reiht sich hier ein.
@@ -98,9 +104,9 @@ web-discovery = [
 
 `settings.py`:
 - `AiAutonomySettings` (TypedDict) um Feld `discovery: str` ergänzen, mit Kommentar:
-  `# off | auto — kein "ask": Auto-Write ohne Rückfrage ist der ganze Witz dieser Funktion (P38/ADR-031)`
+  `# off | auto — kein "ask": die Bestätigung sitzt im Wizard (Fakten abhaken), nicht hier (P38/ADR-031)`
 - `SETTINGS_DEFAULTS["ai"]["autonomy"]` um `"discovery": "off"` ergänzen (**Default off** —
-  Websuche + ungefragtes Schreiben ist ein bewusster Opt-in, nie Default-Verhalten).
+  Netzwerkzugriff ist ein bewusster Opt-in, nie Default-Verhalten).
 
 ## Aufgabe 3 — Prompt-Library-Eintrag
 Neue Datei `backend/photofant/inference/prompts/knowledge_discovery.md`:
@@ -110,16 +116,18 @@ Neue Datei `backend/photofant/inference/prompts/knowledge_discovery.md`:
 version: 1
 ---
 You are a knowledge assistant with access to live web search results for a person or
-entity. Your output will be written directly into a knowledge base WITHOUT further human
-review — be conservative. Only state facts that are directly supported by the provided
-search snippets. If a snippet is ambiguous or you are not confident, leave that part out
-rather than guessing.
+entity. Your output is a list of PROPOSALS that a human will review and tick off one by
+one — never invent to fill the list. Only state facts that are directly supported by the
+provided search snippets. If a snippet is ambiguous or you are not confident, omit the
+fact rather than guessing. Fewer, solid facts beat a long, shaky list.
 
-Output format (exact section markers, always all three, use "keine" if empty):
+Output format (exact section markers, always all three, use "keine" if a section is empty):
 
-### BESCHREIBUNG
-<2-5 sentences, extending or correcting the existing description. Keep correct existing
-sentences unchanged. German language.>
+### FAKTEN
+<one line per fact, or the single word "keine">
+- Feld: <one of the allowed field keys given below, or the word "beschreibung"> | Wert: <the
+  value, German, one short phrase — for "beschreibung" 2-5 sentences> | Quelle: <the exact
+  URL from the snippets that supports it> | Konfidenz: <0.0-1.0>
 
 ### NEUE_ENTITAETEN
 <one line per newly discovered related entity, or the single word "keine">
@@ -130,40 +138,56 @@ sentences unchanged. German language.>
 <one URL per line, only URLs you actually used>
 ```
 
+Der Wert `beschreibung` im Feld-Slot ist der Sonderfall für den Freitext-`body` — der Parser
+in Phase 3 mappt ihn auf `field: "body"`. Alle anderen Feld-Keys kommen aus den
+Merkmals-Definitionen der Domäne (Phase 2) und werden dem Modell im User-Prompt aufgelistet.
+
 ## Aufgabe 4 — ADR-031
-Neue Datei `docs/decisions/031-web-discovery-auto-write.md` — Nummer verifiziert (`max(Platte
-030, in geparkten Plänen reserviert) + 1`, kein geparkter Plan reserviert eine höhere Nummer
-als 030 — kurz gegengrepped: `grep -rn "ADR-0[3-9][0-9]" docs/planning/` vor dem Anlegen
-erneut laufen lassen, falls zwischenzeitlich ein anderer Plan entstanden ist):
+Neue Datei `docs/decisions/031-web-recherche-netzwerkzugriff.md` — Nummer verifiziert am
+2026-07-21 (Platte bis `030`, in `docs/planning/` reserviert bis `031`; Phase 2 dieses Plans
+nimmt `032`). Vor dem Anlegen `grep -rn "ADR-0[3-9][0-9]" docs/planning/` erneut laufen lassen,
+falls zwischenzeitlich ein anderer Plan entstanden ist:
 
 ```markdown
-# ADR-031 — Web-Discovery: Auto-Write ohne Bestätigung (Amendment zu ADR-006/ADR-028, Präzisierung von P27)
+# ADR-031 — Web-Recherche: einziger erlaubter Netzwerkzugriff der Wissensbasis
 
-**Status:** Akzeptiert — 2026-07-20
-**Querverweise:** [ADR-006-Regel siehe P27-README] (Gemma ändert nie direkt Daten) ·
-[ADR-009](009-comfyui-default-auto-import.md) *(Hinweis: Konzept-ADR-009 in `docs/Konzept-Agentic-Knowledge-Base/`, nicht diese Nummer — privat/öffentlich-Trennung)* ·
-[027](027-ai-capability-layer.md) · [028](028-gemma-runtime.md)
+**Status:** Akzeptiert — 2026-07-21
+**Querverweise:** [025](025-knowledge-vault-markdown-wahrheit.md) ·
+[027](027-ai-capability-layer.md) · [028](028-gemma-runtime.md) ·
+Konzept-ADR-009 (privat/öffentlich-Trennung, in `docs/Konzept-Agentic-Knowledge-Base/` —
+nicht die gleichnamige Nummer unter `docs/decisions/`)
 
 ## Kontext
 P27 legt zwei Kernregeln fest: (1) Gemma schreibt nie ohne Nutzer-Bestätigung, (2) keine
-Laufzeit-Netzwerkzugriffe (Offline-Garantie). P38 (Web-Discovery) braucht beides bewusst
-anders — Nutzerentscheidung, kein stiller Drift.
+Laufzeit-Netzwerkzugriffe (Offline-Garantie). Die Web-Recherche braucht Regel (2) bewusst
+anders. Regel (1) bleibt unangetastet — ein früherer Entwurf sah Auto-Write ohne Rückfrage
+vor, der wurde am 2026-07-21 zugunsten des Bestätigungs-Wegs verworfen.
 
 ## Entscheidung
-Eine neue, einzelne Capability (`KNOWLEDGE_DISCOVERY`) darf: (a) bei explizitem User-Klick
-pro Entity einen Web-Suchaufruf machen, (b) das Ergebnis ohne Bestätigungs-Dialog direkt
-schreiben — mit `owner=web` (niedrigste Schreibpriorität außer `inferred`, überschreibt nie
-`user`/`manual`). Alle anderen P27-Capabilities (`KNOWLEDGE_IMPORT`, `KNOWLEDGE_UPDATE`,
-`INTERVIEW`) bleiben unverändert bestätigungspflichtig und offline. Private Domänen sind von
-`KNOWLEDGE_DISCOVERY` vollständig ausgeschlossen (Guard wie `import-suggestion`).
+Eine neue, einzelne Capability (`KNOWLEDGE_DISCOVERY`) darf bei explizitem User-Klick pro
+Entity einen Web-Suchaufruf machen. Ihr Ergebnis sind **Vorschläge**, keine Schreibungen:
+die Fakten werden dem Nutzer zum Abhaken vorgelegt, erst die Bestätigung schreibt — mit
+`owner=web` (niedrigste Schreibpriorität außer `inferred`, überschreibt nie `user`/`manual`).
+Alle anderen P27-Capabilities (`KNOWLEDGE_IMPORT`, `KNOWLEDGE_UPDATE`, `INTERVIEW`) bleiben
+offline. Private Domänen sind von `KNOWLEDGE_DISCOVERY` vollständig ausgeschlossen (Guard
+wie `import-suggestion`).
+
+## Betrachtete Optionen
+- **Auto-Write ohne Rückfrage** (ursprünglicher Entwurf) — weniger Klicks, aber halluzinierte
+  Fakten landen ungeprüft in der Ablage und die P27-Kernregel bekäme eine Ausnahme, die
+  später jeder als Präzedenzfall zitiert. Verworfen.
+- **Netzwerkzugriff generell erlauben** — würde die Offline-Garantie als Ganzes aufweichen.
+  Verworfen: der Zugriff bleibt an genau diese eine Capability und einen expliziten Klick
+  gebunden.
 
 ## Konsequenzen
-- Jede Web-Discovery-Schreibung erzeugt einen Changelog-Eintrag + trägt Quell-URLs in
-  `entity.sources` — Transparenz ersetzt die fehlende Bestätigung.
+- Jede bestätigte Übernahme erzeugt Changelog-Einträge + trägt Quell-URLs in
+  `entity.sources` — nachvollziehbar, wo ein Wert herkommt.
 - `ai.autonomy.discovery` (Default `off`) ist der einzige globale Schalter; ohne ihn explizit
-  auf `auto` zu stellen, ändert sich am bestehenden P27-Verhalten nichts.
+  auf `auto` zu stellen, macht die Anwendung weiterhin keinen einzigen Netzwerkzugriff aus
+  der Wissensbasis heraus.
 - Kein Agenten-Loop: die Suche läuft deterministisch vor dem Gemma-Call, kein
-  Function-Calling (siehe P38-README „Wichtiger Fund").
+  Function-Calling (siehe P38-README „Wichtige Funde").
 ```
 
 ## AK dieser Phase
@@ -173,7 +197,7 @@ schreiben — mit `owner=web` (niedrigste Schreibpriorität außer `inferred`, �
 - [ ] `Capability.KNOWLEDGE_DISCOVERY` + `autonomy_for(Capability.KNOWLEDGE_DISCOVERY)`
       liefert `"off"` ohne weitere Settings-Änderung (Default greift).
 - [ ] `PromptLibrary().get("knowledge_discovery")` liefert den Prompt mit `version == "1"`.
-- [ ] ADR-031 liegt unter `docs/decisions/031-web-discovery-auto-write.md`.
+- [ ] ADR-031 liegt unter `docs/decisions/031-web-recherche-netzwerkzugriff.md`.
 
 ## Doc-Updates
 - [ ] `docs/code-map.md` — Zeile „KI-Layer / Gemma" um Phase-P38-Hinweis + neue Dateien
