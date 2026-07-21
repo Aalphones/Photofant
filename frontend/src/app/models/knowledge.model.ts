@@ -120,7 +120,7 @@ export interface DomainDto {
   private: boolean;
 }
 
-export const TASK_KINDS = ['new_person', 'missing_entity', 'confirm_relationship', 'review_recommendation', 'incomplete_entity'] as const;
+export const TASK_KINDS = ['new_person', 'missing_entity', 'confirm_relationship', 'review_recommendation', 'incomplete_entity', 'missing_field', 'low_completeness', 'auto_link'] as const;
 export type TaskKind = typeof TASK_KINDS[number];
 
 export const TASK_STATUSES = ['open', 'resolved', 'dismissed'] as const;
@@ -161,6 +161,9 @@ export interface AiAutonomyDto {
   knowledge_import: AiAutonomyMode;
   knowledge_update: AiAutonomyMode;
   interview: AiAutonomyMode;
+  // P38 Phase 4 — praktisch nur 'off'/'auto': die Bestätigung sitzt im Wizard (Fakten
+  // abhaken), nicht in diesem Schalter (ADR-031).
+  discovery: AiAutonomyMode;
 }
 
 // P27 Phase 2 — Anfrage für einen KI-Vorschlag (füllt die Wizard-Felder vor).
@@ -318,4 +321,66 @@ export interface ChangelogEntryDto {
   source: Owner;
   job_id: string;
   created_at: string;
+}
+
+// P38 Phase 4 — startet den KnowledgeDiscoveryJob. Das Ergebnis sind Vorschläge (ADR-031);
+// geschrieben wird erst über DiscoveryApplyRequest.
+export interface DiscoveryRequest {
+  entity_id: string;
+}
+
+export interface DiscoveryResponse {
+  job_id: string;
+}
+
+// P38 Phase 4 — ein von Gemma vorgeschlagener Fakt (Job-Ergebnis, noch nicht geschrieben).
+export interface KnowledgeDiscoveryFact {
+  field: string; // Merkmals-Key aus der Domäne, oder 'body'
+  label: string; // Anzeigename ('Beruf', 'Beschreibung')
+  value: string;
+  source: string; // Host der Quelle, z.B. 'linkedin.com'
+  source_url: string;
+  confidence: number;
+}
+
+// P38 Phase 4 — eine von Gemma vorgeschlagene neue Entity (z.B. eine gefundene Beziehung).
+export interface KnowledgeDiscoveryEntitySuggestion {
+  title: string;
+  type: string;
+  relationship_type: string;
+  body: string;
+}
+
+// P38 Phase 4 — Explainability der Web-Recherche (gleiche Form wie Import/Update/Interview).
+export interface KnowledgeDiscoveryExplainability {
+  model_id: string;
+  capability: string;
+  prompt_version: string | null;
+  duration_ms: number;
+  confidence: number | null;
+  reason: string;
+}
+
+// P38 Phase 4 — Ergebnis des KnowledgeDiscoveryJob, über den Job-Stream geliefert. Reine
+// Vorschläge — nichts ist geschrieben, bis der User im Wizard Haken setzt.
+export interface KnowledgeDiscoveryResult {
+  facts: KnowledgeDiscoveryFact[];
+  entity_suggestions: KnowledgeDiscoveryEntitySuggestion[];
+  sources: string[];
+  errors: string[];
+  explainability: KnowledgeDiscoveryExplainability;
+}
+
+// P38 Phase 4 — bestätigte Auswahl aus dem Wizard (Haken gesetzt). Geschrieben wird nur,
+// was hier ankommt, nicht der volle Job-Output.
+export interface DiscoveryApplyRequest {
+  entity_id: string;
+  facts: KnowledgeDiscoveryFact[];
+  entity_suggestions: KnowledgeDiscoveryEntitySuggestion[];
+}
+
+export interface DiscoveryApplyResponse {
+  written_fields: string[];
+  created_entities: EntityRefDto[];
+  errors: string[];
 }

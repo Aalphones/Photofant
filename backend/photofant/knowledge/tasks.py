@@ -25,6 +25,10 @@ class TaskKind(StrEnum):
     CONFIRM_RELATIONSHIP = "confirm_relationship"
     REVIEW_RECOMMENDATION = "review_recommendation"
     INCOMPLETE_ENTITY = "incomplete_entity"
+    # P38 Phase 4 — Merkmale + Namens-Abgleich.
+    MISSING_FIELD = "missing_field"
+    LOW_COMPLETENESS = "low_completeness"
+    AUTO_LINK = "auto_link"
 
 
 class TaskStatus(StrEnum):

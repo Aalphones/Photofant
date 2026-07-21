@@ -26,6 +26,7 @@ from photofant.db.models import AssetInstance, Face, Person
 from photofant.db.session import get_session
 from photofant.knowledge.schema import Owner
 from photofant.knowledge.service import EntityNotFoundError, KnowledgeService, OwnershipConflictError
+from photofant.knowledge.task_rules import refresh_auto_link_tasks
 from photofant.knowledge.vault import Vault, open_vault
 
 log = logging.getLogger(__name__)
@@ -219,6 +220,7 @@ async def create_person(body: CreatePersonRequest, session: DbSession, vault: Va
     data_root = get_data_root()
     ensure_person_folder(data_root, new_person)
 
+    refresh_auto_link_tasks(session, vault)
     session.commit()
     session.refresh(new_person)
 
@@ -315,6 +317,8 @@ async def update_person(
     if body.group_name is not None:
         person.group_name = body.group_name.strip() or None
 
+    if body.name is not None:
+        refresh_auto_link_tasks(session, vault)
     session.commit()
     session.refresh(person)
     return _build_person_dto(session, person, vault)
@@ -373,6 +377,7 @@ async def unlink_person_entity(
     from photofant.recommendation.context import assets_of_persons
 
     invalidate_recommendations(session, assets_of_persons(session, [person_id]))
+    refresh_auto_link_tasks(session, vault)
     session.commit()
 
     log.info("Unlinked person %d from entity %r", person_id, entity_id)

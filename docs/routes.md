@@ -1085,7 +1085,7 @@ comfyui.result_wait_timeout_seconds = 1800
 | Lore-Panel (P25 Phase 2, Kontrakt) | `GET` | `/api/knowledge/lore` | Query: genau eines von `asset_id`, `person_id` (sonst 422) | `LoreDto[]` — je ein Block pro abgebildeter, mit Wissen verknüpfter Person (Bild) bzw. höchstens einer (Person); **200 mit leerer Liste ohne Verknüpfung** (kein 404) |
 | Lore-Panel „Das stimmt nicht" (P25 Phase 3) | `POST` | `/api/knowledge/entities/{id}/patch` | `PatchEntityRequest { field, value, reason }` — `field` muss eine der patchbaren Felder sein (`PATCHABLE_FIELDS` in `knowledge/service.py`), `owner` ist **kein** Request-Feld (fest `user`) | `{ job_id: string }` — startet `KnowledgePatchJob` **asynchron** (Job-Dock/SSE, gleiches Muster wie `/lookup`); 422 bei unbekanntem Feld vorab, Entity-404/Ownership-409 laufen als Job-Error, nicht als HTTP-Status |
 | Lore-Panel (Explainability, P25 Phase 3) | `GET` | `/api/knowledge/entities/{id}/changelog` | — | `ChangelogEntryDto[]` — Korrektur-Historie (neueste zuerst), geteilte Payload mit P26 Phase 3 (Warum?-Popover) |
-| Wizard (KI-Vorschlag-Gate, P27 Phase 2) | `GET` | `/api/knowledge/ai/autonomy` | — | `AiAutonomyDto { knowledge_import, knowledge_update, interview }` (`off\|ask\|auto`) — steuert das Ein-/Ausblenden der KI-Aktionen |
+| Wizard (KI-Vorschlag-Gate, P27 Phase 2, erweitert P38 Phase 4) | `GET` | `/api/knowledge/ai/autonomy` | — | `AiAutonomyDto { knowledge_import, knowledge_update, interview, discovery }` (`off\|ask\|auto`; `discovery` kennt praktisch nur `off\|auto`) — steuert das Ein-/Ausblenden der KI-Aktionen |
 | Wizard „KI-Vorschlag" (P27 Phase 2) | `POST` | `/api/knowledge/ai/import-suggestion` | `ImportSuggestionRequest { title, domain, type, person_ids?, asset_ids? }` | `{ job_id: string }` — startet `KnowledgeImportJob` **asynchron**; das Ergebnis (`KnowledgeImportResult`) reist über den **Job-Stream** (`JobDto.result`), nicht als HTTP-Antwort. 409 wenn `ai.autonomy.knowledge_import == "off"`, 422 bei leerem Titel |
 
 **KI-Vorschlag-Ergebnis (P27 Phase 2, über `JobDto.result` des `knowledge_import`-Jobs):** `KnowledgeImportResult { suggestion: { title, type, domain, aliases, relationships, body } | null, explainability: { model_id, capability, prompt_version, duration_ms, confidence, reason }, validation_errors: string[] }`. `suggestion` ist `null`, wenn der Validator den Vorschlag abwies (`validation_errors` erklärt warum) — der Wizard belegt dann nichts vor. Geschrieben wird erst durch die Nutzer-Bestätigung über `POST /knowledge/entities`. Ab P27 Phase 4 lehnt `import-suggestion` eine **private** Zieldomäne mit 422 ab (private Personen laufen nie über den Web-Import — Konzept-ADR-009).
@@ -1108,6 +1108,21 @@ und `completeness: number` (0..1, Anteil gefüllter an den für den Typ definier
 (leere Liste ist gültig). `EntityRefDto` trägt zusätzlich `completeness: number`, damit
 Personen-Karte und Wissens-Übersicht den Prozentwert ohne zweiten Request zeigen; er kommt aus
 den im Cache gespiegelten Merkmalen, nicht aus der Markdown-Datei.
+
+| Web-Recherche starten (P38 Phase 4, ADR-031) | `POST` | `/api/knowledge/ai/discovery` | `DiscoveryRequest { entity_id }` | `{ job_id: string }` — startet `KnowledgeDiscoveryJob` **asynchron**; Ergebnis (`KnowledgeDiscoveryResult`) über den Job-Stream, schreibt **nichts**. 409 wenn `ai.autonomy.discovery != "auto"`, 422 bei leerer `entity_id`, 404 wenn die Entity fehlt, 422 wenn die Ziel-Domäne privat ist (Konzept-ADR-009) |
+| Web-Recherche übernehmen (P38 Phase 4) | `POST` | `/api/knowledge/ai/discovery/apply` | `DiscoveryApplyRequest { entity_id, facts: KnowledgeDiscoveryFact[], entity_suggestions: KnowledgeDiscoveryEntitySuggestion[] }` — nur die im Wizard angehakten Einträge, nicht der volle Job-Output | `DiscoveryApplyResponse { written_fields: string[], created_entities: EntityRefDto[], errors: string[] }` — **synchron** (kein Job, das Modell hat schon geantwortet). Dieselben Guards wie oben (409/422/404). Schreibt mit `owner=web`; ein durch `owner_can_overwrite` blockiertes Merkmal oder eine Ownership-Kollision auf der Entity selbst landet als Klartext in `errors`, nicht als Exception |
+
+**Web-Recherche-Ergebnis (P38 Phase 4, über `JobDto.result` des `knowledge_discovery`-Jobs):**
+`KnowledgeDiscoveryResult { facts: { field, label, value, source, source_url, confidence }[],
+entity_suggestions: { title, type, relationship_type, body }[], sources: string[], errors: string[],
+explainability: {…} }` — reine Vorschläge, `field` ist ein Merkmals-Key der Domäne oder `"body"`.
+Beim Übernehmen (`/discovery/apply`) werden Fakten mit `field == "body"` als Beschreibung
+geschrieben (zusammen mit den gemergten Quell-URLs in `entity.sources`), alle anderen als Merkmale
+über `set_attributes` (jedes einzeln gegen seinen bisherigen Owner geprüft — ein `user`/`manual`-Wert
+wird nie überschrieben). Vorgeschlagene Entitäten werden bei Namensgleichheit wiederverwendet, sonst
+neu angelegt (`owner=web`, id `<folder>/<slug>`); unbekannter Typ/Beziehung landet als Klartext in
+`errors`. Jede Übernahme erzeugt Changelog-Einträge (`job_id` leer, da kein Job mehr läuft) und
+invalidiert die Empfehlungs-Cache-Einträge betroffener Assets.
 
 **`LoreDto` (P25 Phase 1 — Vollform des P22-Stubs):** `{ entity: EntityDto | null, relationships: { type, target: EntityRefDto }[], franchises: EntityRefDto[], related_media: { kind: "person"|"asset", id, thumbnail_url, label? }[], sources: string[] }`. `EntityRefDto = { id, title, type, completeness }`. Beziehungsziele sind 1 Hop aufgelöst (Titel+Typ statt roher id) — Ziel nicht im Cache → Titel fällt auf die rohe id zurück, keine Beziehung geht verloren. `franchises` ist eine Teilmenge von `relationships` (Ziel-Typ `"Franchise"`), eigenes Feld weil das Lore-Panel es als eigene Sektion zeigt. `related_media` löst `media_links` (rohe Personen-/Asset-ids) zu Thumbnails auf — Personen ohne Gesichts-Aufnahme (kein Portrait) werden ausgelassen.
 

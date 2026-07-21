@@ -33,6 +33,7 @@ from photofant.knowledge.schema import (
     Relationship,
     owner_can_overwrite,
 )
+from photofant.knowledge.task_rules import refresh_auto_link_tasks, refresh_completeness_tasks
 from photofant.knowledge.tasks import TaskKind, TaskService
 from photofant.knowledge.validator import ValidationError, validate_entity
 from photofant.knowledge.vault import Vault
@@ -135,6 +136,8 @@ class KnowledgeService:
         self.vault.save_entity(entity, domain)
         self.entities.upsert_from_vault(entity)
         self._flag_if_incomplete(entity)
+        refresh_completeness_tasks(self.session, entity, domain)
+        refresh_auto_link_tasks(self.session, self.vault)
         return entity
 
     def _flag_if_incomplete(self, entity: Entity) -> None:
@@ -184,6 +187,7 @@ class KnowledgeService:
 
         self.vault.save_entity(entity, domain)
         self.entities.upsert_from_vault(entity)
+        refresh_completeness_tasks(self.session, entity, domain)
         return entity
 
     def completeness_for(self, entity: Entity, domain: Domain | None = None) -> float:
@@ -241,6 +245,7 @@ class KnowledgeService:
         self._validate(entity, domain)
         self.vault.save_entity(entity, domain)
         self.entities.upsert_from_vault(entity)
+        refresh_completeness_tasks(self.session, entity, domain)
         return entity, written_keys, skipped_messages
 
     def validate_patch(self, entity_id: str, patch: dict[str, Any]) -> list[str]:

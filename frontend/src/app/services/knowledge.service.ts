@@ -7,6 +7,10 @@ import type {
   AiAutonomyDto,
   ChangelogEntryDto,
   CreateEntityRequest,
+  DiscoveryApplyRequest,
+  DiscoveryApplyResponse,
+  DiscoveryRequest,
+  DiscoveryResponse,
   DomainDto,
   EntityDto,
   ImportSuggestionRequest,
@@ -128,5 +132,15 @@ export class KnowledgeService {
   // owner=user setzt (manuelle Korrektur).
   acceptUpdateSuggestion(request: AcceptUpdateSuggestionRequest): Observable<AcceptUpdateSuggestionResponse> {
     return this.http.post<AcceptUpdateSuggestionResponse>('/api/knowledge/ai/update-suggestion/accept', request);
+  }
+
+  // P38 — startet die Web-Recherche. Das Job-Ergebnis sind Vorschläge, nichts ist
+  // geschrieben; erst applyDiscovery schreibt (ADR-031).
+  requestDiscovery(request: DiscoveryRequest): Observable<DiscoveryResponse> {
+    return this.http.post<DiscoveryResponse>('/api/knowledge/ai/discovery', request);
+  }
+
+  applyDiscovery(request: DiscoveryApplyRequest): Observable<DiscoveryApplyResponse> {
+    return this.http.post<DiscoveryApplyResponse>('/api/knowledge/ai/discovery/apply', request);
   }
 }

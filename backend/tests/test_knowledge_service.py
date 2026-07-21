@@ -91,13 +91,20 @@ def test_create_entity_without_body_or_relationships_flags_incomplete_task(
 
     tasks = TaskService(db_session).list_tasks()
 
-    assert len(tasks) == 1
-    assert tasks[0].kind == TaskKind.INCOMPLETE_ENTITY.value
-    assert tasks[0].context == {
+    # P38 Phase 4: "Actor" hat definierte Merkmale (movies.yaml) — eine frisch angelegte,
+    # leere Entity zieht zusätzlich zu INCOMPLETE_ENTITY auch MISSING_FIELD (kein Merkmal
+    # gefüllt). LOW_COMPLETENESS bleibt aus, weil "kein Merkmal gefüllt" ≠ "kaum gefüllt".
+    incomplete = [task for task in tasks if task.kind == TaskKind.INCOMPLETE_ENTITY.value]
+    missing_field = [task for task in tasks if task.kind == TaskKind.MISSING_FIELD.value]
+    assert len(tasks) == 2
+    assert len(incomplete) == 1
+    assert incomplete[0].context == {
         "entity_id": "actors/robert-downey-jr",
         "title": "Robert Downey Jr.",
         "type": "Actor",
     }
+    assert len(missing_field) == 1
+    assert missing_field[0].context["entity_id"] == "actors/robert-downey-jr"
 
 
 def test_create_entity_with_body_does_not_flag_incomplete_task(
@@ -105,7 +112,11 @@ def test_create_entity_with_body_does_not_flag_incomplete_task(
 ) -> None:
     service.create_entity(_actor(body="Bekannt aus Iron Man."), Owner.USER)
 
-    assert TaskService(db_session).list_tasks() == []
+    tasks = TaskService(db_session).list_tasks()
+
+    # Kein INCOMPLETE_ENTITY mehr (body gesetzt) — MISSING_FIELD bleibt, "Actor" hat
+    # weiterhin drei ungefüllte Merkmale (P38 Phase 4).
+    assert [task.kind for task in tasks] == [TaskKind.MISSING_FIELD.value]
 
 
 def test_create_entity_with_relationship_does_not_flag_incomplete_task(
@@ -116,7 +127,15 @@ def test_create_entity_with_relationship_does_not_flag_incomplete_task(
 
     service.create_entity(entity, Owner.USER)
 
-    assert TaskService(db_session).list_tasks() == []
+    tasks = TaskService(db_session).list_tasks()
+
+    # Kein INCOMPLETE_ENTITY (body bzw. Beziehung vorhanden) — beide Typen haben aber
+    # definierte, ungefüllte Merkmale, deshalb je ein MISSING_FIELD (P38 Phase 4).
+    assert {task.kind for task in tasks} == {TaskKind.MISSING_FIELD.value}
+    assert {task.context["entity_id"] for task in tasks} == {
+        "movies/iron-man",
+        "actors/robert-downey-jr",
+    }
 
 
 def test_find_entity_by_id_and_alias(service: KnowledgeService) -> None:

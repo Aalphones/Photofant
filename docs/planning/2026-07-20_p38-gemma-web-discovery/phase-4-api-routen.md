@@ -204,25 +204,77 @@ Enum stehen. Nur prüfen, ob irgendwo eine harte Liste der Kinds steht (grep nac
 ```
 
 ## AK dieser Phase
-- [ ] `GET /api/knowledge/ai/autonomy` liefert `discovery: "off"` im Auslieferungszustand.
-- [ ] `POST /discovery` mit `discovery == "off"` → 409; mit privater Entity (nach Umstellen auf
-      `"auto"`) → 422; mit öffentlicher Entity → 200 und der Job taucht im Job-Dock auf.
-- [ ] `POST /discovery/apply` mit zwei Fakten schreibt beide als Merkmale mit `owner: web`; die
-      Markdown-Datei zeigt sie im `attributes`-Block.
-- [ ] Ein Fakt auf ein Merkmal, das `owner: user` trägt, wird **nicht** geschrieben und taucht
-      in `errors` als Klartext-Meldung auf.
-- [ ] „Warum geändert?" (`GET /api/knowledge/entities/{id}/changelog`) zeigt nach der Übernahme
-      je geschriebenem Feld einen Eintrag mit der Quelle im Grund-Text.
-- [ ] Eine Entity mit 5 definierten und 1 gefüllten Merkmal erzeugt sowohl eine
-      „Feld fehlt"- als auch eine „kaum ausgefüllt"-Aufgabe; nach dem Füllen aller Merkmale ist
-      keine der beiden mehr offen.
-- [ ] Eine unverknüpfte private Entity „Noah B." und eine Person „Noah" erzeugen genau **eine**
-      Verknüpfungs-Aufgabe mit einem Score über 0.8.
-- [ ] `ruff` + `mypy` ohne neue Fehler, `npx tsc --noEmit` grün.
+- [ ] 🟡 **Smoke (User):** `GET /api/knowledge/ai/autonomy` liefert `discovery: "off"` im
+      Auslieferungszustand.
+- [ ] 🟡 **Smoke (User):** `POST /discovery` mit `discovery == "off"` → 409; mit privater Entity
+      (nach Umstellen auf `"auto"`) → 422; mit öffentlicher Entity → 200 und der Job taucht im
+      Job-Dock auf.
+- [ ] 🟡 **Smoke (User):** `POST /discovery/apply` mit zwei Fakten schreibt beide als Merkmale
+      mit `owner: web`; die Markdown-Datei zeigt sie im `attributes`-Block.
+- [ ] 🟡 **Smoke (User):** Ein Fakt auf ein Merkmal, das `owner: user` trägt, wird **nicht**
+      geschrieben und taucht in `errors` als Klartext-Meldung auf.
+- [ ] 🟡 **Smoke (User):** „Warum geändert?" (`GET /api/knowledge/entities/{id}/changelog`) zeigt
+      nach der Übernahme je geschriebenem Feld einen Eintrag mit der Quelle im Grund-Text.
+- [ ] 🟡 **Smoke (User):** Eine Entity mit 5 definierten und 1 gefüllten Merkmal erzeugt sowohl
+      eine „Feld fehlt"- als auch eine „kaum ausgefüllt"-Aufgabe; nach dem Füllen aller Merkmale
+      ist keine der beiden mehr offen.
+- [ ] 🟡 **Smoke (User):** Eine unverknüpfte private Entity „Noah B." und eine Person „Noah"
+      erzeugen genau **eine** Verknüpfungs-Aufgabe mit einem Score über 0.8.
+- [x] `ruff` + `mypy` ohne neue Fehler, `npx tsc --noEmit` grün.
 
 ## Doc-Updates
-- [ ] `docs/routes.md` — beide neuen Routen mit Guards (409/422/404) und Antwortform.
-- [ ] `docs/models.md` — die drei neuen Aufgaben-Arten samt Context-Feldern.
-- [ ] `docs/code-map.md` — `knowledge/task_rules.py` + die neuen Routen ergänzen.
+- [x] `docs/routes.md` — beide neuen Routen mit Guards (409/422/404) und Antwortform.
+- [x] `docs/models.md` — die drei neuen Aufgaben-Arten samt Context-Feldern.
+- [x] `docs/code-map.md` — `knowledge/task_rules.py` + die neuen Routen ergänzen.
 
 ## Report-Back
+
+**Status: Code komplett, statisch grün, sieben AK-Punkte warten auf den Live-Smoke des Users**
+(privates Profil — diese Session startet keinen Server/Browser, siehe Smoke-Checkliste README).
+`ruff`/`mypy` auf allen neuen/geänderten Dateien grün; `npx tsc --noEmit` grün. Voller
+Backend-Testlauf (`uv run pytest`, 451 Tests) zeigt **keine neuen Regressionen** — 438 grün,
+13 rot, exakt die in `STATE.md` dokumentierte Vorbelastung (ComfyUI/Caption, P38-fremd).
+
+**Umgesetzt:**
+- `api/knowledge_ai.py`: `AutonomyDto.discovery`, `POST /discovery` (Guards 409/422/404, startet
+  `KnowledgeDiscoveryJob`), `POST /discovery/apply` (synchron, schreibt Beschreibung+Merkmale
+  über `update_entity`/`set_attributes` mit `owner=web`, legt vorgeschlagene Entitäten/
+  Beziehungen an, schreibt Changelog, invalidiert Empfehlungen). Jeder Fakt/Vorschlag scheitert
+  einzeln in `errors` statt die ganze Übernahme abzubrechen (auch Ownership-Kollisionen auf der
+  Entity selbst — z.B. wenn sie inzwischen `user`-owned ist).
+- `knowledge/tasks.py`: drei neue `TaskKind`-Werte.
+- `knowledge/task_rules.py` (neu): `refresh_completeness_tasks()` (Feld fehlt/kaum ausgefüllt,
+  löst offene Aufgaben der Entity zuerst auf, dann neu) und `refresh_auto_link_tasks()`
+  (Namens-Abgleich privater unverknüpfter Entities gegen unverknüpfte Personen, `difflib`).
+  Eingehängt in `KnowledgeService.create_entity`/`set_attributes`/`update_entity` sowie
+  `api/persons.py::create_person`/`update_person`(bei Umbenennung)/`unlink_person_entity`.
+- Frontend: `JOB_KINDS` +`knowledge_discovery`, `TASK_KINDS` +3, `AiAutonomyDto.discovery`,
+  neue Discovery-DTOs, `KnowledgeService.requestDiscovery`/`applyDiscovery`.
+- `domains/personen.yaml` auf `private: true` gesetzt (User-Entscheidung vor Phase-4-Start,
+  siehe FINDINGS — echte Kontakte sind damit von der Web-Recherche ausgenommen).
+
+**Deviation vom Plan-Text (README-Kontrakt-Treue, nicht Plan-Codeblock):** die Quell-URL-
+Zusammenführung in `entity.sources` läuft **immer**, wenn Fakten mit `source_url` übernommen
+werden — nicht nur, wenn zusätzlich ein Beschreibungs-Fakt (`field == "body"`) dabei ist. Der
+Plan-Text hängt den Schritt syntaktisch an „Beschreibung"; das finale AK („Jede Übernahme …
+trägt die verwendeten Quell-URLs in entity.sources") ist aber unconditional. Reine
+Merkmals-Übernahmen (kein Body-Fakt) hätten sonst nie eine Quelle hinterlassen.
+
+**Bestehende Tests angepasst, nicht geschwächt:** `test_knowledge_service.py` (3 Tests) und
+`test_knowledge_lookup_job.py` (2 Tests) prüften bisher `list_tasks() == []`/`len(tasks) == 1`
+für Entities, deren Typ (Actor/Movie aus `movies.yaml`) bereits seit Phase 2 definierte, aber
+bis Phase 4 folgenlos ungefüllte Merkmale hat. Mit dem neuen `missing_field`-Hook aus
+`create_entity` ist „ungefüllte Merkmale erzeugen eine Aufgabe" das **korrekte** neue Verhalten
+(genau das AK dieser Phase) — die Tests prüften vorher unbeabsichtigt auch die Abwesenheit
+dieses Features. Angepasst auf gezielte Kind-Filter statt Gesamtlisten-Gleichheit, keine
+Assertion verworfen oder gelockert.
+
+**Bekannte Grenze, keine Behebung in dieser Phase:** `apply_discovery` schreibt Beschreibung/
+Beziehungen über den entity-weiten Ownership-Check (`update_entity`/`create_relationship`) —
+bei einer bereits `user`-owned Entity (der Normalfall für alles, was der User manuell angelegt
+hat) schlagen diese beiden Teile mit einer Ownership-Meldung in `errors` fehl, nur die
+Merkmals-Übernahme (`set_attributes`, pro-Feld-Ownership) geht durch. Das ist bestehendes
+P22-Verhalten (`accept_update_suggestion` hat dieselbe Einschränkung, dokumentiert in dessen
+Docstring), keine Neuerung dieser Phase — aber beim Smoke-Test relevant: der AK-Punkt „schreibt
+Merkmale mit owner: web" funktioniert auf jeder Entity, „Beschreibung+Quellen" nur auf
+`inferred`/`web`/`manual`-owned Entities.

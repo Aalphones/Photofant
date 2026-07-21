@@ -8,22 +8,34 @@ Getaggte Erkenntnisse aus der Umsetzung, die eine spätere Phase betreffen. Form
   Liste kann also kürzer sein als `max_results`. Der Job muss den Fall „0 Treffer" tragen
   (kein Fehler, sondern leere Fakten-Liste). Eingearbeitet: `_build_user_prompt` zeigt
   `"(keine Suchergebnisse)"`, der Parser degradiert auf ein leeres `DiscoveryOutput`.
-- [ ] → Phase 4 (Tag korrigiert, war fälschlich Phase 3 — der Job selbst schreibt nichts):
+- [x] → Phase 4 (Tag korrigiert, war fälschlich Phase 3 — der Job selbst schreibt nichts):
   `set_attributes()` liefert `(Entity, geschriebene Keys, Meldungen zu übersprungenen)`. Die
   Übersprungen-Meldungen sind fertiger Klartext („'Geburtsort' bleibt unverändert — der Wert
   stammt von dir") und gehören unverändert in das `errors`-Feld der Apply-Antwort. Changelog
   schreibt `set_attributes` **nicht** — das macht die Route.
-- [ ] → Phase 4: Neue Fehlerklasse `PrivateDomainError` (`knowledge/service.py`, neben
+  Eingearbeitet: `apply_discovery` reicht `skipped_messages` unverändert in `errors`, schreibt
+  Changelog selbst je Feld.
+- [x] → Phase 4: Neue Fehlerklasse `PrivateDomainError` (`knowledge/service.py`, neben
   `EntityNotFoundError`) — die Discovery-Route muss sie zu 422 abfangen, analog zum
   bestehenden `_is_private_domain`-Guard in `api/knowledge_ai.py`.
-- [ ] → Phase 4 / User-Entscheidung: Domäne „Personen" (`personen.yaml`, echte private
+  Präzisiert beim Einarbeiten: `PrivateDomainError` fliegt nur im Job selbst (Verteidigung in
+  der Tiefe bei direktem Job-Aufruf) — die Routen prüfen `domain.private` synchron **vor** dem
+  Enqueue/Schreiben und geben 422 direkt zurück, kein Catch nötig.
+- [x] → Phase 4 / User-Entscheidung: Domäne „Personen" (`personen.yaml`, echte private
   Kontakte wie `Person/anna-lieb`) trägt **kein** `private: true` — anders als die separate
   Domäne „Private". Vor dem Freischalten der Route klären, ob das gewollt ist (siehe
   Report-Back Phase 3).
-- [ ] → Phase 4: Merkmale liegen jetzt auch in der Cache-Spalte `knowledge_entities.attributes`
+  Entschieden (User, vor Phase-4-Start): ja, `private: true` setzen — echte Kontakte bleiben
+  von der Web-Recherche ausgenommen. Umgesetzt.
+- [x] → Phase 4: Merkmale liegen jetzt auch in der Cache-Spalte `knowledge_entities.attributes`
   (JSON, gleiche Form wie im Frontmatter, migration 0040). Die Aufgaben `missing_field` und
   `low_completeness` können daraus über **einen** Query erzeugt werden — kein Vault-Read je
   Entity nötig. `KnowledgeService._completeness_from_cache(row)` macht genau das schon.
+  Bewusst anders gelöst: `refresh_completeness_tasks()` läuft als Hook direkt nach jedem
+  Schreiben auf der **einen** gerade geschriebenen Entity (Plan-Vorgabe „nach jedem Schreiben"),
+  kein Bulk-Scan über den Cache nötig — der Vault-Read passiert ohnehin schon für den Schreibpfad
+  selbst. Der Cache-Query-Ansatz bleibt der richtige Weg, falls später ein Bulk-Backfill für
+  Bestandsdaten gebraucht wird (z.B. Reconcile-Job).
 - [ ] → Phase 6: `EntityDto.attributes` enthält nur die **gesetzten** Merkmale. Welche Felder
   ein Typ vorsieht (und damit welche als „fehlt"-Zeile erscheinen), steht in
   `GET /api/knowledge/domains` → `entity_types[].fields`. Die Detailansicht braucht beide
@@ -32,7 +44,8 @@ Getaggte Erkenntnisse aus der Umsetzung, die eine spätere Phase betreffen. Form
   automatisch — die mitgelieferten Domänen werden nur einmalig gesät. Vor dem Smoke einmal von
   Hand `<vault>/domains/private.yaml` um den `fields:`-Block ergänzen (Vorlage:
   `backend/photofant/knowledge/domains/private.yaml`), sonst bleibt jeder Ring auf 0 %.
-- [ ] → Phase 4: `autonomy_for()` fällt bei einem **unbekannten** Autonomie-Key auf `"ask"`
+- [x] → Phase 4: `autonomy_for()` fällt bei einem **unbekannten** Autonomie-Key auf `"ask"`
   zurück, nicht auf `"off"`. Für `discovery` greift das nie, weil `load_settings()` die
   Defaults tief einmischt — aber die Route muss trotzdem auf `!= "auto"` gaten (so geplant),
   nicht auf `== "off"`, sonst wäre `"ask"` versehentlich durchlässig.
+  Eingearbeitet: beide Routen gaten auf `!= "auto"`, nicht auf `== "off"`.

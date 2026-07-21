@@ -50,7 +50,7 @@ def test_run_lookup_creates_task_when_entity_missing(session_factory, vault: Vau
 def test_run_lookup_skips_task_when_entity_exists(session_factory, vault: Vault) -> None:
     with session_factory() as session:
         # `body` gesetzt, sonst legt `create_entity` selbst eine `incomplete_entity`-
-        # Aufgabe an und verfälscht die `list_tasks() == []`-Prüfung unten.
+        # Aufgabe an und verfälscht die Prüfung unten.
         KnowledgeService(session, vault).create_entity(
             Entity(
                 id="actors/robert-downey-jr", type="Actor", title="Robert Downey Jr.", domain="Movies",
@@ -64,7 +64,11 @@ def test_run_lookup_skips_task_when_entity_exists(session_factory, vault: Vault)
 
     assert created is False
     with session_factory() as session:
-        assert TaskService(session).list_tasks() == []
+        # "Actor" hat definierte, hier ungefüllte Merkmale — `create_entity` legt dafür
+        # (P38 Phase 4) selbst eine `missing_field`-Aufgabe an. Relevant für diesen Test
+        # ist nur, dass der Lookup-Job selbst keine `missing_entity`-Aufgabe nachlegt.
+        tasks = TaskService(session).list_tasks()
+        assert TaskKind.MISSING_ENTITY.value not in {task.kind for task in tasks}
 
 
 def test_run_lookup_second_run_same_ref_is_idempotent(session_factory, vault: Vault) -> None:
@@ -91,7 +95,7 @@ def test_run_lookup_ambiguous_alias_skips_task(session_factory, vault: Vault) ->
     with session_factory() as session:
         service = KnowledgeService(session, vault)
         # `body` gesetzt, sonst legt `create_entity` selbst je eine `incomplete_entity`-
-        # Aufgabe an und verfälscht die `list_tasks() == []`-Prüfung unten.
+        # Aufgabe an und verfälscht die Prüfung unten.
         service.create_entity(
             Entity(
                 id="actors/robert-downey-jr",
@@ -120,4 +124,7 @@ def test_run_lookup_ambiguous_alias_skips_task(session_factory, vault: Vault) ->
 
     assert created is False
     with session_factory() as session:
-        assert TaskService(session).list_tasks() == []
+        # Wie oben: `missing_field`-Aufgaben aus `create_entity` sind hier erwartet
+        # (P38 Phase 4) — relevant ist nur, dass kein `missing_entity` nachgelegt wurde.
+        tasks = TaskService(session).list_tasks()
+        assert TaskKind.MISSING_ENTITY.value not in {task.kind for task in tasks}

@@ -8,6 +8,10 @@ const KIND_LABELS: Record<TaskKind, string> = {
   confirm_relationship: 'Beziehung bestätigen',
   review_recommendation: 'Empfehlung prüfen',
   incomplete_entity: 'Entity noch ohne Inhalt',
+  // P38 Phase 4
+  missing_field: 'Feld fehlt',
+  low_completeness: 'Kaum ausgefüllt',
+  auto_link: 'Verknüpfung vorschlagen',
 };
 
 @Component({

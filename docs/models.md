@@ -545,7 +545,7 @@ ausschließlich über `knowledge/tasks.py::TaskService`.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | INTEGER PK | autoincrement |
-| `kind` | TEXT | `new_person\|missing_entity\|confirm_relationship\|review_recommendation` (indexed) |
+| `kind` | TEXT | `new_person\|missing_entity\|confirm_relationship\|review_recommendation\|incomplete_entity\|missing_field\|low_completeness\|auto_link` (indexed) |
 | `status` | TEXT | `open\|resolved\|dismissed`, Default `open` (indexed); Übergang nur `open` → `resolved`/`dismissed`, kein zweiter Wechsel |
 | `context` | JSON | frei geformt (z.B. `{"ref": "actors/robert-downey-jr"}`); Dedup über `kind` + exakte `context`-Gleichheit unter **offenen** Aufgaben |
 | `created_at` | DATETIME | gesetzt bei Anlage |
@@ -555,6 +555,16 @@ ausschließlich über `knowledge/tasks.py::TaskService`.
 liefert `None`) genau eine Aufgabe an; ein mehrdeutiger Alias-Treffer (`AmbiguousEntityError`) zählt als
 gefunden, keine Aufgabe. Automatischer Trigger aus Ereignissen erst ab P24 — hier nur manuell über
 `POST /api/knowledge/lookup` auslösbar.
+
+**Drei neue Aufgaben-Arten (P38 Phase 4, `knowledge/task_rules.py`)** — reine Ableitungen, kein
+eigener Zustand, ausgelöst nach jedem Schreiben auf einer Entity (`KnowledgeService.create_entity`/
+`set_attributes`/`update_entity`) bzw. nach Personen-Anlage/-Umbenennung/-Entknüpfung:
+
+| `kind` | `context` | Auslöser |
+|---|---|---|
+| `missing_field` | `{ entity_id, title, fields: string[] }` — Anzeigenamen der noch leeren, für den Typ definierten Merkmale | mindestens ein definiertes Merkmal ist ungefüllt; vorherige offene `missing_field`-Aufgabe der Entity wird zuerst aufgelöst (keine Varianten-Stapelung) |
+| `low_completeness` | `{ entity_id, title, completeness: number }` — 0..1 | Vollständigkeit unter einem Drittel **und** mindestens ein Merkmal gefüllt (komplett leer ist „nicht angefangen", nicht „kaum ausgefüllt") |
+| `auto_link` | `{ entity_id, title, person_id: number, person_name: string, score: number }` | Namens-Ähnlichkeit (`difflib.SequenceMatcher`, normalisiert) zwischen einer unverknüpften **privaten** Entity und einer unverknüpften, namentlich bekannten Person über 0.80 — reine Heuristik, der Vorschlag muss im Wizard bestätigt werden |
 
 ### `recommendation_cache` (migration 0036, P26 Phase 1)
 

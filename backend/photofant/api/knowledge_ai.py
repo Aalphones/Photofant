@@ -10,18 +10,36 @@ Nutzer-Bestätigung auf dem normalen Speichern-Weg.
 from __future__ import annotations
 
 import logging
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
+from photofant.api.knowledge import EntityRefDto
+from photofant.db.session import get_session
 from photofant.inference.capabilities import Capability, autonomy_for
 from photofant.jobs.interview_job import InterviewAnswer, enqueue_interview
+from photofant.jobs.knowledge_discovery_job import enqueue_knowledge_discovery
 from photofant.jobs.knowledge_import_job import enqueue_knowledge_import
 from photofant.jobs.knowledge_patch_job import enqueue_knowledge_patch
 from photofant.jobs.knowledge_update_job import enqueue_knowledge_update
+from photofant.knowledge.changelog import ChangelogService
 from photofant.knowledge.domains import DomainLoadError
-from photofant.knowledge.schema import MediaLinks, Owner
-from photofant.knowledge.vault import open_vault
+from photofant.knowledge.schema import Attribute, Entity, MediaLinks, Owner, Relationship
+from photofant.knowledge.service import (
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+    KnowledgeService,
+    OwnershipConflictError,
+)
+from photofant.knowledge.slug import slugify
+from photofant.knowledge.task_rules import refresh_completeness_tasks
+from photofant.knowledge.validator import ValidationError
+from photofant.knowledge.vault import Vault, open_vault
+
+DbSession = Annotated[Session, Depends(get_session)]
+VaultDep = Annotated[Vault, Depends(open_vault)]
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +66,7 @@ class AutonomyDto(BaseModel):
     knowledge_import: str
     knowledge_update: str
     interview: str
+    discovery: str
 
 
 class ImportSuggestionRequest(BaseModel):
@@ -119,6 +138,7 @@ def get_autonomy() -> AutonomyDto:
         knowledge_import=autonomy_for(Capability.KNOWLEDGE_IMPORT),
         knowledge_update=autonomy_for(Capability.KNOWLEDGE_UPDATE),
         interview=autonomy_for(Capability.INTERVIEW),
+        discovery=autonomy_for(Capability.KNOWLEDGE_DISCOVERY),
     )
 
 
@@ -199,3 +219,238 @@ async def accept_update_suggestion(body: AcceptUpdateSuggestionRequest) -> Accep
 
     status = await enqueue_knowledge_patch(body.entity_id, "body", body.body, body.reason, Owner.INFERRED)
     return AcceptUpdateSuggestionResponse(job_id=status.id)
+
+
+class DiscoveryRequest(BaseModel):
+    """P38 — startet den ``KnowledgeDiscoveryJob``. Das Ergebnis sind Vorschläge (ADR-031);
+    geschrieben wird erst über ``/discovery/apply``."""
+
+    entity_id: str
+
+
+class DiscoveryResponse(BaseModel):
+    job_id: str
+
+
+def _entity_for_guard(entity_id: str) -> Entity | None:
+    """Lädt die Entity nur für den Privat-Domain-Guard — der Job lädt sie danach erneut
+    (eigene DB-Session im Thread), doppeltes Lesen ist hier bewusst in Kauf genommen statt
+    eine Session über die async-Grenze zu reichen."""
+    from photofant.db.session import SessionLocal
+
+    with SessionLocal() as session:
+        return KnowledgeService(session, open_vault()).find_entity(entity_id)
+
+
+@router.post("/discovery", response_model=DiscoveryResponse)
+async def request_discovery(body: DiscoveryRequest) -> DiscoveryResponse:
+    """Löst den ``KnowledgeDiscoveryJob`` aus — Websuche + Gemma schlagen Fakten vor.
+
+    Bei ``ai.autonomy.discovery == "off"`` wird die Aktion abgelehnt (der Wizard bietet
+    „Recherchieren" dann gar nicht erst an). Schreibt nichts (ADR-031) — der Schreibweg
+    ist ``POST /discovery/apply``, erst nach Bestätigung der Fakten im Wizard."""
+    if autonomy_for(Capability.KNOWLEDGE_DISCOVERY) != "auto":
+        raise HTTPException(status_code=409, detail="Web-Recherche ist in den Einstellungen deaktiviert")
+    if not body.entity_id.strip():
+        raise HTTPException(status_code=422, detail="entity_id ist erforderlich")
+
+    entity = _entity_for_guard(body.entity_id)
+    if entity is None:
+        raise HTTPException(status_code=404, detail=f"Entity '{body.entity_id}' nicht gefunden")
+    if _is_private_domain(entity.domain):
+        raise HTTPException(
+            status_code=422,
+            detail='Private Entitäten werden nie web-recherchiert — nutze „Ergänzen (KI)" (webfrei)',
+        )
+
+    status = await enqueue_knowledge_discovery(body.entity_id)
+    return DiscoveryResponse(job_id=status.id)
+
+
+class DiscoveryFactDto(BaseModel):
+    field: str
+    label: str
+    value: str
+    source: str
+    source_url: str
+    confidence: float
+
+
+class DiscoveryEntitySuggestionDto(BaseModel):
+    title: str
+    type: str
+    relationship_type: str
+    body: str
+
+
+class DiscoveryApplyRequest(BaseModel):
+    """Bestätigte Auswahl aus dem Wizard (Haken gesetzt) — geschrieben wird nur, was
+    hier ankommt, nicht der volle Job-Output."""
+
+    entity_id: str
+    facts: list[DiscoveryFactDto] = []
+    entity_suggestions: list[DiscoveryEntitySuggestionDto] = []
+
+
+class DiscoveryApplyResponse(BaseModel):
+    written_fields: list[str]
+    created_entities: list[EntityRefDto]
+    errors: list[str]
+
+
+@router.post("/discovery/apply", response_model=DiscoveryApplyResponse)
+async def apply_discovery(
+    body: DiscoveryApplyRequest, session: DbSession, vault: VaultDep
+) -> DiscoveryApplyResponse:
+    """Schreibt bestätigte Web-Recherche-Fakten — synchron, kein Job mehr (das Modell hat
+    schon geantwortet, hier passiert nur noch Schreiben). Dieselben Guards wie
+    ``POST /discovery``: die Ziel-Entity kann zwischen Start und Bestätigung deaktiviert
+    oder privat geworden sein, also nicht auf den vorangegangenen Job-Lauf vertrauen.
+
+    Jeder einzelne Fakt/Vorschlag schlägt für sich fehl statt die ganze Übernahme
+    abzubrechen — ein durch ``owner_can_overwrite`` blockiertes Merkmal oder eine
+    Ownership-Kollision auf der Entity selbst (z.B. wenn sie inzwischen ``user``-owned
+    ist) landet als Klartext in ``errors``, nicht als 500.
+    """
+    if autonomy_for(Capability.KNOWLEDGE_DISCOVERY) != "auto":
+        raise HTTPException(status_code=409, detail="Web-Recherche ist in den Einstellungen deaktiviert")
+    if not body.entity_id.strip():
+        raise HTTPException(status_code=422, detail="entity_id ist erforderlich")
+
+    service = KnowledgeService(session, vault)
+    entity = service.find_entity(body.entity_id)
+    if entity is None:
+        raise HTTPException(status_code=404, detail=f"Entity '{body.entity_id}' nicht gefunden")
+    domain = vault.load_domain(entity.domain)
+    if domain.private:
+        raise HTTPException(
+            status_code=422,
+            detail='Private Entitäten werden nie web-recherchiert — nutze „Ergänzen (KI)" (webfrei)',
+        )
+
+    from photofant.jobs.recommendation_job import invalidate_recommendations
+    from photofant.recommendation.context import assets_for_entity
+
+    errors: list[str] = []
+    written_fields: list[str] = []
+    created_entities: list[EntityRefDto] = []
+
+    body_fact = next((fact for fact in body.facts if fact.field == "body"), None)
+    attribute_facts = [fact for fact in body.facts if fact.field != "body"]
+    source_urls = [fact.source_url for fact in body.facts if fact.source_url]
+    merged_sources = sorted(set(entity.sources) | set(source_urls))
+
+    # Beschreibung + Quellen in einem Patch. Läuft auch ohne Beschreibungs-Fakt, sobald
+    # neue Quellen dazukommen — sonst würden reine Merkmals-Übernahmen nie in
+    # `entity.sources` auftauchen (Kontrakt README „trägt die Quell-URLs in entity.sources").
+    if body_fact is not None or merged_sources != sorted(set(entity.sources)):
+        patch: dict[str, Any] = {"sources": merged_sources}
+        if body_fact is not None:
+            patch["body"] = body_fact.value
+        validation_errors = service.validate_patch(entity.id, patch)
+        if validation_errors:
+            errors.extend(validation_errors)
+        else:
+            old_body = entity.body
+            try:
+                entity = service.update_entity(entity.id, patch, Owner.WEB)
+            except OwnershipConflictError as error:
+                errors.append(str(error))
+            else:
+                if body_fact is not None:
+                    written_fields.append("body")
+                    ChangelogService(session).record(
+                        entity_id=entity.id,
+                        field="body",
+                        old_value=old_body,
+                        new_value=body_fact.value,
+                        reason=f"Web-Recherche, von dir bestätigt (Quelle: {body_fact.source})",
+                        source=Owner.WEB.value,
+                        job_id="",
+                    )
+
+    if attribute_facts:
+        old_values = {
+            fact.field: (
+                entity.attributes[fact.field].value if fact.field in entity.attributes else None
+            )
+            for fact in attribute_facts
+        }
+        attributes = {
+            fact.field: Attribute(value=fact.value, owner=Owner.WEB, confidence=fact.confidence)
+            for fact in attribute_facts
+        }
+        entity, written_keys, skipped_messages = service.set_attributes(entity.id, attributes, Owner.WEB)
+        written_fields.extend(written_keys)
+        errors.extend(skipped_messages)
+        facts_by_field = {fact.field: fact for fact in attribute_facts}
+        for key in written_keys:
+            fact = facts_by_field[key]
+            ChangelogService(session).record(
+                entity_id=entity.id,
+                field=key,
+                old_value=old_values.get(key),
+                new_value=fact.value,
+                reason=f"Web-Recherche, von dir bestätigt (Quelle: {fact.source})",
+                source=Owner.WEB.value,
+                job_id="",
+            )
+
+    affected_asset_ids: set[int] = set()
+    for suggestion in body.entity_suggestions:
+        if not domain.has_entity_type(suggestion.type) or not domain.has_relationship_type(
+            suggestion.relationship_type
+        ):
+            errors.append(f"'{suggestion.title}': unbekannter Typ oder Beziehung, übersprungen")
+            continue
+
+        matches = [
+            candidate
+            for candidate in service.search_entities(
+                suggestion.title, type=suggestion.type, domain=entity.domain
+            )
+            if candidate.title.strip().lower() == suggestion.title.strip().lower()
+        ]
+        if matches:
+            target = matches[0]
+        else:
+            new_entity = Entity(
+                id=f"{domain.folder_for(suggestion.type)}/{slugify(suggestion.title)}",
+                type=suggestion.type,
+                title=suggestion.title,
+                domain=entity.domain,
+                body=suggestion.body,
+            )
+            try:
+                target = service.create_entity(new_entity, Owner.WEB)
+            except (EntityAlreadyExistsError, ValidationError, DomainLoadError) as error:
+                errors.append(f"'{suggestion.title}': {error}")
+                continue
+            created_entities.append(EntityRefDto(id=target.id, title=target.title, type=target.type))
+
+        already_linked = any(
+            existing.type == suggestion.relationship_type and existing.target == target.id
+            for existing in entity.relationships
+        )
+        if already_linked:
+            continue
+        try:
+            entity = service.create_relationship(
+                entity.id,
+                Relationship(type=suggestion.relationship_type, target=target.id),
+                Owner.WEB,
+            )
+        except (EntityNotFoundError, OwnershipConflictError, ValidationError) as error:
+            errors.append(f"'{suggestion.title}': {error}")
+            continue
+        affected_asset_ids |= assets_for_entity(session, entity.id)
+        affected_asset_ids |= assets_for_entity(session, target.id)
+
+    if affected_asset_ids:
+        invalidate_recommendations(session, affected_asset_ids)
+
+    refresh_completeness_tasks(session, entity, domain)
+
+    return DiscoveryApplyResponse(
+        written_fields=written_fields, created_entities=created_entities, errors=errors
+    )

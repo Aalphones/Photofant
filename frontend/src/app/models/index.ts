@@ -171,6 +171,14 @@ export type {
   KnowledgeInterviewExplainability,
   KnowledgeInterviewSuggestion,
   KnowledgeInterviewResult,
+  DiscoveryRequest,
+  DiscoveryResponse,
+  KnowledgeDiscoveryFact,
+  KnowledgeDiscoveryEntitySuggestion,
+  KnowledgeDiscoveryExplainability,
+  KnowledgeDiscoveryResult,
+  DiscoveryApplyRequest,
+  DiscoveryApplyResponse,
 } from './knowledge.model';
 export { OWNERS, TASK_KINDS, TASK_STATUSES, AI_AUTONOMY_MODES } from './knowledge.model';
 
