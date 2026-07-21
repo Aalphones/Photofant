@@ -40,8 +40,18 @@ generative = [
 #     https://abetlen.github.io/llama-cpp-python/whl/cu121
 # (Index/CUDA-Version an die lokale Treiber-Version anpassen — Plan B, falls das
 # Default-Wheel beim Smoke-Test #1 CPU-only lädt.)
+#
+# Die CUDA-Wheels von llama-cpp-python (cu12x) linken zur Ladezeit gegen die
+# CUDA-12-Runtime (cudart64_12.dll / cublas64_12.dll) — diese DLLs stecken NICHT
+# im Wheel. Ohne torch (das sie sonst mitbrächte) fehlen sie, `ggml-cuda.dll`
+# lädt nicht, und der Import scheitert still. Darum die Runtime als eigene
+# Abhängigkeit mitziehen; `gguf_engine._register_cuda_runtime_dll_dirs()` hängt
+# ihre bin-Ordner vor dem Import auf den DLL-Suchpfad. macOS hat kein CUDA →
+# per Marker ausgeschlossen.
 gemma-gguf = [
     "llama-cpp-python>=0.3",
+    "nvidia-cuda-runtime-cu12; platform_system != 'Darwin'",
+    "nvidia-cublas-cu12; platform_system != 'Darwin'",
 ]
 
 [build-system]

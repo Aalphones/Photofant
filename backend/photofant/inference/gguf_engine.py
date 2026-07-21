@@ -15,7 +15,12 @@ hier (siehe `generative_engine.load_transformers_model`).
 """
 from __future__ import annotations
 
+import importlib.util
 import logging
+import os
+import shutil
+import site
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -26,6 +31,101 @@ from typing import Any
 log = logging.getLogger(__name__)
 
 IDLE_TIMEOUT_SECONDS: float = 120.0
+
+# Guards the one-time CUDA-runtime provisioning below.
+_cuda_runtime_provisioned = False
+
+
+def _find_llama_cpp_lib_dir() -> Path | None:
+    """Locate llama-cpp-python's native `lib/` folder without importing it.
+
+    Importing llama_cpp is exactly what triggers the DLL load we are trying to
+    fix up first, so we resolve the path via the import machinery instead
+    (`find_spec` does not execute the module).
+    """
+    spec = importlib.util.find_spec("llama_cpp")
+    if spec is None or spec.origin is None:
+        return None
+    lib_dir = Path(spec.origin).parent / "lib"
+    return lib_dir if lib_dir.is_dir() else None
+
+
+def _nvidia_bin_dirs() -> list[Path]:
+    """Every `nvidia/*/bin` folder shipped by the `nvidia-*-cu12` wheels.
+
+    Discovered from the live `site-packages` (never a hardcoded path, so it
+    travels to any machine/venv). `sys.prefix` is added as a fallback because a
+    venv's own site-packages is not always in `site.getsitepackages()`.
+    """
+    site_dirs: list[str] = list(site.getsitepackages())
+    user_site = site.getusersitepackages()
+    if user_site:
+        site_dirs.append(user_site)
+    site_dirs.append(str(Path(sys.prefix) / "Lib" / "site-packages"))
+
+    bin_dirs: list[Path] = []
+    seen: set[str] = set()
+    for site_dir in site_dirs:
+        nvidia_root = Path(site_dir) / "nvidia"
+        if not nvidia_root.is_dir():
+            continue
+        for bin_dir in nvidia_root.glob("*/bin"):
+            resolved = str(bin_dir.resolve())
+            if bin_dir.is_dir() and resolved not in seen:
+                seen.add(resolved)
+                bin_dirs.append(bin_dir)
+    return bin_dirs
+
+
+def _provision_cuda_runtime_dlls() -> None:
+    """Place the CUDA-12 runtime DLLs next to llama-cpp's `ggml-cuda.dll`.
+
+    The CUDA build of llama-cpp-python links `ggml-cuda.dll` against
+    `cudart64_12.dll` / `cublas64_12.dll`, but ships neither. A torch install
+    would drag them in; this backend carries no torch, so without help
+    `ggml-cuda.dll` fails to load and the whole import degrades to a silent
+    "not available".
+
+    The Windows loader resolves a DLL's dependencies from the directory of the
+    DLL being loaded — for `ggml-cuda.dll` that is llama-cpp's `lib/`. It does
+    NOT consult `PATH`, `os.add_dll_directory`, or already-loaded modules here
+    (llama-cpp loads with a full path and no user-dir search flag), so the only
+    reliable fix is to have the DLLs physically sit in that `lib/`. We hardlink
+    them from the `nvidia-*-cu12` wheels (same volume → zero extra space; a copy
+    is the cross-volume fallback). Idempotent and self-healing: a llama-cpp
+    reinstall wipes `lib/`, and the next import re-links.
+
+    No-op off Windows: there `.so` resolution runs through the wheels' RPATH and
+    `os.link` semantics differ — the CUDA linux wheels are found without help.
+    """
+    global _cuda_runtime_provisioned
+    if _cuda_runtime_provisioned:
+        return
+    _cuda_runtime_provisioned = True
+
+    if os.name != "nt":
+        return
+
+    lib_dir = _find_llama_cpp_lib_dir()
+    if lib_dir is None:
+        return
+
+    for bin_dir in _nvidia_bin_dirs():
+        for source_dll in bin_dir.glob("*.dll"):
+            target_dll = lib_dir / source_dll.name
+            if target_dll.exists():
+                continue
+            try:
+                os.link(source_dll, target_dll)
+            except OSError:
+                # Cross-volume or hardlink-unsupported filesystem — fall back to
+                # a plain copy so the DLL is still resolvable next to ggml-cuda.
+                try:
+                    shutil.copy2(source_dll, target_dll)
+                except OSError:
+                    log.warning("Could not provision CUDA runtime DLL %s", source_dll.name, exc_info=True)
+                    continue
+            log.debug("Provisioned CUDA runtime DLL into llama_cpp/lib: %s", source_dll.name)
 
 
 class GgufAvailability(StrEnum):
@@ -45,6 +145,7 @@ class _GgufEntry:
 
 def check_gguf_available() -> GgufAvailability:
     """Check whether llama-cpp-python (the gemma-gguf extra) is importable."""
+    _provision_cuda_runtime_dlls()
     try:
         import llama_cpp  # noqa: F401
     except ImportError:
