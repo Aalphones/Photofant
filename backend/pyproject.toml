@@ -35,9 +35,11 @@ generative = [
 ]
 # 2. Inferenz-Runtime neben `generative` (ADR-029) — llama.cpp für GGUF-Gemma.
 # `uv add` zieht per Default ein CPU-only-Wheel; für CUDA-Offload (Pflicht für ein
-# 12B-Modell) das prebuilt-CUDA-Wheel des Projekts installieren, z.B.:
-#   uv pip install llama-cpp-python --extra-index-url \
-#     https://abetlen.github.io/llama-cpp-python/whl/cu121
+# 12B-Modell) das prebuilt-CUDA-Wheel installieren. Die AKTUELLEN Windows-Wheels
+# liegen auf dem cu124/cu125-Index (cu121–cu123 hören bei 0.3.4 auf — zu alt für
+# Gemma 4), z.B.:
+#   uv pip install "llama-cpp-python==0.3.34" --extra-index-url \
+#     https://abetlen.github.io/llama-cpp-python/whl/cu124
 # (Index/CUDA-Version an die lokale Treiber-Version anpassen — Plan B, falls das
 # Default-Wheel beim Smoke-Test #1 CPU-only lädt.)
 #
@@ -45,11 +47,14 @@ generative = [
 # CUDA-12-Runtime (cudart64_12.dll / cublas64_12.dll) — diese DLLs stecken NICHT
 # im Wheel. Ohne torch (das sie sonst mitbrächte) fehlen sie, `ggml-cuda.dll`
 # lädt nicht, und der Import scheitert still. Darum die Runtime als eigene
-# Abhängigkeit mitziehen; `gguf_engine._register_cuda_runtime_dll_dirs()` hängt
-# ihre bin-Ordner vor dem Import auf den DLL-Suchpfad. macOS hat kein CUDA →
-# per Marker ausgeschlossen.
+# Abhängigkeit mitziehen; `gguf_engine._provision_cuda_runtime_dlls()` verlinkt
+# sie beim ersten Zugriff neben `ggml-cuda.dll` (der einzige Ort, den der
+# Windows-Loader für transitive Abhängigkeiten durchsucht). macOS hat kein
+# CUDA → per Marker ausgeschlossen.
 gemma-gguf = [
-    "llama-cpp-python>=0.3",
+    # Gemma-4-Architektur braucht ein aktuelles gebündeltes llama.cpp — 0.3.4
+    # kannte nur bis gemma2. Boden auf die erste gemma4-fähige Version anheben.
+    "llama-cpp-python>=0.3.34",
     "nvidia-cuda-runtime-cu12; platform_system != 'Darwin'",
     "nvidia-cublas-cu12; platform_system != 'Darwin'",
 ]
