@@ -70,4 +70,10 @@ Kein Mockup. KI-Vorschläge erscheinen **im vorhandenen** Wizard (P23) und Lore 
 
 ---
 ## Summary / Deviations / Follow-ups
-_(beim Archivieren)_ — Follow-ups: Creative-Jobs/ComfyUI-Intelligenz (Roadmap-Phase 7) · Discovery (Phase 8) · Prompt-Versionierungs-Strategie ausbauen.
+Alle 4 Phasen umgesetzt wie geplant, Smoke-Checkliste (oben) vom User bestanden — Gemma-Vorschlagspfad
+(Wizard, Lore Panel, Interview-Mode) läuft über Capability/Tool-Registry, Patches laufen immer durch
+Validator + Nutzerbestätigung, keine Direkt-Writes. Keine Abweichungen vom Plan.
+
+Follow-ups (nicht Teil von P27): Creative-Jobs/ComfyUI-Intelligenz (Roadmap-Phase 7) · Discovery
+(Phase 8, siehe `docs/planning/2026-07-20_p38-gemma-web-discovery/`) · Prompt-Versionierungs-Strategie
+ausbauen (Dok 040 §14 bleibt offen).

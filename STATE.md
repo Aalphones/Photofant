@@ -1,10 +1,11 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan — Backlog: `docs/planning/2026-07-01_p27-gemma-integration/`
-wartet auf User-Smoke, `docs/planning/2026-07-06_p34-mcp-wissensbasis/` blockiert bis dahin)
+**Aktiver Plan:** (kein aktiver Plan — P27-Smoke bestanden und archiviert, `docs/planning/2026-07-06_p34-mcp-wissensbasis/`
+ist damit entblockt und bereit zur Umsetzung; `docs/planning/2026-07-20_p38-gemma-web-discovery/` liegt
+ebenfalls freigegeben im Backlog)
 **Phase:** —
-**Nächster Schritt:** Empfehlungs-Cache-Invalidierung (4/4 Phasen) ist fertig und archiviert —
-Smoke-Checkliste unten ausstehend (User). Danach ggf. P27-Smoke nachholen oder neuen Plan wählen.
+**Nächster Schritt:** Nächsten Plan aus dem Backlog wählen (P34 oder P38) oder offene Smoke-Tests
+(P26, P35) nachholen.
 
 ## Empfehlungs-Cache-Invalidierung abgeschlossen (alle 4 Phasen)
 
@@ -58,12 +59,10 @@ erwarteten `llama_cpp`-Import-Fehler (Paket noch nicht installiert — Smoke #1
 installiert es). ADR-029 angelegt. **Noch offen: Backlog P27-Smoke + Archivieren**
 (siehe unten) — unabhängig von P35, wartet weiter auf den User.
 
-## Backlog — P27 (parkt, nicht blockierend für P35)
+## P27 abgeschlossen (Gemma-Integration)
 
-Plan `docs/planning/2026-07-01_p27-gemma-integration/` — alle 4 Phasen ✅ complete,
-Plan-Ende offen: (1) User-Smoke (Checkliste in der README, Wackelstellen zuerst) —
-Gemma muss dafür geladen/verfügbar sein; (2) Archivieren nach grünem Smoke
-(`git mv` → `docs/archive/2026-07/`, README-Bottom-Sektionen füllen).
+Alle 4 Phasen ✅ complete, User-Smoke bestanden, archiviert nach
+`docs/archive/2026-07/2026-07-01_p27-gemma-integration/`.
 
 ## Backlog (nach P35)
 
@@ -72,7 +71,8 @@ Gemma muss dafür geladen/verfügbar sein; (2) Archivieren nach grünem Smoke
   Wissens-Oberfläche aus dem Design-Handoff (Phase 5-8, Bundle liegt im Plan unter `design/`).
   Phase 2 (Merkmale mit eigenem Owner + Vollständigkeit) ist die Schema-Änderung, auf der
   fast alles andere steht — nicht überspringen.
-- `docs/planning/2026-07-06_p34-mcp-wissensbasis/` — blockiert bis MCP-Basisplan + P27 stehen.
+- `docs/planning/2026-07-06_p34-mcp-wissensbasis/` — MCP-Basisplan + P27 stehen jetzt beide,
+  entblockt und bereit zur Umsetzung.
 
 ## Smoke-Test P26 ausstehend (User)
 
