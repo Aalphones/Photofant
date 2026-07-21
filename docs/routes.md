@@ -1072,7 +1072,7 @@ comfyui.result_wait_timeout_seconds = 1800
 
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
-| `/wissen` | `GET` | `/api/knowledge/domains` | — | `DomainDto[] { name, entity_types: { name, folder }[], relationship_types: string[] }` — nicht im P22-Kontrakt, P23 Phase 2 ergänzt sie für den Wizard-Typ-Dropdown |
+| `/wissen` | `GET` | `/api/knowledge/domains` | — | `DomainDto[] { name, entity_types: { name, folder, fields: { key, label }[] }[], relationship_types: string[], private }` — nicht im P22-Kontrakt, P23 Phase 2 ergänzt sie für den Wizard-Typ-Dropdown; `fields` (P38 Phase 2) sind die Merkmale des Typs |
 | `/wissen` | `POST` | `/api/knowledge/entities` | `CreateEntityRequest { id, type, title, domain, aliases?, status?, owner? ("user" default), confidence?, media_links?, relationships?, sources?, body? }` | `EntityDto` (201) — 409 bei bereits vergebener `id`, 422 bei unbekanntem Typ/Beziehungstyp/Owner |
 | *(ab P23, ungenutzt)* | `GET` | `/api/knowledge/entities` | `q?`, `type?`, `domain?` | `EntityDto[]` — Titel/Alias-Suche, leeres `q` = alle |
 | `/wissen` (Beziehungs-Autocomplete im Wizard) | `GET` | `/api/knowledge/entities/search` | `q` (Pflicht), `type?`, `domain?` | `EntityDto[]` — identische Logik wie oben, eigener Pfad laut Kontrakt |
@@ -1100,7 +1100,16 @@ comfyui.result_wait_timeout_seconds = 1800
 
 `EntityDto` trägt zusätzlich `body: string` (freier Markdown-Text unter dem Frontmatter) — im P22-Kontrakt beschrieben, aber erst P23 Phase 2 durch die REST-Schicht gereicht (Wizard-Feld „Beschreibung").
 
-**`LoreDto` (P25 Phase 1 — Vollform des P22-Stubs):** `{ entity: EntityDto | null, relationships: { type, target: EntityRefDto }[], franchises: EntityRefDto[], related_media: { kind: "person"|"asset", id, thumbnail_url, label? }[], sources: string[] }`. `EntityRefDto = { id, title, type }`. Beziehungsziele sind 1 Hop aufgelöst (Titel+Typ statt roher id) — Ziel nicht im Cache → Titel fällt auf die rohe id zurück, keine Beziehung geht verloren. `franchises` ist eine Teilmenge von `relationships` (Ziel-Typ `"Franchise"`), eigenes Feld weil das Lore-Panel es als eigene Sektion zeigt. `related_media` löst `media_links` (rohe Personen-/Asset-ids) zu Thumbnails auf — Personen ohne Gesichts-Aufnahme (kein Portrait) werden ausgelassen.
+**Merkmale + Vollständigkeit (P38 Phase 2, ADR-032):** `EntityDto` trägt zusätzlich
+`attributes: Record<string, { value, owner, confidence }>` (Merkmale mit eigenem Owner je Merkmal)
+und `completeness: number` (0..1, Anteil gefüllter an den für den Typ definierten Merkmalen —
+**berechnet, nie gespeichert**). `GET /api/knowledge/domains` liefert je Entity-Typ zusätzlich
+`fields: { key, label }[]` — die für den Typ vorgesehenen Merkmale, definiert in der Domänen-YAML
+(leere Liste ist gültig). `EntityRefDto` trägt zusätzlich `completeness: number`, damit
+Personen-Karte und Wissens-Übersicht den Prozentwert ohne zweiten Request zeigen; er kommt aus
+den im Cache gespiegelten Merkmalen, nicht aus der Markdown-Datei.
+
+**`LoreDto` (P25 Phase 1 — Vollform des P22-Stubs):** `{ entity: EntityDto | null, relationships: { type, target: EntityRefDto }[], franchises: EntityRefDto[], related_media: { kind: "person"|"asset", id, thumbnail_url, label? }[], sources: string[] }`. `EntityRefDto = { id, title, type, completeness }`. Beziehungsziele sind 1 Hop aufgelöst (Titel+Typ statt roher id) — Ziel nicht im Cache → Titel fällt auf die rohe id zurück, keine Beziehung geht verloren. `franchises` ist eine Teilmenge von `relationships` (Ziel-Typ `"Franchise"`), eigenes Feld weil das Lore-Panel es als eigene Sektion zeigt. `related_media` löst `media_links` (rohe Personen-/Asset-ids) zu Thumbnails auf — Personen ohne Gesichts-Aufnahme (kein Portrait) werden ausgelassen.
 
 **Explainability/Changelog (P25 Phase 3, `knowledge/changelog.py`):** jeder über `POST .../patch`
 gelaufene Korrektur-Patch erzeugt eine `knowledge_changelog`-Zeile — Cache-Tabelle wie
@@ -1148,6 +1157,10 @@ interface EntityDto {
   media_links: { persons: number[]; assets: number[] };
   relationships: { type: string; target: string }[];
   sources: string[];
+  // P38 Phase 2 — Merkmale mit eigenem Owner je Merkmal; completeness ist berechnet, nie gespeichert.
+  attributes: Record<string, { value: string; owner: Owner; confidence: number }>;
+  completeness: number;
+  body: string;
 }
 ```
 

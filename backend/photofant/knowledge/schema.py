@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 
 class Owner(StrEnum):
@@ -67,13 +68,45 @@ class Relationship:
 
 
 @dataclass
+class Attribute:
+    """Ein einzelnes Merkmal einer Entity (Geburtstag, Beruf, …) mit eigenem Owner.
+
+    Der Owner sitzt bewusst **pro Merkmal**, nicht nur auf der Entity: ein manuell
+    gepflegter Wohnort darf nicht verschwinden, nur weil eine Web-Recherche denselben
+    Datensatz anfasst. Die Überschreib-Regel ist dieselbe wie auf Entity-Ebene
+    (``owner_can_overwrite``), nur feiner angewendet.
+    """
+
+    value: str
+    owner: Owner = Owner.INFERRED
+    confidence: float = 1.0
+
+
+def attributes_to_mapping(attributes: dict[str, Attribute]) -> dict[str, dict[str, Any]]:
+    """Kanonische Mapping-Form der Merkmale.
+
+    Frontmatter-Block und Cache-Spalte tragen bewusst dieselbe Form — hier steht sie
+    einmal, damit die beiden Schreibpfade nicht auseinanderlaufen.
+    """
+    return {
+        key: {
+            "value": attribute.value,
+            "owner": attribute.owner.value,
+            "confidence": attribute.confidence,
+        }
+        for key, attribute in attributes.items()
+    }
+
+
+@dataclass
 class Entity:
     """Eine Wissenseinheit — entspricht genau einer Markdown-Datei.
 
     Pflichtfelder (``id``/``type``/``title``/``domain``) haben bewusst keinen
     Default: eine Entity ohne sie ist inhaltlich unvollständig und wird vom
     Validator abgelehnt. ``body`` ist der freie Markdown-Artikel unter dem
-    Frontmatter.
+    Frontmatter. ``attributes`` sind die strukturierten Merkmale (je mit eigenem
+    Owner); welche Keys für einen Typ vorgesehen sind, legt die Domäne fest.
     """
 
     id: str
@@ -87,6 +120,7 @@ class Entity:
     media_links: MediaLinks = field(default_factory=MediaLinks)
     relationships: list[Relationship] = field(default_factory=list)
     sources: list[str] = field(default_factory=list)
+    attributes: dict[str, Attribute] = field(default_factory=dict)
     body: str = ""
 
     @property

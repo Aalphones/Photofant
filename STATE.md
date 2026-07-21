@@ -1,9 +1,25 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-20_p38-gemma-web-discovery/`
-**Phase:** 2/8 — Merkmale + Vollständigkeit (Schema, Felddefinitionen, ADR-032) — pending
-**Nächster Schritt:** `phase-2-merkmale.md` lesen und umsetzen; erster AK-Punkt ist der
-Frontmatter-Round-Trip mit Sonderzeichen (Doppelpunkt, Umlaute, langer Text).
+**Phase:** 3/8 — KnowledgeDiscoveryJob (Suche → Gemma → Fakten-Vorschläge) — pending
+**Nächster Schritt:** `phase-3-*.md` lesen und umsetzen; der Wackelpunkt ist der Parser-Test
+(5-10 echte Läufe, Trefferquote protokollieren, bevor Phase 4 draufbaut). Phase 3 ist **heikel**
+→ `/model opusplan` empfohlen.
+
+## Phase 2 erledigt (Merkmale + Vollständigkeit)
+
+Merkmale sind jetzt echte Felder mit **eigenem Owner pro Feld**: neuer `attributes`-Block im
+Frontmatter (Round-Trip mit Umlauten/Doppelpunkt/langen Werten verlustfrei geprüft), Felder pro
+Entity-Typ in der Domänen-YAML (`fields:`), Vollständigkeit als reine Ableitung (nie gespeichert),
+eigener Schreibweg `set_attributes()` der ein `user`-Merkmal gegen einen `web`-Lauf schützt und
+die Entity-Ownership unangetastet lässt. ADR-032 angelegt. **Abweichung vom Plan:** Merkmale
+liegen zusätzlich als JSON-Spiegel in `knowledge_entities.attributes` (**migration 0040**) —
+sonst hätte die unpaginierte Personen-Liste für jeden Prozentwert eine Markdown-Datei geöffnet.
+Neue Tests `backend/tests/test_knowledge_attributes.py` (10, grün). Details: `phase-2-merkmale.md`
+(Report-Back).
+
+⚠️ **Migration 0040 ist noch nicht auf der laufenden DB** — beim nächsten App-Start/`alembic
+upgrade head` läuft sie mit.
 
 ## Phase 1 erledigt (Fundament Web-Recherche)
 
@@ -18,6 +34,13 @@ amendiert. ruff grün, keine neuen mypy-Fehler. Details: `phase-1-fundament.md` 
 - `tests/test_comfyui_run.py` ist **vor** dieser Phase schon rot (9 Fehler auf dem
   unveränderten Stand — `run_comfyui_run_job()` fehlt ein Argument). Unabhängig von P38,
   wartet auf eine eigene Runde.
+- Dazu **4 weitere rote Tests**, ebenfalls auf dem unveränderten Stand geprüft (2026-07-21):
+  `test_comfyui_auto_import.py` (3× — `SimpleNamespace` ohne `toggles` in `api/comfyui.py:641`)
+  und `test_caption_config.py::test_validate_rejects_unimplemented_instruct_mode`. Gesamt-Suite
+  steht damit bei 13 roten Tests, alle P38-fremd.
+- `uv run ruff check .` über das **ganze** Backend meldet 7 Altbestand-Fehler (alte Migrationen
+  0020/0024, `api/assets.py` B008, `inference/tools.py`, `jobs/comfyui_run_job.py`). Die
+  geänderten Dateien sind grün; die CI-Zeile aus `AGENTS.md` läuft aber rot durch.
 
 ## Offene Smoke-Tests (User)
 

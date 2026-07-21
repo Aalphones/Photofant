@@ -161,6 +161,8 @@ class EntityRefDto(BaseModel):
     id: str
     title: str
     type: str
+    # Anteil gefüllter Merkmale (0..1) — gleiche Form wie auf der Personen-Seite (P38 Phase 2).
+    completeness: float = 0.0
 
 
 class LinkEntityRequest(BaseModel):
@@ -576,6 +578,28 @@ def _version_candidates_query(session: Session, filtered: OrmQuery[Any]) -> OrmQ
     )
 
 
+def _total_without_asset_join(session: Session, instance_conditions: list[Any]) -> int:
+    """Gallery total for the case where no filter needs a column from `asset`.
+
+    The join to `asset` is then a pure existence check that the foreign key already
+    guarantees — but SQLite pays one random row lookup per instance into a table whose
+    size is dominated by the embedding BLOBs. Dropping the join takes the two counts
+    from ~80 ms to under 1 ms at 11.000 assets; both variants return the same number
+    (`test_total_matches_full_count_for_every_filter`).
+    """
+    active = [AssetInstance.deleted_at.is_(None), *instance_conditions]
+    asset_total = session.execute(
+        select(func.count()).select_from(AssetInstance).where(*active)
+    ).scalar_one()
+    version_total = session.execute(
+        select(func.count())
+        .select_from(Version)
+        .join(AssetInstance, AssetInstance.id == Version.instance_id)
+        .where(Version.face_id.is_(None), *active)
+    ).scalar_one()
+    return asset_total + version_total
+
+
 @router.get("", response_model=AssetsPage)
 async def list_assets(
     session: DbSession,
@@ -597,13 +621,37 @@ async def list_assets(
     similar_ids: Annotated[list[int] | None, Query()] = None,
 ) -> AssetsPage:
     query = _base_query(session)
+    q_clean = (q or "").strip()
 
+    # `favourite` und `person_id` sind die einzigen Filter, die allein auf
+    # `asset_instance` arbeiten. Separat gehalten, damit der schlanke Zähl-Pfad unten
+    # sie ohne den Join auf `asset` anwenden kann.
+    instance_conditions: list[Any] = []
     if favourite is not None:
-        query = query.filter(AssetInstance.favourite.is_(favourite))
+        instance_conditions.append(AssetInstance.favourite.is_(favourite))
+    if person_id is not None:
+        instance_conditions.append(AssetInstance.person_id == person_id)
+    for condition in instance_conditions:
+        query = query.filter(condition)
+
+    # Jeder andere Filter braucht Spalten aus `asset` — dann ist der Join tragend und
+    # `total` muss über die volle Query laufen. WICHTIG: kommt hier ein neuer
+    # asset-seitiger Filter dazu, gehört er in diese Liste, sonst zählt die Galerie
+    # falsch. `test_total_matches_full_count_for_every_filter` schlägt sonst an.
+    filters_touch_asset = any((
+        source,
+        framing,
+        tags,
+        classification,
+        similar_ids,
+        q_clean,
+        collection_id is not None,
+        has_faces is not None,
+        quality_min is not None and quality_min > 0.0,
+    ))
+
     if source:
         query = query.filter(Asset.source.in_(source))
-    if person_id is not None:
-        query = query.filter(AssetInstance.person_id == person_id)
     if framing:
         query = query.filter(Asset.framing.in_(framing))
     if has_faces is not None:
@@ -659,7 +707,6 @@ async def list_assets(
 
     # Text / semantic search
     score_map: dict[int, float] = {}
-    q_clean = (q or "").strip()
     if q_clean:
         if q_mode == SearchMode.TAGS:
             query = query.filter(Asset.id.in_(_tag_name_match_subquery(session, q_clean)))
@@ -715,7 +762,10 @@ async def list_assets(
     facets = _compute_facets(session, query) if page == 1 else _empty_facets()
     version_query = _version_candidates_query(session, query)
 
-    total = query.count() + version_query.count()
+    if filters_touch_asset:
+        total = query.count() + version_query.count()
+    else:
+        total = _total_without_asset_join(session, instance_conditions)
 
     if score_map:
         # Version-Pseudo-Einträge übernehmen den Score des Original-Assets (kein eigener
@@ -1081,7 +1131,12 @@ def _build_asset_detail_dto(
         quality=asset.quality_score,
         framing=asset.framing,
         classifications=classifications,
-        linked_entity=EntityRefDto(id=linked_entity.id, title=linked_entity.title, type=linked_entity.type)
+        linked_entity=EntityRefDto(
+            id=linked_entity.id,
+            title=linked_entity.title,
+            type=linked_entity.type,
+            completeness=linked_entity.completeness,
+        )
         if linked_entity is not None
         else None,
     )

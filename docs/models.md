@@ -501,6 +501,26 @@ Markdown-Entsprechung (Kontrakt, siehe `docs/planning/2026-07-01_p22-knowledge-e
 | `confidence` | REAL | 0.0–1.0 |
 | `status` | TEXT | frei, kann leer sein |
 | `aliases` | JSON | Liste von Alias-Strings; Suche via `cast(aliases, Text).like(...)` (kein FTS, laut Kontrakt optional) |
+| `attributes` | JSON | Merkmale gespiegelt wie im Frontmatter, `{key: {value, owner, confidence}}` (migration 0040, P38 Phase 2). Damit beantworten Listen-Ansichten den Vollständigkeits-Wert aus einem Query, statt pro Zeile eine Markdown-Datei zu öffnen |
+
+**Vollständigkeit ist keine Spalte.** Der Anteil gefüllter Merkmale wird bei jedem Ausliefern
+aus `attributes` + den Felddefinitionen der Domäne berechnet (`knowledge/service.py::completeness_for`)
+und **nie** gespeichert — ein persistierter Wert würde gegen die Markdown-Wahrheit driften
+(ADR-025/[032](decisions/032-merkmale-mit-eigenem-owner.md)).
+
+**Entity-Frontmatter, `attributes`-Block** (die Wahrheit, Markdown):
+
+```yaml
+attributes:
+  geburtstag:
+    value: "1965-04-04"
+    owner: web          # eigener Owner pro Merkmal, gleiche Priorität wie oben
+    confidence: 0.9
+```
+
+Erlaubt sind nur Keys, die die Domäne für den Entity-Typ unter `fields:` definiert — sonst
+lehnt der Validator ab. Der Block darf ganz fehlen (alle vor P38 geschriebenen Dateien);
+das ist kein Fehler und erzwingt keine Migration bestehender Vault-Dateien.
 
 **`knowledge_relationships`** — `id` PK, `entity_id` FK → `knowledge_entities.id` (Quelle, indexed), `type` TEXT, `target` TEXT (Ziel-Entity-`id`, indexed, **keine FK** — Ziel kann vor/nach der Beziehung angelegt werden).
 

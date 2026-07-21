@@ -9,8 +9,9 @@ nie eine Datenbank direkt — die kennst du an dieser Stelle ohnehin nicht.
 ## Struktur
 
 - `domains/*.yaml` — je eine Datei pro Domäne (Themenbereich). Legt fest, welche
-  Entity-Typen es gibt, in welchen Ordner sie geschrieben werden, und welche
-  Beziehungstypen erlaubt sind. Mitgeliefert: `domains/movies.yaml`.
+  Entity-Typen es gibt, in welchen Ordner sie geschrieben werden, welche
+  Beziehungstypen erlaubt sind und **welche Merkmale ein Typ hat** (`fields:` je
+  Entity-Typ, siehe unten). Mitgeliefert: `domains/movies.yaml`.
 - `<ordner>/<slug>.md` — je eine Datei pro Wissenseinheit (Entity). Der Ordnername
   kommt aus der Domänen-Datei (z.B. `movies/`, `actors/`, `characters/`).
 - `prompts/` — reserviert für später, aktuell leer.
@@ -40,6 +41,11 @@ relationships:
     target: Character/tony-stark
 sources:
   - https://example.com/quelle
+attributes:
+  geburtstag:
+    value: "1965-04-04"
+    owner: web
+    confidence: 0.9
 ---
 
 Freier Beschreibungstext (Kurzbio) kommt hier drunter.
@@ -68,6 +74,11 @@ Freier Beschreibungstext (Kurzbio) kommt hier drunter.
   nicht auf Existenz des Ziels geprüft** — ein Tippfehler im Ziel erzeugt eine
   stille Sackgasse, keinen Fehler. Prüf das Ziel selbst, bevor du speicherst.
 - `sources` — Liste aus URLs oder Freitext-Quellenangaben.
+- `attributes` — die **Merkmale** (Geburtstag, Beruf, …). Erlaubt sind nur Keys, die
+  die Domäne für diesen Typ unter `fields:` vorsieht — alles andere wird abgelehnt.
+  Jedes Merkmal hat einen **eigenen** `owner` und eine eigene `confidence`, nach
+  denselben Prioritätsregeln wie oben: ein von Hand gesetzter Wert (`user`) bleibt
+  stehen, auch wenn du dieselbe Entity anfasst. Der Block darf ganz fehlen.
 - Text unter dem Frontmatter — die Kurzbio/Beschreibung.
 
 ## Neue Domäne anlegen
@@ -79,6 +90,12 @@ name: Manga
 entity_types:
   - name: Manga
     folder: mangas
+    # Optional: die Merkmale dieses Typs. Ohne 'fields' hat der Typ keine.
+    fields:
+      - key: erscheinungsjahr
+        label: Erscheinungsjahr
+      - key: autor
+        label: Autor
   - name: MangaCharacter
     folder: manga_characters
 relationship_types:

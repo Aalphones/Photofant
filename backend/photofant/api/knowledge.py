@@ -29,6 +29,7 @@ from photofant.knowledge.service import (
     AmbiguousEntityError,
     EntityAlreadyExistsError,
     EntityNotFoundError,
+    EntityRef,
     KnowledgeService,
     Lore,
     OwnershipConflictError,
@@ -54,6 +55,14 @@ class RelationshipDto(BaseModel):
     target: str
 
 
+class AttributeDto(BaseModel):
+    """Ein Merkmal mit eigenem Owner (P38 Phase 2)."""
+
+    value: str
+    owner: str
+    confidence: float
+
+
 class EntityDto(BaseModel):
     id: str
     type: str
@@ -66,10 +75,13 @@ class EntityDto(BaseModel):
     media_links: MediaLinksDto
     relationships: list[RelationshipDto]
     sources: list[str]
+    attributes: dict[str, AttributeDto] = {}
+    # Anteil gefüllter Merkmale — immer berechnet, nie gespeichert (ADR-025/032).
+    completeness: float = 0.0
     body: str
 
     @classmethod
-    def from_entity(cls, entity: Entity) -> EntityDto:
+    def from_entity(cls, entity: Entity, completeness: float = 0.0) -> EntityDto:
         return cls(
             id=entity.id,
             type=entity.type,
@@ -87,13 +99,30 @@ class EntityDto(BaseModel):
                 for relationship in entity.relationships
             ],
             sources=list(entity.sources),
+            attributes={
+                key: AttributeDto(
+                    value=attribute.value,
+                    owner=attribute.owner.value,
+                    confidence=attribute.confidence,
+                )
+                for key, attribute in entity.attributes.items()
+            },
+            completeness=completeness,
             body=entity.body,
         )
+
+
+class FieldDefDto(BaseModel):
+    """Ein für einen Entity-Typ vorgesehenes Merkmal (Domänen-Definition, P38 Phase 2)."""
+
+    key: str
+    label: str
 
 
 class EntityTypeDto(BaseModel):
     name: str
     folder: str
+    fields: list[FieldDefDto] = []
 
 
 class DomainDto(BaseModel):
@@ -107,7 +136,14 @@ class DomainDto(BaseModel):
         return cls(
             name=domain.name,
             entity_types=[
-                EntityTypeDto(name=entity_type.name, folder=entity_type.folder)
+                EntityTypeDto(
+                    name=entity_type.name,
+                    folder=entity_type.folder,
+                    fields=[
+                        FieldDefDto(key=definition.key, label=definition.label)
+                        for definition in entity_type.fields
+                    ],
+                )
                 for entity_type in domain.entity_types.values()
             ],
             relationship_types=sorted(domain.relationship_types),
@@ -119,6 +155,9 @@ class EntityRefDto(BaseModel):
     id: str
     title: str
     type: str
+    # Aus den im Cache gespiegelten Merkmalen — die Personen-Karte und die Wissens-
+    # Übersicht zeigen den Prozentwert damit ohne zweiten Request (P38 Phase 2).
+    completeness: float = 0.0
 
 
 class ResolvedRelationshipDto(BaseModel):
@@ -146,23 +185,23 @@ class LoreDto(BaseModel):
     sources: list[str]
 
     @classmethod
-    def from_lore(cls, lore: Lore, related_media: list[MediaRefDto]) -> LoreDto:
+    def from_lore(
+        cls, lore: Lore, related_media: list[MediaRefDto], completeness: float = 0.0
+    ) -> LoreDto:
         return cls(
-            entity=EntityDto.from_entity(lore.entity) if lore.entity is not None else None,
+            entity=(
+                EntityDto.from_entity(lore.entity, completeness)
+                if lore.entity is not None
+                else None
+            ),
             relationships=[
                 ResolvedRelationshipDto(
                     type=relationship.type,
-                    target=EntityRefDto(
-                        id=relationship.target.id,
-                        title=relationship.target.title,
-                        type=relationship.target.type,
-                    ),
+                    target=_entity_ref_dto(relationship.target),
                 )
                 for relationship in lore.relationships
             ],
-            franchises=[
-                EntityRefDto(id=ref.id, title=ref.title, type=ref.type) for ref in lore.franchises
-            ],
+            franchises=[_entity_ref_dto(ref) for ref in lore.franchises],
             related_media=related_media,
             sources=list(lore.sources),
         )
@@ -281,6 +320,12 @@ def _service(session: Session, vault: Vault) -> KnowledgeService:
     return KnowledgeService(session, vault)
 
 
+def _entity_ref_dto(ref: EntityRef) -> EntityRefDto:
+    return EntityRefDto(
+        id=ref.id, title=ref.title, type=ref.type, completeness=ref.completeness
+    )
+
+
 def _parse_owner(value: str) -> Owner:
     try:
         return Owner(value)
@@ -292,7 +337,10 @@ def _parse_owner(value: str) -> Owner:
 
 
 def _search(service: KnowledgeService, q: str, type: str | None, domain: str | None) -> list[EntityDto]:
-    return [EntityDto.from_entity(entity) for entity in service.search_entities(q, type=type, domain=domain)]
+    return [
+        EntityDto.from_entity(entity, service.completeness_for(entity))
+        for entity in service.search_entities(q, type=type, domain=domain)
+    ]
 
 
 def _portrait_face_ids(session: Session, person_ids: list[int]) -> dict[int, int]:
@@ -391,7 +439,11 @@ async def get_lore_for_media(
 
     lores = service.get_lore_bundle(targets)
     return [
-        LoreDto.from_lore(lore, _resolve_media_refs(session, lore.related_media))
+        LoreDto.from_lore(
+            lore,
+            _resolve_media_refs(session, lore.related_media),
+            service.completeness_for(lore.entity) if lore.entity is not None else 0.0,
+        )
         for lore in lores
     ]
 
@@ -417,7 +469,7 @@ async def create_entity(body: CreateEntityRequest, session: DbSession, vault: Va
         raise HTTPException(status_code=409, detail=str(error)) from error
     except (ValidationError, DomainLoadError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return EntityDto.from_entity(entity)
+    return EntityDto.from_entity(entity, service.completeness_for(entity))
 
 
 @router.get("/entities", response_model=list[EntityDto])
@@ -471,7 +523,7 @@ async def create_relationship(
     from photofant.recommendation.context import assets_for_entity
 
     invalidate_recommendations(session, assets_for_entity(session, entity_id))
-    return EntityDto.from_entity(entity)
+    return EntityDto.from_entity(entity, service.completeness_for(entity))
 
 
 @router.delete("/entities/{entity_id:path}/relationships", response_model=EntityDto)
@@ -495,7 +547,7 @@ async def remove_relationship(
     from photofant.recommendation.context import assets_for_entity
 
     invalidate_recommendations(session, assets_for_entity(session, entity_id))
-    return EntityDto.from_entity(entity)
+    return EntityDto.from_entity(entity, service.completeness_for(entity))
 
 
 @router.post("/entities/{entity_id:path}/patch", response_model=PatchJobResponse)
@@ -529,7 +581,8 @@ async def get_lore(entity_id: str, session: DbSession, vault: VaultDep) -> LoreD
     except EntityNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     media_refs = _resolve_media_refs(session, lore.related_media)
-    return LoreDto.from_lore(lore, media_refs)
+    completeness = service.completeness_for(lore.entity) if lore.entity is not None else 0.0
+    return LoreDto.from_lore(lore, media_refs, completeness)
 
 
 @router.get("/entities/{entity_id:path}", response_model=EntityDto)
@@ -541,7 +594,7 @@ async def get_entity(entity_id: str, session: DbSession, vault: VaultDep) -> Ent
         raise HTTPException(status_code=409, detail=str(error)) from error
     if entity is None:
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' nicht gefunden")
-    return EntityDto.from_entity(entity)
+    return EntityDto.from_entity(entity, service.completeness_for(entity))
 
 
 @router.patch("/entities/{entity_id:path}", response_model=EntityDto)
@@ -567,7 +620,7 @@ async def update_entity(
 
     if needs_invalidation:
         invalidate_recommendations(session, before_ids | assets_for_entity(session, entity_id))
-    return EntityDto.from_entity(entity)
+    return EntityDto.from_entity(entity, service.completeness_for(entity))
 
 
 @router.delete("/entities/{entity_id:path}", status_code=204)

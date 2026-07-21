@@ -68,7 +68,12 @@ async def test_link_entity_sets_linked_entity_on_person(app_with_deps: tuple[Any
 
     assert response.status_code == 200
     body = response.json()
-    assert body["linked_entity"] == {"id": "actors/jane-doe", "title": "Jane Doe", "type": "Actor"}
+    assert body["linked_entity"] == {
+        "id": "actors/jane-doe",
+        "title": "Jane Doe",
+        "type": "Actor",
+        "completeness": 0.0,
+    }
 
 
 @pytest.mark.asyncio

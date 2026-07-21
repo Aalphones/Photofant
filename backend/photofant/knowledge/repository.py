@@ -17,7 +17,7 @@ from photofant.db.models import (
     KnowledgeRelationship,
     KnowledgeSource,
 )
-from photofant.knowledge.schema import Entity
+from photofant.knowledge.schema import Entity, attributes_to_mapping
 
 
 class EntityRepository:
@@ -43,6 +43,7 @@ class EntityRepository:
         row.confidence = entity.confidence
         row.status = entity.status
         row.aliases = list(entity.aliases)
+        row.attributes = attributes_to_mapping(entity.attributes)
 
         self._replace_children(entity)
 

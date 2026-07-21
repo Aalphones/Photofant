@@ -72,7 +72,12 @@ async def test_link_entity_sets_linked_entity_on_asset_detail(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["linked_entity"] == {"id": "movies/iron-man", "title": "Iron Man", "type": "Movie"}
+    assert body["linked_entity"] == {
+        "id": "movies/iron-man",
+        "title": "Iron Man",
+        "type": "Movie",
+        "completeness": 0.0,
+    }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         detail = await client.get("/api/assets/7")

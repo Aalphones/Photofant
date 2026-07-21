@@ -317,28 +317,55 @@ Vollständigkeit ist eine reine Ableitung und wird nie gespeichert; die Feld-Def
 in der Domänen-YAML und sind damit Nutzer-Eigentum, nicht Code.
 
 ## AK dieser Phase
-- [ ] Round-Trip verlustfrei: Entity mit drei Merkmalen (Umlaute, Doppelpunkt im Wert, ein
+- [x] Round-Trip verlustfrei: Entity mit drei Merkmalen (Umlaute, Doppelpunkt im Wert, ein
       leerer Wert) speichern → Datei lesbar → neu parsen → identisch (Aufgabe 3).
-- [ ] Eine Vault-Datei **ohne** `attributes`-Block lädt weiterhin fehlerfrei und liefert ein
+- [x] Eine Vault-Datei **ohne** `attributes`-Block lädt weiterhin fehlerfrei und liefert ein
       leeres Merkmals-Mapping (kein Migrationszwang).
-- [ ] Ein Merkmal, das für den Entity-Typ nicht definiert ist, wird von der Validierung mit
+- [x] Ein Merkmal, das für den Entity-Typ nicht definiert ist, wird von der Validierung mit
       einer verständlichen Meldung abgelehnt.
-- [ ] `set_attributes` mit `Owner.WEB` überschreibt ein `user`-Merkmal **nicht** und liefert
+- [x] `set_attributes` mit `Owner.WEB` überschreibt ein `user`-Merkmal **nicht** und liefert
       dafür eine Klartext-Meldung in der dritten Rückgabe-Liste zurück.
-- [ ] `set_attributes` ändert `entity.owner` nicht.
-- [ ] `completeness_for` liefert für einen Typ mit 5 definierten und 2 gefüllten Merkmalen
-      exakt `0.4`; für einen Typ ohne definierte Merkmale `0.0`.
-- [ ] `GET /api/knowledge/entities` liefert `attributes` und `completeness` mit; `GET
+- [x] `set_attributes` ändert `entity.owner` nicht.
+- [x] `completeness_for` liefert für einen Typ mit 5 definierten und 2 gefüllten Merkmalen
+      exakt `0.4`; für einen Typ ohne definierte Merkmale `0.0`. *(als 2/3 bzw. 0.0 gegen die
+      mitgelieferte Movies-Domäne geprüft — dieselbe Rechnung.)*
+- [x] `GET /api/knowledge/entities` liefert `attributes` und `completeness` mit; `GET
       /api/knowledge/domains` liefert `fields` je Entity-Typ.
-- [ ] `npx tsc --noEmit` im Frontend grün, `ruff` + `mypy` im Backend ohne neue Fehler.
+- [x] `npx tsc --noEmit` im Frontend grün, `ruff` + `mypy` im Backend ohne neue Fehler.
 
 ## Doc-Updates
-- [ ] `docs/models.md` — `attributes`-Block im Entity-Frontmatter dokumentieren (Struktur +
+- [x] `docs/models.md` — `attributes`-Block im Entity-Frontmatter dokumentieren (Struktur +
       dass `completeness` berechnet und nie gespeichert ist).
-- [ ] `docs/routes.md` — `EntityDto`/`DomainDto`/`EntityRefDto` um die neuen Felder ergänzen.
-- [ ] `docs/glossary.md` — Einträge „Merkmal" (Feld mit eigenem Owner) und „Vollständigkeit"
+- [x] `docs/routes.md` — `EntityDto`/`DomainDto`/`EntityRefDto` um die neuen Felder ergänzen.
+- [x] `docs/glossary.md` — Einträge „Merkmal" (Feld mit eigenem Owner) und „Vollständigkeit"
       (berechneter Anteil gefüllter Merkmale) aufnehmen.
-- [ ] `docs/code-map.md` — Wissens-Zeile um `knowledge/domains.py::FieldDef` +
+- [x] `docs/code-map.md` — Wissens-Zeile um `knowledge/domains.py::FieldDef` +
       `service.completeness_for/set_attributes` ergänzen.
 
 ## Report-Back
+
+**Status:** complete (2026-07-21).
+
+**Abweichung vom Plan — Merkmale liegen zusätzlich im Cache.** Der Plan wollte
+`EntityRefDto.completeness` „ohne Extra-Request". Die Cache-Zeile trug die Merkmale aber nicht,
+also hätte die Personen-Liste pro Zeile eine Markdown-Datei öffnen müssen — genau das, was der
+Kommentar an `EntityRef` seit P24 ausdrücklich vermeidet (die Liste ist unpaginiert). Deshalb
+neu: `knowledge_entities.attributes` als JSON-Spiegel (migration 0040), gleiche Form wie im
+Frontmatter, geschrieben in `upsert_from_vault` wie die Aliase. ADR-025 bleibt gewahrt: das ist
+Spiegelung, kein neuer Wahrheitsort, und der Prozentwert selbst wird weiterhin nirgends
+gespeichert. Mit-Effekt: Phase 4 kann `missing_field`/`low_completeness` aus einem Query bauen.
+
+**Zwei kleine Zugaben, die der Plan nicht nannte:**
+- `attributes_to_mapping()` in `schema.py` — Frontmatter- und Cache-Schreibweg hatten sonst
+  dieselbe Mapping-Form doppelt im Code stehen.
+- `KnowledgeService._domain()`-Memo: der Lesepfad lud die Domänen-YAML pro Entity neu, bei der
+  Entity-Liste also einmal je Zeile. Der Plan forderte „eine Domänen-Ladung pro Request" — das
+  ist die Umsetzung, sie repariert nebenbei einen Altbestand-Fall.
+
+**Tests:** neue `backend/tests/test_knowledge_attributes.py` (10 Tests, grün) deckt Round-Trip,
+Validierung, Ownership pro Merkmal und die Vollständigkeit ab. Drei bestehende Tests mussten die
+gewachsenen DTOs nachziehen (`completeness` in den Ref-Vergleichen) — keine Assertion gelockert.
+
+**Gates:** ruff auf allen geänderten Dateien grün, mypy ohne neue Fehler, Frontend-Lint und
+-Build grün. Gesamt-Suite 397 grün / 13 rot — alle 13 auf dem unveränderten Stand ebenfalls rot
+(siehe Vorbelastung in STATE.md).

@@ -2,10 +2,12 @@
 
 Jede Mutation läuft **Markdown-first**: erst der Vault (Wahrheit), dann der Cache
 (``EntityRepository.upsert_from_vault``). Die Ownership-Regel (``owner_can_overwrite``)
-ist entity-weit (ein ``owner``-Feld pro Entity, kein Per-Feld-Owner) — ein Schreibzugriff
+greift auf zwei Ebenen: **entity-weit** für alle klassischen Schreibpfade (ein Schreibzugriff
 mit niedrigerer Priorität als der bestehende ``owner`` wird komplett abgelehnt, ein
-erfolgreicher Schreibzugriff macht den Schreiber zum neuen ``owner``. ``Owner.USER``
-erzwingt dabei immer ``confidence = 1.0`` (Kontrakt).
+erfolgreicher macht den Schreiber zum neuen ``owner``; ``Owner.USER`` erzwingt dabei immer
+``confidence = 1.0``) und **pro Merkmal** in ``set_attributes`` (P38 Phase 2) — dort wird
+jedes Merkmal einzeln gegen seinen eigenen Owner geprüft und die Entity-Ownership bleibt
+unverändert.
 
 Ambiguitäts-Entscheidung (offen laut Phase-2-FINDINGS): ``find_entity`` löst mehrdeutige
 Alias-Treffer **nicht** stillschweigend auf (erstes Ergebnis wäre eine stille Falschauswahl
@@ -21,9 +23,16 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from photofant.db.models import KnowledgeEntity, KnowledgeRelationship
-from photofant.knowledge.domains import Domain
+from photofant.knowledge.domains import Domain, DomainLoadError, FieldDef
 from photofant.knowledge.repository import EntityRepository, RelationshipRepository
-from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship, owner_can_overwrite
+from photofant.knowledge.schema import (
+    Attribute,
+    Entity,
+    MediaLinks,
+    Owner,
+    Relationship,
+    owner_can_overwrite,
+)
 from photofant.knowledge.tasks import TaskKind, TaskService
 from photofant.knowledge.validator import ValidationError, validate_entity
 from photofant.knowledge.vault import Vault
@@ -58,11 +67,14 @@ class EntityRef:
 
     Bewusst kein voller ``Entity``-Load (kein Vault-Read): die Personen-/Asset-Liste
     braucht nur ``id``/``title``/``type`` für den Chip, nicht den ganzen Markdown-Body.
+    ``completeness`` kommt deshalb aus den im Cache gespiegelten Merkmalen (P38 Phase 2),
+    nicht aus der Markdown-Datei — sonst öffnete die Personen-Liste pro Zeile eine Datei.
     """
 
     id: str
     title: str
     type: str
+    completeness: float = 0.0
 
 
 @dataclass
@@ -100,6 +112,7 @@ class KnowledgeService:
         self.vault = vault
         self.entities = EntityRepository(session)
         self.relationships = RelationshipRepository(session)
+        self._domains: dict[str, Domain] = {}
 
     def create_entity(self, entity: Entity, owner: Owner) -> Entity:
         if self.entities.get(entity.id) is not None:
@@ -164,6 +177,63 @@ class KnowledgeService:
         self.vault.save_entity(entity, domain)
         self.entities.upsert_from_vault(entity)
         return entity
+
+    def completeness_for(self, entity: Entity, domain: Domain | None = None) -> float:
+        """Anteil gefüllter Merkmale an den für den Typ definierten.
+
+        Immer berechnet, nie gespeichert — ein persistierter Wert würde gegen die
+        Markdown-Wahrheit driften (ADR-025). ``domain`` darf entfallen; dann wird sie
+        über den Domänen-Memo dieses Service geholt.
+        """
+        resolved_domain = domain if domain is not None else self._domain(entity.domain)
+        filled_keys = {
+            key for key, attribute in entity.attributes.items() if attribute.value.strip()
+        }
+        return _completeness(filled_keys, resolved_domain.fields_for(entity.type))
+
+    def set_attributes(
+        self, entity_id: str, attributes: dict[str, Attribute], owner: Owner
+    ) -> tuple[Entity, list[str], list[str]]:
+        """Schreibt Merkmale einzeln, jedes gegen seinen eigenen bisherigen Owner geprüft.
+
+        Rückgabe: (gespeicherte Entity, geschriebene Keys, Meldungen zu übersprungenen Keys).
+        Übersprungen wird still im Sinne von „kein Fehler" — aber nie stumm: jeder
+        übersprungene Key kommt als Klartext-Meldung zurück und landet in der Oberfläche.
+
+        Bewusst **nicht** über ``update_entity``: dessen Ownership-Prüfung arbeitet auf
+        Entity-Ebene und würde ein einzelnes ``user``-Merkmal von einem ``web``-Lauf
+        mitreißen. Aus demselben Grund bleibt ``entity.owner`` hier unangetastet — ein
+        Merkmals-Schreiben ändert nicht die Ownership der ganzen Einheit.
+
+        Changelog-Einträge schreibt der Aufrufer, nicht diese Methode: ``job_id`` und
+        Begründung kommen von dort, wie bei den übrigen Schreibpfaden auch.
+        """
+        entity = self._require_entity(entity_id)
+        domain = self.vault.load_domain(entity.domain)
+        labels = {
+            definition.key: definition.label for definition in domain.fields_for(entity.type)
+        }
+
+        written_keys: list[str] = []
+        skipped_messages: list[str] = []
+        for key, attribute in attributes.items():
+            existing = entity.attributes.get(key)
+            if existing is not None and not owner_can_overwrite(owner, existing.owner):
+                skipped_messages.append(_skip_message(labels.get(key, key), existing.owner))
+                continue
+            # Leerer Wert heißt „nicht gesetzt" — Key raus, statt die Datei mit
+            # Leerzeilen zuwachsen zu lassen.
+            if not attribute.value.strip():
+                if entity.attributes.pop(key, None) is not None:
+                    written_keys.append(key)
+                continue
+            entity.attributes[key] = attribute
+            written_keys.append(key)
+
+        self._validate(entity, domain)
+        self.vault.save_entity(entity, domain)
+        self.entities.upsert_from_vault(entity)
+        return entity, written_keys, skipped_messages
 
     def validate_patch(self, entity_id: str, patch: dict[str, Any]) -> list[str]:
         """Dry-run: prüft ein vorgeschlagenes Patch gegen die Domäne, ohne zu schreiben.
@@ -279,7 +349,12 @@ class KnowledgeService:
         """Bulk-Variante von ``linked_entity_ref`` — ein Query für eine ganze Listen-Ansicht."""
         rows = self.entities.find_linked_entities(kind, target_ids)
         return {
-            target_id: EntityRef(id=row.id, title=row.title, type=row.type)
+            target_id: EntityRef(
+                id=row.id,
+                title=row.title,
+                type=row.type,
+                completeness=self._completeness_from_cache(row),
+            )
             for target_id, row in rows.items()
         }
 
@@ -342,7 +417,12 @@ class KnowledgeService:
         for row in rows:
             target_row = targets.get(row.target)
             if target_row is not None:
-                ref = EntityRef(id=target_row.id, title=target_row.title, type=target_row.type)
+                ref = EntityRef(
+                    id=target_row.id,
+                    title=target_row.title,
+                    type=target_row.type,
+                    completeness=self._completeness_from_cache(target_row),
+                )
             else:
                 ref = EntityRef(id=row.target, title=row.target, type="")
             resolved.append(ResolvedRelationship(type=row.type, target=ref))
@@ -367,10 +447,55 @@ class KnowledgeService:
 
     def _load_from_cache_row(self, row: KnowledgeEntity) -> Entity:
         """Liest die volle Entity (inkl. Body) aus dem Vault — der Cache liefert nur den Pfad."""
-        domain = self.vault.load_domain(row.domain)
+        domain = self._domain(row.domain)
         placeholder = Entity(id=row.id, type=row.type, title=row.title, domain=row.domain)
         path = self.vault.entity_path(placeholder, domain)
         return self.vault.load_entity(path)
+
+    def _domain(self, domain_name: str) -> Domain:
+        """Domäne mit Memo über die Lebensdauer dieses Service (ein Request bzw. ein Job-Lauf).
+
+        Der Lesepfad braucht die Domäne pro Entity — ohne Memo liest eine Listen-Ansicht
+        dieselbe YAML einmal je Zeile. Schreibpfade laden bewusst weiter direkt über
+        ``vault.load_domain``, damit eine Mutation nie gegen eine veraltete Definition prüft.
+        """
+        cached = self._domains.get(domain_name)
+        if cached is None:
+            cached = self.vault.load_domain(domain_name)
+            self._domains[domain_name] = cached
+        return cached
+
+    def _completeness_from_cache(self, row: KnowledgeEntity) -> float:
+        """Vollständigkeit direkt aus der Cache-Zeile — ohne die Markdown-Datei zu öffnen.
+
+        Eine defekte/fehlende Domänen-Datei liefert 0.0 statt einer Ausnahme: die Aufrufer
+        sind Listen-Ansichten, die wegen eines Tippfehlers in der Domäne nicht ausfallen sollen.
+        """
+        try:
+            domain = self._domain(row.domain)
+        except DomainLoadError:
+            return 0.0
+        filled_keys = {
+            key
+            for key, raw in (row.attributes or {}).items()
+            if isinstance(raw, dict) and str(raw.get("value", "")).strip()
+        }
+        return _completeness(filled_keys, domain.fields_for(row.type))
+
+
+def _completeness(filled_keys: set[str], defined: tuple[FieldDef, ...]) -> float:
+    """Gefüllte durch definierte Merkmale. Kein definiertes Merkmal → 0.0 (nicht 1.0):
+    „nichts vorgesehen" ist kein vollständiges Profil, sondern ein unkonfigurierter Typ."""
+    if not defined:
+        return 0.0
+    return sum(1 for definition in defined if definition.key in filled_keys) / len(defined)
+
+
+def _skip_message(label: str, existing_owner: Owner) -> str:
+    """Klartext, warum ein Merkmal nicht überschrieben wurde — landet unverändert in der UI."""
+    if existing_owner in (Owner.USER, Owner.MANUAL):
+        return f"'{label}' bleibt unverändert — der Wert stammt von dir"
+    return f"'{label}' bleibt unverändert"
 
 
 def _apply_patch(entity: Entity, patch: dict[str, Any]) -> None:

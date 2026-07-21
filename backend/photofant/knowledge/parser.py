@@ -10,7 +10,14 @@ from typing import Any
 
 import frontmatter
 
-from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship
+from photofant.knowledge.schema import (
+    Attribute,
+    Entity,
+    MediaLinks,
+    Owner,
+    Relationship,
+    attributes_to_mapping,
+)
 
 # Feldreihenfolge im serialisierten Frontmatter — bewusst festgelegt für lesbare,
 # stabile Dateien (Kontrakt-Reihenfolge aus der Plan-README).
@@ -26,6 +33,7 @@ _FIELD_ORDER: tuple[str, ...] = (
     "media_links",
     "relationships",
     "sources",
+    "attributes",
 )
 
 
@@ -59,6 +67,7 @@ def entity_to_metadata(entity: Entity) -> dict[str, Any]:
             for relationship in entity.relationships
         ],
         "sources": list(entity.sources),
+        "attributes": attributes_to_mapping(entity.attributes),
     }
 
 
@@ -80,6 +89,7 @@ def metadata_to_entity(meta: dict[str, Any], body: str) -> Entity:
         media_links=_as_media_links(meta.get("media_links")),
         relationships=_as_relationships(meta.get("relationships")),
         sources=[_as_str(source) for source in _as_list(meta.get("sources"))],
+        attributes=_as_attributes(meta.get("attributes")),
         body=body,
     )
 
@@ -131,6 +141,26 @@ def _as_media_links(value: Any) -> MediaLinks:
         persons=[_as_int(person) for person in _as_list(value.get("persons"))],
         assets=[_as_int(asset) for asset in _as_list(value.get("assets"))],
     )
+
+
+def _as_attributes(value: Any) -> dict[str, Attribute]:
+    """Liest den ``attributes``-Block.
+
+    Fehlt er komplett (alle vor P38 geschriebenen Dateien), ist das kein Fehler —
+    leeres Mapping, kein Migrationszwang.
+    """
+    if not isinstance(value, dict):
+        return {}
+    attributes: dict[str, Attribute] = {}
+    for key, raw in value.items():
+        if not isinstance(raw, dict):
+            raise EntityParseError(f"Merkmal '{key}' ist kein Mapping: {raw!r}")
+        attributes[str(key)] = Attribute(
+            value=_as_str(raw.get("value")),
+            owner=_as_owner(raw.get("owner", Owner.INFERRED.value)),
+            confidence=_as_confidence(raw.get("confidence", 1.0)),
+        )
+    return attributes
 
 
 def _as_int(value: Any) -> int:

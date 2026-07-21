@@ -13,7 +13,7 @@
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | Fundament — Web-Suche, Capability, Einstellung, ADR-031 | heikel | ✅ complete |
-| 2 | Merkmale + Vollständigkeit (Schema, Felddefinitionen, ADR-032) | heikel | pending |
+| 2 | Merkmale + Vollständigkeit (Schema, Felddefinitionen, ADR-032) | heikel | ✅ complete |
 | 3 | KnowledgeDiscoveryJob — Suche → Gemma → Fakten-**Vorschläge** | heikel | pending |
 | 4 | Routen + Guards + neue Aufgaben-Arten | standard | pending |
 | 5 | Wissen-Übersicht nach Design | standard | pending |
@@ -140,6 +140,11 @@ completeness: number;
 **Vollständigkeit** = Anzahl der Merkmale mit nicht-leerem Wert geteilt durch Anzahl der für den
 Typ definierten Merkmale. Kein definiertes Merkmal → `0.0`. Wird bei jedem Ausliefern berechnet,
 **nie** persistiert (sonst driftet sie gegen die Markdown-Wahrheit, ADR-025).
+
+Die **Merkmale selbst** liegen zusätzlich in der Cache-Spalte `knowledge_entities.attributes`
+(JSON, gleiche Form wie im Frontmatter, migration 0040 — Phase 2). Reine Spiegelung wie die
+Aliase, damit Listen-Ansichten den Prozentwert liefern können, ohne pro Zeile eine Markdown-Datei
+zu öffnen. Der Prozentwert selbst bleibt draußen.
 
 ### Web-Recherche (Phase 3/4)
 - **Neue Capability:** `Capability.KNOWLEDGE_DISCOVERY = "knowledge_discovery"`.

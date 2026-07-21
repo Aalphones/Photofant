@@ -36,6 +36,11 @@ class Person(Base):
 
 class Asset(Base):
     __tablename__ = "asset"
+    __table_args__ = (
+        # Sortier-Index der Galerie (Migration 0041). Muss den Ausdruck tragen, nicht
+        # die nackte Spalte — `ix_asset_created_at` greift bei `coalesce(...)` nicht.
+        Index("ix_asset_sort_date", text("coalesce(created_at, imported_at) DESC")),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     content_hash: Mapped[str] = mapped_column(Text, unique=True, nullable=False, index=True)
@@ -301,6 +306,12 @@ class KnowledgeEntity(Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False, server_default="1.0")
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     aliases: Mapped[list[str]] = mapped_column(JSON, nullable=False, server_default="[]")  # type: ignore[type-arg]
+    # Merkmale gespiegelt wie im Frontmatter ({key: {value, owner, confidence}}, P38 Phase 2).
+    # Liegt im Cache, damit Listen-Ansichten den Vollständigkeits-Wert und fehlende Felder
+    # aus einem Query beantworten können, statt pro Zeile eine Markdown-Datei zu öffnen.
+    attributes: Mapped[dict[str, dict[str, object]]] = mapped_column(
+        JSON, nullable=False, server_default="{}"
+    )
 
 
 class KnowledgeRelationship(Base):

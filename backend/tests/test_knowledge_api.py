@@ -256,7 +256,15 @@ async def test_relationship_lifecycle_and_lore(app_with_deps: tuple[Any, Session
     lore_body = lore.json()
     assert lore_body["entity"]["id"] == "actors/robert-downey-jr"
     assert lore_body["relationships"] == [
-        {"type": "plays", "target": {"id": "movies/iron-man", "title": "Iron Man", "type": "Movie"}}
+        {
+            "type": "plays",
+            "target": {
+                "id": "movies/iron-man",
+                "title": "Iron Man",
+                "type": "Movie",
+                "completeness": 0.0,
+            },
+        }
     ]
     assert lore_body["franchises"] == []
     assert lore_body["related_media"] == []

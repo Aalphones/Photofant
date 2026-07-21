@@ -6,13 +6,29 @@ name: Movies
 
 # Jeder Entity-Typ: 'name' steht im Frontmatter (type:), 'folder' ist der Ordner
 # (Plural) unter der Vault-Wurzel. Kein automatisches Pluralisieren — explizit.
+# 'fields' (optional) sind die Merkmale des Typs; ohne Block hat der Typ keine —
+# ein gültiger Zustand, dann bleibt sein Vollständigkeits-Wert bei 0.
 entity_types:
   - name: Movie
     folder: movies
+    fields:
+      - key: erscheinungsjahr
+        label: Erscheinungsjahr
+      - key: regie
+        label: Regie
+      - key: laufzeit
+        label: Laufzeit
   - name: Series
     folder: series
   - name: Actor
     folder: actors
+    fields:
+      - key: geburtstag
+        label: Geburtstag
+      - key: geburtsort
+        label: Geburtsort
+      - key: taetigkeit
+        label: Tätigkeit
   - name: Character
     folder: characters
   - name: Franchise

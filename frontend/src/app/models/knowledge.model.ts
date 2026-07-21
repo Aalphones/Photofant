@@ -11,6 +11,20 @@ export interface Relationship {
   target: string;
 }
 
+// P38 Phase 2 — ein Merkmal (Geburtstag, Beruf, …) mit eigenem Owner. Der Owner sitzt
+// bewusst pro Merkmal: ein selbst gepflegter Wert überlebt eine Web-Recherche.
+export interface AttributeDto {
+  value: string;
+  owner: Owner;
+  confidence: number;
+}
+
+// P38 Phase 2 — die für einen Entity-Typ vorgesehenen Merkmale (kommen aus der Domänen-Datei).
+export interface EntityFieldDefDto {
+  key: string;
+  label: string;
+}
+
 export interface EntityDto {
   id: string;
   type: string;
@@ -23,6 +37,9 @@ export interface EntityDto {
   media_links: MediaLinks;
   relationships: Relationship[];
   sources: string[];
+  attributes: Record<string, AttributeDto>;
+  // Anteil gefüllter Merkmale (0..1) — vom Backend berechnet, nie gespeichert.
+  completeness: number;
   body: string;
 }
 
@@ -58,6 +75,9 @@ export interface EntityRefDto {
   id: string;
   title: string;
   type: string;
+  // P38 Phase 2 — Anteil gefüllter Merkmale (0..1), damit Personen-Karte und Übersicht
+  // den Prozentwert ohne zweiten Request zeigen können.
+  completeness: number;
 }
 
 // P25 Phase 1 — Beziehung mit aufgelöstem Ziel (Titel/Typ statt roher id).
@@ -87,6 +107,8 @@ export interface LoreDto {
 export interface EntityType {
   name: string;
   folder: string;
+  // P38 Phase 2 — welche Merkmale dieser Typ vorsieht. Leer ist gültig (Typ ohne Merkmale).
+  fields: EntityFieldDefDto[];
 }
 
 export interface DomainDto {

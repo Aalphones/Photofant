@@ -28,6 +28,7 @@ def validate_metadata(meta: dict[str, Any], domain: Domain) -> list[str]:
     _check_owner(meta, errors)
     _check_confidence(meta, errors)
     _check_relationships(meta, domain, errors)
+    _check_attributes(meta, domain, errors)
     return errors
 
 
@@ -82,6 +83,51 @@ def _check_confidence(meta: dict[str, Any], errors: list[str]) -> None:
         errors.append(f"'confidence' muss eine Zahl sein, war {confidence!r}")
     elif not 0.0 <= confidence <= 1.0:
         errors.append(f"'confidence' muss zwischen 0.0 und 1.0 liegen, war {confidence}")
+
+
+def _check_attributes(meta: dict[str, Any], domain: Domain, errors: list[str]) -> None:
+    """Merkmale müssen für den Entity-Typ definiert sein — sonst wächst über KI-Läufe
+    ein wildes Feld-Sammelsurium heran, das keine Oberfläche mehr anzeigen kann."""
+    attributes = meta.get("attributes")
+    if attributes is None:
+        return
+    if not isinstance(attributes, dict):
+        errors.append("'attributes' muss ein Mapping sein")
+        return
+
+    type_name = meta.get("type")
+    defined_keys = (
+        {definition.key for definition in domain.fields_for(type_name)}
+        if isinstance(type_name, str)
+        else set()
+    )
+    for key, raw in attributes.items():
+        if key not in defined_keys:
+            errors.append(f"Merkmal '{key}' ist für Typ '{type_name}' nicht definiert")
+        if not isinstance(raw, dict):
+            errors.append(f"Merkmal '{key}' muss ein Mapping sein, war {raw!r}")
+            continue
+        _check_attribute_owner(key, raw.get("owner"), errors)
+        _check_attribute_confidence(key, raw.get("confidence"), errors)
+
+
+def _check_attribute_owner(key: str, owner: Any, errors: list[str]) -> None:
+    if owner is None:
+        return
+    if not isinstance(owner, str) or owner not in _KNOWN_OWNERS:
+        allowed = ", ".join(sorted(_KNOWN_OWNERS))
+        errors.append(f"Merkmal '{key}': unbekannter Owner '{owner}' (erlaubt: {allowed})")
+
+
+def _check_attribute_confidence(key: str, confidence: Any, errors: list[str]) -> None:
+    if confidence is None:
+        return
+    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+        errors.append(f"Merkmal '{key}': 'confidence' muss eine Zahl sein, war {confidence!r}")
+    elif not 0.0 <= confidence <= 1.0:
+        errors.append(
+            f"Merkmal '{key}': 'confidence' muss zwischen 0.0 und 1.0 liegen, war {confidence}"
+        )
 
 
 def _check_relationships(meta: dict[str, Any], domain: Domain, errors: list[str]) -> None:

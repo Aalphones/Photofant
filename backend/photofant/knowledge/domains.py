@@ -18,11 +18,23 @@ class DomainLoadError(ValueError):
 
 
 @dataclass(frozen=True)
+class FieldDef:
+    """Ein für einen Entity-Typ vorgesehenes Merkmal.
+
+    ``key`` steht im Frontmatter, ``label`` ist der Anzeigename in der Oberfläche.
+    """
+
+    key: str
+    label: str
+
+
+@dataclass(frozen=True)
 class EntityType:
-    """Ein Entity-Typ: Anzeigename im Frontmatter + Ordner im Vault."""
+    """Ein Entity-Typ: Anzeigename im Frontmatter + Ordner im Vault + Merkmals-Felder."""
 
     name: str
     folder: str
+    fields: tuple[FieldDef, ...] = ()
 
 
 @dataclass
@@ -55,6 +67,15 @@ class Domain:
                 f"Entity-Typ '{type_name}' ist in Domäne '{self.name}' nicht definiert"
             )
         return entity_type.folder
+
+    def fields_for(self, type_name: str) -> tuple[FieldDef, ...]:
+        """Die Merkmals-Definitionen eines Entity-Typs.
+
+        Unbekannter Typ → leeres Tupel (keine Ausnahme — Aufrufer sind Anzeige-Pfade,
+        die nicht wegen eines Tippfehlers in der Domänen-Datei umfallen sollen).
+        """
+        entity_type = self.entity_types.get(type_name)
+        return entity_type.fields if entity_type is not None else ()
 
 
 def load_domain(path: Path) -> Domain:
@@ -110,8 +131,36 @@ def _parse_entity_types(raw: Any, path: Path) -> dict[str, EntityType]:
             raise DomainLoadError(f"'entity_types'-Eintrag ohne 'name': {entry!r} in {path}")
         if not isinstance(folder, str) or not folder:
             raise DomainLoadError(f"Entity-Typ '{type_name}' ohne 'folder' in {path}")
-        entity_types[type_name] = EntityType(name=type_name, folder=folder)
+        entity_types[type_name] = EntityType(
+            name=type_name, folder=folder, fields=_parse_fields(entry.get("fields"), path)
+        )
     return entity_types
+
+
+def _parse_fields(raw: Any, path: Path) -> tuple[FieldDef, ...]:
+    """Optionaler ``fields``-Block eines Entity-Typs.
+
+    Fehlt er, hat der Typ keine Merkmale — das ist ein gültiger Zustand (bestehende
+    Domänen-Dateien bleiben ohne Migration lesbar), nur die Vollständigkeit ist dann
+    für ihn immer 0.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise DomainLoadError(f"'fields' muss eine Liste sein: {raw!r} in {path}")
+
+    fields: list[FieldDef] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            raise DomainLoadError(f"'fields'-Eintrag ist kein Mapping: {entry!r} in {path}")
+        key = entry.get("key")
+        if not isinstance(key, str) or not key:
+            raise DomainLoadError(f"'fields'-Eintrag ohne 'key': {entry!r} in {path}")
+        label = entry.get("label")
+        if not isinstance(label, str) or not label:
+            label = key
+        fields.append(FieldDef(key=key, label=label))
+    return tuple(fields)
 
 
 def _parse_relationship_types(raw: Any, path: Path) -> frozenset[str]:

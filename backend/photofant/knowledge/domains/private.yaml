@@ -8,11 +8,31 @@ name: Private
 private: true
 
 # 'name' steht im Frontmatter (type:), 'folder' ist der Ordner (Plural) im Vault.
+# 'fields' sind die Merkmale des Typs: Was hier steht, zeigt die App als eigene Zeile
+# mit Wert und Herkunft an — und daraus errechnet sich der Vollständigkeits-Wert.
 entity_types:
   - name: Person
     folder: people
+    fields:
+      - key: geburtstag
+        label: Geburtstag
+      - key: beruf
+        label: Beruf
+      - key: wohnort
+        label: Wohnort
+      - key: vorlieben
+        label: Vorlieben
+      - key: beziehung
+        label: Beziehungsstatus
   - name: Pet
     folder: pets
+    fields:
+      - key: art
+        label: Art
+      - key: geburtstag
+        label: Geburtstag
+      - key: eigenheiten
+        label: Eigenheiten
 
 # Beziehungstypen für den privaten Kreis. Der Knowledge Graph wird ausschließlich
 # aus diesen Beziehungen erzeugt.

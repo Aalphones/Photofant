@@ -50,6 +50,9 @@ class EntityRefDto(BaseModel):
     id: str
     title: str
     type: str
+    # Anteil gefüllter Merkmale (0..1) — die Personen-Karte zeigt daraus ihren
+    # Prozentwert, ohne das Wissen nachladen zu müssen (P38 Phase 2).
+    completeness: float = 0.0
 
 
 class PersonDto(BaseModel):
@@ -152,7 +155,12 @@ def _build_person_dto(session: Session, person: Person, vault: Vault) -> PersonD
         portrait_face_id=portrait_face.id if portrait_face is not None else None,
         group_name=person.group_name,
         created_at=person.created_at,
-        linked_entity=EntityRefDto(id=linked_entity.id, title=linked_entity.title, type=linked_entity.type)
+        linked_entity=EntityRefDto(
+            id=linked_entity.id,
+            title=linked_entity.title,
+            type=linked_entity.type,
+            completeness=linked_entity.completeness,
+        )
         if linked_entity is not None
         else None,
     )
@@ -242,7 +250,9 @@ async def list_persons(session: DbSession, vault: VaultDep) -> list[PersonDto]:
             group_name=person.group_name,
             created_at=person.created_at,
             linked_entity=(
-                EntityRefDto(id=ref.id, title=ref.title, type=ref.type)
+                EntityRefDto(
+                    id=ref.id, title=ref.title, type=ref.type, completeness=ref.completeness
+                )
                 if (ref := linked_entities.get(person.id)) is not None
                 else None
             ),
