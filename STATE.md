@@ -1,10 +1,30 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-20_p38-gemma-web-discovery/`
-**Phase:** 3/8 — KnowledgeDiscoveryJob (Suche → Gemma → Fakten-Vorschläge) — pending
-**Nächster Schritt:** `phase-3-*.md` lesen und umsetzen; der Wackelpunkt ist der Parser-Test
-(5-10 echte Läufe, Trefferquote protokollieren, bevor Phase 4 draufbaut). Phase 3 ist **heikel**
-→ `/model opusplan` empfohlen.
+**Phase:** 3/8 — KnowledgeDiscoveryJob — 🟡 Code+Tests fertig, zwei AK-Punkte blockiert
+**Nächster Schritt:** 🔴 Entscheidung nötig, bevor Phase 4 startet — siehe „Phase 3 blockiert"
+unten. Kurzfassung: `gemma-3-12b-obliterated-gguf` ist auf dieser Maschine nicht gebunden, der
+echte Job-Lauf + Parser-Trefferquote-Test (Konfidenz-Ausweis README Punkt 1) kann daher nicht
+laufen. Modell binden und Check nachholen, oder Phase 4 auf eigenes Risiko ohne diesen Check
+starten.
+
+## Phase 3 blockiert (KnowledgeDiscoveryJob — Code fertig, Live-Check aussteht)
+
+`jobs/knowledge_discovery_job.py` + `knowledge/slug.py` stehen, `ruff`/`mypy` grün, 23 neue
+gemockte Tests grün (`test_knowledge_discovery_job.py`, `test_knowledge_slug.py`). Zwei AK
+bleiben offen, weil kein Gemma-Modell auf dieser Maschine registriert ist
+(`resolve_generator(Capability.KNOWLEDGE_DISCOVERY)` → `None`): der echte Job-Lauf gegen eine
+reale öffentliche Person und das Parser-Trefferquote-Protokoll (5-10 Läufe). Details + Tabelle
+zum Ausfüllen: `phase-3-discovery-job.md` → „Report-Back".
+
+**Nebenbefund (User-Entscheidung vor Phase 4):** Die Domäne „Personen" (echte private
+Kontakte, z. B. `Person/anna-lieb`) ist nicht `private: true` markiert — anders als die
+separate Domäne „Private". Sobald Phase 4 die Route freischaltet, wäre Web-Recherche auf
+diesen echten Kontakten technisch erlaubt. Klären, ob das gewollt ist.
+
+**Neu, nicht im ursprünglichen Plan-Codeblock:** `PrivateDomainError` in `knowledge/service.py`
+(Phase 4 muss sie zu 422 fangen); `DiscoveryOutput` trägt zusätzlich ein `errors`-Feld
+(Parser-Hinweise wie „N Zeile(n) konnten nicht gelesen werden").
 
 ## Phase 2 erledigt (Merkmale + Vollständigkeit)
 

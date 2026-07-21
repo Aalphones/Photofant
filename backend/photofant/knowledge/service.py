@@ -61,6 +61,14 @@ class AmbiguousEntityError(ValueError):
     """Mehrere Entities matchen denselben Alias — keine automatische Auflösung."""
 
 
+class PrivateDomainError(PermissionError):
+    """Web-Recherche gegen eine privat markierte Domäne (Konzept-ADR-009).
+
+    Verteidigung in der Tiefe: die API-Route (P38 Phase 4) blockt bereits mit 422,
+    diese Ausnahme fängt den Fall auch dann ab, wenn der Job direkt aufgerufen wird.
+    """
+
+
 @dataclass
 class EntityRef:
     """Schlanke Cache-Projektion einer Entity — für ``linked_entity`` auf Person-/Asset-DTOs.

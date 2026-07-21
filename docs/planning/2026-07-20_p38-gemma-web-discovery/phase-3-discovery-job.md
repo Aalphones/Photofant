@@ -206,20 +206,60 @@ Enthält, jeweils eine Zeile bzw. ein Block:
 - Abschlusssatz: `"Nenne nur Fakten, die durch die Snippets gedeckt sind."`
 
 ## AK dieser Phase
-- [ ] `enqueue_knowledge_discovery(<echte öffentliche Test-Entity>)` läuft durch: Job-Status
+- [ ] 🔴 **Blockiert (kein Modell auf dieser Maschine gebunden):**
+      `enqueue_knowledge_discovery(<echte öffentliche Test-Entity>)` läuft durch: Job-Status
       `done`, `result.facts` enthält mindestens einen Eintrag **oder** `result.errors` erklärt
       nachvollziehbar warum nicht.
-- [ ] Nach dem Lauf ist die Entity **unverändert** — Datei-Zeitstempel und Inhalt gleich wie
+- [x] Nach dem Lauf ist die Entity **unverändert** — Datei-Zeitstempel und Inhalt gleich wie
       vorher. (Der Job schreibt nichts; das ist der Kernunterschied zum ursprünglichen Entwurf.)
-- [ ] Jeder gelieferte Fakt hat entweder einen echten Merkmals-Key der Domäne oder `"body"` —
-      nie einen erfundenen Feldnamen.
-- [ ] Ein bewusst kaputter Modell-Output (Text ohne Marker, manuell simuliert) liefert ein
-      leeres `DiscoveryOutput`, keinen Crash.
-- [ ] Parser-Trefferquote über 5-10 echte Läufe protokolliert (siehe Aufgabe 2), Tabelle steht
-      im Report-Back.
+      Verifiziert per Test (`test_run_discovery_does_not_write_the_vault`), Modell gemockt.
+- [x] Jeder gelieferte Fakt hat entweder einen echten Merkmals-Key der Domäne oder `"body"` —
+      nie einen erfundenen Feldnamen. Verifiziert per Test (unbekanntes Feld wird verworfen und
+      gezählt, `"beschreibung"` mappt auf `"body"`).
+- [x] Ein bewusst kaputter Modell-Output (Text ohne Marker, manuell simuliert) liefert ein
+      leeres `DiscoveryOutput`, keinen Crash. Verifiziert per Test.
+- [ ] 🔴 **Blockiert (kein Modell auf dieser Maschine gebunden):** Parser-Trefferquote über
+      5-10 echte Läufe protokolliert (siehe Aufgabe 2), Tabelle steht im Report-Back.
 
 ## Doc-Updates
-- [ ] `docs/code-map.md` — „KI-Layer / Gemma"-Zeile um `jobs/knowledge_discovery_job.py`,
-      `knowledge/slug.py` ergänzen.
+- [x] `docs/code-map.md` — „KI-Layer / Gemma"-Zeile um `jobs/knowledge_discovery_job.py`,
+      `knowledge/slug.py` ergänzt (Abschnitt „P38 Phase 3").
 
 ## Report-Back
+
+**Status: Code + Tests fertig, zwei AK-Punkte blockiert.** `gemma-3-12b-obliterated-gguf`
+(`ai.gemmaModel`) ist auf dieser Maschine nicht in der Modell-Registry gebunden
+(`resolve_generator(Capability.KNOWLEDGE_DISCOVERY)` liefert `None` — kein Pfad hinterlegt,
+nicht heruntergeladen). Ohne echtes Modell kein echter Job-Lauf, also auch kein
+Parser-Trefferquote-Protokoll. Beides bleibt offen, bis das Modell gebunden ist — Konsequenz:
+**vor Phase 4 entweder das Modell hier binden und den Check nachholen, oder den Job auf einer
+Maschine mit gebundenem Modell testen.**
+
+Ersatzweise abgesichert über 23 neue, gemockte Tests (`tests/test_knowledge_discovery_job.py`,
+`tests/test_knowledge_slug.py`) — decken Parser-Logik (unbekanntes Feld verworfen,
+`beschreibung`→`body`, fehlende/kaputte Konfidenz, fehlende/kaputte Quelle, `www.`-Präfix,
+komplett unparsbarer Output), `PrivateDomainError`, `EntityNotFoundError`, `WebSearchError`→
+`RuntimeError`, leere Modell-Antwort→`RuntimeError`, „schreibt nichts" und den Prompt-Aufbau
+(erlaubte Felder, bereits gesetzte Merkmale, Suchergebnis-Block) ab. `ruff` + `mypy` grün auf
+allen neuen/geänderten Dateien.
+
+**Neue Fehlerklasse `PrivateDomainError`** in `knowledge/service.py` (nicht im Plan-Codeblock
+vorgesehen, aber von Aufgabe 3 gefordert) — gleiche Familie wie `EntityNotFoundError`, Phase 4
+fängt sie in der Route zu 422 ab.
+
+**`DiscoveryOutput` um ein `errors`-Feld erweitert** (Plan-Codeblock zeigte nur
+`facts`/`new_entities`/`sources`) — nötig, weil der Job-Kontrakt „Parser-Hinweise ins
+`errors`-Feld" verlangt (Aufgabe 3, Punkt 6). Der Parser zählt verworfene Zeilen pro Sektion
+und formuliert sie als Klartext-Hinweis.
+
+**Nebenbefund, nicht Teil dieser Phase:** Die Domäne „Personen" (`personen.yaml`, enthält
+reale, dem User bekannte Kontakte — z. B. `Person/anna-lieb`) ist **nicht** `private: true`
+markiert, anders als die separate Domäne „Private" (`people`/`pets`). Sobald Phase 4 die
+Route freischaltet, wäre „Recherchieren" auf diesen echten Personen technisch erlaubt — eine
+echte Web-Suche nach dem Namen eines echten Kontakts. Ob das gewollt ist oder die Domäne noch
+`private: true` bekommen soll, ist eine Entscheidung für den User vor Phase 4, keine, die ich
+in Phase 3 einseitig treffe.
+
+| # | Test-Person | Format eingehalten? | Fakten geparst | Notiz |
+|---|---|---|---|---|
+| — | _(noch nicht gelaufen — Modell fehlt, siehe oben)_ | | | |

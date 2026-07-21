@@ -3,14 +3,23 @@
 Getaggte Erkenntnisse aus der Umsetzung, die eine spätere Phase betreffen. Format:
 `- [ ] → Phase N: <Erkenntnis>`. Wird von `mode-implementing` gepflegt.
 
-- [ ] → Phase 3: `ddgs` 9.14.4 liefert die Keys `title` / `href` / `body` — genau die Form, die
+- [x] → Phase 3: `ddgs` 9.14.4 liefert die Keys `title` / `href` / `body` — genau die Form, die
   `search_web()` erwartet; keine Anpassung nötig. Ein Treffer ohne `href` wird verworfen, die
   Liste kann also kürzer sein als `max_results`. Der Job muss den Fall „0 Treffer" tragen
-  (kein Fehler, sondern leere Fakten-Liste).
-- [ ] → Phase 3: `set_attributes()` liefert `(Entity, geschriebene Keys, Meldungen zu
-  übersprungenen)`. Die Übersprungen-Meldungen sind fertiger Klartext („'Geburtsort' bleibt
-  unverändert — der Wert stammt von dir") und gehören unverändert in das `errors`-Feld der
-  Apply-Antwort. Changelog schreibt `set_attributes` **nicht** — das macht die Route.
+  (kein Fehler, sondern leere Fakten-Liste). Eingearbeitet: `_build_user_prompt` zeigt
+  `"(keine Suchergebnisse)"`, der Parser degradiert auf ein leeres `DiscoveryOutput`.
+- [ ] → Phase 4 (Tag korrigiert, war fälschlich Phase 3 — der Job selbst schreibt nichts):
+  `set_attributes()` liefert `(Entity, geschriebene Keys, Meldungen zu übersprungenen)`. Die
+  Übersprungen-Meldungen sind fertiger Klartext („'Geburtsort' bleibt unverändert — der Wert
+  stammt von dir") und gehören unverändert in das `errors`-Feld der Apply-Antwort. Changelog
+  schreibt `set_attributes` **nicht** — das macht die Route.
+- [ ] → Phase 4: Neue Fehlerklasse `PrivateDomainError` (`knowledge/service.py`, neben
+  `EntityNotFoundError`) — die Discovery-Route muss sie zu 422 abfangen, analog zum
+  bestehenden `_is_private_domain`-Guard in `api/knowledge_ai.py`.
+- [ ] → Phase 4 / User-Entscheidung: Domäne „Personen" (`personen.yaml`, echte private
+  Kontakte wie `Person/anna-lieb`) trägt **kein** `private: true` — anders als die separate
+  Domäne „Private". Vor dem Freischalten der Route klären, ob das gewollt ist (siehe
+  Report-Back Phase 3).
 - [ ] → Phase 4: Merkmale liegen jetzt auch in der Cache-Spalte `knowledge_entities.attributes`
   (JSON, gleiche Form wie im Frontmatter, migration 0040). Die Aufgaben `missing_field` und
   `low_completeness` können daraus über **einen** Query erzeugt werden — kein Vault-Read je

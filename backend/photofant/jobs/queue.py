@@ -49,6 +49,7 @@ class JobKind(StrEnum):
     KNOWLEDGE_IMPORT = "knowledge_import"
     KNOWLEDGE_UPDATE = "knowledge_update"
     INTERVIEW = "interview"
+    KNOWLEDGE_DISCOVERY = "knowledge_discovery"
     RECOMMENDATION = "recommendation"
 
 

@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 1 | Fundament — Web-Suche, Capability, Einstellung, ADR-031 | heikel | ✅ complete |
 | 2 | Merkmale + Vollständigkeit (Schema, Felddefinitionen, ADR-032) | heikel | ✅ complete |
-| 3 | KnowledgeDiscoveryJob — Suche → Gemma → Fakten-**Vorschläge** | heikel | pending |
+| 3 | KnowledgeDiscoveryJob — Suche → Gemma → Fakten-**Vorschläge** | heikel | 🟡 Code+Tests fertig, Live-Check blockiert (kein Modell gebunden) |
 | 4 | Routen + Guards + neue Aufgaben-Arten | standard | pending |
 | 5 | Wissen-Übersicht nach Design | standard | pending |
 | 6 | Wissen-Detail (Modal) nach Design | standard | pending |
