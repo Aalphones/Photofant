@@ -36,11 +36,14 @@ Getaggte Erkenntnisse aus der Umsetzung, die eine spätere Phase betreffen. Form
   kein Bulk-Scan über den Cache nötig — der Vault-Read passiert ohnehin schon für den Schreibpfad
   selbst. Der Cache-Query-Ansatz bleibt der richtige Weg, falls später ein Bulk-Backfill für
   Bestandsdaten gebraucht wird (z.B. Reconcile-Job).
-- [ ] → Phase 6: `EntityDto.attributes` enthält nur die **gesetzten** Merkmale. Welche Felder
+- [x] → Phase 6: `EntityDto.attributes` enthält nur die **gesetzten** Merkmale. Welche Felder
   ein Typ vorsieht (und damit welche als „fehlt"-Zeile erscheinen), steht in
   `GET /api/knowledge/domains` → `entity_types[].fields`. Die Detailansicht braucht beide
   Quellen, eine allein reicht nicht.
-- [ ] → Phase 6: `EntityDto` (und `EntityRefDto`) trägt **kein** `updated_at`/`created_at`-Feld —
+  Eingearbeitet: `domains`/`persons`/`autonomy` kommen als Input vom Elternteil (`wissen.ts`
+  hat beide Listen ohnehin schon geladen), `fieldRows()` mischt `EntityType.fields` gegen
+  `entity.attributes`.
+- [x] → Phase 6: `EntityDto` (und `EntityRefDto`) trägt **kein** `updated_at`/`created_at`-Feld —
   verifiziert beim Bau der Phase-5-Sektion „Nicht verknüpfte Notizen", die laut Plan
   „geändert am {Datum}" zeigen sollte und das mangels Datenquelle weglassen musste (nur „{N} %"
   angezeigt). Phase 6, Aufgabe „Kopf" verlangt denselben Text
@@ -48,6 +51,7 @@ Getaggte Erkenntnisse aus der Umsetzung, die eine spätere Phase betreffen. Form
   Datei-mtime oder ein neuer Zeitstempel in `Entity`) lässt sich das nicht ehrlich befüllen.
   Vor Phase 6 entscheiden: Datum weglassen (wie hier), oder kleinen Backend-Zusatz nachziehen
   (`Entity.updated_at` aus Datei-mtime, kein Kontrakt-Bruch, additive Erweiterung).
+  Entschieden (User, vor Phase-6-Start): Datum weglassen, konsistent mit Phase 5. Umgesetzt.
 - [x] → Phase 5: `EntityRefDto` (`person.linked_entity`) trägt keine Domäne — für die
   Personen-Karten-Meta-Zeile „{N} % · {Domäne}" über `entityDomainById` in `wissen.ts` aus der
   vollständigen `entities()`-Liste aufgelöst (kein neuer Endpunkt). Für Phase 6/8 nicht relevant:

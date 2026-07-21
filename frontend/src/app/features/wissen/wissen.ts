@@ -12,10 +12,12 @@ import type {
   UpdateEntityRequest,
 } from '@photofant/models';
 import { PersonService } from '@photofant/services';
-import { knowledgeActions, knowledgeSelectors, personsActions, personsSelectors } from '@photofant/store';
+import { galleryActions, knowledgeActions, knowledgeSelectors, personsActions, personsSelectors } from '@photofant/store';
 import { Icon, LinkEntityDialog } from '@photofant/ui';
+import { Lightbox } from '../galerie/lightbox/lightbox';
 import { EntityWizardDialog } from './entity-wizard-dialog/entity-wizard-dialog';
 import { InterviewDialog } from './interview-dialog/interview-dialog';
+import { KnowledgeDetailDialog } from './knowledge-detail-dialog/knowledge-detail-dialog';
 import { PersonKnowledgeCard } from './person-knowledge-card/person-knowledge-card';
 import { WorkQueue } from './work-queue/work-queue';
 
@@ -23,7 +25,16 @@ const TOAST_DURATION_MS = 2800;
 
 @Component({
   selector: 'pf-wissen',
-  imports: [Icon, EntityWizardDialog, InterviewDialog, WorkQueue, PersonKnowledgeCard, LinkEntityDialog],
+  imports: [
+    Icon,
+    EntityWizardDialog,
+    InterviewDialog,
+    WorkQueue,
+    PersonKnowledgeCard,
+    LinkEntityDialog,
+    KnowledgeDetailDialog,
+    Lightbox,
+  ],
   templateUrl: './wissen.html',
   styleUrl: './wissen.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -76,8 +87,9 @@ export class Wissen {
     );
   });
 
-  // P27 Phase 2 — KI-Vorschlag im Wizard
-  private readonly aiAutonomy = this.store.selectSignal(knowledgeSelectors.selectAiAutonomy);
+  // P27 Phase 2 — KI-Vorschlag im Wizard. Protected (statt private): Phase 6 reicht das
+  // volle DTO unverändert an das Detail-Modal durch (Web-Suche-/KI-Banner-Gating dort).
+  protected readonly aiAutonomy = this.store.selectSignal(knowledgeSelectors.selectAiAutonomy);
   protected readonly importAutonomy = computed((): AiAutonomyMode => this.aiAutonomy()?.knowledge_import ?? 'off');
   protected readonly suggestionLoading = this.store.selectSignal(knowledgeSelectors.selectSuggestionLoading);
   protected readonly suggestionResult = this.store.selectSignal(knowledgeSelectors.selectSuggestionResult);
@@ -111,12 +123,18 @@ export class Wissen {
   // Wizard aus einer Aufgabe geöffnet? -> nach Erfolg diese Aufgabe auflösen statt nur zu schließen.
   private readonly activeTask = signal<TaskDto | null>(null);
 
-  // P38 Phase 5 — Personen-Detail (Modal kommt erst in Phase 6, Signal ist der Anschluss
-  // dafür; die Karte im Grid schreibt bereits heute hinein).
+  // P38 Phase 6 — Wissen-Detail-Modal: genau eines der beiden ist gesetzt (Person aus dem
+  // Grid, Entity aus der Notizen-Sektion).
   protected readonly detailPersonId = signal<number | null>(null);
+  protected readonly detailEntityId = signal<string | null>(null);
+  // Nach einer Verknüpfung/Trennung hochgezählt — stößt im Modal einen frischen Lore-Read an.
+  protected readonly detailRefreshKey = signal(0);
 
   // P38 Phase 5 — "Verknüpfen" auf einer unverknüpften Notiz: Personen-Suche öffnen.
   protected readonly linkingEntity = signal<EntityDto | null>(null);
+  // P38 Phase 6 — umgekehrte Richtung: aus dem leeren Detail-Zustand eine bestehende Notiz
+  // für eine feste Person suchen ("Bestehende Notiz verknüpfen").
+  protected readonly linkingPersonForEntity = signal<PersonDto | null>(null);
 
   // P38 Phase 5 — Toast statt der beiden statischen Bestätigungs-Blöcke.
   protected readonly toastMessage = signal<string | null>(null);
@@ -226,9 +244,21 @@ export class Wissen {
     this.store.dispatch(knowledgeActions.updateEntity(event));
   }
 
-  // Klick auf eine Personen-Karte -> Detail öffnen (Modal folgt in Phase 6).
+  // Klick auf eine Personen-Karte -> Detail öffnen.
   protected openPersonDetail(personId: number): void {
     this.detailPersonId.set(personId);
+    this.detailEntityId.set(null);
+  }
+
+  // Klick auf eine unverknüpfte Notiz-Karte -> dasselbe Modal, andere Datenquelle.
+  protected openEntityDetail(entity: EntityDto): void {
+    this.detailEntityId.set(entity.id);
+    this.detailPersonId.set(null);
+  }
+
+  protected closeDetail(): void {
+    this.detailPersonId.set(null);
+    this.detailEntityId.set(null);
   }
 
   protected openLinkPicker(entity: EntityDto): void {
@@ -249,6 +279,50 @@ export class Wissen {
       this.store.dispatch(knowledgeActions.loadTasks());
       this.showToast(`„${entity.title}" mit ${person.name ?? 'Unbenannt'} verknüpft.`);
     });
+  }
+
+  // P38 Phase 6 — leerer Detail-Zustand: "Bestehende Notiz verknüpfen" sucht eine Entity für
+  // die feste, gerade offene Person (Gegenrichtung zu `openLinkPicker` oben).
+  protected onDetailLinkRequested(): void {
+    const personId = this.detailPersonId();
+    if (personId === null) { return; }
+    const person = this.knownPersons().find((candidate: PersonDto) => candidate.id === personId) ?? null;
+    this.linkingPersonForEntity.set(person);
+  }
+
+  protected closeLinkEntityPicker(): void {
+    this.linkingPersonForEntity.set(null);
+  }
+
+  protected onLinkEntityToPerson(entity: EntityDto): void {
+    const person = this.linkingPersonForEntity();
+    if (person === null) { return; }
+    this.personService.linkEntity(person.id, entity.id).subscribe(() => {
+      this.linkingPersonForEntity.set(null);
+      this.store.dispatch(knowledgeActions.loadEntities());
+      this.store.dispatch(personsActions.loadPersons());
+      this.store.dispatch(knowledgeActions.loadTasks());
+      this.detailRefreshKey.update((tick: number): number => tick + 1);
+      this.showToast(`„${entity.title}" mit ${person.name ?? 'Unbenannt'} verknüpft.`);
+    });
+  }
+
+  // "Verknüpfung lösen" im Detail-Kopf — trennt die Zuordnung, die Notiz bleibt erhalten und
+  // taucht danach unter "Nicht verknüpfte Notizen" auf (kein Datenverlust, AK dieser Phase).
+  protected onDetailUnlinkRequested(entityId: string): void {
+    const personId = this.detailPersonId();
+    if (personId === null) { return; }
+    this.personService.unlinkEntity(personId, entityId).subscribe(() => {
+      this.store.dispatch(knowledgeActions.loadEntities());
+      this.store.dispatch(personsActions.loadPersons());
+      this.store.dispatch(knowledgeActions.loadTasks());
+      this.detailRefreshKey.update((tick: number): number => tick + 1);
+      this.showToast('Verknüpfung gelöst — die Notiz bleibt erhalten.');
+    });
+  }
+
+  protected onOpenLightboxFromDetail(assetId: number): void {
+    this.store.dispatch(galleryActions.openAssetLightbox({ assetId }));
   }
 
   // Kein `updated_at` im EntityDto-Kontrakt (P38 Phase 2/3 fixiert) — die Meta-Zeile zeigt

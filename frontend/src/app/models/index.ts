@@ -135,6 +135,8 @@ export type {
   Owner,
   MediaLinks,
   Relationship,
+  AttributeDto,
+  EntityFieldDefDto,
   EntityDto,
   EntityRefDto,
   ResolvedRelationshipDto,

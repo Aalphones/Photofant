@@ -121,21 +121,69 @@ Kein Wissen zu dieser Person: schmales Modal (`width: min(420px, 92vw)`), mittig
 unverknüpfte Notizen gibt — „Bestehende Notiz verknüpfen".
 
 ## AK dieser Phase
-- [ ] Modal öffnet aus dem Personen-Grid und aus der Notizen-Sektion, schließt über Scrim,
+- [x] Modal öffnet aus dem Personen-Grid und aus der Notizen-Sektion, schließt über Scrim,
       X und Escape.
-- [ ] Kopf zeigt 72px-Ring, Name 19px/700 und die Sub-Zeile mit Prozent, Domäne und Datum.
-- [ ] Merkmals-Liste zeigt **alle** für den Typ definierten Merkmale; fehlende mit „—" und
+- [x] Kopf zeigt 72px-Ring, Name 19px/700 und die Sub-Zeile mit Prozent, Domäne und Datum.
+      **Abweichung (User-Entscheidung vor Phase-Start):** Datum entfällt — `EntityDto` trägt
+      kein `updated_at` (FINDINGS.md), ein Backend-Zusatz hätte den Scope dieser reinen
+      Frontend-Phase gesprengt. Sub-Zeile zeigt „{N} % vollständig · {Domäne}", konsistent mit
+      Phase 5s „Nicht verknüpfte Notizen".
+- [x] Merkmals-Liste zeigt **alle** für den Typ definierten Merkmale; fehlende mit „—" und
       gestrichelter „fehlt"-Pille.
-- [ ] Owner-Pillen tragen die deutschen Beschriftungen und die vier Farbvarianten aus der
+- [x] Owner-Pillen tragen die deutschen Beschriftungen und die vier Farbvarianten aus der
       Tabelle oben.
-- [ ] Zwei-Spalten-Layout (1fr / 240px) klappt unter 860px auf eine Spalte um.
-- [ ] Klick auf ein verknüpftes Foto öffnet die Lightbox mit genau diesem Bild.
-- [ ] „Verknüpfung lösen" trennt die Zuordnung; die Notiz erscheint danach in der Übersicht
+- [x] Zwei-Spalten-Layout (1fr / 240px) klappt unter 860px auf eine Spalte um.
+- [x] Klick auf ein verknüpftes Foto öffnet die Lightbox mit genau diesem Bild
+      (`galleryActions.openAssetLightbox` — lädt das Asset auch nach, falls es in der
+      Galerie-Store gerade nicht geladen ist).
+- [x] „Verknüpfung lösen" trennt die Zuordnung; die Notiz erscheint danach in der Übersicht
       unter „Nicht verknüpfte Notizen" — nichts ist gelöscht.
-- [ ] Leerer Zustand zeigt den schmalen Modal-Zuschnitt mit den beiden Knöpfen.
-- [ ] Keine „Album-Vorschlag"-Box vorhanden.
+- [x] Leerer Zustand zeigt den schmalen Modal-Zuschnitt mit den beiden Knöpfen.
+- [x] Keine „Album-Vorschlag"-Box vorhanden.
 
 ## Doc-Updates
-- [ ] `docs/code-map.md` — `features/wissen/knowledge-detail-dialog/` ergänzen.
+- [x] `docs/code-map.md` — `features/wissen/knowledge-detail-dialog/` ergänzt.
 
 ## Report-Back
+
+**Umgesetzt:** `features/wissen/knowledge-detail-dialog/` (neu, `pf-knowledge-detail-dialog`),
+verdrahtet in `wissen.ts`/`.html` (zwei neue Signale `detailEntityId`/`linkingPersonForEntity`,
+`detailRefreshKey`, `<pf-lightbox />` eingebettet, zweite `link-entity-dialog`-Instanz im Modus
+`entity` für „Bestehende Notiz verknüpfen"). `KnowledgeService.getEntityLore()` neu (Gegenstück
+zu `getLore({personId})` für die unverknüpfte Notiz, nutzt die bereits vorhandene Backend-Route
+`GET /entities/{id}/lore`).
+
+**Zwei Entscheidungen vorab mit dem User geklärt (beide dokumentiert, s.o. bzw. Findings):**
+1. Datum in der Kopfzeile weggelassen statt Backend-Zusatz.
+2. KI-Ergänzungs-Banner (Aufgabe 3) feuert **nicht** automatisch beim Öffnen — ein Gemma-Lauf
+   startet erst auf expliziten Klick auf eine schmale „Gemma nach einer Ergänzung fragen?"-Zeile
+   (im Design nicht als eigenes Element vorgesehen, aber notwendig, um konsistent mit dem
+   Opt-in-Prinzip des gesamten Plans zu bleiben — sonst würde jedes Öffnen einer nicht-user-
+   owned Entity einen echten LLM-Lauf auslösen).
+
+**Weitere Abweichungen vom Pixel-Vorbild (Datenmodell trägt die Information nicht):**
+- **Quellen-Icons:** `entity.sources` enthält laut Backend-Kontrakt nur URLs (nur die
+  Web-Recherche schreibt strukturierte Einträge) — es gibt kein Herkunfts-Feld. Die
+  Drei-Icon-Regel (Interview/Web/manuell) ist daher heuristisch: URL → Web-Icon, Text mit
+  „Interview" → Interview-Icon, sonst → Manuell-Icon (`pencil` statt `edit` — dieser Icon-Name
+  existiert im Projekt nicht, `pencil` ist das Äquivalent).
+- **Beziehungs-Chips ohne Avatar:** das Design zeigt ein Portrait, „falls das Ziel eine Person
+  mit Portrait ist" — `ResolvedRelationshipDto.target` (`EntityRefDto`) trägt aber keine
+  Person-/Portrait-Referenz, nur `id`/`title`/`type`/`completeness`. Chips zeigen deshalb
+  durchgehend ein generisches Personen-Icon statt eines echten Avatars.
+
+**Kleiner Nebenfund behoben:** `AttributeDto` und `EntityFieldDefDto` waren in `models/index.ts`
+seit Phase 2 im Modell definiert, aber nicht aus dem Barrel exportiert — ergänzt (dieser Import
+war der erste externe Konsument).
+
+**Nicht in der Backend-Route enthalten, kein Blocker:** Wenn eine Person `linkEntity`/
+`unlinkEntity` betrifft, ruft `wissen.ts` weiterhin volle Store-Reloads (`loadEntities`/
+`loadPersons`/`loadTasks`) statt gezielter Patches — gleiches Muster wie Phase 5s
+`onLinkNoteToPerson`, hier nur auf die neue Gegenrichtung übertragen.
+
+**Konfidenz:** kein Live-Smoke in dieser Session (privates Profil) — `npx tsc --noEmit` und
+`ng build` sind grün, keine neue Bundle-Regression. Wackelstellen für den User-Smoke: die drei
+Escape/Scrim/X-Schließwege, die Zwei-Spalten-Umbruchgrenze bei 860px, und ob
+„Verknüpfung lösen"/„Bestehende Notiz verknüpfen" tatsächlich beide Richtungen sauber
+durchspielen (Notiz taucht danach wirklich unter „Nicht verknüpfte Notizen" auf bzw.
+verschwindet von dort).

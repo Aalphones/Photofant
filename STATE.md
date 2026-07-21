@@ -1,9 +1,19 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-20_p38-gemma-web-discovery/`
-**Phase:** 6/8 — Wissen-Detail (Modal) nach Design (Komplexität: standard → `sonnet` reicht)
-**Nächster Schritt:** `phase-6-wissen-detail.md` lesen und umsetzen. Vorher `/clear`
+**Phase:** 7/8 — Wizards (Interview + Web-Suche mit Fakten-Bestätigung) (Komplexität: standard → `sonnet` reicht)
+**Nächster Schritt:** `phase-7-wizards.md` lesen und umsetzen. Vorher `/clear`
 empfohlen (Session ist groß) — danach `/model sonnet`, `/implement` liest hier weiter.
+
+## Phase 6 erledigt (Wissen-Detail-Modal nach Design)
+
+Code fertig, `npx tsc --noEmit` grün, Produktions-Build läuft durch (gleiche vorbestehende
+Bundle-Budget-Warnung wie Phase 5, keine Regression). Neues Modal `knowledge-detail-dialog/`
+(Person aus dem Grid oder Entity aus „Nicht verknüpfte Notizen", Merkmale mit Owner-Pille,
+Beziehungs-Chips mit interner Navigation, verknüpfte Fotos → Lightbox, „Verknüpfung lösen"),
+KI-Ergänzungs-Banner bewusst nur auf Klick (Opt-in-Prinzip, User-Entscheidung), Datum in der
+Kopfzeile weggelassen (User-Entscheidung, wie schon Phase 5). Details/Abweichungen (Quellen-
+Icon-Heuristik, fehlender Beziehungs-Avatar): `phase-6-wissen-detail.md` → „Report-Back".
 
 ## Phase 5 erledigt (Wissen-Übersicht nach Design)
 

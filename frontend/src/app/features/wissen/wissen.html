@@ -78,7 +78,14 @@
     <h2 class="wi-unlinked__title">Nicht verknüpfte Notizen</h2>
     <div class="wi-unlinked__grid">
       @for (entity of unlinkedEntities(); track entity.id) {
-        <div class="wi-unlinked__card">
+        <div
+          class="wi-unlinked__card"
+          role="button"
+          tabindex="0"
+          title="Details zu '{{ entity.title }}' öffnen"
+          (click)="openEntityDetail(entity)"
+          (keydown.enter)="openEntityDetail(entity)"
+        >
           <div class="wi-unlinked__ico">
             <pf-icon name="book" [size]="16" />
           </div>
@@ -86,7 +93,11 @@
             <div class="wi-unlinked__title">{{ entity.title }}</div>
             <div class="wi-unlinked__meta">{{ unlinkedPercent(entity) }} %</div>
           </div>
-          <button class="wi-unlinked__link-btn" type="button" (click)="openLinkPicker(entity)">
+          <button
+            class="wi-unlinked__link-btn"
+            type="button"
+            (click)="$event.stopPropagation(); openLinkPicker(entity)"
+          >
             <pf-icon name="link" [size]="12" />
             Verknüpfen
           </button>
@@ -137,3 +148,32 @@
     (selectPerson)="onLinkNoteToPerson($event)"
   />
 }
+
+@if (linkingPersonForEntity(); as person) {
+  <pf-link-entity-dialog
+    mode="entity"
+    [person]="person"
+    (close)="closeLinkEntityPicker()"
+    (select)="onLinkEntityToPerson($event)"
+  />
+}
+
+@if (detailPersonId() !== null || detailEntityId() !== null) {
+  <pf-knowledge-detail-dialog
+    [personId]="detailPersonId()"
+    [entityId]="detailEntityId()"
+    [domains]="domains()"
+    [persons]="persons()"
+    [autonomy]="aiAutonomy()"
+    [hasUnlinkedNotes]="unlinkedEntities().length > 0"
+    [refreshKey]="detailRefreshKey()"
+    (close)="closeDetail()"
+    (openInterview)="openInterview()"
+    (openWebSearch)="openWebSearchWizard()"
+    (openLightbox)="onOpenLightboxFromDetail($event)"
+    (linkRequested)="onDetailLinkRequested()"
+    (unlinkRequested)="onDetailUnlinkRequested($event)"
+  />
+}
+
+<pf-lightbox />

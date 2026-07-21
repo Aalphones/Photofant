@@ -75,6 +75,13 @@ export class KnowledgeService {
     return this.http.get<LoreDto[]>('/api/knowledge/lore', { params: httpParams });
   }
 
+  // P38 Phase 6 — Lore einer festen Entity (Wissen-Detail für eine unverknüpfte Notiz,
+  // die kein personId hat). Gegenstück zu `getLore({ personId })`: dieselbe LoreDto-Form,
+  // aber `entity` ist nie null (die Route 404-t, wenn die Entity fehlt).
+  getEntityLore(entityId: string): Observable<LoreDto> {
+    return this.http.get<LoreDto>(`/api/knowledge/entities/${entityId}/lore`);
+  }
+
   listTasks(status?: TaskStatus): Observable<TaskDto[]> {
     let params = new HttpParams();
     if (status) {

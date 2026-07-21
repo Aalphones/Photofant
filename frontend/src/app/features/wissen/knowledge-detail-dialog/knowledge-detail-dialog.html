@@ -1,0 +1,214 @@
+<div class="kd-scrim" (click)="onBackdrop($event)">
+
+  @if (status() === 'loading') {
+    <div class="kd-modal kd-modal--empty" (click)="$event.stopPropagation()">
+      <button class="kd-close" type="button" (click)="close.emit()" aria-label="Schließen">
+        <pf-icon name="x" [size]="17" />
+      </button>
+      <p class="kd-empty-txt">Wird geladen…</p>
+    </div>
+  } @else if (isEmptyState()) {
+    <div class="kd-modal kd-modal--empty" (click)="$event.stopPropagation()">
+      <button class="kd-close" type="button" (click)="close.emit()" aria-label="Schließen">
+        <pf-icon name="x" [size]="17" />
+      </button>
+      <div class="kd-empty-avatar">
+        @if (avatarUrl(); as url) {
+          <img [src]="url" [alt]="displayName()" />
+        } @else {
+          <pf-icon name="user" [size]="26" />
+        }
+      </div>
+      <p class="kd-empty-txt">Zu {{ displayName() }} ist noch nichts gespeichert.</p>
+      <div class="kd-empty-actions">
+        <button class="kd-btn kd-btn--primary" type="button" (click)="openInterview.emit()">
+          <pf-icon name="sparkle" [size]="14" />
+          Interview starten
+        </button>
+        @if (hasUnlinkedNotes()) {
+          <button class="kd-btn" type="button" (click)="linkRequested.emit()">
+            <pf-icon name="link" [size]="14" />
+            Bestehende Notiz verknüpfen
+          </button>
+        }
+      </div>
+    </div>
+  } @else {
+    @if (entity(); as ent) {
+      <div class="kd-modal" (click)="$event.stopPropagation()">
+        <button class="kd-close" type="button" (click)="close.emit()" aria-label="Schließen">
+          <pf-icon name="x" [size]="17" />
+        </button>
+
+        <div class="kd-head">
+          <pf-completeness-ring [value]="ent.completeness" [size]="72">
+            @if (avatarUrl(); as url) {
+              <img [src]="url" [alt]="displayName()" class="kd-avatar" />
+            } @else if (person() !== null) {
+              <pf-icon name="user" [size]="28" />
+            } @else {
+              <pf-icon name="book" [size]="28" />
+            }
+          </pf-completeness-ring>
+          <div class="kd-head__info">
+            <div class="kd-name">{{ displayName() }}</div>
+            <div class="kd-sub">{{ percent() }} % vollständig · {{ ent.domain }}</div>
+          </div>
+          <div class="kd-actions">
+            <button class="kd-btn" type="button" (click)="openInterview.emit()">
+              <pf-icon name="sparkle" [size]="13" />
+              Interview
+            </button>
+            @if (canRequestWebSearch()) {
+              <button class="kd-btn" type="button" (click)="openWebSearch.emit()">
+                <pf-icon name="globe" [size]="13" />
+                Web-Suche
+              </button>
+            }
+            @if (canUnlink()) {
+              <button
+                class="kd-btn"
+                type="button"
+                title="Trennt Person und Notiz. Die Notiz bleibt erhalten und taucht danach unter 'Nicht verknüpfte Notizen' auf."
+                (click)="unlinkRequested.emit(ent.id)"
+              >
+                <pf-icon name="link" [size]="13" />
+                Verknüpfung lösen
+              </button>
+            }
+          </div>
+        </div>
+
+        @if (canOfferUpdateSuggestion()) {
+          @if (!updateSuggestionRequested()) {
+            <button class="kd-ai-prompt" type="button" (click)="requestUpdateSuggestion()">
+              <pf-icon name="sparkle" [size]="13" />
+              Gemma nach einer Ergänzung fragen?
+            </button>
+          } @else if (updateSuggestionPending()) {
+            <div class="kd-ai-banner">
+              <pf-icon name="sparkle" [size]="14" />
+              <span class="kd-ai-txt">Gemma denkt nach…</span>
+            </div>
+          } @else if (updateSuggestionError()) {
+            <div class="kd-ai-banner">
+              <span class="kd-ai-txt">Vorschlag fehlgeschlagen.</span>
+              <div class="kd-ai-acts">
+                <button class="kd-btn kd-btn--ghost" type="button" (click)="dismissUpdateSuggestion()">Schließen</button>
+              </div>
+            </div>
+          } @else {
+            @if (updateSuggestionResult(); as result) {
+              @if (updateAccepted()) {
+                <div class="kd-ai-banner done">
+                  <pf-icon name="check" [size]="14" />
+                  <span class="kd-ai-txt">Übernommen.</span>
+                </div>
+              } @else {
+                @if (result.proposal; as proposal) {
+                  <div class="kd-ai-banner">
+                    <pf-icon name="sparkle" [size]="14" />
+                    <span class="kd-ai-txt">{{ proposal.body }}</span>
+                    <div class="kd-ai-acts">
+                      <button
+                        class="kd-btn kd-btn--primary"
+                        type="button"
+                        [disabled]="updateAcceptPending()"
+                        (click)="acceptUpdateSuggestion()"
+                      >
+                        {{ updateAcceptPending() ? 'Übernimmt…' : 'Übernehmen' }}
+                      </button>
+                      <button class="kd-btn kd-btn--ghost" type="button" (click)="dismissUpdateSuggestion()">Verwerfen</button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="kd-ai-banner">
+                    <span class="kd-ai-txt">Kein Vorschlag: {{ result.validation_errors.join(', ') }}</span>
+                    <div class="kd-ai-acts">
+                      <button class="kd-btn kd-btn--ghost" type="button" (click)="dismissUpdateSuggestion()">Schließen</button>
+                    </div>
+                  </div>
+                }
+              }
+            }
+          }
+        }
+
+        <div class="kd-cols">
+          <div class="kd-col-main">
+            <div class="kd-section">
+              <div class="kd-section__title">Profil</div>
+              @if (ent.body.trim().length > 0) {
+                <p class="kd-bio">{{ ent.body }}</p>
+              } @else {
+                <p class="kd-bio kd-bio--empty">Noch keine Beschreibung — das Interview schreibt sie.</p>
+              }
+            </div>
+
+            @if (fieldRows().length > 0) {
+              <div class="kd-section">
+                <div class="kd-section__title">Merkmale</div>
+                <div class="kd-fields">
+                  @for (row of fieldRows(); track row.key) {
+                    <div class="kd-field-row">
+                      <span class="kd-field-lbl">{{ row.label }}</span>
+                      <span class="kd-field-val" [class.kd-field-val--missing]="row.value === null">{{ row.value ?? '—' }}</span>
+                      <span class="kd-owner" [class]="ownerClass(row.owner)">{{ ownerLabel(row.owner) }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (relationships().length > 0) {
+              <div class="kd-section">
+                <div class="kd-section__title">Beziehungen</div>
+                <div class="kd-rel-row">
+                  @for (relationship of relationships(); track relationship.type + relationship.target.id) {
+                    <button class="kd-rel-chip" type="button" (click)="openRelationTarget(relationship.target.id)">
+                      <pf-icon name="user" [size]="13" />
+                      <span class="kd-rel-name">{{ relationship.target.title }}</span>
+                      <span class="kd-rel-type">{{ relationTypeLabel(relationship.type) }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (sources().length > 0) {
+              <div class="kd-section">
+                <div class="kd-section__title">Quellen</div>
+                @for (source of sources(); track source) {
+                  <div class="kd-source-row">
+                    <pf-icon [name]="sourceIcon(source)" [size]="13" />
+                    @if (isUrl(source)) {
+                      <a [href]="source" target="_blank" rel="noopener noreferrer">{{ sourceLabel(source) }}</a>
+                    } @else {
+                      <span>{{ source }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="kd-col-side">
+            <div class="kd-section__title">Verknüpfte Fotos</div>
+            @if (relatedPhotos().length > 0) {
+              <div class="kd-photo-grid">
+                @for (photo of relatedPhotos(); track photo.id) {
+                  <button class="kd-photo-cell" type="button" [title]="photo.label ?? ''" (click)="openLightbox.emit(photo.id)">
+                    <img [src]="photo.thumbnail_url" [alt]="photo.label ?? ''" />
+                  </button>
+                }
+              </div>
+            } @else {
+              <p class="kd-photos-empty">Noch keine verknüpften Fotos.</p>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+</div>
