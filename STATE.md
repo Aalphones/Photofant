@@ -1,9 +1,9 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-22_gesichter-bereinigung/`
-**Phase:** 2/4 — Backend-API: DTO-Erweiterung + Bulk-Delete (complete)
-**Nächster Schritt:** `/clear`, dann Phase 3 (Frontend-Model + Service),
-Modell `sonnet` reicht (Rating: mechanisch).
+**Phase:** 3/4 — Frontend-Model + Service (complete)
+**Nächster Schritt:** `/clear`, dann Phase 4 (Frontend-UI: Cleanup-Dialog + Verdrahtung),
+Modell `sonnet` reicht (Rating: standard).
 
 ## P38 „Wissen: Web-Recherche + neue Oberfläche" abgeschlossen (alle 8 Phasen)
 

@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
+  BulkDeleteFacesResult,
   ClusterResult,
   FaceDetailDto,
   FaceImportResult,
@@ -114,6 +115,10 @@ export class PersonService {
 
   deleteFace(faceId: number): Observable<void> {
     return this.http.delete<void>(`/api/faces/${faceId}`);
+  }
+
+  bulkDeleteFaces(faceIds: number[]): Observable<BulkDeleteFacesResult> {
+    return this.http.post<BulkDeleteFacesResult>('/api/faces/bulk-delete', { face_ids: faceIds });
   }
 
   listFacesGallery(params: { page: number; page_size: number; person_id?: number; asset_ids?: number[] }): Observable<FacesPage> {

@@ -63,8 +63,15 @@ anderen Modelle aus `@photofant/models`).
 
 ## Checkliste
 
-- [ ] `PersonFace`-Interface erweitert, `BulkDeleteFacesResult` neu
-- [ ] `PersonService.bulkDeleteFaces()` neu
-- [ ] `tsc --noEmit` (oder Projekt-Äquivalent) sauber
+- [x] `PersonFace`-Interface erweitert, `BulkDeleteFacesResult` neu
+- [x] `PersonService.bulkDeleteFaces()` neu
+- [x] `tsc --noEmit` (oder Projekt-Äquivalent) sauber
 
 ## Report-Back
+
+Beide Interfaces + Service-Methode 1:1 nach Plan-Vorgabe ergänzt (`person.model.ts`,
+`person.service.ts`), `BulkDeleteFacesResult` zusätzlich im Barrel-Export
+(`models/index.ts`) ergänzt — das stand nicht explizit im Plan, war aber nötig, sonst
+importiert `person.service.ts` einen Typ, der über `@photofant/models` nicht sichtbar
+ist. `npx tsc --noEmit` läuft grün, keine neuen Fehler. Kein Cast/Mapping in
+`getPersonFaces()` nötig — Backend liefert das Shape 1:1 (Phase 2 bereits abgeschlossen).

@@ -14,7 +14,7 @@ export type {
 export { JOB_STATES, JOB_KINDS } from './job.model';
 
 export type { AssetDto, AssetDetailDto, AssetPatch, AssetLinkSummary, AssetsPage, TagDto, FaceDto, FaceDetailDto, FacetItem, TagFacetItem, ClassificationFacetItem, ClassificationCategoryFacet, Facets, Density, SortKey, SortOrder, SearchMode, TagListItem, MediaType, FaceGalleryItemDto, FacesPage, VersionDto, Framing, LineageDto, LineageFaceDto } from './asset.model';
-export type { PersonDto, PersonFace, FaceMatch, PersonDupePair, FaceImportResult, PersonImportResponse, ClusterResult } from './person.model';
+export type { PersonDto, PersonFace, FaceMatch, PersonDupePair, FaceImportResult, BulkDeleteFacesResult, PersonImportResponse, ClusterResult } from './person.model';
 export { DENSITIES, DENSITY_THUMB_SIZE, SORT_KEYS, SORT_ORDERS, BASE_HEIGHTS, SEARCH_MODES, MEDIA_TYPES, FRAMINGS } from './asset.model';
 export type { SearchHit, SemanticSearchResponse, ReverseSearchState } from './search.model';
 export type { Reason, RelatedRailItem } from './related-rail.model';

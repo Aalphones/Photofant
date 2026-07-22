@@ -10,7 +10,7 @@
 |---|---|---|---|
 | 1 | Backend-Scoring-Modul + Settings | standard | complete |
 | 2 | Backend-API (DTO-Erweiterung + Bulk-Delete) | standard | complete |
-| 3 | Frontend-Model + Service | mechanisch | pending |
+| 3 | Frontend-Model + Service | mechanisch | complete |
 | 4 | Frontend-UI (Cleanup-Dialog + Verdrahtung) | standard | pending |
 
 ## Kontrakt (Backend ↔ Frontend)

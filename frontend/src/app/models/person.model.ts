@@ -19,6 +19,11 @@ export interface PersonFace {
   crop_url: string;
   score: number | null;
   age: number | null;
+  resolution: number | null;
+  is_upscaled: boolean;
+  identity_distance: number | null;
+  cleanup_score: number;
+  cleanup_reasons: string[];
 }
 
 export interface FaceMatch {
@@ -42,6 +47,11 @@ export interface FaceImportResult {
   face_id: number;
   person_id: number | null;
   has_embedding: boolean;
+}
+
+export interface BulkDeleteFacesResult {
+  deleted: number;
+  asset_ids: number[];
 }
 
 export interface PersonImportResponse {
