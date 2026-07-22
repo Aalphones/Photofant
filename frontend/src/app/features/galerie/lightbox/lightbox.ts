@@ -351,6 +351,15 @@ export class Lightbox {
   // fertiger Recommendation-Job bei jedem weiteren Signal-Read erneut einen Reload auslöst.
   private readonly handledRecommendationJobIds = new Set<string>();
 
+  // Retry-Cap für den „computing"-Reload unten: das Backend kann „noch nie berechnet"
+  // nicht von „berechnet, aber 0 Treffer" unterscheiden (leere Cache-Zeilen sehen in
+  // beiden Fällen gleich aus) und liefert für ein Bild ohne Embedding + ohne Graph-Signal
+  // bei jedem GET erneut `status: computing` — ohne Deckel dreht sich das Lightbox-Reload
+  // dann endlos (jeder fertige Job triggert den nächsten). Pro Bild reicht eine Handvoll
+  // Versuche; danach bleibt die Sektion einfach leer statt ewig zu laden.
+  private static readonly MAX_RECOMMENDATION_RETRIES = 5;
+  private readonly recommendationRetryCount = signal(0);
+
   // ── Face matches (PersonPicker-Modal) ─────────────────────────────────────
   // Nur die faceId wird gebraucht (Zuweisen/Vergleich mit Löschziel) — funktioniert
   // damit gleichermaßen für Asset-Modus-`FaceDto` wie für den Gesichter-Modus.
@@ -712,6 +721,7 @@ export class Lightbox {
     // nächste Reload wieder „computing" und wartet auf den nächsten Job weiter).
     effect((): void => {
       if (this.recommendations().status !== 'computing') { return; }
+      if (this.recommendationRetryCount() >= Lightbox.MAX_RECOMMENDATION_RETRIES) { return; }
       const finishedJob = this.allJobs().find((job) =>
         job.kind === 'recommendation' &&
         (job.state === 'done' || job.state === 'error') &&
@@ -719,6 +729,7 @@ export class Lightbox {
       );
       if (finishedJob == null) { return; }
       this.handledRecommendationJobIds.add(finishedJob.id);
+      this.recommendationRetryCount.update((count: number) => count + 1);
       this.reloadTrigger.update((count: number) => count + 1);
     });
 
@@ -752,6 +763,8 @@ export class Lightbox {
       this.relationBrowserSelected.set([]);
       // Reset Explainability-Popover (P26 Phase 3) — Payload ist pro Quellbild gültig
       this.recommendationExplainOpenId.set(null);
+      // Neues Bild -> frisches Retry-Budget für den „computing"-Reload oben.
+      this.recommendationRetryCount.set(0);
     });
 
     // Metadaten-Drafts aus `detail()` initialisieren (framing lebt nur dort) —
