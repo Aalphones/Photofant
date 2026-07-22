@@ -726,7 +726,9 @@ export class Lightbox {
       const asset: AssetDto | null = this.asset();
       this.lightboxFaceId(); // auch bei Wechsel zwischen/innerhalb Gesichter-Modus zurücksetzen
       this.showGenMeta.set(asset?.source != null && asset.source !== 'original');
-      this.activeTab.set('overview');
+      // Kein Tab-Reset: der aktive Tab bleibt beim Bildwechsel stehen, seine Inhalte
+      // (faces()/detail()/Lore-Panel-Inputs) sind bereits reaktiv und aktualisieren sich
+      // von selbst — ein erzwungener Sprung zurück auf Übersicht war nur störend.
       this.mobileActionsOpen.set(false);
       this.selectedQuickAssignFaceId.set(null);
       // Reset editing state when navigating
