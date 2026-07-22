@@ -12,7 +12,7 @@ import type {
   UpdateEntityRequest,
 } from '@photofant/models';
 import { PersonService } from '@photofant/services';
-import { galleryActions, knowledgeActions, knowledgeSelectors, personsActions, personsSelectors } from '@photofant/store';
+import { galleryActions, gallerySelectors, knowledgeActions, knowledgeSelectors, personsActions, personsSelectors } from '@photofant/store';
 import { Icon, LinkEntityDialog } from '@photofant/ui';
 import { Lightbox } from '../galerie/lightbox/lightbox';
 import { EntityWizardDialog } from './entity-wizard-dialog/entity-wizard-dialog';
@@ -45,6 +45,11 @@ export class Wissen {
   private readonly store = inject(Store);
   private readonly personService = inject(PersonService);
   private readonly destroyRef = inject(DestroyRef);
+
+  // Lightbox-Guard (wie Galerie/Favoriten/Alben): ohne dieses Signal rendert `<pf-lightbox />`
+  // immer, auch ohne ausgewähltes Bild — die Lightbox hat keinen eigenen Leer-Zustand und
+  // legt dann einen leeren Scrim über die ganze Seite.
+  protected readonly lightboxId = this.store.selectSignal(gallerySelectors.selectLightboxId);
 
   protected readonly domains = this.store.selectSignal(knowledgeSelectors.selectDomains);
   protected readonly domainsLoading = this.store.selectSignal(knowledgeSelectors.selectDomainsLoading);
