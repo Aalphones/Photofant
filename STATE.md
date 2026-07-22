@@ -124,3 +124,7 @@ lief beim ersten App-Start seither mit. Details: `phase-1-fundament.md` / `phase
 - `docs/planning/2026-07-21_asset-embeddings-auslagern.md` — Galerie-Performance, letzter
   großer Hebel (Bild-Tabelle 90,8 → 11 MB, alle Voll-Abfragen 3-5× schneller). Bereit zum
   Start, hängt an nichts.
+- `docs/planning/2026-07-22_ml-jobs-worker-prozess/` — Lightbox/API blockiert während
+  Tagging/Captioning/Embedding & Co. laufen (GIL-Kontention, nicht ein vergessenes `to_thread`).
+  Alle Modell-Inferenz-Jobs ziehen in einen dauerhaften Worker-Prozess um. 4 Phasen, bereit zum
+  Start, hängt an nichts.
