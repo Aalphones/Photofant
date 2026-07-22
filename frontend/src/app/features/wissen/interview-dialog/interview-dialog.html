@@ -66,7 +66,7 @@
           </div>
           <div>
             <div class="iv-preset__title">Interview mit {{ name() }}</div>
-            <div class="iv-preset__sub">{{ questions.length }} kurze Fragen — leer lassen zum Überspringen.</div>
+            <div class="iv-preset__sub">{{ totalSteps() }} kurze Schritte — leer lassen zum Überspringen.</div>
           </div>
         </div>
       } @else {
@@ -103,8 +103,26 @@
           </div>
         </div>
       }
+    } @else if (atFieldStep()) {
+      <div class="iv-progress">Eckdaten</div>
+      <div class="iv-fields">
+        @for (fieldQuestion of fieldQuestions(); track fieldQuestion.key) {
+          <div class="iv-field">
+            <label class="iv-label" [for]="'iv-field-' + fieldQuestion.key">{{ fieldQuestion.question }}</label>
+            <input
+              class="iv-input"
+              type="text"
+              [id]="'iv-field-' + fieldQuestion.key"
+              [placeholder]="fieldQuestion.label"
+              [value]="fieldAnswers()[fieldQuestion.key] ?? ''"
+              (input)="setFieldAnswer(fieldQuestion.key, $any($event.target).value)"
+            />
+          </div>
+        }
+      </div>
+      <div class="iv-hint">Alles freiwillig — leer lassen ist in Ordnung.</div>
     } @else {
-      <div class="iv-progress">Frage {{ stepIndex() }} von {{ questions.length }}</div>
+      <div class="iv-progress">Frage {{ stepIndex() }} von {{ totalSteps() }}</div>
       <label class="iv-label" for="iv-answer">{{ currentQuestion() }}</label>
       <textarea
         id="iv-answer"

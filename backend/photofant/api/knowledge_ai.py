@@ -33,11 +33,11 @@ from photofant.knowledge.service import (
     KnowledgeService,
     OwnershipConflictError,
 )
-from photofant.settings import patch_settings
 from photofant.knowledge.slug import slugify
 from photofant.knowledge.task_rules import refresh_completeness_tasks
 from photofant.knowledge.validator import ValidationError
 from photofant.knowledge.vault import Vault, open_vault
+from photofant.settings import patch_settings
 
 DbSession = Annotated[Session, Depends(get_session)]
 VaultDep = Annotated[Vault, Depends(open_vault)]
@@ -84,10 +84,15 @@ class ImportSuggestionResponse(BaseModel):
 
 
 class InterviewAnswerDto(BaseModel):
-    """Ein beantwortetes Frage-Paar aus dem geführten Interview-Dialog (P27 Phase 4)."""
+    """Ein beantwortetes Frage-Paar aus dem geführten Interview-Dialog (P27 Phase 4).
+
+    ``field_key`` ist gesetzt, wenn die Antwort zu einem Merkmal des Entity-Typs gehört
+    (Schritt „Eckdaten", P39 Phase 2) — solche Werte werden wörtlich übernommen. Erzähl-
+    Antworten tragen keinen Key."""
 
     question: str
     answer: str
+    field_key: str | None = None
 
 
 class InterviewSynthesizeRequest(BaseModel):
@@ -231,7 +236,10 @@ async def synthesize_interview(body: InterviewSynthesizeRequest) -> InterviewSyn
             detail="Der Interview-Mode ist nur für private Domänen — für öffentliches Wissen den KI-Vorschlag nutzen",
         )
 
-    answers = [InterviewAnswer(question=item.question, answer=item.answer) for item in body.answers]
+    answers = [
+        InterviewAnswer(question=item.question, answer=item.answer, field_key=item.field_key)
+        for item in body.answers
+    ]
     media_links = MediaLinks(persons=list(body.person_ids), assets=list(body.asset_ids))
     status = await enqueue_interview(body.title, body.domain, body.type, answers, media_links)
     return InterviewSynthesizeResponse(job_id=status.id)

@@ -76,70 +76,96 @@ aus der Domäne und würden sich sonst doppeln.
 
 ### Backend — Kontrakt
 
-- [ ] `InterviewAnswer` (Job **und** API-DTO in `knowledge_ai.py`) um `field_key: str | None = None`
+- [x] `InterviewAnswer` (Job **und** API-DTO in `knowledge_ai.py`) um `field_key: str | None = None`
       erweitern.
 
 ### Backend — Prompt
 
-- [ ] `interview.md` auf JSON-Ausgabe umstellen: `body` (String) und `attributes`
+- [x] `interview.md` auf JSON-Ausgabe umstellen: `body` (String) und `attributes`
       (Key → `{"value": String, "confidence": 0..1}`).
-- [ ] Regeln im Prompt: nur die im Nutzer-Turn als „noch offen" gelisteten Keys verwenden; ein
+- [x] Regeln im Prompt: nur die im Nutzer-Turn als „noch offen" gelisteten Keys verwenden; ein
       Merkmal nur setzen, wenn es eindeutig aus den Erzähl-Antworten hervorgeht; im Zweifel
       weglassen; nichts aus Weltwissen; kein Web.
-- [ ] Prompt-`version` hochziehen (bestehendes Dateiformat beibehalten).
+- [x] Prompt-`version` hochziehen (bestehendes Dateiformat beibehalten).
 
 ### Backend — Job
 
-- [ ] In `_run_interview` `vault.load_domain(...)` **vor** den `generate()`-Aufruf ziehen (steht
+- [x] In `_run_interview` `vault.load_domain(...)` **vor** den `generate()`-Aufruf ziehen (steht
       heute danach) — die Feld-Definitionen werden für den Prompt gebraucht.
-- [ ] Antworten aufteilen: `answered_fields` (mit `field_key`, nicht-leer, Key in `fields_for`)
+- [x] Antworten aufteilen: `answered_fields` (mit `field_key`, nicht-leer, Key in `fields_for`)
       und `narrative` (ohne `field_key`). Unbekannte `field_key` verwerfen.
-- [ ] `_build_user_prompt(title, narrative, open_fields)`: Protokoll der Erzähl-Antworten +
+- [x] `_build_user_prompt(title, narrative, open_fields)`: Protokoll der Erzähl-Antworten +
       Liste der **noch offenen** Merkmale als `- <key> (<label>)`. Ist nichts offen, den
       Merkmals-Block weglassen.
-- [ ] Neue Funktion `_parse_interview_output(raw, allowed) -> tuple[str, dict[str, Attribute]]`:
+- [x] Neue Funktion `_parse_interview_output(raw, allowed) -> tuple[str, dict[str, Attribute]]`:
       - Code-Fence (```json … ```) abstreifen, `json.loads`.
       - Bei `JSONDecodeError`, Nicht-Dict oder fehlendem/leerem `body` → `(raw.strip(), {})`.
       - `attributes` filtern: Key nicht in `allowed` → raus; Wert kein String oder leer → raus;
         `confidence` fehlt/ungültig → `0.5`, sonst auf `0.0..1.0` klemmen.
       - Ergebnis-Attribute mit `owner=Owner.INFERRED`.
-- [ ] Merkmale zusammenführen: erst die gefragten (`Owner.USER`, Confidence 1.0, Wert
+- [x] Merkmale zusammenführen: erst die gefragten (`Owner.USER`, Confidence 1.0, Wert
       `.strip()`), dann die vom Modell vorgeschlagenen — **nur** für Keys, die noch nicht belegt
       sind (AK 6). Die gefragten gewinnen immer.
-- [ ] `attributes` in den `Entity`-Kandidaten setzen, damit der P22-Validator sie mitprüft.
-- [ ] Ergebnis-Payload `suggestion.attributes` nach README-Kontrakt 1 (Key →
+- [x] `attributes` in den `Entity`-Kandidaten setzen, damit der P22-Validator sie mitprüft.
+- [x] Ergebnis-Payload `suggestion.attributes` nach README-Kontrakt 1 (Key →
       `{label, value, owner, confidence}`), Label aus `fields_for`.
-- [ ] Modul-Docstring nachziehen (Chesterton's Fence oben).
+- [x] Modul-Docstring nachziehen (Chesterton's Fence oben).
 
 ### Frontend — Interview-Dialog
 
-- [ ] `INTERVIEW_QUESTIONS` auf die drei Erzähl-Fragen kürzen, mit `{name}`-Platzhalter.
-- [ ] `computed` `fieldQuestions()`: Merkmale des aufgelösten Typs mit gesetzter `question`,
+- [x] `INTERVIEW_QUESTIONS` auf die drei Erzähl-Fragen kürzen, mit `{name}`-Platzhalter.
+- [x] `computed` `fieldQuestions()`: Merkmale des aufgelösten Typs mit gesetzter `question`,
       `{name}` ersetzt.
-- [ ] `computed` `hasFieldStep()` — steuert, ob Schritt 4 existiert.
-- [ ] Zweiter Antwort-Speicher `fieldAnswers = signal<Record<string, string>>({})`, Key =
+- [x] `computed` `hasFieldStep()` — steuert, ob Schritt 4 existiert.
+- [x] Zweiter Antwort-Speicher `fieldAnswers = signal<Record<string, string>>({})`, Key =
       Merkmals-Key.
-- [ ] Schrittzählung anpassen: Gesamtzahl = 3 (+1 wenn `hasFieldStep()`); der Fortschrittstext
+- [x] Schrittzählung anpassen: Gesamtzahl = 3 (+1 wenn `hasFieldStep()`); der Fortschrittstext
       „Frage X von N" bleibt, Schritt 4 zeigt „Eckdaten" als Titel statt einer Nummer-Frage.
-- [ ] Template: neuer Block für Schritt 4 — je Merkmal ein `<label>` mit der Frage und ein
+- [x] Template: neuer Block für Schritt 4 — je Merkmal ein `<label>` mit der Frage und ein
       einzeiliges `<input>` (kein Textarea; das sind kurze Werte). Alle optional, Hinweiszeile
       „Alles freiwillig — leer lassen ist in Ordnung."
-- [ ] `submit()`: `answers` bauen aus den drei Erzähl-Antworten (ohne `field_key`) **plus** je
+- [x] `submit()`: `answers` bauen aus den drei Erzähl-Antworten (ohne `field_key`) **plus** je
       Merkmal mit nicht-leerem Wert ein Eintrag `{question, answer, field_key}`.
 
 ### Tests
 
-- [ ] `_parse_interview_output`: gültiges JSON, kaputtes JSON (Fallback), unbekannter Key,
+- [x] `_parse_interview_output`: gültiges JSON, kaputtes JSON (Fallback), unbekannter Key,
       leerer Wert, Confidence-Klemmung.
-- [ ] Zusammenführung: gefragtes Merkmal schlägt Modell-Vorschlag desselben Keys (AK 6).
-- [ ] Gefragte Merkmale überleben kaputtes Modell-JSON (AK 7).
-- [ ] Interview ohne Antworten → Ergebnis ohne Merkmale, kein Fehler (AK 8).
+- [x] Zusammenführung: gefragtes Merkmal schlägt Modell-Vorschlag desselben Keys (AK 6).
+- [x] Gefragte Merkmale überleben kaputtes Modell-JSON (AK 7).
+- [x] Interview ohne Antworten → Ergebnis ohne Merkmale, kein Fehler (AK 8).
 
 ### Docs
 
-- [ ] `docs/decisions/034-interview-fuellt-merkmale.md`: Kontext / Optionen / Entscheidung /
+- [x] `docs/decisions/034-interview-fuellt-merkmale.md`: Kontext / Optionen / Entscheidung /
       Konsequenzen. Kernpunkt: Merkmale werden **gefragt**, nicht aus Prosa geraten; der
       Modell-Pfad ist optional, auf leere Felder beschränkt und als `inferred` markiert; ADR-009
       wird präzisiert, nicht aufgehoben.
 
 ## Report-Back
+
+**Status: complete.** Alle 9 AK umgesetzt, 16 Tests in `backend/tests/test_interview_job.py`
+grün (7 neue Phase-2-Tests + die bestehenden). Voller Backend-Lauf: **460 grün / 13 rot** —
+die 13 sind exakt die bekannte Vorbelastung (comfyui/caption), keine neue Regression.
+`ruff` auf den geänderten Dateien und `mypy` auf `interview_job.py` sauber,
+`npm run lint` + `npm run build` grün.
+
+Abweichungen und Entscheidungen während der Umsetzung:
+
+- **Erlaubte Keys für den Modell-Vorschlag = die offenen Merkmale**, nicht alle `fields_for`.
+  Damit filtert schon der Parser einen Vorschlag für ein bereits beantwortetes Merkmal weg;
+  die Zusammenführung (AK 6) ist ein zweiter Riegel davor, nicht der einzige.
+- **Der Prompt fordert reines JSON ohne Code-Fence**, das Parsen strippt eine Fence trotzdem —
+  kleine Modelle liefern sie erfahrungsgemäß ungefragt mit.
+- **`{name}` ohne Namen** (Wizard-Intro, bevor eine Person gewählt ist) fällt auf
+  „dieser Person" zurück, statt eine Lücke im Fragetext zu hinterlassen.
+- **Intro-Text sagt jetzt „N kurze Schritte"** statt „N kurze Fragen" — der Eckdaten-Schritt
+  ist ein Schritt mit mehreren Fragen, „Fragen" hätte gelogen.
+- **Vorbelastung gefixt (fremd, aber im selben Modul):** `api/knowledge_ai.py` hatte einen
+  falsch einsortierten Import (`patch_settings` mitten zwischen den `knowledge`-Importen) und
+  war deshalb dauerhaft `ruff`-rot. Per `git stash` als vorbestehend bestätigt und mit
+  `ruff --fix` erledigt — reine Sortierung, kein Verhalten.
+
+Offen für Phase 3: Das Frontend **sendet** die Merkmale und das Backend **liefert** sie im
+Vorschlag zurück, aber die Zusammenfassung zeigt sie noch nicht an und `CreateEntityRequest`
+trägt sie noch nicht. Genau das ist Phase 3.

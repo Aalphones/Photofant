@@ -268,6 +268,9 @@ export interface AcceptUpdateSuggestionResponse {
 export interface InterviewAnswer {
   question: string;
   answer: string;
+  // P39 Phase 2 — gesetzt, wenn die Antwort zu einem Merkmal des Typs gehört (Schritt
+  // „Eckdaten"). Solche Werte übernimmt das Backend wörtlich; Erzähl-Antworten tragen nichts.
+  field_key?: string;
 }
 
 // P27 Phase 4 — synthetisiert aus den Interview-Antworten einen Entity-Vorschlag. `domain`

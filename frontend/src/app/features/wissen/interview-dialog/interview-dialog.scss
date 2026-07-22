@@ -179,6 +179,17 @@
   &:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
 }
 
+.iv-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.iv-field .iv-label {
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
 .iv-summary {
   display: flex;
   flex-direction: column;

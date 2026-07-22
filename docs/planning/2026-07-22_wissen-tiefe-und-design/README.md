@@ -23,7 +23,7 @@ Phase 7 und 8 geworden.
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | [Domänen: Feld-Fragen und bevorzugte Quellen](phase-1-domaenen-schema.md) | standard | complete |
-| 2 | [Interview: Fragen aus der Domäne, Antworten feldgenau](phase-2-interview-fragen-merkmale.md) | heikel | pending |
+| 2 | [Interview: Fragen aus der Domäne, Antworten feldgenau](phase-2-interview-fragen-merkmale.md) | heikel | complete |
 | 3 | [Merkmale speichern und im Wizard zeigen](phase-3-merkmale-end-to-end.md) | standard | pending |
 | 4 | [Web-Recherche: bevorzugte Quellen + Einträge bestätigen](phase-4-web-recherche.md) | standard | pending |
 | 5 | [„aktualisiert am …" end-to-end](phase-5-zeitstempel.md) | standard | pending |

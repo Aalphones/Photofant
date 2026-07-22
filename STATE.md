@@ -1,10 +1,11 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-22_wissen-tiefe-und-design/`
-**Phase:** 1/8 — Domänen: Feld-Fragen und bevorzugte Quellen (in Arbeit)
-**Nächster Schritt:** `FieldDef.question` + `preferred_sources` auf Domain/EntityType, Parser,
-YAML-Inhalte (private.yaml, movies.yaml), DTOs (Backend `api/knowledge.py` + Frontend
-`knowledge.model.ts`), Tests, `docs/models.md`.
+**Phase:** 3/8 — Merkmale speichern und im Wizard zeigen (standard — `sonnet` reicht)
+**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-3-merkmale-end-to-end.md`
+lesen und umsetzen; die zwei Phase-3-Einträge in `FINDINGS.md` mitnehmen. Phase 2 (Interview
+fragt Merkmale ab, ADR-034) ist committet, Backend-Volltest 460 grün / 13 rot (unveränderte
+Vorbelastung).
 
 ## „Gesichter-Bereinigung" abgeschlossen (alle 4 Phasen)
 
