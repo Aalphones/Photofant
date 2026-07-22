@@ -235,7 +235,10 @@ interface InfoResponse {
 | `/wartung` (reconcile repair) | `POST` | `/api/maintenance/reconcile/repair` | `{ actions: RepairAction[] }` | `RepairResponse` |
 | `/wartung` (rebuild trigger) | `POST` | `/api/maintenance/rebuild` | `{ target: RebuildTarget }` | `{ job_id: string }` — REBUILD-Job in Queue (löscht Cache, baut neu auf; `knowledge`/`knowledge_reconcile` synchronisieren den Wissens-Cache aus dem Vault) |
 | `/wartung` (thumbnail rebuild additive) | `POST` | `/api/maintenance/rebuild-thumbnails` | — | `{ job_id: string }` — THUMBNAIL_REBUILD-Job; 409 wenn bereits läuft |
-| `/wartung` (status) | `GET` | `/api/maintenance/status` | — | `MaintenanceStatus` |
+| `/wartung` (unfertige nachverarbeiten) | `POST` | `/api/maintenance/reprocess-pending` | — | `{ job_id: string; asset_count: number }` — REPROCESS-Job; 409 wenn bereits läuft |
+| `/wartung` (status) | `GET` | `/api/maintenance/status` | — | `MaintenanceStatus` (inkl. `incomplete_count`) |
+
+**`POST /api/maintenance/reprocess-pending`:** Sammelt alle aktiven Bilder, deren `processing_ledger`-Flags noch offen sind (gefiltert auf die per `auto_*`-Settings aktivierten Schritte), und reiht **nur die fehlenden** Schritte über die reguläre Pipeline neu ein — Fertiges wird nicht wiederholt. Fängt Bilder auf, deren Verarbeitung abgebrochen ist; ohne diesen Lauf bleiben sie dauerhaft unverarbeitet, weil ein gescheiterter Job nie wiederholt wird. `asset_count` = Anzahl betroffener Bilder zum Auslösezeitpunkt, gleiche Zahl wie `MaintenanceStatus.incomplete_count`.
 
 ```typescript
 interface ReconcileReport {

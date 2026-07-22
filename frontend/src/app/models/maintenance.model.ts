@@ -126,11 +126,17 @@ export const REBUILD_TARGETS = ['thumbnails', 'embeddings', 'faces', 'knowledge'
 export type RebuildTarget = typeof REBUILD_TARGETS[number];
 
 export interface MaintenanceStatus {
-  db_size: number;          // db.sqlite size in bytes
-  thumbnail_count: number;  // assets with at least one cached thumbnail
-  cache_size: number;       // thumbnails.sqlite size in bytes
-  image_count: number;      // total assets in the database
-  face_crop_count: number;  // total face crops in the database
-  disk_total: number;       // total bytes on the filesystem hosting data_root
-  disk_used: number;        // used bytes on that filesystem
+  db_size: number;           // db.sqlite size in bytes
+  thumbnail_count: number;   // assets with at least one cached thumbnail
+  cache_size: number;        // thumbnails.sqlite size in bytes
+  image_count: number;       // total assets in the database
+  face_crop_count: number;   // total face crops in the database
+  disk_total: number;        // total bytes on the filesystem hosting data_root
+  disk_used: number;         // used bytes on that filesystem
+  incomplete_count: number;  // assets whose processing never finished
+}
+
+export interface ReprocessResponse {
+  job_id: string;
+  asset_count: number;
 }

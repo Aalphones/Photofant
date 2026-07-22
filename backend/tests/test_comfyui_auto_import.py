@@ -152,7 +152,7 @@ async def test_default_run_imports_history_output() -> None:
     assert import_and_cleanup.call_args.args[2].filename == "result.png"
     # ADR-013: a successful import must trigger the normal post-import pipeline
     # (tagging/caption/face/embedding) since the result is now a full Asset.
-    enqueue_pipeline.assert_called_once_with([(101, "/data/edits/img.png")])
+    enqueue_pipeline.assert_called_once_with([101])
 
 
 @pytest.mark.asyncio

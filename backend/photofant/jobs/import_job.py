@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import logging
 import shutil
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -29,8 +30,8 @@ def _dest_path(data_root: Path, meta: ImageMeta, source_path: Path) -> Path:
     return data_root / "_unknown" / "photos" / filename
 
 
-def _import_single(source_path: Path) -> tuple[int, str] | None:
-    """Import one file; return (asset_id, dest_path) if newly imported, None if duplicate."""
+def _import_single(source_path: Path) -> int | None:
+    """Import one file; return the new asset id, or None if it was a duplicate."""
     meta = read_meta(source_path)
 
     with SessionLocal() as session:
@@ -92,7 +93,7 @@ def _import_single(source_path: Path) -> tuple[int, str] | None:
             log.info("Duplicate detected on commit for %s — skipped", source_path.name)
             return None
 
-        return asset.id, str(dest.resolve())
+        return asset.id
 
 
 def _expand_paths(raw_paths: list[str]) -> list[Path]:
@@ -127,7 +128,7 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
     total = len(files)
     imported = 0
     skipped = 0
-    imported_items: list[tuple[int, str]] = []
+    imported_asset_ids: list[int] = []
 
     if total == 0:
         log.warning("Import: no importable files found in %d input path(s)", len(paths))
@@ -141,9 +142,9 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
             log.info("Skipping unsupported format: %s", source_path.suffix)
             skipped += 1
         else:
-            result = await asyncio.to_thread(_import_single, source_path)
-            if result is not None:
-                imported_items.append(result)
+            asset_id = await asyncio.to_thread(_import_single, source_path)
+            if asset_id is not None:
+                imported_asset_ids.append(asset_id)
                 imported += 1
             else:
                 skipped += 1
@@ -156,8 +157,8 @@ async def run_import_job(status: JobStatus, paths: list[str]) -> None:
         label_parts.append(f"{skipped} übersprungen")
     log.info("Import done: %s", ", ".join(label_parts))
 
-    if imported_items:
-        await _enqueue_pipeline(imported_items)
+    if imported_asset_ids:
+        await _enqueue_pipeline(imported_asset_ids)
 
 
 def _is_scannable(file_path: Path, data_root: Path) -> bool:
@@ -177,7 +178,7 @@ def _is_scannable(file_path: Path, data_root: Path) -> bool:
 def _import_to_person(
     source_path: Path,
     person_id: int,
-) -> tuple[int, str] | None:
+) -> int | None:
     """Import a file dropped into a person folder (FS-Drop, §6.1a).
 
     If the asset already exists (same hash), creates a new instance for the
@@ -226,7 +227,7 @@ def _import_to_person(
                 "FS-Drop: new instance for existing asset %d → person %d",
                 existing_asset.id, person_id,
             )
-            return existing_asset.id, str(source_path.resolve())
+            return existing_asset.id
 
         asset = Asset(
             content_hash=meta.content_hash,
@@ -261,7 +262,7 @@ def _import_to_person(
             return None
 
         log.info("FS-Drop: new asset %d from %s → person %d", asset.id, source_path.name, person_id)
-        return asset.id, str(source_path.resolve())
+        return asset.id
 
 
 async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
@@ -299,35 +300,35 @@ async def run_scan_job(status: JobStatus, scan_root: Path) -> None:
     if not path_assignments:
         return
 
-    imported_items: list[tuple[int, str]] = []
+    imported_asset_ids: list[int] = []
     total = len(path_assignments)
     for index, (file_path, pid) in enumerate(path_assignments):
         if pid is not None:
-            result = await asyncio.to_thread(_import_to_person, file_path, pid)
+            asset_id = await asyncio.to_thread(_import_to_person, file_path, pid)
         else:
-            result = await asyncio.to_thread(_import_single, file_path)
-        if result is not None:
-            imported_items.append(result)
+            asset_id = await asyncio.to_thread(_import_single, file_path)
+        if asset_id is not None:
+            imported_asset_ids.append(asset_id)
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
 
-    if imported_items:
-        await _enqueue_pipeline(imported_items)
+    if imported_asset_ids:
+        await _enqueue_pipeline(imported_asset_ids)
 
 
 async def run_person_import_job(status: JobStatus, person_id: int, paths: list[str]) -> None:
     """Import files that were uploaded directly to a person's folder (fixed_person)."""
     total = len(paths)
-    imported_items: list[tuple[int, str]] = []
+    imported_asset_ids: list[int] = []
 
     for index, path_str in enumerate(paths):
         file_path = Path(path_str)
-        result = await asyncio.to_thread(_import_to_person, file_path, person_id)
-        if result is not None:
-            imported_items.append(result)
+        asset_id = await asyncio.to_thread(_import_to_person, file_path, person_id)
+        if asset_id is not None:
+            imported_asset_ids.append(asset_id)
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
 
-    if imported_items:
-        await _enqueue_pipeline(imported_items)
+    if imported_asset_ids:
+        await _enqueue_pipeline(imported_asset_ids)
 
 
 async def enqueue_person_import(person_id: int, paths: list[str]) -> JobStatus:
@@ -354,96 +355,105 @@ async def enqueue_scan(scan_root: Path) -> JobStatus:
     )
 
 
-async def enqueue_post_import_pipeline(items: list[tuple[int, str]]) -> None:
-    """Public entrypoint for other import paths (e.g. ComfyUI edit-as-asset, ADR-013)."""
-    await _enqueue_pipeline(items)
+@dataclass(frozen=True)
+class PipelineSteps:
+    """Which processing steps to enqueue for one asset.
 
-
-async def _enqueue_pipeline(items: list[tuple[int, str]]) -> None:
-    """Enqueue the post-import processing pipeline for freshly imported assets.
-
-    Thumbnails and heuristics always run; tagging, captioning, embedding and
-    face detection are gated on auto_* settings flags.
+    Import turns everything on that the auto_* settings allow. The catch-up run
+    (`reprocess_job`) turns on only what the ledger still says is missing, so a
+    photo that just lost its face detection isn't captioned all over again.
     """
-    from photofant.jobs.thumbnail_job import enqueue_thumbnails
+
+    heuristics: bool = True
+    tags: bool = True
+    caption: bool = True
+    embedding: bool = True
+    faces: bool = True
+    classification: bool = True
+
+
+def steps_from_settings() -> PipelineSteps:
+    """The full pipeline, minus whatever the auto_* settings switch off."""
     from photofant.settings import load_settings
 
     settings = load_settings()
-
-    await enqueue_thumbnails(items)
-    await _enqueue_heuristics_batch(items)
-    auto_tag: bool = settings["auto_tag"]
-    auto_caption: bool = settings["auto_caption"]
-    auto_embed: bool = settings["auto_embed"]
     auto_face: bool = settings.get("auto_face", True)  # type: ignore[assignment]
+    return PipelineSteps(
+        heuristics=True,
+        tags=settings["auto_tag"],
+        caption=settings["auto_caption"],
+        embedding=settings["auto_embed"],
+        faces=auto_face,
+        classification=True,
+    )
 
-    if auto_tag:
-        await _enqueue_tagging_batch(items)
-    if auto_caption:
-        await _enqueue_caption_batch(items)
-    if auto_embed:
-        await _enqueue_embedding_batch(items)
 
-    if auto_face:
-        prereq_count = int(auto_tag) + int(auto_caption)
-        if prereq_count == 0:
-            # No TAGGING or CAPTIONING configured — FACE has no prerequisites.
-            await _enqueue_face_batch(items)
+async def enqueue_pipeline_steps(asset_id: int, steps: PipelineSteps) -> None:
+    """Enqueue the selected steps for one asset, wiring up the ordering rules.
+
+    This is *the* place the dependency rules live — both the import pipeline and
+    the catch-up run go through here, so the two can never drift apart:
+
+    - FACE waits for TAGGING and CAPTIONING (whichever of them actually runs),
+      because face matching moves the file into a person folder.
+    - CLASSIFICATION waits for TAGGING and EMBEDDING, its two fusion inputs.
+
+    Only steps that really run are counted as prerequisites — waiting for a
+    signal nobody will send would strand the asset forever.
+    """
+    from photofant.jobs.caption_job import enqueue_caption
+    from photofant.jobs.classification_job import enqueue_classification
+    from photofant.jobs.classification_pipeline import classification_pipeline
+    from photofant.jobs.embedding_job import enqueue_embedding
+    from photofant.jobs.face_job import enqueue_face
+    from photofant.jobs.face_pipeline import face_pipeline
+    from photofant.jobs.heuristics_job import enqueue_heuristics
+    from photofant.jobs.tagging_job import enqueue_tagging
+
+    if steps.heuristics:
+        await enqueue_heuristics(asset_id)
+    if steps.tags:
+        await enqueue_tagging(asset_id)
+    if steps.caption:
+        await enqueue_caption(asset_id)
+    if steps.embedding:
+        await enqueue_embedding(asset_id)
+
+    if steps.faces:
+        face_prereq_count = int(steps.tags) + int(steps.caption)
+        if face_prereq_count == 0:
+            await enqueue_face(asset_id)
         else:
-            from photofant.jobs.face_pipeline import face_pipeline
+            face_pipeline.register(asset_id, face_prereq_count)
 
-            for asset_id, asset_path in items:
-                face_pipeline.register(asset_id, asset_path, prereq_count)
-
-    classification_prereq_count = int(auto_tag) + int(auto_embed)
-    if classification_prereq_count == 0:
-        # Neither TAGGING nor EMBEDDING configured — CLASSIFICATION has no signal to wait for
-        # (the engine still runs; both fusion inputs simply stay absent).
-        await _enqueue_classification_batch(items)
-    else:
-        from photofant.jobs.classification_pipeline import classification_pipeline
-
-        for asset_id, _asset_path in items:
+    if steps.classification:
+        classification_prereq_count = int(steps.tags) + int(steps.embedding)
+        if classification_prereq_count == 0:
+            # No TAGGING or EMBEDDING to wait for — the engine still runs, both
+            # fusion inputs simply stay absent.
+            await enqueue_classification(asset_id)
+        else:
             classification_pipeline.register(asset_id, classification_prereq_count)
 
 
-async def _enqueue_heuristics_batch(items: list[tuple[int, str]]) -> None:
-    from photofant.jobs.heuristics_job import enqueue_heuristics
-
-    for asset_id, asset_path in items:
-        await enqueue_heuristics(asset_id, asset_path)
+async def enqueue_post_import_pipeline(asset_ids: list[int]) -> None:
+    """Public entrypoint for other import paths (e.g. ComfyUI edit-as-asset, ADR-013)."""
+    await _enqueue_pipeline(asset_ids)
 
 
-async def _enqueue_tagging_batch(items: list[tuple[int, str]]) -> None:
-    from photofant.jobs.tagging_job import enqueue_tagging
+async def _enqueue_pipeline(asset_ids: list[int]) -> None:
+    """Enqueue the post-import processing pipeline for freshly imported assets.
 
-    for asset_id, asset_path in items:
-        await enqueue_tagging(asset_id, asset_path)
+    Only asset ids travel through the queue — never file paths. Face matching
+    moves an asset into its person folder mid-pipeline, so a path captured here
+    would be wrong by the time a later job opens it (see media/asset_paths.py).
+    """
+    from photofant.jobs.thumbnail_job import enqueue_thumbnails
 
+    # One batched thumbnail job for the whole import — not one per photo, or the
+    # job dock would drown in entries.
+    await enqueue_thumbnails(asset_ids)
 
-async def _enqueue_caption_batch(items: list[tuple[int, str]]) -> None:
-    from photofant.jobs.caption_job import enqueue_caption
-
-    for asset_id, asset_path in items:
-        await enqueue_caption(asset_id, asset_path)
-
-
-async def _enqueue_embedding_batch(items: list[tuple[int, str]]) -> None:
-    from photofant.jobs.embedding_job import enqueue_embedding
-
-    for asset_id, asset_path in items:
-        await enqueue_embedding(asset_id, asset_path)
-
-
-async def _enqueue_face_batch(items: list[tuple[int, str]]) -> None:
-    from photofant.jobs.face_job import enqueue_face
-
-    for asset_id, asset_path in items:
-        await enqueue_face(asset_id, asset_path)
-
-
-async def _enqueue_classification_batch(items: list[tuple[int, str]]) -> None:
-    from photofant.jobs.classification_job import enqueue_classification
-
-    for asset_id, _asset_path in items:
-        await enqueue_classification(asset_id)
+    steps = steps_from_settings()
+    for asset_id in asset_ids:
+        await enqueue_pipeline_steps(asset_id, steps)

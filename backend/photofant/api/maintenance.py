@@ -20,6 +20,7 @@ from photofant.jobs.import_job import enqueue_import
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.jobs.rebuild_job import RebuildTarget, enqueue_rebuild
 from photofant.jobs.reconcile_job import enqueue_reconcile
+from photofant.jobs.reprocess_job import count_incomplete_assets, enqueue_reprocess
 from photofant.jobs.thumbnail_job import enqueue_thumbnail_rebuild
 from photofant.maintenance import repair
 from photofant.maintenance.store import load_report
@@ -318,6 +319,29 @@ async def trigger_thumbnail_rebuild() -> JobResponse:
     return JobResponse(job_id=status.id)
 
 
+# ── Unfinished processing ─────────────────────────────────────────────────────
+
+
+class ReprocessResponse(BaseModel):
+    job_id: str
+    asset_count: int
+
+
+@router.post("/reprocess-pending", response_model=ReprocessResponse)
+async def trigger_reprocess() -> ReprocessResponse:
+    """Requeue the processing steps that never finished, for every affected asset."""
+    already_running = any(
+        job.kind == JobKind.REPROCESS and job.state in (JobState.QUEUED, JobState.RUNNING)
+        for job in job_queue.snapshot()
+    )
+    if already_running:
+        raise HTTPException(status_code=409, detail="Nachverarbeitung läuft bereits")
+
+    asset_count = count_incomplete_assets()
+    status: JobStatus = await enqueue_reprocess()
+    return ReprocessResponse(job_id=status.id, asset_count=asset_count)
+
+
 # ── Status ────────────────────────────────────────────────────────────────────
 
 
@@ -329,6 +353,7 @@ class MaintenanceStatusDto(BaseModel):
     face_crop_count: int    # total face crops in the database
     disk_total: int         # total bytes on the filesystem hosting data_root
     disk_used: int          # used bytes on that filesystem
+    incomplete_count: int   # assets whose processing never finished
 
 
 def _file_size(path: Path) -> int:
@@ -356,4 +381,5 @@ async def get_status(session: DbSession) -> MaintenanceStatusDto:
         face_crop_count=face_crop_count,
         disk_total=disk_total,
         disk_used=disk_used,
+        incomplete_count=count_incomplete_assets(),
     )

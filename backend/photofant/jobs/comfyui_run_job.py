@@ -395,7 +395,7 @@ async def _wait_and_import_output(
     )
 
     from photofant.jobs.import_job import enqueue_post_import_pipeline
-    await enqueue_post_import_pipeline([(imported.asset_id, imported.path)])
+    await enqueue_post_import_pipeline([imported.asset_id])
 
 
 def _import_and_cleanup(

@@ -835,7 +835,7 @@ async def import_comfyui_result(body: ComfyUIImportRequest, db: DbSession) -> Co
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     from photofant.jobs.import_job import enqueue_post_import_pipeline
-    await enqueue_post_import_pipeline([(imported.asset_id, imported.path)])
+    await enqueue_post_import_pipeline([imported.asset_id])
 
     return ComfyUIImportResponse(
         asset_id=imported.asset_id,

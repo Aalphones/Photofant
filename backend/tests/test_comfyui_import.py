@@ -259,7 +259,8 @@ class TestComfyUIImport:
         assert ledger is not None
 
         # A full Asset must run the normal post-import pipeline (Tags/Caption/Face/Embedding).
-        enqueue_pipeline.assert_called_once_with([(new_asset_id, new_instance.path)])
+        # Only the id travels — each job resolves the file path itself when it runs.
+        enqueue_pipeline.assert_called_once_with([new_asset_id])
 
     def test_import_unknown_asset_returns_404(self, db: Session) -> None:
         app = _make_app(db)

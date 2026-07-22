@@ -2,7 +2,15 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, filter, map, of, switchMap } from 'rxjs';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { AppInfo, BackupInfo, Job, MaintenanceStatus, ReconcileReport, RepairResponse } from '@photofant/models';
+import type {
+  AppInfo,
+  BackupInfo,
+  Job,
+  MaintenanceStatus,
+  ReconcileReport,
+  RepairResponse,
+  ReprocessResponse,
+} from '@photofant/models';
 import { ClassifyService, MaintenanceService } from '@photofant/services';
 import { jobsActions } from '../jobs/jobs.actions';
 import { maintenanceActions } from './maintenance.actions';
@@ -202,6 +210,50 @@ export class MaintenanceEffects {
       filter(({ job }: { job: Job }) => job.kind === 'thumbnail_rebuild' && job.state === 'error'),
       map(({ job }: { job: Job }) =>
         maintenanceActions.triggerThumbnailRebuildFailure({ error: job.error ?? 'Rebuild fehlgeschlagen' })
+      ),
+    )
+  );
+
+  readonly triggerReprocess$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(maintenanceActions.triggerReprocess),
+      switchMap(() =>
+        this.maintenanceService.reprocessPending().pipe(
+          map((response: ReprocessResponse) =>
+            maintenanceActions.triggerReprocessSuccess({
+              jobId: response.job_id,
+              assetCount: response.asset_count,
+            })
+          ),
+          catchError((error: HttpErrorResponse) =>
+            of(maintenanceActions.triggerReprocessFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
+  // The catch-up job only *enqueues* work — the actual processing runs afterwards
+  // in the job dock, so "done" here means "everything is queued up".
+  readonly reprocessJobDone$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'reprocess' && job.state === 'done'),
+      switchMap(() => [
+        maintenanceActions.reprocessDone(),
+        maintenanceActions.loadStatus(),
+      ]),
+    )
+  );
+
+  readonly reprocessJobFailed$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(jobsActions.upsertJob),
+      filter(({ job }: { job: Job }) => job.kind === 'reprocess' && job.state === 'error'),
+      map(({ job }: { job: Job }) =>
+        maintenanceActions.triggerReprocessFailure({
+          error: job.error ?? 'Nachverarbeitung fehlgeschlagen',
+        })
       ),
     )
   );

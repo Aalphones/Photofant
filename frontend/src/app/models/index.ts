@@ -121,6 +121,7 @@ export type {
   RepairResponse,
   RebuildTarget,
   MaintenanceStatus,
+  ReprocessResponse,
 } from './maintenance.model';
 export { ISSUE_KINDS, REPAIR_ACTIONS, REBUILD_TARGETS } from './maintenance.model';
 

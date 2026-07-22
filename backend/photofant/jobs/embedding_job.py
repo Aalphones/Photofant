@@ -67,7 +67,7 @@ def _check_for_dupes(session: Session, asset_id: int, dino_embedding: np.ndarray
         session.rollback()
 
 
-def _embed_asset(asset_id: int, asset_path: str, *, semantic: bool, dino: bool) -> None:
+def _embed_asset(asset_id: int, *, semantic: bool, dino: bool) -> None:
     """Blocking: run the requested image embedders + persist them for one asset.
 
     `semantic` = the SigLIP2 (role ``semantic_search``) path: canonical
@@ -80,22 +80,39 @@ def _embed_asset(asset_id: int, asset_path: str, *, semantic: bool, dino: bool) 
     The two spaces are independent — a requested role with no enabled model is
     skipped cleanly (its flag stays False), never a crash. The source image is
     opened once and fed to both adapters (each does its own preprocessing).
+
+    The classification signal fires in `finally` on the semantic path: whatever
+    goes wrong here, classification must not wait for a signal that never comes.
     """
+    from photofant.jobs.classification_pipeline import classification_pipeline
+
+    try:
+        _embed_asset_inner(asset_id, semantic=semantic, dino=dino)
+    finally:
+        if semantic:
+            classification_pipeline.signal(asset_id)
+
+
+def _embed_asset_inner(asset_id: int, *, semantic: bool, dino: bool) -> None:
+    """Inner implementation; always called through `_embed_asset`."""
     from PIL import Image as PILImage
 
     from photofant.inference.image_embedder import resolve_image_embedder
-    from photofant.jobs.classification_pipeline import classification_pipeline
+    from photofant.media.asset_paths import resolve_asset_path
 
     semantic_embedder = resolve_image_embedder() if semantic else None
     dino_embedder = resolve_image_embedder(role="visual_rerank") if dino else None
 
     if semantic_embedder is None and dino_embedder is None:
         if semantic:
-            # Primary pipeline must advance even without a semantic embedder.
             log.info("No image embedder enabled — skipping embedding for asset %d", asset_id)
-            classification_pipeline.signal(asset_id)
         else:
             log.info("No DINOv2 embedder enabled — skipping visual-rerank embedding for asset %d", asset_id)
+        return
+
+    asset_path = resolve_asset_path(asset_id)
+    if asset_path is None:
+        log.warning("Asset %d has no readable file — skipping embedding", asset_id)
         return
 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
@@ -133,35 +150,32 @@ def _embed_asset(asset_id: int, asset_path: str, *, semantic: bool, dino: bool) 
     if semantic_embedding is not None:
         log.info("Embedded asset %d (SigLIP2 %d dims)", asset_id, semantic_embedding.shape[0])
 
-    if semantic:
-        classification_pipeline.signal(asset_id)
 
-
-def _run_embedding(asset_id: int, asset_path: str) -> None:
+def _run_embedding(asset_id: int) -> None:
     """Blocking: embed both active image models (SigLIP2 + DINOv2) for one asset."""
-    _embed_asset(asset_id, asset_path, semantic=True, dino=True)
+    _embed_asset(asset_id, semantic=True, dino=True)
 
 
-def _run_dino_embedding(asset_id: int, asset_path: str) -> None:
+def _run_dino_embedding(asset_id: int) -> None:
     """Blocking: (re)embed only the DINOv2 visual-rerank space for one asset.
 
     Lets an existing library gain the DINOv2 embedding on a rerun without
     recomputing SigLIP2 (rerun step ``dino_embedding``).
     """
-    _embed_asset(asset_id, asset_path, semantic=False, dino=True)
+    _embed_asset(asset_id, semantic=False, dino=True)
 
 
-async def run_embedding_job(status: JobStatus, asset_id: int, asset_path: str) -> None:
+async def run_embedding_job(status: JobStatus, asset_id: int) -> None:
     import asyncio
 
     job_queue.update(status, progress=0.1, state=JobState.RUNNING)
-    await asyncio.to_thread(_run_embedding, asset_id, asset_path)
+    await asyncio.to_thread(_run_embedding, asset_id)
     job_queue.update(status, progress=1.0, state=JobState.DONE)
 
 
-async def enqueue_embedding(asset_id: int, asset_path: str) -> JobStatus:
+async def enqueue_embedding(asset_id: int) -> JobStatus:
     return await job_queue.enqueue(
         kind=JobKind.EMBEDDING,
         label=f"Embedding: Asset {asset_id}",
-        coro_factory=lambda job_status: run_embedding_job(job_status, asset_id, asset_path),
+        coro_factory=lambda job_status: run_embedding_job(job_status, asset_id),
     )

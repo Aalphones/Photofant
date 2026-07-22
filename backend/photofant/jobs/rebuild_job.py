@@ -6,7 +6,7 @@ from typing import Literal
 from photofant.db.cache import clear_cache, get_cache_db_path, init_cache_db
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
-from photofant.jobs.thumbnail_job import gather_active_items, generate_thumbnails
+from photofant.jobs.thumbnail_job import gather_active_asset_ids, generate_thumbnails
 
 log = logging.getLogger(__name__)
 
@@ -31,9 +31,9 @@ async def _rebuild_thumbnails(status: JobStatus) -> None:
     init_cache_db(db_path)
     clear_cache(db_path)
 
-    items = gather_active_items()
-    await generate_thumbnails(status, db_path, items)
-    log.info("Thumbnail cache rebuilt for %d instances", len(items))
+    asset_ids = gather_active_asset_ids()
+    await generate_thumbnails(status, db_path, asset_ids)
+    log.info("Thumbnail cache rebuilt for %d assets", len(asset_ids))
 
 
 async def _rebuild_embeddings(status: JobStatus) -> None:

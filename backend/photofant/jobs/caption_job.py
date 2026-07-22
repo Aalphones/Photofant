@@ -172,7 +172,6 @@ def _run_captioner(
 
 def _run_caption_with_preset(
     asset_id: int,
-    asset_path: str,
     override_preset_id: int | None = None,
     force: bool = False,
 ) -> None:
@@ -180,19 +179,20 @@ def _run_caption_with_preset(
     from photofant.jobs.face_pipeline import face_pipeline
 
     try:
-        _run_caption_with_preset_inner(asset_id, asset_path, override_preset_id, force)
+        _run_caption_with_preset_inner(asset_id, override_preset_id, force)
     finally:
         face_pipeline.signal(asset_id)
 
 
 def _run_caption_with_preset_inner(
     asset_id: int,
-    asset_path: str,
     override_preset_id: int | None,
     force: bool,
 ) -> None:
     """Inner implementation; always called through _run_caption_with_preset."""
     from PIL import Image as PILImage
+
+    from photofant.media.asset_paths import resolve_asset_path
 
     # Find the active captioner (heavy preferred over Florence).
     active_model = _resolve_active_captioner()
@@ -219,6 +219,11 @@ def _run_caption_with_preset_inner(
         if asset_check.caption_edited and not force:
             log.info("Asset %d has a manually edited caption — skipping captioner", asset_id)
             return
+
+    asset_path = resolve_asset_path(asset_id)
+    if asset_path is None:
+        log.warning("Asset %d has no readable file — skipping caption", asset_id)
+        return
 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
     caption = _run_captioner(manifest_id, caption_mode, image, preset_config)
@@ -253,21 +258,21 @@ def _run_caption_with_preset_inner(
     log.info("Captioned asset %d (%d chars, preset %s, model %s)", asset_id, len(caption), preset_id, manifest_id)
 
 
-def _run_caption(asset_id: int, asset_path: str) -> None:
-    _run_caption_with_preset(asset_id, asset_path)
+def _run_caption(asset_id: int) -> None:
+    _run_caption_with_preset(asset_id)
 
 
-async def run_caption_job(status: JobStatus, asset_id: int, asset_path: str) -> None:
+async def run_caption_job(status: JobStatus, asset_id: int) -> None:
     import asyncio
 
     job_queue.update(status, progress=0.1, state=JobState.RUNNING)
-    await asyncio.to_thread(_run_caption, asset_id, asset_path)
+    await asyncio.to_thread(_run_caption, asset_id)
     job_queue.update(status, progress=1.0, state=JobState.DONE)
 
 
-async def enqueue_caption(asset_id: int, asset_path: str) -> JobStatus:
+async def enqueue_caption(asset_id: int) -> JobStatus:
     return await job_queue.enqueue(
         kind=JobKind.CAPTIONING,
         label=f"Caption: Asset {asset_id}",
-        coro_factory=lambda job_status: run_caption_job(job_status, asset_id, asset_path),
+        coro_factory=lambda job_status: run_caption_job(job_status, asset_id),
     )

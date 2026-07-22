@@ -21,6 +21,9 @@ export interface MaintenanceState {
   rebuildingTarget: RebuildTarget | null;
   isThumbnailRebuilding: boolean;
   isReembedding: boolean;
+  isReprocessing: boolean;
+  /** How many photos the last catch-up run picked up — drives the confirmation text. */
+  reprocessAssetCount: number | null;
   status: MaintenanceStatus | null;
   appInfo: AppInfo | null;
   isLoadingAppInfo: boolean;
@@ -38,6 +41,8 @@ const initialState: MaintenanceState = {
   rebuildingTarget: null,
   isThumbnailRebuilding: false,
   isReembedding: false,
+  isReprocessing: false,
+  reprocessAssetCount: null,
   status: null,
   appInfo: null,
   isLoadingAppInfo: false,
@@ -180,6 +185,26 @@ export const maintenanceFeature = createFeature({
     on(maintenanceActions.thumbnailRebuildDone, (state: MaintenanceState) => ({
       ...state,
       isThumbnailRebuilding: false,
+    })),
+
+    on(maintenanceActions.triggerReprocess, (state: MaintenanceState) => ({
+      ...state,
+      isReprocessing: true,
+      reprocessAssetCount: null,
+      error: null,
+    })),
+    on(maintenanceActions.triggerReprocessSuccess, (state: MaintenanceState, { assetCount }) => ({
+      ...state,
+      reprocessAssetCount: assetCount,
+    })),
+    on(maintenanceActions.triggerReprocessFailure, (state: MaintenanceState, { error }) => ({
+      ...state,
+      isReprocessing: false,
+      error,
+    })),
+    on(maintenanceActions.reprocessDone, (state: MaintenanceState) => ({
+      ...state,
+      isReprocessing: false,
     })),
 
     on(maintenanceActions.triggerReembedAll, (state: MaintenanceState) => ({

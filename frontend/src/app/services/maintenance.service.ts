@@ -9,6 +9,7 @@ import type {
   ReconcileReport,
   RepairAction,
   RepairResponse,
+  ReprocessResponse,
 } from '@photofant/models';
 
 @Injectable({ providedIn: 'root' })
@@ -47,6 +48,10 @@ export class MaintenanceService {
 
   rebuildThumbnails(): Observable<{ job_id: string }> {
     return this.http.post<{ job_id: string }>('/api/maintenance/rebuild-thumbnails', {});
+  }
+
+  reprocessPending(): Observable<ReprocessResponse> {
+    return this.http.post<ReprocessResponse>('/api/maintenance/reprocess-pending', {});
   }
 
   loadStatus(): Observable<MaintenanceStatus> {

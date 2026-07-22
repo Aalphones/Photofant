@@ -15,13 +15,28 @@ from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 log = logging.getLogger(__name__)
 
 
-def _run_tagging(asset_id: int, asset_path: str) -> None:
-    """Blocking: run WD14 inference + persist tags for one asset."""
+def _run_tagging(asset_id: int) -> None:
+    """Blocking: run WD14 inference + persist tags for one asset.
+
+    The follow-up signals fire in `finally`: face detection and classification
+    wait for this step, and a tagging failure must not strand them forever.
+    """
+    from photofant.jobs.classification_pipeline import classification_pipeline
+    from photofant.jobs.face_pipeline import face_pipeline
+
+    try:
+        _run_tagging_inner(asset_id)
+    finally:
+        face_pipeline.signal(asset_id)
+        classification_pipeline.signal(asset_id)
+
+
+def _run_tagging_inner(asset_id: int) -> None:
+    """Inner implementation; always called through `_run_tagging`."""
     from PIL import Image as PILImage
 
     from photofant.inference.adapters.wd14 import resolve_wd14_tagger
-    from photofant.jobs.classification_pipeline import classification_pipeline
-    from photofant.jobs.face_pipeline import face_pipeline
+    from photofant.media.asset_paths import resolve_asset_path
     from photofant.settings import load_settings
 
     settings = load_settings()
@@ -30,8 +45,11 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
     tagger = resolve_wd14_tagger(threshold=threshold)
     if tagger is None:
         log.info("WD14 not enabled — skipping tagging for asset %d", asset_id)
-        face_pipeline.signal(asset_id)
-        classification_pipeline.signal(asset_id)
+        return
+
+    asset_path = resolve_asset_path(asset_id)
+    if asset_path is None:
+        log.warning("Asset %d has no readable file — skipping tagging", asset_id)
         return
 
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
@@ -99,21 +117,19 @@ def _run_tagging(asset_id: int, asset_path: str) -> None:
         engine.evaluate_asset(session, asset_id)
 
     log.info("Tagged asset %d: %d tag(s) persisted", asset_id, len(tag_scores))
-    face_pipeline.signal(asset_id)
-    classification_pipeline.signal(asset_id)
 
 
-async def run_tagging_job(status: JobStatus, asset_id: int, asset_path: str) -> None:
+async def run_tagging_job(status: JobStatus, asset_id: int) -> None:
     import asyncio
 
     job_queue.update(status, progress=0.1, state=JobState.RUNNING)
-    await asyncio.to_thread(_run_tagging, asset_id, asset_path)
+    await asyncio.to_thread(_run_tagging, asset_id)
     job_queue.update(status, progress=1.0, state=JobState.DONE)
 
 
-async def enqueue_tagging(asset_id: int, asset_path: str) -> JobStatus:
+async def enqueue_tagging(asset_id: int) -> JobStatus:
     return await job_queue.enqueue(
         kind=JobKind.TAGGING,
         label=f"Tagging: Asset {asset_id}",
-        coro_factory=lambda job_status: run_tagging_job(job_status, asset_id, asset_path),
+        coro_factory=lambda job_status: run_tagging_job(job_status, asset_id),
     )

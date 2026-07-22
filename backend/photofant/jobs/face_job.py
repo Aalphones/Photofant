@@ -103,15 +103,25 @@ def _run_incremental_match(face_id: int) -> None:
     run_incremental_match(face_id)
 
 
-def _run_face_job(asset_id: int, asset_path: str) -> None:
+def _run_face_job(asset_id: int) -> None:
     from photofant.config import get_data_root
     from photofant.inference.adapters.buffalo_l import resolve_buffalo_l
+    from photofant.media.asset_paths import resolve_asset_path
     from photofant.settings import load_settings
 
     engine = resolve_buffalo_l()
     if engine is None:
         log.info("Face job skipped for asset %d — buffalo_l not available", asset_id)
         _mark_done(asset_id)
+        return
+
+    # Resolved here, not at enqueue time: this job runs last in the pipeline, so
+    # the file has most likely been moved into a person folder in the meantime.
+    asset_path = resolve_asset_path(asset_id)
+    if asset_path is None:
+        # Deliberately *not* marked done — the asset needs a reconcile, not a
+        # "processed" tick that hides it from the catch-up run.
+        log.warning("Asset %d has no readable file — skipping face detection", asset_id)
         return
 
     settings = load_settings()
@@ -283,17 +293,17 @@ def _mark_done(asset_id: int) -> None:
         session.commit()
 
 
-async def run_face_job(status: JobStatus, asset_id: int, asset_path: str) -> None:
+async def run_face_job(status: JobStatus, asset_id: int) -> None:
     import asyncio
 
     job_queue.update(status, progress=0.1, state=JobState.RUNNING)
-    await asyncio.to_thread(_run_face_job, asset_id, asset_path)
+    await asyncio.to_thread(_run_face_job, asset_id)
     job_queue.update(status, progress=1.0, state=JobState.DONE)
 
 
-async def enqueue_face(asset_id: int, asset_path: str) -> JobStatus:
+async def enqueue_face(asset_id: int) -> JobStatus:
     return await job_queue.enqueue(
         kind=JobKind.FACE,
         label=f"Gesichter: Asset {asset_id}",
-        coro_factory=lambda job_status: run_face_job(job_status, asset_id, asset_path),
+        coro_factory=lambda job_status: run_face_job(job_status, asset_id),
     )

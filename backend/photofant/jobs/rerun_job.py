@@ -36,19 +36,24 @@ _STEP_FLAGS: dict[str, str] = {
 
 def _resolve_assets(
     asset_ids: list[int] | Literal["all"],
-) -> list[tuple[int, str, str]]:
-    """Return list of (asset_id, path, content_hash) for non-deleted active assets."""
+) -> list[tuple[int, str]]:
+    """Return list of (asset_id, content_hash) for non-deleted active assets.
+
+    No path here on purpose — each step resolves the file itself, right before
+    reading it. A bulk rerun runs for hours and outlives plenty of file moves.
+    """
     with SessionLocal() as session:
         query = (
-            select(Asset.id, AssetInstance.path, Asset.content_hash)
+            select(Asset.id, Asset.content_hash)
             .join(AssetInstance, AssetInstance.asset_id == Asset.id)
             .where(AssetInstance.deleted_at.is_(None))
             .where(AssetInstance.missing_at.is_(None))
+            .distinct()
         )
         if asset_ids != "all":
             query = query.where(Asset.id.in_(asset_ids))
         rows = session.execute(query).all()
-    return [(int(row[0]), str(row[1]), str(row[2])) for row in rows]
+    return [(int(row[0]), str(row[1])) for row in rows]
 
 
 def _delete_existing_faces(asset_id: int) -> None:
@@ -130,25 +135,25 @@ async def run_rerun_job(
 
     job_queue.update(status, progress=0.0, state=JobState.RUNNING)
 
-    for index, (asset_id, asset_path, content_hash) in enumerate(assets):
+    for index, (asset_id, content_hash) in enumerate(assets):
         await asyncio.to_thread(_reset_ledger_flags, content_hash, steps)
 
         if "heuristics" in steps:
-            await asyncio.to_thread(_run_heuristics, asset_id, asset_path)
+            await asyncio.to_thread(_run_heuristics, asset_id)
         if "tags" in steps:
-            await asyncio.to_thread(_run_tagging, asset_id, asset_path)
+            await asyncio.to_thread(_run_tagging, asset_id)
         if "caption" in steps:
-            await asyncio.to_thread(_run_caption_with_preset, asset_id, asset_path, caption_preset_id, True)
+            await asyncio.to_thread(_run_caption_with_preset, asset_id, caption_preset_id, True)
         if "embedding" in steps:
-            await asyncio.to_thread(_run_embedding, asset_id, asset_path)
+            await asyncio.to_thread(_run_embedding, asset_id)
         elif "dino_embedding" in steps:
             # DINOv2-only re-embed — skipped when the full embedding step already ran both.
-            await asyncio.to_thread(_run_dino_embedding, asset_id, asset_path)
+            await asyncio.to_thread(_run_dino_embedding, asset_id)
         if "categories" in steps:
             await asyncio.to_thread(_run_classification, asset_id)
         if "faces" in steps:
             await asyncio.to_thread(_delete_existing_faces, asset_id)
-            await asyncio.to_thread(_run_face_job, asset_id, asset_path)
+            await asyncio.to_thread(_run_face_job, asset_id)
 
         job_queue.update(status, progress=(index + 1) / total, state=JobState.RUNNING)
 

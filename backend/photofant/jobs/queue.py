@@ -51,6 +51,7 @@ class JobKind(StrEnum):
     INTERVIEW = "interview"
     KNOWLEDGE_DISCOVERY = "knowledge_discovery"
     RECOMMENDATION = "recommendation"
+    REPROCESS = "reprocess"
 
 
 @dataclass
@@ -78,11 +79,16 @@ _PARALLEL_KINDS: frozenset[JobKind] = frozenset({JobKind.DOWNLOAD})
 # main worker (import, export, ComfyUI) never wait behind a slow caption run.
 # Lower number = higher priority; FIFO within the same priority via a sequence counter.
 #
-# ORDERING CONSTRAINT: FACE must run *after* HEURISTICS, EMBEDDING, TAGGING and
-# CAPTIONING for the same asset complete.
-# Reason: FACE calls run_incremental_match → materialize_assignment which physically
-# moves the file to the matched person's folder, invalidating any stale asset_path
-# closures still waiting in the queue.
+# ORDERING CONSTRAINT: FACE runs *after* HEURISTICS, EMBEDDING, TAGGING and
+# CAPTIONING for the same asset. FACE calls run_incremental_match →
+# materialize_assignment, which physically moves the file into the matched
+# person's folder, and it overwrites asset.framing with the face-based value the
+# heuristics step computed earlier.
+#
+# This is no longer what keeps the pipeline from breaking: every job resolves the
+# file path itself when it starts (media/asset_paths.py), so a move mid-pipeline
+# is survivable rather than fatal. The order is kept because it produces the
+# better result — framing from real faces, classification from real tags.
 #
 # With dedicated TAGGING and CAPTIONING workers (separate queues, see below) the
 # priority-queue order alone cannot enforce this — face_pipeline.py handles it

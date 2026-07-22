@@ -64,7 +64,58 @@ import { maintenanceActions, maintenanceSelectors, personsActions, personsSelect
           <div class="stat-value">{{ status() ? status()!.face_crop_count : '—' }}</div>
           <div class="stat-sub">Gesichter in der DB</div>
         </div>
+
+        <div class="stat">
+          <div class="stat-label">Unfertig</div>
+          @if (status()) {
+            @if (status()!.incomplete_count === 0) {
+              <div class="stat-value ok">0</div>
+            } @else {
+              <div class="stat-value warn">{{ status()!.incomplete_count }}</div>
+            }
+          } @else {
+            <div class="stat-value">—</div>
+          }
+          <div class="stat-sub">Bilder ohne volle Verarbeitung</div>
+        </div>
       </div>
+
+      <!-- Verarbeitung -->
+      <section class="section">
+        <h2 class="section-heading">Verarbeitung</h2>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <div class="card-label">Unfertige Bilder nachverarbeiten</div>
+              <div class="card-desc">
+                Sucht Bilder, bei denen Tags, Beschreibung, Gesichter oder Ähnlichkeits-Daten
+                fehlen — etwa weil die Verarbeitung damals abgebrochen ist — und stellt genau
+                die fehlenden Schritte neu in die Warteschlange. Was schon fertig ist, wird
+                nicht noch einmal berechnet.
+              </div>
+              @if (reprocessAssetCount() !== null) {
+                <div class="card-desc ok">
+                  {{ reprocessAssetCount() }} Bild(er) zur Nachverarbeitung eingereiht — der
+                  Fortschritt läuft in der Job-Leiste.
+                </div>
+              }
+            </div>
+            <button
+              class="btn-primary"
+              [disabled]="isReprocessing()"
+              (click)="triggerReprocess()"
+            >
+              @if (isReprocessing()) {
+                <span class="spinner"></span>
+                Läuft…
+              } @else {
+                Nachverarbeiten
+              }
+            </button>
+          </div>
+        </div>
+      </section>
 
       <!-- Modelle & Embeddings -->
       <section class="section">
@@ -600,6 +651,8 @@ export class Wartung {
   readonly rebuildingTarget = this.store.selectSignal(maintenanceSelectors.selectRebuildingTarget);
   readonly isThumbnailRebuilding = this.store.selectSignal(maintenanceSelectors.selectIsThumbnailRebuilding);
   readonly isReembedding = this.store.selectSignal(maintenanceSelectors.selectIsReembedding);
+  readonly isReprocessing = this.store.selectSignal(maintenanceSelectors.selectIsReprocessing);
+  readonly reprocessAssetCount = this.store.selectSignal(maintenanceSelectors.selectReprocessAssetCount);
   readonly status = this.store.selectSignal(maintenanceSelectors.selectStatus);
   readonly error = this.store.selectSignal(maintenanceSelectors.selectError);
   readonly isClustering = this.store.selectSignal(personsSelectors.selectIsClustering);
@@ -650,6 +703,10 @@ export class Wartung {
 
   triggerReembedAll(): void {
     this.store.dispatch(maintenanceActions.triggerReembedAll());
+  }
+
+  triggerReprocess(): void {
+    this.store.dispatch(maintenanceActions.triggerReprocess());
   }
 
   triggerClustering(): void {

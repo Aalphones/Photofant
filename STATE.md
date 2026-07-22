@@ -5,6 +5,23 @@
 **Nächster Schritt:** `phase-7-wizards.md` lesen und umsetzen. Vorher `/clear`
 empfohlen (Session ist groß) — danach `/model sonnet`, `/implement` liest hier weiter.
 
+## Zwischendrin erledigt (nicht P38): Job-Pipeline überlebt Datei-Verschiebungen
+
+Bilder blieben nach dem Import massenhaft ohne Gesichter/Beschreibung/Tags. Ursache: jeder
+Verarbeitungs-Job bekam beim Einreihen einen festen Dateipfad mit — und die Datei zieht
+mitten in der Verarbeitung um (Personen-Zuordnung, Favorit, Zusammenführen, Person löschen).
+Toter Pfad → Job stirbt → nichts wiederholt ihn. Jobs bekommen jetzt nur noch die Bild-Nummer
+und lösen den Pfad beim Start auf (`media/asset_paths.py`). Zusätzlich: Tagging und Einbetten
+melden ihren Nachfolge-Schritten „durch" auch im Fehlerfall (vorher strandeten Gesichter und
+Klassifizierung dauerhaft), und die Wartungsseite hat einen Nachzieh-Lauf plus die Kennzahl
+„Unfertig". Voller Testlauf: 438 grün, 13 rot = unveränderte Vorbelastung unten.
+
+**Offener Folgepunkt (User-Entscheidung vertagt):** Ist ein Modell nicht installiert (z.B. kein
+Beschreibungs-Modell), wird dessen Erledigt-Häkchen nie gesetzt — die Kennzahl „Unfertig"
+zeigt dann dauerhaft alle Bilder an, und der Nachzieh-Lauf reiht sie folgenlos immer wieder
+ein. Kein Schaden, nur eine lügende Zahl. Fix-Option: beim Zählen die Schritte überspringen,
+für die kein Modell aktiv ist (braucht eine Modell-Abfrage im Zählpfad, die Modelle laden kann).
+
 ## Phase 6 erledigt (Wissen-Detail-Modal nach Design)
 
 Code fertig, `npx tsc --noEmit` grün, Produktions-Build läuft durch (gleiche vorbestehende

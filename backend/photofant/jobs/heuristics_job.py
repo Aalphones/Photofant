@@ -83,11 +83,17 @@ def _compute_framing(asset_id: int, image_width: int, image_height: int) -> str 
     return "full_body"
 
 
-def _run_heuristics(asset_id: int, asset_path: str) -> None:
+def _run_heuristics(asset_id: int) -> None:
     """Blocking: compute quality_score + framing and persist them for one asset."""
     from PIL import Image as PILImage
 
+    from photofant.media.asset_paths import resolve_asset_path
     from photofant.settings import load_settings
+
+    asset_path = resolve_asset_path(asset_id)
+    if asset_path is None:
+        log.warning("Asset %d has no readable file — skipping heuristics", asset_id)
+        return
 
     blur_threshold = load_settings()["blur_threshold"]
     image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
@@ -115,17 +121,17 @@ def _run_heuristics(asset_id: int, asset_path: str) -> None:
     log.info("Heuristics done for asset %d: quality_score=%.4f framing=%s", asset_id, quality, framing)
 
 
-async def run_heuristics_job(status: JobStatus, asset_id: int, asset_path: str) -> None:
+async def run_heuristics_job(status: JobStatus, asset_id: int) -> None:
     import asyncio
 
     job_queue.update(status, progress=0.1, state=JobState.RUNNING)
-    await asyncio.to_thread(_run_heuristics, asset_id, asset_path)
+    await asyncio.to_thread(_run_heuristics, asset_id)
     job_queue.update(status, progress=1.0, state=JobState.DONE)
 
 
-async def enqueue_heuristics(asset_id: int, asset_path: str) -> JobStatus:
+async def enqueue_heuristics(asset_id: int) -> JobStatus:
     return await job_queue.enqueue(
         kind=JobKind.HEURISTICS,
         label=f"Heuristiken: Asset {asset_id}",
-        coro_factory=lambda job_status: run_heuristics_job(job_status, asset_id, asset_path),
+        coro_factory=lambda job_status: run_heuristics_job(job_status, asset_id),
     )
