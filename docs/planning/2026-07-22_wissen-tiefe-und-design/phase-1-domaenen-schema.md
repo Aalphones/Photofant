@@ -76,56 +76,58 @@ entity_types:
 
 ### Backend — Schema
 
-- [ ] `FieldDef.question: str | None = None`.
-- [ ] `EntityType.preferred_sources: tuple[str, ...] = ()`,
+- [x] `FieldDef.question: str | None = None`.
+- [x] `EntityType.preferred_sources: tuple[str, ...] = ()`,
       `Domain.preferred_sources: tuple[str, ...] = ()`.
-- [ ] `_parse_fields`: `question` einlesen (String oder fehlend; anderes → `DomainLoadError`).
-- [ ] Neuer Parser `_parse_preferred_sources(raw, path)`: fehlend → `()`; Liste von nicht-leeren
+- [x] `_parse_fields`: `question` einlesen (String oder fehlend; anderes → `DomainLoadError`).
+- [x] Neuer Parser `_parse_preferred_sources(raw, path)`: fehlend → `()`; Liste von nicht-leeren
       Strings → Tupel, dabei `www.`-Präfix und Groß-/Kleinschreibung normalisieren; sonst
       `DomainLoadError`.
-- [ ] In `load_domain` und im Typ-Parser aufrufen.
-- [ ] `Domain.questions_for(type_name) -> tuple[FieldDef, ...]` — filtert `fields_for` auf
+- [x] In `load_domain` und im Typ-Parser aufrufen.
+- [x] `Domain.questions_for(type_name) -> tuple[FieldDef, ...]` — filtert `fields_for` auf
       Einträge mit gesetzter `question`.
-- [ ] `Domain.preferred_sources_for(type_name) -> tuple[str, ...]` — Typ-Liste falls nicht leer,
+- [x] `Domain.preferred_sources_for(type_name) -> tuple[str, ...]` — Typ-Liste falls nicht leer,
       sonst Domänen-Liste.
 
 ### Backend — YAML-Inhalte
 
-- [ ] `private.yaml`, Typ `Person`: Fragen ergänzen für `geburtstag`, `beruf`, `wohnort`,
-      `vorlieben`, `beziehung`. Ton wie im Interview — persönlich, nicht formularhaft, z.B.
-      `Wo wohnt {name}?` / `Was macht {name} beruflich?` / `Wann hat {name} Geburtstag?` /
-      `Was mag {name} besonders — Hobbys, Vorlieben, Eigenheiten?` /
-      `In welcher Beziehung steht {name} — Partnerschaft, Familie?`
-- [ ] `private.yaml`, Typ `Pet`: Fragen für `art`, `geburtstag`, `eigenheiten`.
-- [ ] `private.yaml`: **keine** `preferred_sources` (private Domäne).
-- [ ] `movies.yaml`: `preferred_sources: [wikipedia.org]` auf Domänen-Ebene;
+- [x] `private.yaml`, Typ `Person`: Fragen ergänzt für `geburtstag`, `beruf`, `wohnort`,
+      `vorlieben`, `beziehung`.
+- [x] `private.yaml`, Typ `Pet`: Fragen für `art`, `geburtstag`, `eigenheiten`.
+- [x] `private.yaml`: **keine** `preferred_sources` (private Domäne).
+- [x] `movies.yaml`: `preferred_sources: [wikipedia.org]` auf Domänen-Ebene;
       Typ `Actor` zusätzlich `[imdb.com, wikipedia.org]`; Typ `Movie` `[imdb.com, wikipedia.org]`.
-- [ ] `movies.yaml`: Fragen bei den Actor-/Movie-Feldern **weglassen** — öffentliche Domänen
-      laufen über die Web-Recherche, nicht über das Interview.
-- [ ] Beide YAMLs: die neuen Schlüssel im Kopf-Kommentar in einem Satz erklären (die Dateien
-      sind Nutzer-Doku und frei editierbar).
+- [x] `movies.yaml`: Fragen bei den Actor-/Movie-Feldern weggelassen.
+- [x] Beide YAMLs: die neuen Schlüssel im Kopf-Kommentar in einem Satz erklärt.
 
 ### Backend — API
 
-- [ ] `EntityFieldDefDto.question: str | None`.
-- [ ] `EntityTypeDto.preferred_sources: list[str]`, `DomainDto.preferred_sources: list[str]`.
-- [ ] Bau-Stelle der DTOs entsprechend befüllen.
+- [x] `EntityFieldDefDto.question: str | None`.
+- [x] `EntityTypeDto.preferred_sources: list[str]`, `DomainDto.preferred_sources: list[str]`.
+- [x] Bau-Stelle der DTOs entsprechend befüllt.
 
 ### Frontend — Model
 
-- [ ] `EntityFieldDefDto.question: string | null`.
-- [ ] `EntityType.preferred_sources: string[]`, `DomainDto.preferred_sources: string[]`.
+- [x] `EntityFieldDefDto.question: string | null`.
+- [x] `EntityType.preferred_sources: string[]`, `DomainDto.preferred_sources: string[]`.
 
 ### Tests
 
-- [ ] Domäne ohne neue Schlüssel lädt (AK 4).
-- [ ] `questions_for` liefert nur Felder mit Frage, in YAML-Reihenfolge.
-- [ ] `preferred_sources_for`: Typ schlägt Domäne; ohne Typ-Liste greift die Domäne; ohne beides leer.
-- [ ] `www.`-Normalisierung.
-- [ ] Ungültiger Wert → `DomainLoadError`.
+- [x] Domäne ohne neue Schlüssel lädt (AK 4).
+- [x] `questions_for` liefert nur Felder mit Frage, in YAML-Reihenfolge.
+- [x] `preferred_sources_for`: Typ schlägt Domäne; ohne Typ-Liste greift die Domäne; ohne beides leer.
+- [x] `www.`-Normalisierung.
+- [x] Ungültiger Wert → `DomainLoadError` (question + preferred_sources je ein Test).
 
 ### Docs
 
-- [ ] `docs/models.md`: die zwei neuen Domänen-Schlüssel dokumentieren.
+- [x] `docs/models.md`: die zwei neuen Domänen-Schlüssel dokumentiert.
 
 ## Report-Back
+
+Neue Testdatei `backend/tests/test_knowledge_domains.py` (7 Tests, alle grün) statt Ergänzung
+einer bestehenden — es gab noch keine dedizierte Parser-Testdatei für `domains.py`.
+`uv run ruff check .` (geänderte Dateien) und `npm run lint`/`npm run build` grün. Ein
+mypy-Fehler in `api/knowledge.py` (Zeile ~376, `dict()` gegen `Sequence[Row[Any]]`) ist
+Vorbelastung — per `git stash` bestätigt, dass er unverändert vor dieser Phase schon da war
+(vorher Zeile 364, reine Zeilenverschiebung durch die neuen DTO-Felder).

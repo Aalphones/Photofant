@@ -117,12 +117,16 @@ class FieldDefDto(BaseModel):
 
     key: str
     label: str
+    # Interview-Frage (P39 Phase 1) — None, wenn das Merkmal dort nicht gefragt wird.
+    question: str | None = None
 
 
 class EntityTypeDto(BaseModel):
     name: str
     folder: str
     fields: list[FieldDefDto] = []
+    # Bevorzugte Hosts für die Web-Recherche (P39 Phase 1); schlägt die Domänen-Vorgabe.
+    preferred_sources: list[str] = []
 
 
 class DomainDto(BaseModel):
@@ -130,6 +134,8 @@ class DomainDto(BaseModel):
     entity_types: list[EntityTypeDto]
     relationship_types: list[str]
     private: bool = False
+    # Domänen-weite Vorgabe für die Web-Recherche (P39 Phase 1).
+    preferred_sources: list[str] = []
 
     @classmethod
     def from_domain(cls, domain: Domain) -> DomainDto:
@@ -140,14 +146,20 @@ class DomainDto(BaseModel):
                     name=entity_type.name,
                     folder=entity_type.folder,
                     fields=[
-                        FieldDefDto(key=definition.key, label=definition.label)
+                        FieldDefDto(
+                            key=definition.key,
+                            label=definition.label,
+                            question=definition.question,
+                        )
                         for definition in entity_type.fields
                     ],
+                    preferred_sources=list(entity_type.preferred_sources),
                 )
                 for entity_type in domain.entity_types.values()
             ],
             relationship_types=sorted(domain.relationship_types),
             private=domain.private,
+            preferred_sources=list(domain.preferred_sources),
         )
 
 

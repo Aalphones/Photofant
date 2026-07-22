@@ -1,8 +1,10 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** Backlog hat zwei startbereite Pläne (siehe unten) — welchen zuerst?
+**Aktiver Plan:** `docs/planning/2026-07-22_wissen-tiefe-und-design/`
+**Phase:** 1/8 — Domänen: Feld-Fragen und bevorzugte Quellen (in Arbeit)
+**Nächster Schritt:** `FieldDef.question` + `preferred_sources` auf Domain/EntityType, Parser,
+YAML-Inhalte (private.yaml, movies.yaml), DTOs (Backend `api/knowledge.py` + Frontend
+`knowledge.model.ts`), Tests, `docs/models.md`.
 
 ## „Gesichter-Bereinigung" abgeschlossen (alle 4 Phasen)
 

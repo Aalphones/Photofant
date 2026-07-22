@@ -526,6 +526,31 @@ Erlaubt sind nur Keys, die die Domäne für den Entity-Typ unter `fields:` defin
 lehnt der Validator ab. Der Block darf ganz fehlen (alle vor P38 geschriebenen Dateien);
 das ist kein Fehler und erzwingt keine Migration bestehender Vault-Dateien.
 
+**Domänen-Datei, zwei optionale Schlüssel (P39 Phase 1, `photofant/knowledge/domains.py`):**
+
+```yaml
+name: Movies
+preferred_sources: [wikipedia.org]                 # Vorgabe der Domäne
+entity_types:
+  - name: Actor
+    folder: actors
+    preferred_sources: [imdb.com, wikipedia.org]    # schlägt die Domänen-Vorgabe vollständig
+    fields:
+      - key: geburtstag
+        label: Geburtstag
+        question: Wann hat {name} Geburtstag?       # nur fürs Interview
+```
+
+- `question` pro Feld: fehlt sie, wird das Merkmal im Interview nicht gefragt (bleibt aber ein
+  Merkmal für Web-Recherche/Handeintrag). `Domain.questions_for(type)` liefert nur Felder mit
+  gesetzter Frage, in YAML-Reihenfolge.
+- `preferred_sources`: Hosts ohne Schema/`www.`, normalisiert beim Laden (klein geschrieben,
+  `www.`-Präfix entfernt). Typ-Liste schlägt die der Domäne vollständig, nicht additiv —
+  `Domain.preferred_sources_for(type)` löst das auf. Private Domänen tragen hier nichts
+  Wirksames (sie gehen nie ins Netz, ADR-009) — der Schlüssel wird beim Laden nicht verboten,
+  aber vom Web-Recherche-Pfad nie angewendet.
+- Beide Schlüssel fehlen bei allen vor P39 geschriebenen Domänen-Dateien; das lädt unverändert.
+
 **`knowledge_relationships`** — `id` PK, `entity_id` FK → `knowledge_entities.id` (Quelle, indexed), `type` TEXT, `target` TEXT (Ziel-Entity-`id`, indexed, **keine FK** — Ziel kann vor/nach der Beziehung angelegt werden).
 
 **`knowledge_sources`** — `id` PK, `entity_id` FK → `knowledge_entities.id` (indexed), `source` TEXT (freier String, z.B. URL).

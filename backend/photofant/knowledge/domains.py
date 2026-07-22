@@ -26,6 +26,9 @@ class FieldDef:
 
     key: str
     label: str
+    # Frage fürs Interview (P39 Phase 1). Fehlt sie, wird das Merkmal dort nicht
+    # gefragt — bleibt aber ein Merkmal, das Web-Recherche/Handeintrag füllen können.
+    question: str | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +38,9 @@ class EntityType:
     name: str
     folder: str
     fields: tuple[FieldDef, ...] = ()
+    # Bevorzugte Hosts für die Web-Recherche (P39 Phase 1). Schlägt die Domänen-Vorgabe
+    # vollständig, wenn nicht leer — siehe Domain.preferred_sources_for.
+    preferred_sources: tuple[str, ...] = ()
 
 
 @dataclass
@@ -49,6 +55,10 @@ class Domain:
     # ausgeschlossen (Konzept-ADR-009): so eine Entity darf nie mit Fremd-/Web-Wissen
     # angereichert werden, nur aus dem Interview-Mode (P27 Phase 4) entstehen.
     private: bool = False
+    # Domänen-weite Vorgabe für die Web-Recherche (P39 Phase 1) — greift nur, wenn
+    # der Typ selbst keine eigene Liste trägt. Private Domänen tragen hier nichts
+    # Wirksames (sie gehen nie ins Netz, siehe preferred_sources_for).
+    preferred_sources: tuple[str, ...] = ()
 
     def has_entity_type(self, type_name: str) -> bool:
         return type_name in self.entity_types
@@ -77,6 +87,23 @@ class Domain:
         entity_type = self.entity_types.get(type_name)
         return entity_type.fields if entity_type is not None else ()
 
+    def questions_for(self, type_name: str) -> tuple[FieldDef, ...]:
+        """Merkmale des Typs, die eine Interview-Frage tragen, in YAML-Reihenfolge."""
+        return tuple(field for field in self.fields_for(type_name) if field.question is not None)
+
+    def preferred_sources_for(self, type_name: str) -> tuple[str, ...]:
+        """Bevorzugte Hosts für die Web-Recherche: Typ schlägt Domäne vollständig.
+
+        Private Domänen gehen nie ins Netz (Konzept-ADR-009) — Aufrufer der
+        Web-Recherche prüfen ``domain.private`` selbst und rufen diese Methode für
+        private Domänen gar nicht erst auf; hier wird nichts zusätzlich verboten,
+        nur wie in der Datei geschrieben aufgelöst.
+        """
+        entity_type = self.entity_types.get(type_name)
+        if entity_type is not None and entity_type.preferred_sources:
+            return entity_type.preferred_sources
+        return self.preferred_sources
+
 
 def load_domain(path: Path) -> Domain:
     """Lädt und parst eine Domänen-Datei. Wirft ``DomainLoadError`` bei jedem Problem."""
@@ -100,11 +127,13 @@ def load_domain(path: Path) -> Domain:
     entity_types = _parse_entity_types(raw.get("entity_types"), path)
     relationship_types = _parse_relationship_types(raw.get("relationship_types"), path)
     private = _parse_private(raw.get("private"), path)
+    preferred_sources = _parse_preferred_sources(raw.get("preferred_sources"), path)
     return Domain(
         name=name,
         entity_types=entity_types,
         relationship_types=relationship_types,
         private=private,
+        preferred_sources=preferred_sources,
     )
 
 
@@ -132,7 +161,10 @@ def _parse_entity_types(raw: Any, path: Path) -> dict[str, EntityType]:
         if not isinstance(folder, str) or not folder:
             raise DomainLoadError(f"Entity-Typ '{type_name}' ohne 'folder' in {path}")
         entity_types[type_name] = EntityType(
-            name=type_name, folder=folder, fields=_parse_fields(entry.get("fields"), path)
+            name=type_name,
+            folder=folder,
+            fields=_parse_fields(entry.get("fields"), path),
+            preferred_sources=_parse_preferred_sources(entry.get("preferred_sources"), path),
         )
     return entity_types
 
@@ -159,8 +191,34 @@ def _parse_fields(raw: Any, path: Path) -> tuple[FieldDef, ...]:
         label = entry.get("label")
         if not isinstance(label, str) or not label:
             label = key
-        fields.append(FieldDef(key=key, label=label))
+        question = entry.get("question")
+        if question is not None and not isinstance(question, str):
+            raise DomainLoadError(f"'question' muss ein String sein: {entry!r} in {path}")
+        fields.append(FieldDef(key=key, label=label, question=question))
     return tuple(fields)
+
+
+def _parse_preferred_sources(raw: Any, path: Path) -> tuple[str, ...]:
+    """Optionale Liste bevorzugter Hosts für die Web-Recherche.
+
+    Fehlt sie, gibt es keine Vorgabe (leeres Tupel). Hosts werden normalisiert:
+    ``www.``-Präfix entfernt, klein geschrieben — ``WWW.IMDb.com`` und ``imdb.com``
+    sollen als derselbe Host gelten.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise DomainLoadError(f"'preferred_sources' muss eine Liste sein: {raw!r} in {path}")
+
+    hosts: list[str] = []
+    for entry in raw:
+        if not isinstance(entry, str) or not entry:
+            raise DomainLoadError(f"Ungültiger 'preferred_sources'-Eintrag: {entry!r} in {path}")
+        host = entry.strip().lower()
+        if host.startswith("www."):
+            host = host[len("www.") :]
+        hosts.append(host)
+    return tuple(hosts)
 
 
 def _parse_relationship_types(raw: Any, path: Path) -> frozenset[str]:

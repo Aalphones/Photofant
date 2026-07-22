@@ -23,6 +23,8 @@ export interface AttributeDto {
 export interface EntityFieldDefDto {
   key: string;
   label: string;
+  // P39 Phase 1 — Interview-Frage; null, wenn das Merkmal dort nicht gefragt wird.
+  question: string | null;
 }
 
 export interface EntityDto {
@@ -109,6 +111,8 @@ export interface EntityType {
   folder: string;
   // P38 Phase 2 — welche Merkmale dieser Typ vorsieht. Leer ist gültig (Typ ohne Merkmale).
   fields: EntityFieldDefDto[];
+  // P39 Phase 1 — bevorzugte Hosts für die Web-Recherche; schlägt die Domänen-Vorgabe.
+  preferred_sources: string[];
 }
 
 export interface DomainDto {
@@ -118,6 +122,8 @@ export interface DomainDto {
   // P27 Phase 4 — private Domänen (reale Personen/Haustiere) laufen nie über den
   // Web-Import; sie entstehen über den Interview-Mode (Konzept-ADR-009).
   private: boolean;
+  // P39 Phase 1 — Domänen-weite Vorgabe für die Web-Recherche.
+  preferred_sources: string[];
 }
 
 export const TASK_KINDS = ['new_person', 'missing_entity', 'confirm_relationship', 'review_recommendation', 'incomplete_entity', 'missing_field', 'low_completeness', 'auto_link'] as const;

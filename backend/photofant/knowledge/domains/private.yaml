@@ -10,29 +10,40 @@ private: true
 # 'name' steht im Frontmatter (type:), 'folder' ist der Ordner (Plural) im Vault.
 # 'fields' sind die Merkmale des Typs: Was hier steht, zeigt die App als eigene Zeile
 # mit Wert und Herkunft an — und daraus errechnet sich der Vollständigkeits-Wert.
+# 'question' (optional, pro Feld): wird im Interview gefragt, {name} wird durch den
+# Namen der befragten Person ersetzt. Fehlt sie, wird das Merkmal nicht gefragt.
+# 'preferred_sources' gibt es hier bewusst nicht — private Entities gehen nie ins Netz.
 entity_types:
   - name: Person
     folder: people
     fields:
       - key: geburtstag
         label: Geburtstag
+        question: Wann hat {name} Geburtstag?
       - key: beruf
         label: Beruf
+        question: Was macht {name} beruflich?
       - key: wohnort
         label: Wohnort
+        question: Wo wohnt {name}?
       - key: vorlieben
         label: Vorlieben
+        question: Was mag {name} besonders — Hobbys, Vorlieben, Eigenheiten?
       - key: beziehung
         label: Beziehungsstatus
+        question: In welcher Beziehung steht {name} — Partnerschaft, Familie?
   - name: Pet
     folder: pets
     fields:
       - key: art
         label: Art
+        question: Was für ein Tier ist {name}?
       - key: geburtstag
         label: Geburtstag
+        question: Wann hat {name} Geburtstag?
       - key: eigenheiten
         label: Eigenheiten
+        question: Was ist an {name} besonders?
 
 # Beziehungstypen für den privaten Kreis. Der Knowledge Graph wird ausschließlich
 # aus diesen Beziehungen erzeugt.

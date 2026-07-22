@@ -3,14 +3,23 @@
 # Wird beim ersten Vault-Zugriff nach <vault>/domains/movies.yaml kopiert und ist
 # danach frei editierbar.
 name: Movies
+# Domänen-weite Vorgabe für die Web-Recherche: greift für jeden Typ ohne eigene
+# 'preferred_sources'-Liste. Öffentliche Domänen laufen über die Web-Recherche,
+# nicht über das Interview — deshalb tragen die Felder unten bewusst keine 'question'.
+preferred_sources:
+  - wikipedia.org
 
 # Jeder Entity-Typ: 'name' steht im Frontmatter (type:), 'folder' ist der Ordner
 # (Plural) unter der Vault-Wurzel. Kein automatisches Pluralisieren — explizit.
 # 'fields' (optional) sind die Merkmale des Typs; ohne Block hat der Typ keine —
 # ein gültiger Zustand, dann bleibt sein Vollständigkeits-Wert bei 0.
+# 'preferred_sources' pro Typ schlägt die Domänen-Vorgabe vollständig.
 entity_types:
   - name: Movie
     folder: movies
+    preferred_sources:
+      - imdb.com
+      - wikipedia.org
     fields:
       - key: erscheinungsjahr
         label: Erscheinungsjahr
@@ -22,6 +31,9 @@ entity_types:
     folder: series
   - name: Actor
     folder: actors
+    preferred_sources:
+      - imdb.com
+      - wikipedia.org
     fields:
       - key: geburtstag
         label: Geburtstag
