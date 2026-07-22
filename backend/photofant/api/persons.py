@@ -88,6 +88,11 @@ class PersonFaceDto(BaseModel):
     crop_url: str
     score: float | None
     age: int | None
+    resolution: int | None = None
+    is_upscaled: bool = False
+    identity_distance: float | None = None
+    cleanup_score: float = 0.0
+    cleanup_reasons: list[str] = []
 
 
 class MergeRequest(BaseModel):
@@ -265,6 +270,8 @@ async def list_persons(session: DbSession, vault: VaultDep) -> list[PersonDto]:
 
 @router.get("/{person_id}/faces", response_model=list[PersonFaceDto])
 async def list_person_faces(person_id: int, session: DbSession) -> list[PersonFaceDto]:
+    from photofant.clustering.cleanup import compute_person_cleanup_scores
+
     person = session.get(Person, person_id)
     if person is None:
         raise HTTPException(status_code=404, detail="Person not found")
@@ -274,6 +281,9 @@ async def list_person_faces(person_id: int, session: DbSession) -> list[PersonFa
         .order_by(Face.id.asc())
         .all()
     )
+    cleanup_by_face_id = {
+        entry.face_id: entry for entry in compute_person_cleanup_scores(session, person_id)
+    }
     return [
         PersonFaceDto(
             id=face.id,
@@ -281,6 +291,21 @@ async def list_person_faces(person_id: int, session: DbSession) -> list[PersonFa
             crop_url=f"/faces/{face.id}/thumbnail",
             score=face.score,
             age=face.age,
+            resolution=face.resolution,
+            is_upscaled=face.is_upscaled,
+            identity_distance=(
+                cleanup_by_face_id[face.id].identity_distance
+                if face.id in cleanup_by_face_id
+                else None
+            ),
+            cleanup_score=(
+                cleanup_by_face_id[face.id].cleanup_score
+                if face.id in cleanup_by_face_id
+                else 0.0
+            ),
+            cleanup_reasons=(
+                cleanup_by_face_id[face.id].reasons if face.id in cleanup_by_face_id else []
+            ),
         )
         for face in faces
     ]

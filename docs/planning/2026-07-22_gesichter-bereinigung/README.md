@@ -9,7 +9,7 @@
 | Phase | Thema | Rating | Status |
 |---|---|---|---|
 | 1 | Backend-Scoring-Modul + Settings | standard | complete |
-| 2 | Backend-API (DTO-Erweiterung + Bulk-Delete) | standard | pending |
+| 2 | Backend-API (DTO-Erweiterung + Bulk-Delete) | standard | complete |
 | 3 | Frontend-Model + Service | mechanisch | pending |
 | 4 | Frontend-UI (Cleanup-Dialog + Verdrahtung) | standard | pending |
 

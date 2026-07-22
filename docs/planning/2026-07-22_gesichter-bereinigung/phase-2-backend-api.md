@@ -217,9 +217,26 @@ async def bulk_delete_faces(body: BulkDeleteFacesRequest, session: DbSession) ->
 
 ## Checkliste
 
-- [ ] `PersonFaceDto` + `list_person_faces` in `api/persons.py` erweitert
-- [ ] `_delete_face_row`-Helper in `api/faces.py`, `delete_face` darauf umgestellt
-- [ ] `POST /api/faces/bulk-delete` neu, Modul-Docstring aktualisiert
-- [ ] Manueller Smoke-Test: bestehenden Einzel-Face löschen funktioniert weiterhin identisch
+- [x] `PersonFaceDto` + `list_person_faces` in `api/persons.py` erweitert
+- [x] `_delete_face_row`-Helper in `api/faces.py`, `delete_face` darauf umgestellt
+- [x] `POST /api/faces/bulk-delete` neu, Modul-Docstring aktualisiert
+- [x] Manueller Smoke-Test: bestehenden Einzel-Face löschen funktioniert weiterhin identisch
 
 ## Report-Back
+
+- Plan 1:1 umgesetzt, ein kleiner Stil-Fix nötig: die Feld-Zuweisungen für `identity_distance`/
+  `cleanup_score`/`cleanup_reasons` in `list_person_faces` mussten auf mehrere Zeilen umgebrochen
+  werden (`ruff` E501, Plan-Code-Snippet war 121 Zeichen in einer Zeile) — funktional identisch.
+- `ruff check` auf beiden Dateien: sauber. `mypy`: 3 Fehler, alle drei bereits vor dieser Phase
+  vorhanden (per `git stash`-Vergleich verifiziert) — nur Zeilennummer von `persons.py:203` auf
+  `:208` verschoben, keine neuen Fehler.
+- Bestandstests (`test_faces_api.py`, `test_recommendation_invalidation_manual.py`,
+  `test_person_folders.py`, `test_knowledge_api.py`, 45 Tests) weiterhin grün — keine Regression
+  am bestehenden `DELETE /faces/{id}`.
+- Ad-hoc-Smoke-Skript (nicht Teil der Test-Suite) gegen eine Wegwerf-SQLite bestätigt:
+  `GET /persons/{id}/faces` liefert die 5 neuen Felder korrekt befüllt (`low_resolution`/
+  `upscaled`-Reasons greifen wie erwartet); `POST /faces/bulk-delete` mit leerer Liste → 422;
+  mit zwei bekannten + einer unbekannten ID → `deleted: 2`, unbekannte übersprungen, `asset_ids`
+  enthält das betroffene Asset genau **einmal** (beide gelöschten Faces hingen am selben Asset —
+  Bündelung greift wie im Kontrakt gefordert).
+- Keine Findings für Phase 3/4, keine Abweichungen vom Kontrakt.

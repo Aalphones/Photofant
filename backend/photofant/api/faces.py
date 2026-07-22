@@ -6,6 +6,7 @@ GET   /faces/{face_id}/matches    → Top 10 disjunkte Personen (Cosine-Score)
 POST  /faces/cluster              → Initial-Clustering (HDBSCAN) als Job
 PATCH /faces/{face_id}/assign     → Manuelle Zuordnung zu einer Person (physischer Move)
 POST  /faces/import               → Direkter Face-Import (Bild = Crop, origin=manual_original)
+POST  /faces/bulk-delete          → Mehrere Faces in einem Aufruf löschen (gebündelte Reevaluation)
 """
 from __future__ import annotations
 
@@ -447,33 +448,44 @@ async def import_faces_direct(
     return results
 
 
+def _delete_face_row(session: Session, face: Face) -> int | None:
+    """Delete one face's DB row + crop file + vector-index entry.
+
+    Returns the face's asset_id (or None) so the caller can batch the
+    downstream reconciliation (prune/invalidate/reevaluate) itself.
+    Does NOT commit and does NOT run prune/invalidate/reevaluate — that's
+    the caller's job, so a bulk delete can batch it across many faces.
+    """
+    from photofant.db.face_vector_index import delete_embedding
+
+    asset_id = face.asset_id
+
+    delete_embedding(session, face.id)
+
+    crop_path = Path(face.crop_path)
+    if crop_path.exists():
+        try:
+            crop_path.unlink()
+        except OSError:
+            log.warning("Could not delete crop file for face %d: %s", face.id, crop_path)
+
+    session.delete(face)
+    session.flush()
+
+    return asset_id
+
+
 @router.delete("/{face_id}", status_code=204)
 async def delete_face(face_id: int, session: DbSession) -> None:
     """Delete a face: removes DB row, crop file, and vector index entry.
 
     If the face belonged to an asset, smart-album re-evaluation is triggered.
     """
-    from photofant.db.face_vector_index import delete_embedding
-
     face = session.get(Face, face_id)
     if face is None:
         raise HTTPException(status_code=404, detail="Face not found")
 
-    asset_id: int | None = face.asset_id
-
-    # Remove from vector index before deleting the DB row
-    delete_embedding(session, face_id)
-
-    # Remove crop file from disk
-    crop_path = Path(face.crop_path)
-    if crop_path.exists():
-        try:
-            crop_path.unlink()
-        except OSError:
-            log.warning("Could not delete crop file for face %d: %s", face_id, crop_path)
-
-    session.delete(face)
-    session.flush()  # face must be gone before pruning re-counts remaining faces
+    asset_id = _delete_face_row(session, face)
 
     # Prune every instance this asset no longer has a face for. The deleted
     # face's person may differ from the instance that's now orphaned (e.g. an
@@ -554,3 +566,59 @@ async def assign_face(
         new_person_id=result["new_person_id"],
         asset_id=result["asset_id"],
     )
+
+
+class BulkDeleteFacesRequest(BaseModel):
+    face_ids: list[int]
+
+
+class BulkDeleteFacesResultDto(BaseModel):
+    deleted: int
+    asset_ids: list[int]
+
+
+@router.post("/bulk-delete", response_model=BulkDeleteFacesResultDto)
+async def bulk_delete_faces(body: BulkDeleteFacesRequest, session: DbSession) -> BulkDeleteFacesResultDto:
+    """Delete several faces in one call.
+
+    Same per-face cleanup as DELETE /{face_id}, but batches smart-album
+    re-evaluation + recommendation invalidation to one call per affected
+    asset instead of one per deleted face — avoids N redundant job-dock
+    entries when the cleanup dialog deletes many faces at once.
+    Unknown face_ids are silently skipped (not counted in `deleted`).
+    """
+    if not body.face_ids:
+        raise HTTPException(status_code=422, detail="face_ids darf nicht leer sein")
+
+    affected_asset_ids: set[int] = set()
+    deleted = 0
+
+    for face_id in body.face_ids:
+        face = session.get(Face, face_id)
+        if face is None:
+            continue
+        asset_id = _delete_face_row(session, face)
+        if asset_id is not None:
+            affected_asset_ids.add(asset_id)
+        deleted += 1
+
+    if affected_asset_ids:
+        from photofant.config import get_data_root
+        from photofant.media.person_folders import prune_orphaned_instances
+
+        data_root = get_data_root()
+        for asset_id in affected_asset_ids:
+            prune_orphaned_instances(session, asset_id, data_root)
+
+    session.commit()
+
+    if affected_asset_ids:
+        from photofant.jobs.recommendation_job import invalidate_recommendations
+
+        invalidate_recommendations(session, list(affected_asset_ids))
+
+        from photofant.jobs.collections_job import enqueue_reevaluate_assets
+
+        await enqueue_reevaluate_assets(list(affected_asset_ids))
+
+    return BulkDeleteFacesResultDto(deleted=deleted, asset_ids=list(affected_asset_ids))
