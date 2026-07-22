@@ -8,7 +8,10 @@
   background: oklch(0 0 0 / 0.5);
   display: grid;
   place-items: center;
-  z-index: 100;
+  // Muss über dem Wissen-Detail-Modal liegen (z-index 120, `knowledge-detail-dialog.scss") —
+  // "Bestehende Notiz verknüpfen" öffnet diesen Dialog aus dem leeren Detail-Zustand heraus,
+  // während das Detail-Modal offen bleibt.
+  z-index: 130;
 }
 
 .link-entity-dialog__card {

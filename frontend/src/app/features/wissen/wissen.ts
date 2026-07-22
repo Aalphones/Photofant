@@ -153,6 +153,18 @@ export class Wissen {
   // Nach einer Verknüpfung/Trennung hochgezählt — stößt im Modal einen frischen Lore-Read an.
   protected readonly detailRefreshKey = signal(0);
 
+  // Leerer Detail-Zustand -> "Web-Recherche starten": merkt sich, für welche Person gerade
+  // eine Entity nur zu dem Zweck angelegt wird, sie danach in den Web-Suche-Wizard zu
+  // überführen (Aufgabe des Users: Nutzer bemerkte, dass es sonst außer "Interview" keinen
+  // Weg für öffentliche Personen ohne bestehende Notiz gab).
+  protected readonly discoverySetupPersonId = signal<number | null>(null);
+  // Discovery darf nie auf einer privaten Domäne laufen (Backend lehnt das ohnehin ab,
+  // `_is_private_domain`-Guard) — der Wizard bekommt in diesem Modus nur die Auswahl, die
+  // hinterher nicht in eine Sackgasse läuft.
+  protected readonly discoverySetupDomains = computed((): DomainDto[] =>
+    this.domains().filter((domain: DomainDto) => !domain.private)
+  );
+
   // P38 Phase 5 — "Verknüpfen" auf einer unverknüpften Notiz: Personen-Suche öffnen.
   protected readonly linkingEntity = signal<EntityDto | null>(null);
   // P38 Phase 6 — umgekehrte Richtung: aus dem leeren Detail-Zustand eine bestehende Notiz
@@ -164,6 +176,11 @@ export class Wissen {
   private toastTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly wizardPrefill = computed((): Partial<CreateEntityRequest> => {
+    const discoveryPersonId = this.discoverySetupPersonId();
+    if (discoveryPersonId !== null) {
+      const person = this.knownPersons().find((candidate: PersonDto) => candidate.id === discoveryPersonId) ?? null;
+      return person?.name ? { title: person.name } : {};
+    }
     const task = this.activeTask();
     if (task === null) { return {}; }
     const title = task.context['title'];
@@ -198,6 +215,20 @@ export class Wissen {
         this.store.dispatch(knowledgeActions.resolveTask({ taskId: task.id }));
         this.activeTask.set(null);
       }
+
+      // "Web-Recherche starten" aus dem leeren Detail-Zustand: die Entity war nur das
+      // Vehikel für die Domäne/Typ-Wahl — sobald sie steht, sofort in den Web-Suche-Wizard
+      // weiterreichen statt hier mit einem Zwischen-Toast zu unterbrechen (der kommt, sobald
+      // die Recherche selbst etwas übernimmt, siehe `onWebSearchApplied`).
+      const discoveryPersonId = this.discoverySetupPersonId();
+      if (created !== null && discoveryPersonId !== null) {
+        this.discoverySetupPersonId.set(null);
+        this.detailRefreshKey.update((tick: number): number => tick + 1);
+        this.wizardTarget.set({ personId: discoveryPersonId, entityId: created.id, name: created.title });
+        this.showWebSearchWizard.set(true);
+        return;
+      }
+
       if (created !== null) {
         this.showToast(`„${created.title}" (${created.type}) angelegt.`);
       } else if (updated !== null) {
@@ -287,6 +318,7 @@ export class Wissen {
     this.store.dispatch(knowledgeActions.resetImportSuggestion());
     this.activeTask.set(null);
     this.editingEntity.set(null);
+    this.discoverySetupPersonId.set(null);
     this.showWizard.set(true);
   }
 
@@ -295,6 +327,22 @@ export class Wissen {
     this.showWizard.set(false);
     this.activeTask.set(null);
     this.editingEntity.set(null);
+    this.discoverySetupPersonId.set(null);
+  }
+
+  // Leerer Detail-Zustand -> "Web-Recherche starten" (Nutzer-Fund: ohne bestehende Notiz gab
+  // es außer "Interview" keinen Weg für öffentliche Personen). Öffnet denselben Entity-Wizard
+  // wie der normale "+"-Knopf, aber mit Namen vorbelegt und auf nicht-private Domänen
+  // eingeschränkt — die Anlage selbst ist nur der Zwischenschritt, siehe Effekt oben.
+  protected openDiscoverySetup(): void {
+    const personId = this.detailPersonId();
+    if (personId === null) { return; }
+    this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.resetImportSuggestion());
+    this.activeTask.set(null);
+    this.editingEntity.set(null);
+    this.discoverySetupPersonId.set(personId);
+    this.showWizard.set(true);
   }
 
   protected onRequestSuggestion(request: ImportSuggestionRequest): void {
@@ -422,6 +470,7 @@ export class Wissen {
     this.store.dispatch(knowledgeActions.resetCreateEntityState());
     this.store.dispatch(knowledgeActions.resetImportSuggestion());
     this.activeTask.set(task);
+    this.discoverySetupPersonId.set(null);
     // "Entity noch ohne Inhalt" verweist auf eine bestehende Entity (`entity_id` im
     // Task-Kontext) -> Wizard im Edit-Modus öffnen statt eine neue anzulegen.
     if (task.kind === 'incomplete_entity') {

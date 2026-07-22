@@ -109,7 +109,7 @@
 
 @if (showWizard()) {
   <pf-entity-wizard-dialog
-    [domains]="domains()"
+    [domains]="discoverySetupPersonId() !== null ? discoverySetupDomains() : domains()"
     [isSaving]="isSaving()"
     [saveError]="saveError()"
     [prefill]="wizardPrefill()"
@@ -181,6 +181,7 @@
     (close)="closeDetail()"
     (openInterview)="openInterviewForDetail()"
     (openWebSearch)="openWebSearchForDetail()"
+    (openDiscoverySetup)="openDiscoverySetup()"
     (openLightbox)="onOpenLightboxFromDetail($event)"
     (linkRequested)="onDetailLinkRequested()"
     (unlinkRequested)="onDetailUnlinkRequested($event)"

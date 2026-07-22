@@ -94,6 +94,7 @@ export class KnowledgeDetailDialog {
   readonly close = output<void>();
   readonly openInterview = output<void>();
   readonly openWebSearch = output<void>();
+  readonly openDiscoverySetup = output<void>();
   readonly openLightbox = output<number>();
   readonly linkRequested = output<void>();
   readonly unlinkRequested = output<string>();
@@ -283,6 +284,15 @@ export class KnowledgeDetailDialog {
     if (entity === null) { return false; }
     if (this.autonomy()?.discovery !== 'auto') { return false; }
     return this.domain()?.private === false;
+  });
+
+  // Leerer Zustand: es gibt noch keine Entity und damit keine Domäne, gegen die
+  // `canRequestWebSearch` prüfen könnte — hier reicht die Existenz mindestens einer
+  // nicht-privaten Domäne, die Wahl der konkreten Domäne trifft der Entity-Wizard, den
+  // `openDiscoverySetup` öffnet (Elternteil verdrahtet das).
+  protected readonly canRequestDiscoverySetup = computed((): boolean => {
+    if (this.autonomy()?.discovery !== 'auto') { return false; }
+    return this.domains().some((candidate: DomainDto) => !candidate.private);
   });
 
   // ── KI-Ergänzungsvorschlag (P27, hier als Banner statt Inline-Aktion) ────────────────────

@@ -25,6 +25,17 @@
           <pf-icon name="sparkle" [size]="14" />
           Interview starten
         </button>
+        @if (canRequestDiscoverySetup()) {
+          <button
+            class="kd-btn"
+            type="button"
+            title="Legt eine Notiz an (Domäne/Typ wählst du) und startet danach die Web-Recherche dafür"
+            (click)="openDiscoverySetup.emit()"
+          >
+            <pf-icon name="globe" [size]="14" />
+            Web-Recherche starten
+          </button>
+        }
         @if (hasUnlinkedNotes()) {
           <button class="kd-btn" type="button" (click)="linkRequested.emit()">
             <pf-icon name="link" [size]="14" />
