@@ -14,6 +14,7 @@ export const ISSUE_KINDS = [
   'acknowledged_missing',
   'orphaned_edit',
   'stranded_face',
+  'incomplete_metadata',
 ] as const;
 export type IssueKind = typeof ISSUE_KINDS[number];
 
@@ -25,6 +26,7 @@ export const REPAIR_ACTIONS = [
   'purge',
   'fix_assignment',
   'move_crop',
+  'reprocess_metadata',
 ] as const;
 export type RepairActionKind = typeof REPAIR_ACTIONS[number];
 
@@ -85,6 +87,14 @@ export interface StrandedFace {
   detail: string;
 }
 
+export interface IncompleteMetadata {
+  asset_id: number;
+  path: string;
+  person_name: string | null;
+  missing: string[];  // subset of 'embedding' | 'tags' | 'caption'
+  detail: string;
+}
+
 export interface ReconcileReport {
   generated_at: string | null;
   orphaned_files: OrphanFile[];
@@ -95,12 +105,14 @@ export interface ReconcileReport {
   acknowledged_missing: AcknowledgedMissing[];
   orphaned_edits: OrphanFile[];
   stranded_faces: StrandedFace[];
+  incomplete_metadata: IncompleteMetadata[];
 }
 
 export interface RepairItem {
   kind: IssueKind;
   instance_id?: number;
   face_id?: number;
+  asset_id?: number;
   path?: string;
   found_path?: string;
 }

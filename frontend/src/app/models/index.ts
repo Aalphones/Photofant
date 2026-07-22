@@ -114,6 +114,7 @@ export type {
   MisassignedInstance,
   AcknowledgedMissing,
   StrandedFace,
+  IncompleteMetadata,
   ReconcileReport,
   RepairItem,
   RepairAction,

@@ -129,6 +129,25 @@ class AcknowledgedMissingItem:
 
 
 @dataclass
+class IncompleteMetadataItem:
+    """An active asset whose caption, tags, or CLIP embedding never finished computing.
+
+    Scoped to the three steps a user can meaningfully re-trigger one asset at a time —
+    unlike `reprocess_job`'s catch-up run (which also covers faces/heuristics/
+    classification for the whole library), this bucket surfaces a specific gap spotted
+    during the FS↔DB scan so it can be closed without a full reprocess pass. A step only
+    counts as "missing" if it's enabled in settings — a disabled `auto_caption` never
+    finishes by design and would otherwise show up as a permanent false positive.
+    """
+
+    asset_id: int
+    path: str
+    person_name: str | None
+    missing: list[str]  # subset of ["embedding", "tags", "caption"]
+    detail: str
+
+
+@dataclass
 class ReconcileReport:
     generated_at: str
     orphaned_files: list[OrphanItem] = field(default_factory=list)
@@ -139,6 +158,7 @@ class ReconcileReport:
     acknowledged_missing: list[AcknowledgedMissingItem] = field(default_factory=list)
     orphaned_edits: list[OrphanItem] = field(default_factory=list)
     stranded_faces: list[StrandedFaceItem] = field(default_factory=list)
+    incomplete_metadata: list[IncompleteMetadataItem] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -151,6 +171,7 @@ class ReconcileReport:
             + len(self.acknowledged_missing)
             + len(self.orphaned_edits)
             + len(self.stranded_faces)
+            + len(self.incomplete_metadata)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -164,6 +185,7 @@ class ReconcileReport:
             "acknowledged_missing": [asdict(item) for item in self.acknowledged_missing],
             "orphaned_edits": [asdict(item) for item in self.orphaned_edits],
             "stranded_faces": [asdict(item) for item in self.stranded_faces],
+            "incomplete_metadata": [asdict(item) for item in self.incomplete_metadata],
         }
 
 

@@ -138,6 +138,14 @@ class StrandedFaceDto(BaseModel):
     detail: str
 
 
+class IncompleteMetadataDto(BaseModel):
+    asset_id: int
+    path: str
+    person_name: str | None
+    missing: list[str]
+    detail: str
+
+
 class ReconcileReportDto(BaseModel):
     generated_at: str | None
     orphaned_files: list[OrphanDto]
@@ -148,6 +156,7 @@ class ReconcileReportDto(BaseModel):
     acknowledged_missing: list[AcknowledgedMissingDto] = []
     orphaned_edits: list[OrphanDto] = []
     stranded_faces: list[StrandedFaceDto] = []
+    incomplete_metadata: list[IncompleteMetadataDto] = []
 
 
 _EMPTY_REPORT = ReconcileReportDto(
@@ -160,16 +169,18 @@ _EMPTY_REPORT = ReconcileReportDto(
     acknowledged_missing=[],
     orphaned_edits=[],
     stranded_faces=[],
+    incomplete_metadata=[],
 )
 
 
 class RepairItem(BaseModel):
     kind: Literal[
         "orphan", "missing", "drift", "orphaned_face", "misassigned", "acknowledged_missing",
-        "orphaned_edit", "stranded_face",
+        "orphaned_edit", "stranded_face", "incomplete_metadata",
     ]
     instance_id: int | None = None
     face_id: int | None = None
+    asset_id: int | None = None
     path: str | None = None
     found_path: str | None = None
 
@@ -178,6 +189,7 @@ class RepairActionDto(BaseModel):
     item: RepairItem
     action: Literal[
         "index", "mark_missing", "trash", "fix_path", "purge", "fix_assignment", "move_crop",
+        "reprocess_metadata",
     ]
 
 
@@ -266,6 +278,10 @@ async def _apply_one(
         if item.face_id is None:
             raise repair.RepairError("move_crop requires a face_id")
         repair.fix_stranded_face(session, item.face_id, data_root)
+    elif item.kind == "incomplete_metadata" and action == "reprocess_metadata":
+        if item.asset_id is None:
+            raise repair.RepairError("reprocess_metadata requires an asset_id")
+        await repair.reprocess_incomplete_metadata(session, item.asset_id)
     else:
         raise repair.RepairError(f"unsupported action '{action}' for kind '{item.kind}'")
 

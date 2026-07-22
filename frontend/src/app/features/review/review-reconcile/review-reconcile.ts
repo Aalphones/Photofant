@@ -10,6 +10,7 @@ import { Icon } from '@photofant/ui';
 import type {
   AcknowledgedMissing,
   DriftFile,
+  IncompleteMetadata,
   IssueKind,
   MisassignedInstance,
   MissingFile,
@@ -64,6 +65,9 @@ export class ReviewReconcile {
   protected readonly ORPHANED_EDIT_ACTIONS: RrAction[] = [
     { label: 'Indizieren', variant: 'primary', action: 'index', icon: 'plus' },
     { label: 'Papierkorb', variant: 'danger', action: 'trash', icon: 'trash' },
+  ];
+  protected readonly INCOMPLETE_METADATA_ACTIONS: RrAction[] = [
+    { label: 'Nachziehen', variant: 'primary', action: 'reprocess_metadata', icon: 'refresh' },
   ];
 
   // ── Buckets projected to display rows ───────────────────────────────────────
@@ -132,6 +136,14 @@ export class ReviewReconcile {
     }))
   );
 
+  protected readonly incompleteMetadataRows = computed((): RrRow[] =>
+    (this.report()?.incomplete_metadata ?? []).map((item: IncompleteMetadata) => ({
+      key: item.asset_id,
+      name: this.fileName(item.path),
+      meta: `${item.person_name ?? '_unknown'} · fehlt: ${item.missing.join(', ')}`,
+    }))
+  );
+
   protected readonly totalIssues = computed((): number =>
     this.orphanRows().length +
     this.missingRows().length +
@@ -140,7 +152,8 @@ export class ReviewReconcile {
     this.orphanedFaceRows().length +
     this.ackMissingRows().length +
     this.orphanedEditRows().length +
-    this.strandedFaceRows().length
+    this.strandedFaceRows().length +
+    this.incompleteMetadataRows().length
   );
 
   // ── Actions ─────────────────────────────────────────────────────────────────
@@ -177,6 +190,8 @@ export class ReviewReconcile {
       case 'orphaned_face':
       case 'stranded_face':
         return { item: { kind, face_id: key as number }, action };
+      case 'incomplete_metadata':
+        return { item: { kind, asset_id: key as number }, action };
       default:
         // missing, misassigned, acknowledged_missing — all keyed by instance id.
         return { item: { kind, instance_id: key as number }, action };

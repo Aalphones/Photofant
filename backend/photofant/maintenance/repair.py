@@ -15,7 +15,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from photofant.db.models import AssetInstance
+from photofant.db.models import Asset, AssetInstance, ProcessingLedger
 from photofant.media import moves
 
 log = logging.getLogger(__name__)
@@ -91,6 +91,37 @@ def fix_stranded_face(session: Session, face_id: int, data_root: Path) -> None:
             f"Face {face_id}: Crop konnte nicht verschoben werden (Datei fehlt oder liegt schon richtig)"
         )
     session.commit()
+
+
+async def reprocess_incomplete_metadata(session: Session, asset_id: int) -> None:
+    """Re-enqueue just the still-missing tags/caption/embedding steps for one asset.
+
+    Recomputes what's pending from the ledger at call time rather than trusting the
+    report — the scan can be minutes old, and re-running an already-finished step
+    would waste a caption/embedding pass for nothing.
+    """
+    from photofant.jobs.import_job import PipelineSteps, enqueue_pipeline_steps, steps_from_settings
+
+    asset = session.get(Asset, asset_id)
+    if asset is None:
+        raise RepairError(f"asset {asset_id} not found")
+
+    ledger = session.get(ProcessingLedger, asset.content_hash)
+    allowed = steps_from_settings()
+    steps = PipelineSteps(
+        heuristics=False,
+        tags=allowed.tags and not (ledger.tags_done if ledger else False),
+        caption=allowed.caption and not (ledger.caption_done if ledger else False),
+        embedding=allowed.embedding and not (ledger.embedding_done if ledger else False),
+        faces=False,
+        classification=False,
+    )
+    if not (steps.tags or steps.caption or steps.embedding):
+        raise RepairError(
+            f"asset {asset_id}: nichts nachzuziehen (bereits vollständig oder in den "
+            "Einstellungen deaktiviert)"
+        )
+    await enqueue_pipeline_steps(asset_id, steps)
 
 
 def fix_misassigned(session: Session, instance_id: int, data_root: Path) -> None:

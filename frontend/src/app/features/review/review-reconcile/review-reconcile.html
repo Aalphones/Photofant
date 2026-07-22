@@ -127,5 +127,17 @@
         (repair)="onRepair('orphaned_edit', $event)"
       />
     }
+
+    @if (incompleteMetadataRows().length > 0) {
+      <pf-rr-section
+        title="Unvollständige Metadaten"
+        subtitle="Tags, Bildunterschrift oder Embedding nie fertig berechnet."
+        variant="warn"
+        [rows]="incompleteMetadataRows()"
+        [actions]="INCOMPLETE_METADATA_ACTIONS"
+        [busy]="isRepairing()"
+        (repair)="onRepair('incomplete_metadata', $event)"
+      />
+    }
   </div>
 }

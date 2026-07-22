@@ -8,11 +8,13 @@ from pathlib import Path
 from sqlalchemy import select
 
 from photofant.config import get_data_root
-from photofant.db.models import Asset, AssetInstance, Face, Person, Version
+from photofant.db.models import Asset, AssetInstance, Face, Person, ProcessingLedger, Version
 from photofant.db.session import SessionLocal
+from photofant.jobs.import_job import steps_from_settings
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.maintenance.reconcile import (
     AcknowledgedMissingItem,
+    IncompleteMetadataItem,
     InstanceRecord,
     MisassignedInstanceItem,
     OrphanedFaceItem,
@@ -258,6 +260,57 @@ def _gather_acknowledged_missing() -> list[AcknowledgedMissingItem]:
     ]
 
 
+def _gather_incomplete_metadata() -> list[IncompleteMetadataItem]:
+    """Active assets missing caption, tags, or CLIP embedding (steps enabled in settings
+    only). One item per asset — an asset with multiple person instances would otherwise
+    show up once per instance, but the gap doesn't depend on which person it's filed
+    under, so only the first instance encountered is kept."""
+    allowed = steps_from_settings()
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(
+                Asset.id,
+                AssetInstance.path,
+                Person.name,
+                ProcessingLedger.tags_done,
+                ProcessingLedger.caption_done,
+                ProcessingLedger.embedding_done,
+            )
+            .join(AssetInstance, AssetInstance.asset_id == Asset.id)
+            .join(Person, Person.id == AssetInstance.person_id)
+            .outerjoin(ProcessingLedger, ProcessingLedger.content_hash == Asset.content_hash)
+            .where(AssetInstance.deleted_at.is_(None))
+            .where(AssetInstance.missing_at.is_(None))
+            .order_by(Asset.id, AssetInstance.id)
+        ).all()
+
+    items: list[IncompleteMetadataItem] = []
+    seen: set[int] = set()
+    for asset_id, path, person_name, tags_done, caption_done, embedding_done in rows:
+        if asset_id in seen:
+            continue
+        seen.add(asset_id)
+        missing: list[str] = []
+        if allowed.tags and not tags_done:
+            missing.append("tags")
+        if allowed.caption and not caption_done:
+            missing.append("caption")
+        if allowed.embedding and not embedding_done:
+            missing.append("embedding")
+        if not missing:
+            continue
+        items.append(
+            IncompleteMetadataItem(
+                asset_id=asset_id,
+                path=path,
+                person_name=person_name,
+                missing=missing,
+                detail=f"asset.id={asset_id} · fehlt: {', '.join(missing)}",
+            )
+        )
+    return items
+
+
 def _run_reconcile() -> int:
     data_root = get_data_root()
     active = _gather_active_instances()
@@ -270,13 +323,15 @@ def _run_reconcile() -> int:
         _walk_edits_dirs(data_root), _gather_active_version_paths()
     )
     report.stranded_faces = _gather_stranded_faces(data_root)
+    report.incomplete_metadata = _gather_incomplete_metadata()
 
     with SessionLocal() as session:
         persist_report(session, report)
 
     log.info(
         "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces, "
-        "%d misassigned, %d acknowledged-missing, %d orphaned edits, %d stranded faces",
+        "%d misassigned, %d acknowledged-missing, %d orphaned edits, %d stranded faces, "
+        "%d incomplete metadata",
         len(report.orphaned_files),
         len(report.missing_files),
         len(report.path_drift),
@@ -285,6 +340,7 @@ def _run_reconcile() -> int:
         len(report.acknowledged_missing),
         len(report.orphaned_edits),
         len(report.stranded_faces),
+        len(report.incomplete_metadata),
     )
     return report.total
 
