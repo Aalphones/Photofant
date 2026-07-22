@@ -1,0 +1,52 @@
+@use '../st-shared' as *;
+:host { display: block; max-width: 660px; }
+
+.ki__kopf { margin-bottom: 20px; }
+.ki__kopf h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.ki__kopf p { margin: 0; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+
+/* ── Warn-Banner (analog MCP-Einstellungen) ──────────────────── */
+.ki__warnung {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; margin-bottom: 20px;
+  background: var(--danger-weak); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border-radius: var(--radius); color: var(--text);
+  font-size: 13px; line-height: 1.5;
+  pf-icon { color: var(--danger); flex: none; margin-top: 1px; }
+  strong { color: var(--danger); }
+}
+
+/* ── Gruppen / Zeilen ─────────────────────────────────────────── */
+.ki__gruppen-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; padding: 0 2px 8px; }
+.ki__gruppen-label--mt { margin-top: 28px; }
+.ki__gruppe { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+.ki__zeile { display: flex; align-items: flex-start; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.ki__zeile:last-child { border-bottom: none; }
+.ki__zeile-inhalt { flex: 1; min-width: 0; }
+.ki__zeile-titel { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 500; color: var(--text); }
+.ki__zeile-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.45; }
+.ki__zeile-steuerung { flex: none; display: flex; align-items: center; gap: 10px; }
+
+.ki__hint { display: inline-flex; color: var(--text-3); cursor: help; }
+.ki__hint:hover { color: var(--accent); }
+
+/* ── Segmented Control (off / ask / auto) ────────────────────── */
+.ki__segmente {
+  display: inline-flex; background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--radius-s); overflow: hidden; flex: none;
+}
+.ki__segment {
+  height: 30px; padding: 0 12px; font-size: 12.5px; font-weight: 500;
+  color: var(--text-3); border-right: 1px solid var(--line);
+  &:last-child { border-right: none; }
+  &:hover:not(:disabled):not(.ki__segment--aktiv) { background: var(--surface-hover); color: var(--text); }
+  &:disabled { opacity: .6; cursor: not-allowed; }
+}
+.ki__segment--aktiv { background: var(--accent); color: #fff; }
+
+@media (max-width: 860px) {
+  .ki__zeile { flex-wrap: wrap; gap: 8px; }
+  .ki__zeile-steuerung { width: 100%; }
+  .ki__segmente { width: 100%; }
+  .ki__segment { flex: 1; }
+}

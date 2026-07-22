@@ -26,6 +26,7 @@ export const SECTIONS: Section[] = [
   { id: 'tags',         icon: 'tag',      label: 'Tags' },
   { id: 'klassifizierung', icon: 'layers', label: 'Klassifizierung' },
   { id: 'comfyui',      icon: 'sparkle',  label: 'ComfyUI' },
+  { id: 'ki',           icon: 'sparkle',  label: 'KI' },
   { id: 'mcp',          icon: 'link',     label: 'MCP-Schnittstelle' },
   { id: 'shortcuts',    icon: 'keyboard', label: 'Tastaturkürzel' },
   { id: 'info',         icon: 'info',     label: 'Info' },

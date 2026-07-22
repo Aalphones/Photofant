@@ -33,6 +33,7 @@ from photofant.knowledge.service import (
     KnowledgeService,
     OwnershipConflictError,
 )
+from photofant.settings import patch_settings
 from photofant.knowledge.slug import slugify
 from photofant.knowledge.task_rules import refresh_completeness_tasks
 from photofant.knowledge.validator import ValidationError
@@ -140,6 +141,48 @@ def get_autonomy() -> AutonomyDto:
         interview=autonomy_for(Capability.INTERVIEW),
         discovery=autonomy_for(Capability.KNOWLEDGE_DISCOVERY),
     )
+
+
+class AutonomyPatchRequest(BaseModel):
+    """Teil-Update — nur angegebene Felder ändern sich, der Rest bleibt unangetastet."""
+
+    knowledge_import: str | None = None
+    knowledge_update: str | None = None
+    interview: str | None = None
+    discovery: str | None = None
+
+
+# discovery kennt bewusst kein "ask" — die Bestätigung sitzt im Wizard (Fakten abhaken),
+# nicht in diesem Schalter (ADR-031).
+_ASK_CAPABLE_MODES = {"off", "ask", "auto"}
+_DISCOVERY_MODES = {"off", "auto"}
+
+
+@router.patch("/autonomy", response_model=AutonomyDto)
+def update_autonomy(body: AutonomyPatchRequest) -> AutonomyDto:
+    """Setzt die Autonomie-Stufe für eine oder mehrere KI-Funktionen. Schreibt direkt nach
+    ``settings.json`` und wirkt sofort — kein Neustart nötig (Einstellungen › KI)."""
+    patch: dict[str, str] = {}
+    for field, allowed in (
+        ("knowledge_import", _ASK_CAPABLE_MODES),
+        ("knowledge_update", _ASK_CAPABLE_MODES),
+        ("interview", _ASK_CAPABLE_MODES),
+        ("discovery", _DISCOVERY_MODES),
+    ):
+        value = getattr(body, field)
+        if value is None:
+            continue
+        if value not in allowed:
+            raise HTTPException(
+                status_code=422,
+                detail=f"'{field}' erlaubt nur {sorted(allowed)}, nicht '{value}'",
+            )
+        patch[field] = value
+
+    if patch:
+        patch_settings({"ai": {"autonomy": patch}})
+
+    return get_autonomy()
 
 
 @router.post("/import-suggestion", response_model=ImportSuggestionResponse)

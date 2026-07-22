@@ -128,6 +128,21 @@ export class KnowledgeEffects {
     )
   );
 
+  // Einstellungen › KI — Teil-Update, Server-Antwort trägt den vollen (frischen) Stand zurück
+  readonly updateAiAutonomy$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(knowledgeActions.updateAiAutonomy),
+      switchMap(({ patch }) =>
+        this.knowledgeService.updateAiAutonomy(patch).pipe(
+          map((autonomy: AiAutonomyDto) => knowledgeActions.updateAiAutonomySuccess({ autonomy })),
+          catchError((error: HttpErrorResponse) =>
+            of(knowledgeActions.updateAiAutonomyFailure({ error: error.message }))
+          ),
+        )
+      ),
+    )
+  );
+
   readonly requestImportSuggestion$ = createEffect(() =>
     this.actions$.pipe(
       ofType(knowledgeActions.requestImportSuggestion),

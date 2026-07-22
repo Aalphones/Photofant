@@ -1,0 +1,131 @@
+<div class="ki__kopf">
+  <h2>KI</h2>
+  <p>Steuert, wie viel die eingebaute KI (Gemma) im Bereich „Wissen" von sich aus tun darf.
+     Jede Funktion ist einzeln abschaltbar — „Aus" blendet die Aktion in der Oberfläche
+     komplett aus, „Automatisch" führt sie ohne Rückfrage aus. Änderungen wirken sofort,
+     kein Neustart nötig.</p>
+</div>
+
+<div class="ki__gruppen-label">Manuelles Anlegen &amp; Pflegen</div>
+<div class="ki__gruppe">
+
+  <div class="ki__zeile">
+    <div class="ki__zeile-inhalt">
+      <div class="ki__zeile-titel">
+        KI-Vorschlag beim Anlegen
+        <span class="ki__hint" title="Beim manuellen Anlegen einer Entity kann Gemma anhand des Titels eine Beschreibung vorschlagen. Du bestätigst oder änderst den Vorschlag, bevor gespeichert wird.">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="ki__zeile-sub">„Fragen" zeigt den Vorschlags-Button an, du entscheidest je Entity. „Automatisch" gibt's hier nicht — es wird nie ungefragt geschrieben.</div>
+    </div>
+    <div class="ki__zeile-steuerung">
+      <div class="ki__segmente" role="group">
+        @for (option of threeWayOptions; track option.value) {
+          <button
+            type="button"
+            class="ki__segment"
+            [class.ki__segment--aktiv]="knowledgeImport() === option.value"
+            [disabled]="isSaving()"
+            (click)="setKnowledgeImport(option.value)"
+          >{{ option.label }}</button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="ki__zeile">
+    <div class="ki__zeile-inhalt">
+      <div class="ki__zeile-titel">
+        Ergänzungsvorschläge
+        <span class="ki__hint" title="Gemma vergleicht eine bestehende Notiz mit neuen Fakten (z.B. aus verknüpften Bildern) und schlägt Ergänzungen vor. Geschrieben wird erst nach deiner Bestätigung.">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="ki__zeile-sub">Schlägt Ergänzungen zu bestehendem Wissen vor, wenn neue Fakten auftauchen.</div>
+    </div>
+    <div class="ki__zeile-steuerung">
+      <div class="ki__segmente" role="group">
+        @for (option of threeWayOptions; track option.value) {
+          <button
+            type="button"
+            class="ki__segment"
+            [class.ki__segment--aktiv]="knowledgeUpdate() === option.value"
+            [disabled]="isSaving()"
+            (click)="setKnowledgeUpdate(option.value)"
+          >{{ option.label }}</button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="ki__zeile">
+    <div class="ki__zeile-inhalt">
+      <div class="ki__zeile-titel">
+        Interview-Modus
+        <span class="ki__hint" title="Für private Personen ohne Web-Recherche: Gemma stellt Rückfragen und fasst deine Antworten zu einem Profil zusammen.">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="ki__zeile-sub">Geführtes Interview, um ein Profil für private Personen anzulegen.</div>
+    </div>
+    <div class="ki__zeile-steuerung">
+      <div class="ki__segmente" role="group">
+        @for (option of threeWayOptions; track option.value) {
+          <button
+            type="button"
+            class="ki__segment"
+            [class.ki__segment--aktiv]="interview() === option.value"
+            [disabled]="isSaving()"
+            (click)="setInterview(option.value)"
+          >{{ option.label }}</button>
+        }
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="ki__gruppen-label ki__gruppen-label--mt">Web-Recherche</div>
+
+<div class="ki__warnung">
+  <pf-icon name="alertTriangle" [size]="20" />
+  <div>
+    <strong>Einziger Netzwerkzugriff der Wissensbasis.</strong>
+    Ist diese Funktion an, sucht Gemma für öffentliche Personen/Figuren im Web und schlägt
+    Fakten vor — dafür verlässt eine Suchanfrage (der Name/Titel) deinen Rechner. Private
+    Domänen sind davon immer ausgenommen. Geschrieben wird erst, wenn du die gefundenen
+    Fakten im Wizard einzeln abhakst.
+  </div>
+</div>
+
+<div class="ki__gruppe">
+  <div class="ki__zeile">
+    <div class="ki__zeile-inhalt">
+      <div class="ki__zeile-titel">
+        Web-Recherche starten dürfen
+        <span class="ki__hint" title="Schaltet den Web-Recherche-Button bei Personen und Entities ohne bestehende Notiz frei (nur für nicht-private Domänen).">
+          <pf-icon name="info" [size]="13" />
+        </span>
+      </div>
+      <div class="ki__zeile-sub">Standardmäßig aus. Kein „Fragen" — die Bestätigung sitzt bereits im Rechercheergebnis (Fakten einzeln abhaken).</div>
+    </div>
+    <div class="ki__zeile-steuerung">
+      <div class="ki__segmente" role="group">
+        @for (option of twoWayOptions; track option.value) {
+          <button
+            type="button"
+            class="ki__segment"
+            [class.ki__segment--aktiv]="discovery() === option.value"
+            [disabled]="isSaving()"
+            (click)="setDiscovery(option.value)"
+          >{{ option.label }}</button>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+@if (error()) {
+  <div class="error-banner">{{ error() }}</div>
+}

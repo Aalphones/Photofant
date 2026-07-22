@@ -26,6 +26,8 @@ export interface KnowledgeState extends EntityState<DomainDto> {
   entityList: EntityListState;
   // P27 Phase 2 — KI-Vorschlag im Wizard
   aiAutonomy: AiAutonomyDto | null;
+  aiAutonomySaving: boolean;
+  aiAutonomySaveError: string | null;
   suggestionJobId: string | null;      // Job, dessen Ergebnis wir aus dem Stream erwarten
   suggestionLoading: boolean;
   suggestionResult: KnowledgeImportResult | null;
@@ -59,6 +61,8 @@ const initialState: KnowledgeState = adapter.getInitialState({
   tasks: taskAdapter.getInitialState({ loading: false, error: null }),
   entityList: entityAdapter.getInitialState({ loading: false, error: null }),
   aiAutonomy: null,
+  aiAutonomySaving: false,
+  aiAutonomySaveError: null,
   suggestionJobId: null,
   suggestionLoading: false,
   suggestionResult: null,
@@ -172,6 +176,21 @@ export const knowledgeFeature = createFeature({
     on(knowledgeActions.loadAiAutonomySuccess, (state: KnowledgeState, { autonomy }) => ({
       ...state,
       aiAutonomy: autonomy,
+    })),
+    on(knowledgeActions.updateAiAutonomy, (state: KnowledgeState) => ({
+      ...state,
+      aiAutonomySaving: true,
+      aiAutonomySaveError: null,
+    })),
+    on(knowledgeActions.updateAiAutonomySuccess, (state: KnowledgeState, { autonomy }) => ({
+      ...state,
+      aiAutonomy: autonomy,
+      aiAutonomySaving: false,
+    })),
+    on(knowledgeActions.updateAiAutonomyFailure, (state: KnowledgeState, { error }) => ({
+      ...state,
+      aiAutonomySaving: false,
+      aiAutonomySaveError: error,
     })),
     // Anfrage läuft: warten, bis der Job-Stream das Ergebnis liefert (suggestionLoading
     // bleibt auch nach dem Success-Ack an, bis der Job fertig ist — der Success trägt nur

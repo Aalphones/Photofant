@@ -41,6 +41,10 @@ export const knowledgeActions = createActionGroup({
     'Load Ai Autonomy':          emptyProps(),
     'Load Ai Autonomy Success':  props<{ autonomy: AiAutonomyDto }>(),
     'Load Ai Autonomy Failure':  props<{ error: string }>(),
+    // Einstellungen › KI — Teil-Update einer oder mehrerer Autonomie-Stufen
+    'Update Ai Autonomy':         props<{ patch: Partial<AiAutonomyDto> }>(),
+    'Update Ai Autonomy Success': props<{ autonomy: AiAutonomyDto }>(),
+    'Update Ai Autonomy Failure': props<{ error: string }>(),
     'Request Import Suggestion':         props<{ request: ImportSuggestionRequest }>(),
     'Request Import Suggestion Success': props<{ jobId: string }>(),
     'Request Import Suggestion Failure': props<{ error: string }>(),

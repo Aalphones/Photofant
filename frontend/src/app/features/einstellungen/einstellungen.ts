@@ -10,12 +10,13 @@ import { Info } from './info/info';
 import { Tags } from './tags/tags';
 import { Klassifizierung } from './klassifizierung/klassifizierung';
 import { ComfyUISection } from './comfyui/comfyui';
+import { KiSection } from './ki/ki';
 import { McpSection } from './mcp/mcp';
 
 @Component({
   selector: 'pf-einstellungen',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, Bibliothek, Verarbeitung, Darstellung, Bearbeitung, Tastaturkuerzel, Info, Tags, Klassifizierung, ComfyUISection, McpSection],
+  imports: [Icon, Bibliothek, Verarbeitung, Darstellung, Bearbeitung, Tastaturkuerzel, Info, Tags, Klassifizierung, ComfyUISection, KiSection, McpSection],
   templateUrl: './einstellungen.html',
   styleUrl: './einstellungen.scss',
 })

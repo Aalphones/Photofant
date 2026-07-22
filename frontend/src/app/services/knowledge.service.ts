@@ -114,6 +114,12 @@ export class KnowledgeService {
     return this.http.get<AiAutonomyDto>('/api/knowledge/ai/autonomy');
   }
 
+  // Einstellungen › KI — Teil-Update, nur die übergebenen Felder ändern sich. Wirkt sofort,
+  // kein Neustart nötig (schreibt direkt in settings.json).
+  updateAiAutonomy(patch: Partial<AiAutonomyDto>): Observable<AiAutonomyDto> {
+    return this.http.patch<AiAutonomyDto>('/api/knowledge/ai/autonomy', patch);
+  }
+
   // P27 Phase 2 — löst den KnowledgeImportJob aus (Gemma füllt den Wizard-Vorschlag).
   // Läuft asynchron über die Job-Queue; das Ergebnis kommt über den Job-Stream, deshalb
   // nur der `job_id`-Rückgabewert hier.
