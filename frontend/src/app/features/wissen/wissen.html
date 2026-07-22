@@ -41,7 +41,7 @@
   [tasks]="tasks()"
   [loading]="tasksLoading()"
   [error]="tasksError()"
-  (resolve)="resolveTaskViaWizard($event)"
+  (resolve)="resolveTask($event)"
   (dismiss)="dismissTask($event)"
 />
 
@@ -128,6 +128,8 @@
 @if (showInterview()) {
   <pf-interview-dialog
     [domains]="domains()"
+    [persons]="knownPersons()"
+    [target]="wizardTarget()"
     [isSaving]="isSaving()"
     [saveError]="saveError()"
     [loading]="interviewLoading()"
@@ -136,6 +138,15 @@
     (close)="closeInterview()"
     (requestInterview)="onRequestInterview($event)"
     (save)="onSave($event)"
+  />
+}
+
+@if (showWebSearchWizard()) {
+  <pf-web-search-dialog
+    [persons]="knownPersons()"
+    [target]="wizardTarget()"
+    (close)="closeWebSearchWizard()"
+    (applied)="onWebSearchApplied($event)"
   />
 }
 
@@ -168,8 +179,8 @@
     [hasUnlinkedNotes]="unlinkedEntities().length > 0"
     [refreshKey]="detailRefreshKey()"
     (close)="closeDetail()"
-    (openInterview)="openInterview()"
-    (openWebSearch)="openWebSearchWizard()"
+    (openInterview)="openInterviewForDetail()"
+    (openWebSearch)="openWebSearchForDetail()"
     (openLightbox)="onOpenLightboxFromDetail($event)"
     (linkRequested)="onDetailLinkRequested()"
     (unlinkRequested)="onDetailUnlinkRequested($event)"

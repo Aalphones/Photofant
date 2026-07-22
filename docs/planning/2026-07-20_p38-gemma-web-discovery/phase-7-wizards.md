@@ -122,23 +122,72 @@ Store-Aktionen) und den Toast aus Phase 5 auslösen.
 - „Überspringen" statt „Weiter" bei leerem Antwortfeld (Aufgabe 2).
 
 ## AK dieser Phase
-- [ ] Beide Wizards nutzen dieselbe Hülle: 500px breit, Fußleiste mit Trennlinie,
+- [x] Beide Wizards nutzen dieselbe Hülle: 500px breit, Fußleiste mit Trennlinie,
       Escape/Scrim/X schließen.
-- [ ] Interview: Personen-Wahl per Chip **oder** Freitext; aus einem Personen-Kontext geöffnet
+- [x] Interview: Personen-Wahl per Chip **oder** Freitext; aus einem Personen-Kontext geöffnet
       entfällt der Schritt und zeigt stattdessen die Bestätigungszeile.
-- [ ] Interview: leeres Antwortfeld → Knopf heißt „Überspringen"; die Fortschrittszeile zählt
+- [x] Interview: leeres Antwortfeld → Knopf heißt „Überspringen"; die Fortschrittszeile zählt
       korrekt „Frage X von N".
-- [ ] Interview ohne gewählte Person legt eine unverknüpfte Notiz an, die danach in der
+- [x] Interview ohne gewählte Person legt eine unverknüpfte Notiz an, die danach in der
       Übersicht auftaucht.
-- [ ] Web-Suche: Ergebnisliste mit vorab aktiven Checkboxen, Quell-Domain und Konfidenz-Pille;
+- [x] Web-Suche: Ergebnisliste mit vorab aktiven Checkboxen, Quell-Domain und Konfidenz-Pille;
       Fußknopf zählt die angehakten Fakten mit.
-- [ ] Web-Suche: nach der Übernahme werden übernommene Merkmale, neu angelegte Entitäten **und**
+- [x] Web-Suche: nach der Übernahme werden übernommene Merkmale, neu angelegte Entitäten **und**
       übersprungene Werte angezeigt — letztere sachlich, nicht als Fehler.
-- [ ] Kein `setTimeout` als Ladesimulation im ausgelieferten Code; beide Ladezustände hängen am
+- [x] Kein `setTimeout` als Ladesimulation im ausgelieferten Code; beide Ladezustände hängen am
       echten Job-Stream.
-- [ ] `npx tsc --noEmit` grün, Produktions-Build läuft durch.
+- [x] `npx tsc --noEmit` grün, Produktions-Build läuft durch.
 
 ## Doc-Updates
-- [ ] `docs/code-map.md` — `features/wissen/wizard-shell/` und `web-search-dialog/` ergänzen.
+- [x] `docs/code-map.md` — `features/wissen/wizard-shell/` und `web-search-dialog/` ergänzt.
 
 ## Report-Back
+
+**Umgesetzt wie geplant:** gemeinsame `wizard-shell` (Aufgabe 1), Interview komplett auf
+Personen-Chip/Freitext + fünf feste Fragen umgeschnitten (Aufgabe 2), neuer
+`web-search-dialog` self-contained wie `lore-panel.ts` (Aufgabe 3), Verdrahtung über ein
+gemeinsames `wizardTarget`-Signal (Aufgabe 4). `npx tsc --noEmit` grün, Produktions-Build
+läuft durch (gleiche vorbestehende Bundle-Budget-Warnung wie Phase 5/6, keine Regression).
+Backend: `ruff`/`mypy` grün, `test_knowledge_discovery_job.py` (19 Tests) weiter grün.
+
+**Abweichungen vom Plan-Wortlaut (mit Begründung):**
+1. **`WizardTarget` um `entityId` erweitert** (Plan: nur `{personId, name}`). Web-Suche kann
+   auf jeder nicht-privaten Entity laufen (Detail-Kopf-Button `canRequestWebSearch`), auch auf
+   einer unverknüpften Notiz ohne Personen-Bezug (z.B. Movies-Domäne) — mit nur `personId`
+   wäre dieser Fall nicht adressierbar gewesen. Abwärtskompatibel (zusätzliches Feld).
+2. **`missing_field`/`low_completeness`-Aufgaben umgeleitet:** Diese Aufgaben-Chips öffneten
+   bisher den Entity-Wizard — der kennt aber gar keine Merkmale (`attributes`), kann das
+   Problem also nie beheben (vorbestehende Lücke seit Phase 4/5, hier beim Verdrahten
+   aufgefallen und mitgefixt). Sie öffnen jetzt die Web-Suche, vorbelegt mit der betroffenen
+   Entity (`personIdByEntityId`-Umkehr-Map löst die Person auf, falls verknüpft).
+3. **`DiscoveryRequest` um optionales `hint` erweitert** (Backend `api/knowledge_ai.py` +
+   `jobs/knowledge_discovery_job.py`, Frontend `knowledge.model.ts`). Der Plan verlangt ein
+   Hinweisfeld im Web-Suche-Wizard, das „als Teil der Suchanfrage" mitgeht — der Phase-3/4-
+   Kontrakt kannte dafür kein Feld. Additiv, kein bestehender Aufrufer betroffen (Default
+   `None`), fließt nur in die `search_web()`-Anfrage ein, kein eigener Prompt-Slot. Grund für
+   den Cross-Phase-Eingriff: ohne ihn wäre das Hinweisfeld eine Attrappe gewesen.
+4. **`score-pill`-Klasse lokal nachgebaut statt wiederverwendet** (Plan: „bestehende
+   `score-pill`-Klasse … wiederverwenden"). Die einzige bestehende Instanz (`review-faces.scss`
+   `.rf__score-pill`) ist Angular-komponenten-gescoped, kein globaler Export — in
+   `web-search-dialog.scss` nach derselben Konvention (Mono-Schrift, `high`/`mid`-Farbe) neu
+   angelegt statt eines nicht möglichen Fremd-Imports.
+5. **Pet-Interview entfällt.** Die alte Interview-Umsetzung unterschied Person/Pet mit eigenen
+   Fragen; das Design hat nur einen festen, personenbezogenen Fragensatz (Frage 4: „Wie würdest
+   du eure Beziehung zueinander beschreiben?" passt nicht auf ein Haustier) und keine
+   Typ-Auswahl mehr. Interview legt jetzt immer den `Person`-Typ der privaten Domäne an —
+   Haustiere lassen sich weiterhin über „Neue Entity" (Entity-Wizard, Domäne „Private", Typ
+   „Pet") anlegen, nur nicht mehr über den geführten Dialog.
+6. **`wizard-shell` um `backLabel`/`hideFooter` erweitert** (Plan nennt nur `title`/`canGoBack`/
+   `primaryLabel`/`primaryDisabled`). Nötig, damit der Summary-Schritt „Antworten anpassen"
+   statt „Zurück" zeigen kann und die Synthese-/Such-Ladephasen ganz ohne Fußleiste auskommen
+   (Design zeigt dort keine Knöpfe).
+
+**Bekannte Grenze (nicht behoben, dokumentiert):** Navigiert man im Wissen-Detail-Modal über
+einen Beziehungs-Chip auf eine andere Person und öffnet danach „Interview"/„Web-Suche", zielt
+der Wizard noch auf die ursprünglich geöffnete Person, nicht die intern nachnavigierte — der
+Output von `KnowledgeDetailDialog` ist unverändert `void`, träfe eine Erweiterung nur für
+diesen Randfall.
+
+**Live-Smoke steht aus** (privates Profil, kein Server/Browser in dieser Session):
+Wizard-Öffnen aus allen vier Einstiegen, Interview-Flow bis Anlegen, Web-Suche-Flow bis
+Übernahme inkl. `hint`-Feld — siehe Plan-Ende-Checkliste in der README.

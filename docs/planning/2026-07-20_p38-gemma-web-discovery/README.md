@@ -18,7 +18,7 @@
 | 4 | Routen + Guards + neue Aufgaben-Arten | standard | 🟡 Code fertig, Live-Smoke steht aus |
 | 5 | Wissen-Übersicht nach Design | standard | ✅ complete |
 | 6 | Wissen-Detail (Modal) nach Design | standard | ✅ complete |
-| 7 | Wizards — Interview + Web-Suche mit Fakten-Bestätigung | standard | pending |
+| 7 | Wizards — Interview + Web-Suche mit Fakten-Bestätigung | standard | ✅ complete |
 | 8 | Personen-Karte + Lightbox-Wissen-Tab | standard | pending |
 
 ## Ziel
@@ -150,9 +150,10 @@ zu öffnen. Der Prozentwert selbst bleibt draußen.
 - **Neue Capability:** `Capability.KNOWLEDGE_DISCOVERY = "knowledge_discovery"`.
 - **Neuer Job-Kind:** `JobKind.KNOWLEDGE_DISCOVERY = "knowledge_discovery"` (Backend `jobs/queue.py`,
   Frontend `JOB_KINDS` in `models/job.model.ts`).
-- **Recherche starten:** `POST /api/knowledge/ai/discovery` · Body `{ entity_id: string }` ·
+- **Recherche starten:** `POST /api/knowledge/ai/discovery` · Body `{ entity_id: string; hint?: string }` ·
   Response `{ job_id: string }`. 409 wenn `ai.autonomy.discovery != "auto"`, 422 wenn die
-  Ziel-Domäne privat ist, 404 wenn die Entity fehlt.
+  Ziel-Domäne privat ist, 404 wenn die Entity fehlt. `hint` additiv seit Phase 7 (Web-Suche-
+  Wizard, „Beruf, Stadt oder ein Link") — geht nur in die Suchanfrage ein, kein Prompt-Slot.
 - **Job-Ergebnis** (`JobDto.result`) — **reine Vorschläge, nichts ist geschrieben**:
   ```ts
   interface KnowledgeDiscoveryFact {

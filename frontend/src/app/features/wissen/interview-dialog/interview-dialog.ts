@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  inject,
   input,
   output,
   signal,
@@ -14,25 +15,47 @@ import type {
   InterviewAnswer,
   InterviewSynthesizeRequest,
   KnowledgeInterviewResult,
+  PersonDto,
 } from '@photofant/models';
+import { PersonService } from '@photofant/services';
 import { Icon } from '../../../ui/icon/icon';
+import { WizardShell } from '../wizard-shell/wizard-shell';
 
-// Fester Fragen-Satz für den geführten Interview-Dialog (kein freies Chat, AK Phase 4).
-// Der Name wird im Intro-Schritt erfasst, die Fragen bauen darauf auf. Person und Haustier
-// bekommen leicht andere Fragen; leere Antworten sind erlaubt (das Backend überspringt sie).
+// P38 Phase 7 — die fünf Fragen wörtlich aus `design/js/data.js` Zeile 455-461 (reine
+// Oberfläche, kein Backend-Konzept mehr wie die alte Person/Pet-Unterscheidung).
+const INTERVIEW_QUESTIONS: readonly string[] = [
+  'Was schätzt du an dieser Person am meisten?',
+  'Gibt es eine Geschichte oder ein Erlebnis, das sie/ihn gut beschreibt?',
+  'Welche Vorlieben, Hobbys oder Eigenheiten fallen dir ein?',
+  'Wie würdest du eure Beziehung zueinander beschreiben?',
+  'Sonst noch etwas Wichtiges, das man wissen sollte?',
+];
+
 type DialogPhase = 'stepper' | 'synthesizing' | 'summary';
+
+// Preset, mit dem der Wizard aus einem Personen-Kontext (Karte, Detail, Aufgabe) geöffnet
+// wird — trägt nur, was zur Anzeige/Verknüpfung nötig ist (Aufgabe 4, gemeinsames Signal).
+export interface WizardTarget {
+  personId: number | null;
+  entityId: string | null;
+  name: string | null;
+}
 
 @Component({
   selector: 'pf-interview-dialog',
-  imports: [Icon],
+  imports: [Icon, WizardShell],
   templateUrl: './interview-dialog.html',
   styleUrl: './interview-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InterviewDialog {
-  // Nur private Domänen kommen für das Interview infrage (Konzept-ADR-009). Der Aufrufer
-  // reicht alle Domänen herein; hier wird auf die privaten gefiltert.
+  private readonly personService = inject(PersonService);
+
+  // Nur private Domänen kommen für das Interview infrage (Konzept-ADR-009) — automatisch
+  // aufgelöst (erste private Domäne + ihr erster Typ), keine eigene Auswahl mehr im Design.
   readonly domains = input.required<DomainDto[]>();
+  readonly persons = input<PersonDto[]>([]);
+  readonly target = input<WizardTarget | null>(null);
   readonly isSaving = input<boolean>(false);
   readonly saveError = input<string | null>(null);
   readonly loading = input<boolean>(false);
@@ -43,65 +66,82 @@ export class InterviewDialog {
   readonly requestInterview = output<InterviewSynthesizeRequest>();
   readonly save = output<CreateEntityRequest>();
 
+  protected readonly questions = INTERVIEW_QUESTIONS;
+
   protected readonly privateDomains = computed<DomainDto[]>(() =>
     this.domains().filter((domain: DomainDto) => domain.private)
   );
 
-  protected readonly selectedDomain = signal('');
-  protected readonly selectedType = signal('');
-  protected readonly name = signal('');
-  protected readonly nameTouched = signal(false);
+  private readonly resolvedDomain = computed<DomainDto | null>(() => this.privateDomains()[0] ?? null);
+
+  private readonly resolvedType = computed<EntityType | null>(() => {
+    const domain = this.resolvedDomain();
+    if (domain === null) { return null; }
+    return domain.entity_types.find((entityType: EntityType) => entityType.name === 'Person')
+      ?? domain.entity_types[0] ?? null;
+  });
+
+  // Schritt 0: entfällt, wenn ein Preset mitkommt (Bestätigungszeile statt Auswahl).
+  protected readonly hasTarget = computed<boolean>(() => this.target() !== null);
+
+  protected readonly pickedPersonId = signal<number | null>(null);
+  protected readonly freetextName = signal('');
 
   protected readonly phase = signal<DialogPhase>('stepper');
-  // 0 = Intro (Name + Typ), 1..N = je eine Frage.
+  // 0 = Intro (Personen-Wahl oder Bestätigungszeile), 1..N = je eine Frage.
   protected readonly stepIndex = signal(0);
   protected readonly answers = signal<Record<number, string>>({});
 
-  protected readonly entityTypes = computed<EntityType[]>(() =>
-    this.privateDomains().find((domain: DomainDto) => domain.name === this.selectedDomain())?.entity_types ?? []
-  );
-
-  protected readonly questions = computed<string[]>(() => {
-    const label = this.name().trim() || 'die Person';
-    if (this.selectedType() === 'Pet') {
-      return [
-        `Wem gehört ${label}, und was für ein Tier ist es?`,
-        `Was macht ${label} besonders? (Rasse, Charakter, Vorlieben)`,
-        `Welche wichtigen Ereignisse verbindest du mit ${label}?`,
-      ];
+  protected readonly name = computed<string>(() => {
+    const target = this.target();
+    if (target !== null) { return target.name ?? ''; }
+    const picked = this.pickedPersonId();
+    if (picked !== null) {
+      return this.persons().find((person: PersonDto) => person.id === picked)?.name ?? '';
     }
-    return [
-      `In welcher Beziehung steht ${label} zu dir?`,
-      `Was ist über ${label} wichtig zu wissen? (Beruf, Herkunft, Eigenheiten)`,
-      `Welche wichtigen Ereignisse verbindest du mit ${label}?`,
-    ];
+    return this.freetextName().trim();
   });
 
-  protected readonly totalSteps = computed<number>(() => 1 + this.questions().length);
+  protected readonly linkedPersonId = computed<number | null>(() => {
+    const target = this.target();
+    if (target !== null) { return target.personId; }
+    return this.pickedPersonId();
+  });
+
   protected readonly atIntro = computed<boolean>(() => this.stepIndex() === 0);
-  protected readonly atLastQuestion = computed<boolean>(() => this.stepIndex() === this.questions().length);
-  protected readonly currentQuestion = computed<string>(() => this.questions()[this.stepIndex() - 1] ?? '');
+  protected readonly atLastQuestion = computed<boolean>(() => this.stepIndex() === this.questions.length);
+  protected readonly currentQuestion = computed<string>(() => this.questions[this.stepIndex() - 1] ?? '');
   protected readonly currentAnswer = computed<string>(() => this.answers()[this.stepIndex() - 1] ?? '');
 
-  protected readonly nameError = computed<string | null>(() =>
-    this.nameTouched() && this.name().trim().length === 0 ? 'Name darf nicht leer sein.' : null
+  protected readonly canAdvanceIntro = computed<boolean>(() =>
+    this.hasTarget() || this.pickedPersonId() !== null || this.freetextName().trim().length > 0
   );
 
-  protected readonly canAdvanceIntro = computed<boolean>(() =>
-    this.name().trim().length > 0 && this.selectedType().trim().length > 0 && this.selectedDomain().trim().length > 0
+  protected readonly canGoBack = computed<boolean>(() => this.phase() === 'stepper' && this.stepIndex() > 0);
+
+  protected readonly backLabel = computed<string>(() =>
+    this.phase() === 'summary' ? 'Antworten anpassen' : 'Zurück'
   );
+
+  protected readonly primaryLabel = computed<string | null>(() => {
+    if (this.phase() === 'synthesizing') { return null; }
+    if (this.phase() === 'summary') { return this.result()?.suggestion ? 'Übernehmen' : null; }
+    if (this.atIntro()) { return 'Weiter'; }
+    if (this.atLastQuestion()) { return 'Zusammenfassen'; }
+    return this.currentAnswer().trim().length === 0 ? 'Überspringen' : 'Weiter';
+  });
+
+  protected readonly primaryDisabled = computed<boolean>(() => {
+    if (this.phase() === 'summary') { return this.isSaving(); }
+    if (this.atIntro()) { return !this.canAdvanceIntro(); }
+    return false;
+  });
+
+  protected avatarUrl(person: PersonDto): string | null {
+    return person.portrait_face_id !== null ? this.personService.portraitUrl(person.portrait_face_id) : null;
+  }
 
   constructor() {
-    // Erste private Domäne + ihren ersten Typ vorbelegen, sobald die Domänen geladen sind.
-    effect(() => {
-      const privateDomains = this.privateDomains();
-      if (privateDomains.length === 0 || this.selectedDomain() !== '') { return; }
-      const first = privateDomains[0];
-      if (first === undefined) { return; }
-      this.selectedDomain.set(first.name);
-      this.selectedType.set(first.entity_types[0]?.name ?? '');
-    });
-
     // Sobald der Interview-Job ein Ergebnis (oder einen Fehler) liefert, aus der
     // Synthese-Warteansicht in die Zusammenfassung wechseln.
     effect(() => {
@@ -116,9 +156,18 @@ export class InterviewDialog {
     return Math.round(confidence * 100);
   }
 
-  protected onDomainChange(domainName: string): void {
-    this.selectedDomain.set(domainName);
-    this.selectedType.set(this.entityTypes()[0]?.name ?? '');
+  protected answeredCount(): number {
+    return Object.values(this.answers()).filter((answer: string) => answer.trim().length > 0).length;
+  }
+
+  protected pickPerson(personId: number): void {
+    this.pickedPersonId.set(personId);
+    this.freetextName.set('');
+  }
+
+  protected setFreetextName(value: string): void {
+    this.freetextName.set(value);
+    this.pickedPersonId.set(null);
   }
 
   protected setCurrentAnswer(value: string): void {
@@ -126,15 +175,26 @@ export class InterviewDialog {
     this.answers.update((current: Record<number, string>) => ({ ...current, [index]: value }));
   }
 
-  protected back(): void {
+  protected onShellBack(): void {
+    if (this.phase() === 'summary') {
+      this.editAnswers();
+      return;
+    }
     if (this.stepIndex() > 0) {
       this.stepIndex.update((index: number) => index - 1);
     }
   }
 
-  protected next(): void {
+  protected onShellPrimary(): void {
+    if (this.phase() === 'summary') {
+      this.onConfirm();
+      return;
+    }
+    this.next();
+  }
+
+  private next(): void {
     if (this.atIntro()) {
-      this.nameTouched.set(true);
       if (!this.canAdvanceIntro()) { return; }
       this.stepIndex.set(1);
       return;
@@ -147,47 +207,48 @@ export class InterviewDialog {
   }
 
   private submit(): void {
-    const answers: InterviewAnswer[] = this.questions().map((question: string, index: number) => ({
+    const domain = this.resolvedDomain();
+    const type = this.resolvedType();
+    if (domain === null || type === null) { return; }
+    const answers: InterviewAnswer[] = this.questions.map((question: string, index: number) => ({
       question,
       answer: this.answers()[index] ?? '',
     }));
+    const personId = this.linkedPersonId();
     const request: InterviewSynthesizeRequest = {
       title: this.name().trim(),
-      domain: this.selectedDomain(),
-      type: this.selectedType(),
+      domain: domain.name,
+      type: type.name,
       answers,
+      person_ids: personId !== null ? [personId] : [],
     };
     this.phase.set('synthesizing');
     this.requestInterview.emit(request);
   }
 
   // Zurück aus der Zusammenfassung in den Fragen-Dialog (z.B. nach Validierungs-Abweisung).
-  protected editAnswers(): void {
+  private editAnswers(): void {
     this.phase.set('stepper');
-    this.stepIndex.set(this.questions().length);
+    this.stepIndex.set(this.questions.length);
   }
 
   protected onConfirm(): void {
     const suggestion = this.result()?.suggestion;
-    if (suggestion === null || suggestion === undefined) { return; }
-    const type = this.selectedType();
-    const folder = this.entityTypes().find((entityType: EntityType) => entityType.name === type)?.folder
-      ?? type.toLowerCase();
+    const domain = this.resolvedDomain();
+    const type = this.resolvedType();
+    if (suggestion === null || suggestion === undefined || domain === null || type === null) { return; }
+    const personId = this.linkedPersonId();
     const request: CreateEntityRequest = {
-      id: `${folder}/${this.slugify(this.name())}`,
-      type,
+      id: `${type.folder}/${this.slugify(this.name())}`,
+      type: type.name,
       title: this.name().trim(),
-      domain: this.selectedDomain(),
-      // owner bleibt Default (user) im Backend — der Nutzer hat die Fakten selbst genannt.
+      domain: domain.name,
       body: suggestion.body,
+      // Vorbelegte oder per Chip gewählte Person verknüpft die entstehende Notiz sofort
+      // (Design-Vorgabe „automatische Verknüpfung") — ohne Person bleibt sie eigenständig.
+      media_links: { persons: personId !== null ? [personId] : [], assets: [] },
     };
     this.save.emit(request);
-  }
-
-  protected onBackdrop(event: MouseEvent): void {
-    if ((event.target as HTMLElement).classList.contains('iv-scrim')) {
-      this.close.emit();
-    }
   }
 
   private slugify(value: string): string {

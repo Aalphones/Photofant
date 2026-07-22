@@ -1,0 +1,211 @@
+:host {
+  display: contents;
+}
+
+.ws-preset {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ws-preset__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ws-preset__sub {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+.ws-empty {
+  font-size: 12.5px;
+  color: var(--text-3);
+  line-height: 1.55;
+}
+
+.ws-pick {
+  margin-bottom: 16px;
+}
+
+.ws-pick__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding-bottom: 6px;
+}
+
+.ws-pick__row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ws-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+
+  &:hover { background: var(--surface-hover); }
+}
+
+.ws-chip--selected {
+  border-color: var(--accent-line);
+  background: var(--accent-weak);
+  color: var(--text);
+}
+
+.ws-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.ws-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 64px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  padding: 10px 12px;
+  outline: none;
+
+  &:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-weak); }
+}
+
+.ws-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 22px 0;
+}
+
+.ws-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  animation: ws-spin .8s linear infinite;
+}
+
+@keyframes ws-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-spinner { animation-duration: 2s; }
+}
+
+.ws-searching-text {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.ws-summary-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 10px;
+}
+
+.ws-fact-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 9px;
+  border-radius: 9px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    flex: none;
+  }
+}
+
+.ws-fact-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ws-fact-field {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-3);
+}
+
+.ws-fact-val {
+  font-size: 12.5px;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.ws-fact-src {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--mono);
+}
+
+// Gleiche Konvention wie `review-faces`s `.rf__score-pill` (Angular-Style-Scoping erlaubt
+// keinen globalen Re-Use, deshalb hier lokal nachgebaut statt eines Fremd-Imports).
+.score-pill {
+  flex: none;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--surface-2);
+
+  &.high { color: var(--good); }
+  &.mid { color: var(--warn); }
+}
+
+.ws-result__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text);
+  padding: 6px 0;
+}
+
+.ws-result__row--info {
+  color: var(--text-2);
+}
+
+.ws-error {
+  font-size: 12px;
+  color: var(--danger);
+  background: var(--danger-weak);
+  border-radius: var(--radius-s);
+  padding: 8px 10px;
+  margin-top: 8px;
+}

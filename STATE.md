@@ -1,9 +1,26 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-20_p38-gemma-web-discovery/`
-**Phase:** 7/8 — Wizards (Interview + Web-Suche mit Fakten-Bestätigung) (Komplexität: standard → `sonnet` reicht)
-**Nächster Schritt:** `phase-7-wizards.md` lesen und umsetzen. Vorher `/clear`
-empfohlen (Session ist groß) — danach `/model sonnet`, `/implement` liest hier weiter.
+**Phase:** 8/8 — Personen-Karte + Lightbox-Wissen-Tab (Komplexität: standard → `sonnet` reicht)
+**Nächster Schritt:** `phase-8-personen-lightbox.md` lesen und umsetzen (letzte Phase des Plans).
+Vorher `/clear` empfohlen (Session ist groß) — danach `/model sonnet`, `/implement` liest hier
+weiter. Vor dem Start: `FINDINGS.md` → Phase-8-Eintrag zu `WizardTarget.entityId` lesen (klärt,
+wie „Recherchieren" im Lore-Panel den Web-Suche-Wizard vorbelegt).
+
+## Phase 7 erledigt (Wizards: Interview + Web-Suche)
+
+Code fertig, `npx tsc --noEmit` grün, Produktions-Build läuft durch (gleiche vorbestehende
+Bundle-Budget-Warnung wie Phase 5/6, keine Regression). Backend `ruff`/`mypy` grün,
+`test_knowledge_discovery_job.py` weiter grün (19 Tests). Neue gemeinsame Wizard-Hülle
+(`wizard-shell/`), Interview komplett auf Personen-Chip/Freitext + fünf feste Fragen
+umgeschnitten, neuer `web-search-dialog/` (self-contained wie `lore-panel.ts`, kein Store-
+Umweg). `missing_field`/`low_completeness`-Aufgaben-Chips öffnen jetzt die Web-Suche statt des
+Entity-Wizards (der kann keine Merkmale editieren — gefundene, vorbestehende Lücke, mitgefixt).
+`DiscoveryRequest` um optionales `hint`-Feld erweitert (additiv, Backend + Frontend). Sechs
+dokumentierte Abweichungen vom Plan-Wortlaut (alle mit Begründung) sowie eine bekannte,
+unbehobene Grenze (Beziehungs-Chip-Navigation im Detail-Modal + danach geöffneter Wizard trifft
+noch die ursprüngliche statt der nachnavigierten Person) — Details:
+`phase-7-wizards.md` → „Report-Back".
 
 ## Zwischendrin erledigt (nicht P38): Job-Pipeline überlebt Datei-Verschiebungen
 

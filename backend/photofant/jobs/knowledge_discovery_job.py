@@ -270,7 +270,7 @@ def _entity_to_dict(entity: DiscoveredEntity) -> dict[str, Any]:
     }
 
 
-def _run_discovery(status: JobStatus, entity_id: str) -> None:
+def _run_discovery(status: JobStatus, entity_id: str, hint: str | None = None) -> None:
     prompt = PromptLibrary().get(_PROMPT_NAME)
     if prompt is None:
         raise RuntimeError(
@@ -293,8 +293,13 @@ def _run_discovery(status: JobStatus, entity_id: str) -> None:
     # Modell-Call, beide können mehrere Sekunden dauern.
 
     job_queue.update(status, progress=0.3, state=JobState.RUNNING)
+    # Optionaler Hinweis aus dem Web-Suche-Wizard (Beruf, Stadt, Link …) — hilft bei
+    # Namensvettern, hat aber keinen eigenen Kontrakt-Slot im Prompt, nur in der Suchanfrage.
+    query = f"{entity.title} {entity.type}"
+    if hint is not None and hint.strip():
+        query = f"{query} {hint.strip()}"
     try:
-        results = search_web(f"{entity.title} {entity.type}", max_results=MAX_SEARCH_RESULTS)
+        results = search_web(query, max_results=MAX_SEARCH_RESULTS)
     except WebSearchError as error:
         raise RuntimeError(str(error)) from error
 
@@ -342,14 +347,14 @@ def _run_discovery(status: JobStatus, entity_id: str) -> None:
     job_queue.set_result(status, result)
 
 
-async def run_knowledge_discovery_job(status: JobStatus, entity_id: str) -> None:
+async def run_knowledge_discovery_job(status: JobStatus, entity_id: str, hint: str | None = None) -> None:
     job_queue.update(status, progress=0.1, state=JobState.RUNNING)
-    await asyncio.to_thread(_run_discovery, status, entity_id)
+    await asyncio.to_thread(_run_discovery, status, entity_id, hint)
 
 
-async def enqueue_knowledge_discovery(entity_id: str) -> JobStatus:
+async def enqueue_knowledge_discovery(entity_id: str, hint: str | None = None) -> JobStatus:
     async def _factory(status: JobStatus) -> None:
-        await run_knowledge_discovery_job(status, entity_id)
+        await run_knowledge_discovery_job(status, entity_id, hint)
 
     return await job_queue.enqueue(
         kind=JobKind.KNOWLEDGE_DISCOVERY,

@@ -56,6 +56,15 @@ Getaggte Erkenntnisse aus der Umsetzung, die eine spätere Phase betreffen. Form
   Personen-Karten-Meta-Zeile „{N} % · {Domäne}" über `entityDomainById` in `wissen.ts` aus der
   vollständigen `entities()`-Liste aufgelöst (kein neuer Endpunkt). Für Phase 6/8 nicht relevant:
   beide arbeiten auf vollen `EntityDto`/`LoreDto`-Objekten, die `domain` direkt tragen.
+- [ ] → Phase 8: `WizardTarget` (`interview-dialog.ts`) trägt jetzt `{ personId, entityId, name }`
+  statt nur `{ personId, name }` — eine bewusste Erweiterung über die Phase-7-Planvorgabe
+  hinaus, weil `web-search-dialog` sonst keine Entity ohne Personen-Link adressieren könnte.
+  Aufgabe 4 dieser Phase („Recherchieren" im Lore-Panel öffnet den Wizard „mit vorbelegter
+  Entity") kann direkt `{ personId: null, entityId: ent.id, name: ent.title }` setzen — aber
+  `wizardTarget` lebt als Signal in `wissen.ts`, nicht in `lore-panel.ts` (andere Feature-Ecke).
+  Vor Aufgabe 4 klären, wie der Wert dorthin kommt (Navigation mit Query-Parameter + Öffnen
+  beim Start, analog zu „Vollständiges Profil", oder ein Store-Weg) — reine UI-Verdrahtung,
+  kein Kontrakt-Problem.
 - [ ] → Smoke (Plan-Ende): ein **bestehender** Vault bekommt die neuen `fields:`-Blöcke nicht
   automatisch — die mitgelieferten Domänen werden nur einmalig gesät. Vor dem Smoke einmal von
   Hand `<vault>/domains/private.yaml` um den `fields:`-Block ergänzen (Vorlage:

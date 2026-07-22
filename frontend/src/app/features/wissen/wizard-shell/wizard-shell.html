@@ -1,0 +1,33 @@
+<div class="wiz-scrim" (click)="onBackdrop($event)">
+  <div class="wiz-modal" (click)="$event.stopPropagation()">
+    <div class="wiz-head">
+      <pf-icon [name]="icon()" [size]="16" />
+      <div class="wiz-title">{{ title() }}</div>
+      <button class="wiz-close" type="button" (click)="close.emit()" aria-label="Schließen">
+        <pf-icon name="x" [size]="14" />
+      </button>
+    </div>
+
+    <div class="wiz-body" #body>
+      <ng-content />
+    </div>
+
+    @if (!hideFooter()) {
+      <div class="wiz-foot">
+        @if (canGoBack()) {
+          <button class="wiz-btn" type="button" (click)="back.emit()">
+            <pf-icon name="chevronUp" [size]="13" />
+            {{ backLabel() }}
+          </button>
+        } @else {
+          <div></div>
+        }
+        @if (primaryLabel(); as label) {
+          <button class="wiz-btn wiz-btn--primary" type="button" [disabled]="primaryDisabled()" (click)="primary.emit()">
+            {{ label }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>

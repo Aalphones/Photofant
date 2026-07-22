@@ -226,6 +226,9 @@ class DiscoveryRequest(BaseModel):
     geschrieben wird erst über ``/discovery/apply``."""
 
     entity_id: str
+    # P38 Phase 7 — optionaler Hinweis aus dem Web-Suche-Wizard (Beruf, Stadt, Link …),
+    # hilft bei Namensvettern. Additiv zum Phase-4-Kontrakt, geht nur in die Suchanfrage ein.
+    hint: str | None = None
 
 
 class DiscoveryResponse(BaseModel):
@@ -263,7 +266,7 @@ async def request_discovery(body: DiscoveryRequest) -> DiscoveryResponse:
             detail='Private Entitäten werden nie web-recherchiert — nutze „Ergänzen (KI)" (webfrei)',
         )
 
-    status = await enqueue_knowledge_discovery(body.entity_id)
+    status = await enqueue_knowledge_discovery(body.entity_id, body.hint)
     return DiscoveryResponse(job_id=status.id)
 
 

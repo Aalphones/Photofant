@@ -327,6 +327,9 @@ export interface ChangelogEntryDto {
 // geschrieben wird erst über DiscoveryApplyRequest.
 export interface DiscoveryRequest {
   entity_id: string;
+  // P38 Phase 7 — optionaler Hinweis aus dem Web-Suche-Wizard (Beruf, Stadt, Link …),
+  // geht nur in die Suchanfrage ein, kein eigener Prompt-Slot.
+  hint?: string;
 }
 
 export interface DiscoveryResponse {

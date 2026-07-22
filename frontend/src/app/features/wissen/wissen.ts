@@ -16,9 +16,10 @@ import { galleryActions, knowledgeActions, knowledgeSelectors, personsActions, p
 import { Icon, LinkEntityDialog } from '@photofant/ui';
 import { Lightbox } from '../galerie/lightbox/lightbox';
 import { EntityWizardDialog } from './entity-wizard-dialog/entity-wizard-dialog';
-import { InterviewDialog } from './interview-dialog/interview-dialog';
+import { InterviewDialog, type WizardTarget } from './interview-dialog/interview-dialog';
 import { KnowledgeDetailDialog } from './knowledge-detail-dialog/knowledge-detail-dialog';
 import { PersonKnowledgeCard } from './person-knowledge-card/person-knowledge-card';
+import { WebSearchDialog } from './web-search-dialog/web-search-dialog';
 import { WorkQueue } from './work-queue/work-queue';
 
 const TOAST_DURATION_MS = 2800;
@@ -29,6 +30,7 @@ const TOAST_DURATION_MS = 2800;
     Icon,
     EntityWizardDialog,
     InterviewDialog,
+    WebSearchDialog,
     WorkQueue,
     PersonKnowledgeCard,
     LinkEntityDialog,
@@ -75,6 +77,19 @@ export class Wissen {
     return map;
   });
 
+  // P38 Phase 7 — Umkehrung von `person.linked_entity.id`, damit eine Aufgabe, die nur eine
+  // `entity_id` im Kontext trägt (missing_field/low_completeness), trotzdem eine Person für
+  // den Wizard-Preset auflösen kann, falls die Entity an eine Person verknüpft ist.
+  protected readonly personIdByEntityId = computed((): Record<string, number> => {
+    const map: Record<string, number> = {};
+    for (const person of this.persons()) {
+      if (person.linked_entity !== null) {
+        map[person.linked_entity.id] = person.id;
+      }
+    }
+    return map;
+  });
+
   // P38 Phase 5 — Sektion "Nicht verknüpfte Notizen": private Entities ohne Personen-Link.
   protected readonly unlinkedEntities = computed((): EntityDto[] => {
     const privateDomainNames = new Set(
@@ -109,12 +124,15 @@ export class Wissen {
   protected readonly interviewError = this.store.selectSignal(knowledgeSelectors.selectInterviewError);
   protected readonly showInterview = signal(false);
 
-  // P38 Phase 5 — "Web-Suche"-Knopf, gleicher Schalter wie der Backend-Guard. Der Wizard
-  // selbst kommt erst in Phase 7 — das Signal wird hier bewusst schon gesetzt, aber noch
-  // von keinem Dialog konsumiert (keine tote Zeile, sondern ein vorbereiteter Anschluss).
+  // P38 Phase 5 — "Web-Suche"-Knopf, gleicher Schalter wie der Backend-Guard.
   protected readonly discoveryAutonomy = computed((): AiAutonomyMode => this.aiAutonomy()?.discovery ?? 'off');
   protected readonly showWebSearchButton = computed((): boolean => this.discoveryAutonomy() === 'auto');
   protected readonly showWebSearchWizard = signal(false);
+
+  // P38 Phase 7 — Vorbelegung für beide Wizards (Aufgabe 4, gemeinsames Signal). `entityId`
+  // ist eine Erweiterung über die Plan-Basisform hinaus (siehe `WizardTarget`, Report-Back):
+  // deckt Web-Suche auf einer unverknüpften, nicht-privaten Notiz ohne Personen-Bezug ab.
+  protected readonly wizardTarget = signal<WizardTarget | null>(null);
 
   protected readonly showWizard = signal(false);
   // Gesetzt, wenn der Wizard eine bestehende Entity bearbeitet (z.B. aus der Aufgabe
@@ -198,6 +216,15 @@ export class Wissen {
   }
 
   protected openInterview(): void {
+    this.wizardTarget.set(null);
+    this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.resetInterview());
+    this.showInterview.set(true);
+  }
+
+  // Aus dem Detail-Kopf (Phase 6) — die dort offene Person/Notiz wird zum Preset.
+  protected openInterviewForDetail(): void {
+    this.wizardTarget.set(this.currentDetailTarget());
     this.store.dispatch(knowledgeActions.resetCreateEntityState());
     this.store.dispatch(knowledgeActions.resetInterview());
     this.showInterview.set(true);
@@ -212,9 +239,42 @@ export class Wissen {
     this.store.dispatch(knowledgeActions.requestInterview({ request }));
   }
 
-  // P38 Phase 5 — Platzhalter bis Phase 7 den echten Wizard liefert.
   protected openWebSearchWizard(): void {
+    this.wizardTarget.set(null);
     this.showWebSearchWizard.set(true);
+  }
+
+  // Aus dem Detail-Kopf (Phase 6) — nur sichtbar, wenn `canRequestWebSearch` dort bereits
+  // gilt (nicht-private Domäne, Autonomie an); die aktuell offene Entity wird zum Preset.
+  protected openWebSearchForDetail(): void {
+    this.wizardTarget.set(this.currentDetailTarget());
+    this.showWebSearchWizard.set(true);
+  }
+
+  protected closeWebSearchWizard(): void {
+    this.showWebSearchWizard.set(false);
+  }
+
+  // Preset aus dem gerade offenen Detail-Modal ableiten — Person, falls über `detailPersonId`
+  // geöffnet, sonst die Entity selbst (unverknüpfte Notiz).
+  private currentDetailTarget(): WizardTarget {
+    const personId = this.detailPersonId();
+    if (personId !== null) {
+      const person = this.knownPersons().find((candidate: PersonDto) => candidate.id === personId) ?? null;
+      return { personId, entityId: null, name: person?.name ?? null };
+    }
+    const entityId = this.detailEntityId();
+    const entity = entityId !== null ? this.entitiesById()[entityId] ?? null : null;
+    return { personId: null, entityId, name: entity?.title ?? null };
+  }
+
+  // Web-Suche-Wizard hat geschrieben — Entities/Aufgaben neu laden (Vollständigkeit/„Feld
+  // fehlt"-Aufgaben ändern sich), Toast wie bei den anderen Übernahme-Wegen.
+  protected onWebSearchApplied(event: { writtenCount: number }): void {
+    this.store.dispatch(knowledgeActions.loadEntities());
+    this.store.dispatch(knowledgeActions.loadTasks());
+    this.detailRefreshKey.update((tick: number): number => tick + 1);
+    this.showToast(event.writtenCount > 0 ? `${event.writtenCount} Merkmale übernommen.` : 'Übernahme abgeschlossen.');
   }
 
   protected openWizard(): void {
@@ -332,7 +392,28 @@ export class Wissen {
     return Math.round(entity.completeness * 100);
   }
 
-  protected resolveTaskViaWizard(task: TaskDto): void {
+  // P38 Phase 7 — "Feld fehlt"/"Kaum ausgefüllt" zielen auf eine bestehende Entity und lassen
+  // sich nur über die Web-Suche wirklich beheben (der Entity-Wizard unten kennt keine
+  // Merkmale) — andere Aufgaben-Arten öffnen unverändert den Entity-Wizard.
+  protected resolveTask(task: TaskDto): void {
+    if (task.kind === 'missing_field' || task.kind === 'low_completeness') {
+      const entityId = task.context['entity_id'];
+      if (typeof entityId === 'string') {
+        const title = task.context['title'];
+        const personId = this.personIdByEntityId()[entityId] ?? null;
+        this.wizardTarget.set({
+          personId,
+          entityId,
+          name: typeof title === 'string' && title.length > 0 ? title : null,
+        });
+        this.showWebSearchWizard.set(true);
+        return;
+      }
+    }
+    this.resolveTaskViaWizard(task);
+  }
+
+  private resolveTaskViaWizard(task: TaskDto): void {
     this.store.dispatch(knowledgeActions.resetCreateEntityState());
     this.store.dispatch(knowledgeActions.resetImportSuggestion());
     this.activeTask.set(task);

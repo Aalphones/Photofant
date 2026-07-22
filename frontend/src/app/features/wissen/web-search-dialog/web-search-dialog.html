@@ -1,0 +1,115 @@
+<pf-wizard-shell
+  title="Wissen per Web-Suche ergänzen"
+  icon="globe"
+  [canGoBack]="canGoBack()"
+  [primaryLabel]="primaryLabel()"
+  [primaryDisabled]="primaryDisabled()"
+  [hideFooter]="step() === 'searching' || applyResponse() !== null"
+  (close)="close.emit()"
+  (back)="onShellBack()"
+  (primary)="onShellPrimary()"
+>
+  @if (step() === 'pick') {
+    @if (hasPreset()) {
+      <div class="ws-preset">
+        <pf-icon name="globe" [size]="18" />
+        <div>
+          <div class="ws-preset__title">Web-Suche für {{ name() }}</div>
+          <div class="ws-preset__sub">Gemma schlägt öffentlich auffindbare Fakten zur Bestätigung vor.</div>
+        </div>
+      </div>
+    } @else if (candidatePersons().length === 0) {
+      <div class="ws-empty">
+        Noch keine Person mit angelegtem Wissen — leg zuerst über ein privates Interview oder
+        „Neue Entity" ein Profil an, bevor du danach im Netz suchst.
+      </div>
+    } @else {
+      <div class="ws-pick">
+        <div class="ws-pick__label">Person wählen</div>
+        <div class="ws-pick__row">
+          @for (person of candidatePersons(); track person.id) {
+            <button
+              type="button"
+              class="ws-chip"
+              [class.ws-chip--selected]="pickedPersonId() === person.id"
+              (click)="pickPerson(person.id)"
+            >
+              <pf-icon name="user" [size]="16" />
+              <span>{{ person.name ?? 'Unbenannt' }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (hasPreset() || candidatePersons().length > 0) {
+      <label class="ws-label" for="ws-hint">Hinweise (Links, Beruf, Stadt …) — optional</label>
+      <textarea
+        id="ws-hint"
+        class="ws-textarea"
+        rows="3"
+        placeholder="z.B. instagram.com/…"
+        [value]="hint()"
+        (input)="hint.set($any($event.target).value)"
+      ></textarea>
+    }
+  } @else if (step() === 'searching') {
+    <div class="ws-center">
+      <div class="ws-spinner"></div>
+      <div class="ws-searching-text">Gemma durchsucht öffentliche Quellen für {{ name() }}…</div>
+    </div>
+  } @else {
+    @if (applyResponse(); as response) {
+      <div class="ws-result">
+        @if (response.written_fields.length > 0) {
+          <div class="ws-result__row">
+            <pf-icon name="check" [size]="14" />
+            <span>{{ response.written_fields.length }} Merkmale übernommen.</span>
+          </div>
+        }
+        @if (response.created_entities.length > 0) {
+          <div class="ws-result__row">
+            <pf-icon name="sparkle" [size]="14" />
+            <span>Neu angelegt: {{ createdTitles(response.created_entities) }}</span>
+          </div>
+        }
+        @for (message of response.errors; track message) {
+          <div class="ws-result__row ws-result__row--info">
+            <pf-icon name="info" [size]="14" />
+            <span>{{ message }}</span>
+          </div>
+        }
+      </div>
+    } @else {
+      @if (searchError(); as error) {
+        <div class="ws-error">{{ error }}</div>
+      } @else {
+        @if (searchResult(); as result) {
+          @if (result.facts.length === 0) {
+            <div class="ws-empty">
+              Nichts Belastbares gefunden. Ein Hinweis wie Beruf oder Stadt hilft oft.
+            </div>
+          } @else {
+            <div class="ws-summary-label">Gefundene Fakten — zur Bestätigung</div>
+            @for (fact of result.facts; track $index) {
+              <label class="ws-fact-row">
+                <input type="checkbox" [checked]="isChecked($index)" (change)="toggleFact($index)" />
+                <div class="ws-fact-body">
+                  <div class="ws-fact-field">{{ fact.label }}</div>
+                  <div class="ws-fact-val">{{ fact.value }}</div>
+                </div>
+                <span class="ws-fact-src">{{ fact.source }}</span>
+                <span class="score-pill" [class]="confidenceClass(fact.confidence)" [title]="'Wie sicher sich das Modell ist — keine Garantie.'">
+                  {{ confidencePercent(fact.confidence) }}%
+                </span>
+              </label>
+            }
+          }
+        }
+        @if (applyError(); as error) {
+          <div class="ws-error">{{ error }}</div>
+        }
+      }
+    }
+  }
+</pf-wizard-shell>
