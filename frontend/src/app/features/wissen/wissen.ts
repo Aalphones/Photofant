@@ -265,7 +265,11 @@ export class Wissen {
         const personId = Number(personParam);
         if (openParam === 'interview') {
           const person = this.knownPersons().find((candidate: PersonDto) => candidate.id === personId) ?? null;
-          this.wizardTarget.set({ personId, entityId: null, name: person?.name ?? null });
+          this.wizardTarget.set({
+            personId,
+            entityId: person?.linked_entity?.id ?? null,
+            name: person?.name ?? null,
+          });
           this.showInterview.set(true);
         } else {
           this.openPersonDetail(personId);
@@ -345,7 +349,7 @@ export class Wissen {
     const personId = this.detailPersonId();
     if (personId !== null) {
       const person = this.knownPersons().find((candidate: PersonDto) => candidate.id === personId) ?? null;
-      return { personId, entityId: null, name: person?.name ?? null };
+      return { personId, entityId: person?.linked_entity?.id ?? null, name: person?.name ?? null };
     }
     const entityId = this.detailEntityId();
     const entity = entityId !== null ? this.entitiesById()[entityId] ?? null : null;

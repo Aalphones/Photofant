@@ -16,6 +16,7 @@ import type {
   InterviewSynthesizeRequest,
   KnowledgeInterviewResult,
   PersonDto,
+  UpdateEntityRequest,
 } from '@photofant/models';
 import { PersonService } from '@photofant/services';
 import { Icon } from '../../../ui/icon/icon';
@@ -65,6 +66,10 @@ export class InterviewDialog {
   readonly close = output<void>();
   readonly requestInterview = output<InterviewSynthesizeRequest>();
   readonly save = output<CreateEntityRequest>();
+  // Zielt das Interview auf eine Person mit bereits bestehender Notiz (`target.entityId`),
+  // muss die Zusammenfassung dorthin gepatcht werden statt eine zweite Notiz mit derselben
+  // ID anzulegen — das Backend lehnt den doppelten Slug sonst mit 409 ab.
+  readonly update = output<{ entityId: string; patch: UpdateEntityRequest }>();
 
   protected readonly questions = INTERVIEW_QUESTIONS;
 
@@ -237,6 +242,19 @@ export class InterviewDialog {
     const domain = this.resolvedDomain();
     const type = this.resolvedType();
     if (suggestion === null || suggestion === undefined || domain === null || type === null) { return; }
+
+    // Läuft das Interview über eine Person, die schon eine Notiz hat, ist das hier ein
+    // Update der bestehenden Notiz — nicht das Anlegen einer zweiten mit derselben ID.
+    const existingEntityId = this.target()?.entityId ?? null;
+    if (existingEntityId !== null) {
+      const patch: UpdateEntityRequest = {
+        title: this.name().trim(),
+        body: suggestion.body,
+      };
+      this.update.emit({ entityId: existingEntityId, patch });
+      return;
+    }
+
     const personId = this.linkedPersonId();
     const request: CreateEntityRequest = {
       id: `${type.folder}/${this.slugify(this.name())}`,
