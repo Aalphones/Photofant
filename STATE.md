@@ -1,9 +1,16 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-22_gesichter-bereinigung/`
-**Phase:** 3/4 — Frontend-Model + Service (complete)
-**Nächster Schritt:** `/clear`, dann Phase 4 (Frontend-UI: Cleanup-Dialog + Verdrahtung),
-Modell `sonnet` reicht (Rating: standard).
+**Aktiver Plan:** (kein aktiver Plan)
+**Phase:** —
+**Nächster Schritt:** Backlog hat zwei startbereite Pläne (siehe unten) — welchen zuerst?
+
+## „Gesichter-Bereinigung" abgeschlossen (alle 4 Phasen)
+
+Archiviert: `docs/archive/2026-07/2026-07-22_gesichter-bereinigung/README.md` (Summary/Files
+touched/Commits/Follow-ups in den Bottom-Sektionen dort). Pro Person lassen sich Ausreißer-
+Gesichter (falsch geclustert oder technisch unbrauchbar) finden und per neuem „Gesichter
+bereinigen…"-Dialog gezielt löschen, sortiert nach einem on-demand berechneten Score
+(ADR-033).
 
 ## P38 „Wissen: Web-Recherche + neue Oberfläche" abgeschlossen (alle 8 Phasen)
 
@@ -32,6 +39,12 @@ für die kein Modell aktiv ist (braucht eine Modell-Abfrage im Zählpfad, die Mo
 
 ## Offene Smoke-Tests (User)
 
+- **Gesichter-Bereinigung Phase 4** — manueller Browser-Check, kein Mockup vorhanden
+  (freihändig nach `split-dialog`-Muster gebaut): Menüpunkt „Gesichter bereinigen…" öffnet
+  den Dialog, Sortierung nach Verdacht + Score-Badges (grün→amber→rot) + Tooltip mit
+  Gründen sichtbar, Löschen fragt einmal nach und aktualisiert die Personen-Karte
+  (Fotoanzahl/Portrait). Details: `docs/archive/2026-07/2026-07-22_gesichter-bereinigung/
+  phase-4-frontend-ui.md` → „Akzeptanzkriterien".
 - **P38 Phase 3+4** — Parser-Trefferquote (5-10 Läufe gegen reale Personen) + API-Live-Smoke,
   warten auf ein gebundenes Gemma-Modell auf dieser Maschine. Vollständige Checkliste:
   `docs/archive/2026-07/2026-07-20_p38-gemma-web-discovery/README.md` → „Smoke-Checkliste"
@@ -71,6 +84,3 @@ für die kein Modell aktiv ist (braucht eine Modell-Abfrage im Zählpfad, die Mo
   Tagging/Captioning/Embedding & Co. laufen (GIL-Kontention, nicht ein vergessenes `to_thread`).
   Alle Modell-Inferenz-Jobs ziehen in einen dauerhaften Worker-Prozess um. 4 Phasen, bereit zum
   Start, hängt an nichts.
-- `docs/planning/2026-07-22_gesichter-bereinigung/` — pro Person Ausreißer-Gesichter
-  (falsch geclustert oder technisch unbrauchbar) finden & gezielt löschen, ADR-033. 4 Phasen,
-  bereit zum Start, hängt an nichts.

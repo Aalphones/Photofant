@@ -133,6 +133,10 @@
             <pf-icon name="compare" [size]="13" />
             <span>Duplikate suchen</span>
           </button>
+          <button class="person-card__menu-item" (click)="onCleanupClick($event)">
+            <pf-icon name="trash" [size]="13" />
+            <span>Gesichter bereinigen…</span>
+          </button>
           <button class="person-card__menu-item" (click)="onImportClick($event)">
             <pf-icon name="upload" [size]="13" />
             <span>Bilder importieren</span>

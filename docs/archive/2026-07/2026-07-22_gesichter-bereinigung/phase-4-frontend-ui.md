@@ -406,10 +406,16 @@ das neue Scoring-Modul ergänzen — Frontend-Spalte: `..., cleanup-dialog/, ...
 
 ## Checkliste
 
-- [ ] `cleanup-dialog.ts` / `.html` / `.scss` neu
-- [ ] `person-card.ts` / `.html`: neuer Output + Menüpunkt
-- [ ] `personen.ts` / `.html`: Signal, Handler, zwei `cleanupClick`-Bindings, Dialog eingebunden
-- [ ] `docs/code-map.md`: Zeile „Personen & Faces" um neuen Dialog + neues Modul ergänzt
-- [ ] Manueller Check im Browser: Dialog öffnen, Sortierung/Badges/Tooltip sichtbar, löschen funktioniert, Person-Karte aktualisiert Fotoanzahl
+- [x] `cleanup-dialog.ts` / `.html` / `.scss` neu
+- [x] `person-card.ts` / `.html`: neuer Output + Menüpunkt
+- [x] `personen.ts` / `.html`: Signal, Handler, zwei `cleanupClick`-Bindings, Dialog eingebunden
+- [x] `docs/code-map.md`: Zeile „Personen & Faces" um neuen Dialog + neues Modul ergänzt
+- [ ] Manueller Check im Browser: Dialog öffnen, Sortierung/Badges/Tooltip sichtbar, löschen funktioniert, Person-Karte aktualisiert Fotoanzahl (**User**, siehe Smoke-Checkliste)
 
 ## Report-Back
+
+Umsetzung 1:1 nach Plan-Vorlage (Komponente, Template, Styles, Verdrahtung — keine Abweichung).
+`tsc --noEmit` und `ng build` laufen grün, keine neuen Warnungen (die zwei Bundle-Budget-Warnungen
+sind unverändert vorbestehend, gehören zu `lightbox.scss`/Initial-Bundle, nicht zu dieser Phase).
+Offen: der manuelle Browser-Check — kein Mockup vorhanden (freihändig nach `split-dialog`-Muster,
+README „Design-Treue"), daher lohnt ein visueller Blick vor dem Abhaken.

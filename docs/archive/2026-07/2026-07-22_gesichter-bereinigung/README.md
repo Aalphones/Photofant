@@ -11,7 +11,7 @@
 | 1 | Backend-Scoring-Modul + Settings | standard | complete |
 | 2 | Backend-API (DTO-Erweiterung + Bulk-Delete) | standard | complete |
 | 3 | Frontend-Model + Service | mechanisch | complete |
-| 4 | Frontend-UI (Cleanup-Dialog + Verdrahtung) | standard | pending |
+| 4 | Frontend-UI (Cleanup-Dialog + Verdrahtung) | standard | complete |
 
 ## Kontrakt (Backend ↔ Frontend)
 
@@ -95,16 +95,34 @@ falls gewünscht.
 ## Bottom-Sektionen (beim Archivieren füllen)
 
 ### Summary
-_(offen)_
+Pro Person lassen sich Ausreißer-Gesichter (falsch geclustert oder technisch unbrauchbar)
+finden und gezielt löschen. Backend berechnet einen Score on-demand aus vier Signalen
+(Identitäts-Abstand zum Personen-Centroid, Auflösung, Detection-Score, Upscale-Flag,
+ADR-033), Frontend zeigt sie im neuen „Gesichter bereinigen…"-Dialog sortiert nach
+Verdacht, mit Mehrfachauswahl und Bulk-Delete (ein Job-Dock-Eintrag pro betroffenem Asset
+statt einem pro Face).
 
 ### Files touched
-_(offen)_
+- Backend: `backend/photofant/clustering/cleanup.py` (neu, Scoring), `settings.py`
+  (5 neue `face_cleanup_*`-Schwellen), `api/faces.py` (`POST /faces/bulk-delete`),
+  `api/persons.py` (`GET /{id}/faces` um 4 Felder erweitert)
+- Frontend: `models/person.model.ts`, `services/person.service.ts`,
+  `features/personen/cleanup-dialog/` (neu), `features/personen/person-card/`,
+  `features/personen/personen.ts`/`.html`
+- Doku: `docs/code-map.md` (Zeile „Personen & Faces")
 
 ### Commits
-_(offen)_
+`1c2c477` Phase 1 (Backend-Scoring) · `1eeb66e` Phase 2 (Backend-API) ·
+`6ad67d1` Phase 3 (Frontend-Model + Service) · Phase 4 (Frontend-UI) — dieser Commit.
 
 ### Deviations from plan
-_(offen)_
+Keine — alle 4 Phasen 1:1 nach Spezifikation umgesetzt.
 
 ### Follow-ups
-_(offen)_
+- Manueller Browser-Smoke (Phase 4, kein Mockup vorhanden) steht noch aus — siehe
+  Smoke-Checkliste unten.
+- Bewusster Scope-Cut aus der Planung bleibt bestehen: keine Einstellungen-UI für die
+  fünf `face_cleanup_*`-Schwellen. Wird das Scoring in der Praxis zu aggressiv/lasch,
+  Folge-Plan mit Slidern (Muster: `face_auto_threshold`).
+- Nebenbefund (nicht gefixt): `merge`/`split`-Icons in `ui/icon/icon.ts` (Zeilen 49/50)
+  teilen sich denselben SVG-Pfad — kosmetisch, separat freigeben falls gewünscht.

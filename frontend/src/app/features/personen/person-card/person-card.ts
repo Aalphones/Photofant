@@ -47,6 +47,7 @@ export class PersonCard {
   readonly splitClick = output<void>();
   readonly mergeClick = output<void>();
   readonly dupeCheck = output<void>();
+  readonly cleanupClick = output<void>();
   readonly revealInFileBrowser = output<void>();
   readonly deleteClick = output<void>();
   readonly linkEntityClick = output<void>();
@@ -206,6 +207,12 @@ export class PersonCard {
     event.stopPropagation();
     this.menuOpen.set(false);
     this.dupeCheck.emit();
+  }
+
+  protected onCleanupClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpen.set(false);
+    this.cleanupClick.emit();
   }
 
   protected onRevealClick(event: MouseEvent): void {

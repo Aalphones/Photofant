@@ -1,0 +1,93 @@
+<div class="cleanup-dialog__backdrop" (click)="onBackdrop($event)">
+  <div class="cleanup-dialog__card">
+    <div class="cleanup-dialog__header">
+      <h3 class="cleanup-dialog__title">Gesichter bereinigen</h3>
+      <button class="cleanup-dialog__close" (click)="close.emit()">
+        <pf-icon name="x" [size]="18" />
+      </button>
+    </div>
+
+    <div class="cleanup-dialog__body">
+      <p class="cleanup-dialog__hint">
+        Gesichter, die nicht zu <strong>{{ person().name ?? 'Person #' + person().id }}</strong>
+        passen oder schlecht erkannt wurden, stehen oben. Auswählen und löschen — die zugehörigen
+        Fotos bleiben erhalten (sie wandern zu „Unbekannt", falls sie sonst keiner Person mehr
+        zugeordnet sind).
+      </p>
+
+      @if (loading()) {
+        <div class="cleanup-dialog__loading">Lade Gesichter…</div>
+      } @else if (faces().length === 0) {
+        <div class="cleanup-dialog__loading">Keine Gesichter vorhanden.</div>
+      } @else {
+        <div class="cleanup-dialog__grid">
+          @for (face of sortedFaces(); track face.id) {
+            <button
+              class="cleanup-dialog__face"
+              [class.cleanup-dialog__face--selected]="isSelected(face.id)"
+              [title]="reasonsTooltip(face)"
+              (click)="toggleFace(face.id)"
+            >
+              <img
+                class="cleanup-dialog__face-img"
+                [src]="'/api' + face.crop_url"
+                [alt]="'Gesicht #' + face.id"
+              />
+              @if (isSelected(face.id)) {
+                <div class="cleanup-dialog__check">
+                  <pf-icon name="check" [size]="14" />
+                </div>
+              }
+              @if (face.cleanup_score > 0) {
+                <span
+                  class="cleanup-dialog__score"
+                  [class.cleanup-dialog__score--high]="scoreSeverity(face) === 'high'"
+                  [class.cleanup-dialog__score--medium]="scoreSeverity(face) === 'medium'"
+                >{{ (face.cleanup_score * 100) | number:'1.0-0' }}%</span>
+              }
+            </button>
+          }
+        </div>
+
+        @if (confirming()) {
+          <div class="cleanup-dialog__confirm">
+            <span class="cleanup-dialog__confirm-text">
+              {{ selectedCount() }} Gesicht(er) wirklich löschen? Das kann nicht rückgängig
+              gemacht werden.
+            </span>
+            <div class="cleanup-dialog__actions">
+              <button class="cleanup-dialog__btn cleanup-dialog__btn--cancel" (click)="onCancelConfirm()">
+                Abbrechen
+              </button>
+              <button
+                class="cleanup-dialog__btn cleanup-dialog__btn--danger"
+                [disabled]="deleting()"
+                (click)="onConfirmDelete()"
+              >
+                <pf-icon name="trash" [size]="14" />
+                Ja, löschen
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="cleanup-dialog__footer">
+            <span class="cleanup-dialog__count">{{ selectedCount() }} ausgewählt</span>
+            <div class="cleanup-dialog__actions">
+              <button class="cleanup-dialog__btn cleanup-dialog__btn--cancel" (click)="close.emit()">
+                Schließen
+              </button>
+              <button
+                class="cleanup-dialog__btn cleanup-dialog__btn--danger"
+                [disabled]="!canDelete()"
+                (click)="onDeleteClick()"
+              >
+                <pf-icon name="trash" [size]="14" />
+                Ausgewählte löschen
+              </button>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>

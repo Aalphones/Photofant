@@ -34,6 +34,7 @@ import { InterviewDialog, type WizardTarget } from '../wissen/interview-dialog/i
 import { KnowledgeDetailDialog } from '../wissen/knowledge-detail-dialog/knowledge-detail-dialog';
 import { WebSearchDialog } from '../wissen/web-search-dialog/web-search-dialog';
 import { AlphabetRail } from './alphabet-rail/alphabet-rail';
+import { CleanupDialog } from './cleanup-dialog/cleanup-dialog';
 import { CreatePersonDialog } from './create-person-dialog/create-person-dialog';
 import { DeletePersonDialog } from './delete-person-dialog/delete-person-dialog';
 import { DupeCheckDialog } from './dupe-check-dialog/dupe-check-dialog';
@@ -54,6 +55,7 @@ const NO_GROUP = 'Ohne Gruppe';
     PersonCard,
     MergeDialog,
     SplitDialog,
+    CleanupDialog,
     DupeCheckDialog,
     CreatePersonDialog,
     DeletePersonDialog,
@@ -162,6 +164,7 @@ export class Personen implements OnInit {
   protected readonly showCreateDialog = signal(false);
   protected readonly linkEntityPerson = signal<PersonDto | null>(null);
   protected readonly splitPerson = signal<PersonDto | null>(null);
+  protected readonly cleanupPerson = signal<PersonDto | null>(null);
   protected readonly dupeCheckPerson = signal<PersonDto | null>(null);
   protected readonly deletePersonTarget = signal<PersonDto | null>(null);
 
@@ -441,6 +444,19 @@ export class Personen implements OnInit {
   protected onSplit(event: { personId: number; faceIds: number[] }): void {
     this.store.dispatch(personsActions.splitPerson(event));
     this.splitPerson.set(null);
+  }
+
+  protected onCleanupClick(person: PersonDto): void {
+    this.cleanupPerson.set(person);
+  }
+
+  protected onCleanupDialogClose(): void {
+    this.cleanupPerson.set(null);
+  }
+
+  protected onFacesDeleted(): void {
+    // Fotoanzahl/Portrait der Person haben sich geändert — Grid neu laden.
+    this.store.dispatch(personsActions.loadPersons());
   }
 
   protected onDeleteClick(person: PersonDto): void {
