@@ -79,13 +79,25 @@
         <span class="person-card__count">{{ person().count }} {{ person().count === 1 ? 'Bild' : 'Bilder' }}</span>
         @if (person().linked_entity; as entity) {
           <button
-            class="person-card__entity-chip"
+            class="person-card__know-chip"
             type="button"
-            [title]="'Verknüpft mit ' + entity.title + ' (' + entity.type + ') — zur Wissens-Sicht'"
-            (click)="onEntityChipClick($event, entity)"
+            [title]="'Wissen zu ' + displayName + ' — ' + (entityPercent(entity) !== null ? entityPercent(entity) + ' % ausgefüllt' : entity.title)"
+            (click)="onKnowledgeClick($event)"
           >
             <pf-icon name="sparkle" [size]="10" />
-            <span class="person-card__entity-chip-text">{{ entity.title }}</span>
+            <span class="person-card__know-chip-text">
+              {{ entityPercent(entity) !== null ? (entityPercent(entity) + ' %') : entity.title }}
+            </span>
+          </button>
+        } @else if (!person().is_unknown) {
+          <button
+            class="person-card__know-nudge"
+            type="button"
+            title="Wissen anlegen?"
+            (click)="onKnowledgeClick($event)"
+          >
+            <pf-icon name="sparkle" [size]="10" />
+            <span>Wissen anlegen?</span>
           </button>
         }
       </div>

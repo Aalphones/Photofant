@@ -118,27 +118,73 @@ neue Farbpalette erfinden.
   bleibt weiterhin Phase 8.)*"
 
 ## AK dieser Phase
-- [ ] Personen-Karte zeigt bei verknüpfter Entity den gefüllten Chip mit Prozentwert, sonst den
+- [x] Personen-Karte zeigt bei verknüpfter Entity den gefüllten Chip mit Prozentwert, sonst den
       gestrichelten Nudge „Wissen anlegen?"; beide öffnen das Detail-Modal **auf derselben Seite**,
       ohne Navigation.
-- [ ] Ist für den Entity-Typ kein Merkmal definiert, zeigt der Chip den Titel statt „0 %".
-- [ ] Lightbox-Wissen-Tab zeigt Ring + Prozentwert und den Sprung „Vollständiges Profil", der die
+- [x] Ist für den Entity-Typ kein Merkmal definiert, zeigt der Chip den Titel statt „0 %".
+- [x] Lightbox-Wissen-Tab zeigt Ring + Prozentwert und den Sprung „Vollständiges Profil", der die
       Wissen-Ansicht mit geöffnetem Detail für diese Person aufruft.
-- [ ] Ohne zugeordnete Person zeigt der Tab genau **einen** Hinweistext, der auf den
+- [x] Ohne zugeordnete Person zeigt der Tab genau **einen** Hinweistext, der auf den
       Gesichter-Tab verweist.
-- [ ] „Weitere Bilder von {Name}" rendert als 3-spaltiges Raster und wechselt bei Klick das Bild;
+- [x] „Weitere Bilder von {Name}" rendert als 3-spaltiges Raster und wechselt bei Klick das Bild;
       der Empfehlungs-Block darunter funktioniert unverändert.
-- [ ] „Recherchieren" erscheint nur bei `discovery === 'auto'` und nur auf nicht-privaten
+- [x] „Recherchieren" erscheint nur bei `discovery === 'auto'` und nur auf nicht-privaten
       Entitäten; er öffnet den Wizard aus Phase 7, keinen eigenen Ablauf.
-- [ ] Owner-Hinweis „🌐 Aus einer Web-Recherche übernommen." erscheint an einer Entity, deren
+- [x] Owner-Hinweis „🌐 Aus einer Web-Recherche übernommen." erscheint an einer Entity, deren
       Beschreibung zuletzt so entstanden ist.
-- [ ] P27-README trägt die zwei ergänzten Zeilen.
-- [ ] `npx tsc --noEmit` grün, Produktions-Build läuft durch.
+- [x] P27-README trägt die ergänzte Zeile (nur eine von zwei geplanten war noch offen — siehe
+      Report-Back).
+- [x] `npx tsc --noEmit` grün, Produktions-Build läuft durch (gleiche vorbestehende
+      Bundle-Budget-Warnung wie Phase 5-7, keine Regression).
 
 ## Doc-Updates
-- [ ] `docs/code-map.md` — Lightbox- und Personen-Zeile um die Wissens-Anbindung ergänzen
-      (Muster wie die bestehenden Einträge, Ordner-Ebene, keine Zeilennummern).
-- [ ] `docs/glossary.md` prüfen — „Owner"/„Web" als Begriff aufnehmen, falls Phase 2 das noch
-      nicht getan hat.
+- [x] `docs/code-map.md` — Lightbox- und Personen-Zeile um die Wissens-Anbindung ergänzt.
+- [x] `docs/glossary.md` geprüft — „Owner"/„Vollständigkeit" stehen bereits seit Phase 2, nichts
+      nachzutragen.
 
 ## Report-Back
+
+**Deep-Link-Entscheidung (FINDINGS-Frage geklärt):** Zwei unterschiedliche Wege, je nach Ausgangsort —
+
+- **Personen-Seite:** volle Parität mit der Wissen-Ansicht, alles **lokal auf derselben Seite**
+  gemountet (Detail-Modal, Interview-Wizard, Web-Suche-Wizard, „Web-Recherche starten", Lightbox
+  für „Verknüpfte Fotos"). Kein Wegnavigieren an irgendeiner Stelle.
+- **Lightbox-Lore-Panel:** „Interview starten", „Recherchieren" und „Vollständiges Profil"
+  schließen die Lightbox und navigieren nach `/wissen` mit Query-Parametern
+  (`?person=<id>`/`?entity=<id>`, optional `&open=interview`/`&open=discovery`) — `wissen.ts`
+  liest das beim Start und öffnet Detail-Modal bzw. den passenden Wizard direkt vorbelegt.
+  Grund: Lightbox ist an vier Stellen eingebettet (Galerie/Favoriten/Alben/Wissen), ein zweites
+  Set lokal gemounteter Wizards dort hätte echte Doppelpflege bedeutet (dieselbe Sorge, die die
+  Phase-4-Aufgabe für „Recherchieren" selbst schon benennt). Die alte Inline-`entity-wizard-
+  dialog`-Lösung für „Wissen anlegen" (P25, wegen eines inzwischen behobenen Routing-Guard-Bugs
+  eingebaut) ist damit ersatzlos entfernt — `routes.ts` hat den Guard seit einer früheren Phase
+  auf jede Kindroute einzeln verschoben, `openLinkedEntity()` navigiert schon länger denselben
+  Weg ohne Probleme.
+
+**Gefundene, vorbestehende Lücke (Phase 6, nicht in dieser Phase gefixt):** Die von
+„Web-Recherche starten" im leeren Detail-Zustand angelegte Entity wird nicht automatisch mit der
+Person verknüpft (`entity-wizard-dialog` kennt kein `media_links`-Prefill) — bestätigt beim
+1:1-Nachbau der `wissen.ts`-Logik für die Personen-Seite. Gleiches Verhalten wie im Original,
+also keine Regression, aber eine reale Lücke: der Chip bleibt nach diesem Weg auf „Wissen
+anlegen?" hängen, bis manuell verknüpft wird. Nicht mitgefixt (Phase-6-Scope), aber hier
+protokolliert.
+
+**P27-README:** nur die „Draußen: Discovery → Phase 8"-Zeile bekam die neue Amendment-Notiz. Die
+zweite geplante Ergänzung (AK-Zeile „Offline-Garantie gewahrt") trägt bereits seit Phase 1
+(2026-07-21) eine inhaltsgleiche Amendment-Notiz zu ADR-031 — eine zweite, fast wortgleiche Notiz
+direkt darunter wäre reine Dopplung gewesen, deshalb übersprungen.
+
+**Kleinere Abweichungen:**
+- Der Nudge „Wissen anlegen?" erscheint nicht auf „Unbekannt"-Karten (`is_unknown`) — eigene
+  Ergänzung, im Plan nicht spezifiziert, aber ein Nudge auf einem unidentifizierten
+  Gesichts-Cluster wäre sinnlos gewesen.
+- Ring/Prozentwert/„Vollständiges Profil"/„Weitere Bilder" im Lore-Panel greifen nur, wenn
+  `personId()` gesetzt ist (Face-Modus mit genau einer aufgelösten Person) — der
+  Backend-Kontrakt verlangt exakt eines von `asset_id`/`person_id` (nie beide), und `LoreDto`
+  trägt keine Person-Zuordnung pro Block. Im normalen Asset-Modus mit mehreren Personen bleibt
+  die Sektion wie vor Phase 8 (Entity-Titel + Bio + Aktionen, ohne die neuen Zusätze) —
+  entspricht dem Design-Text „erkannte **Haupt**person" (Singular).
+
+**Konfidenz:** keine wacklige Stelle, für die ich einen offenen Check sehe — `tsc`/Build sind
+grün, die Deep-Link-Logik ist reaktiv gegen die Loading-Flags gegated (kein Race mit leerem
+Namen). Der Live-Smoke-Punkt unten ist trotzdem echt (kein Ersatz für tatsächliches Klicken).

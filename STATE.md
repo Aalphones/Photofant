@@ -1,26 +1,17 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-20_p38-gemma-web-discovery/`
-**Phase:** 8/8 — Personen-Karte + Lightbox-Wissen-Tab (Komplexität: standard → `sonnet` reicht)
-**Nächster Schritt:** `phase-8-personen-lightbox.md` lesen und umsetzen (letzte Phase des Plans).
-Vorher `/clear` empfohlen (Session ist groß) — danach `/model sonnet`, `/implement` liest hier
-weiter. Vor dem Start: `FINDINGS.md` → Phase-8-Eintrag zu `WizardTarget.entityId` lesen (klärt,
-wie „Recherchieren" im Lore-Panel den Web-Suche-Wizard vorbelegt).
+**Aktiver Plan:** (keiner) — Backlog unten, User wählt den nächsten.
+**Phase:** –
+**Nächster Schritt:** Nächsten Plan aus dem Backlog auswählen (`/implement` fragt danach) oder
+neuen Plan anlegen (`/plan`).
 
-## Phase 7 erledigt (Wizards: Interview + Web-Suche)
+## P38 „Wissen: Web-Recherche + neue Oberfläche" abgeschlossen (alle 8 Phasen)
 
-Code fertig, `npx tsc --noEmit` grün, Produktions-Build läuft durch (gleiche vorbestehende
-Bundle-Budget-Warnung wie Phase 5/6, keine Regression). Backend `ruff`/`mypy` grün,
-`test_knowledge_discovery_job.py` weiter grün (19 Tests). Neue gemeinsame Wizard-Hülle
-(`wizard-shell/`), Interview komplett auf Personen-Chip/Freitext + fünf feste Fragen
-umgeschnitten, neuer `web-search-dialog/` (self-contained wie `lore-panel.ts`, kein Store-
-Umweg). `missing_field`/`low_completeness`-Aufgaben-Chips öffnen jetzt die Web-Suche statt des
-Entity-Wizards (der kann keine Merkmale editieren — gefundene, vorbestehende Lücke, mitgefixt).
-`DiscoveryRequest` um optionales `hint`-Feld erweitert (additiv, Backend + Frontend). Sechs
-dokumentierte Abweichungen vom Plan-Wortlaut (alle mit Begründung) sowie eine bekannte,
-unbehobene Grenze (Beziehungs-Chip-Navigation im Detail-Modal + danach geöffneter Wizard trifft
-noch die ursprüngliche statt der nachnavigierten Person) — Details:
-`phase-7-wizards.md` → „Report-Back".
+Archiviert: `docs/archive/2026-07/2026-07-20_p38-gemma-web-discovery/README.md` (Summary/Files
+touched/Deviations/Follow-ups in den Bottom-Sektionen dort). Web-Recherche (Gemma + echte
+Websuche, nur bei explizitem Klick, nur auf öffentlichen Entitäten), Merkmale als echte Felder
+mit eigenem Owner, komplette neue Wissens-Oberfläche (Übersicht, Detail, zwei Wizards,
+Personen-Karten-Chip, Lightbox-Wissen-Tab).
 
 ## Zwischendrin erledigt (nicht P38): Job-Pipeline überlebt Datei-Verschiebungen
 
@@ -39,84 +30,36 @@ zeigt dann dauerhaft alle Bilder an, und der Nachzieh-Lauf reiht sie folgenlos i
 ein. Kein Schaden, nur eine lügende Zahl. Fix-Option: beim Zählen die Schritte überspringen,
 für die kein Modell aktiv ist (braucht eine Modell-Abfrage im Zählpfad, die Modelle laden kann).
 
-## Phase 6 erledigt (Wissen-Detail-Modal nach Design)
+## Offene Smoke-Tests (User)
 
-Code fertig, `npx tsc --noEmit` grün, Produktions-Build läuft durch (gleiche vorbestehende
-Bundle-Budget-Warnung wie Phase 5, keine Regression). Neues Modal `knowledge-detail-dialog/`
-(Person aus dem Grid oder Entity aus „Nicht verknüpfte Notizen", Merkmale mit Owner-Pille,
-Beziehungs-Chips mit interner Navigation, verknüpfte Fotos → Lightbox, „Verknüpfung lösen"),
-KI-Ergänzungs-Banner bewusst nur auf Klick (Opt-in-Prinzip, User-Entscheidung), Datum in der
-Kopfzeile weggelassen (User-Entscheidung, wie schon Phase 5). Details/Abweichungen (Quellen-
-Icon-Heuristik, fehlender Beziehungs-Avatar): `phase-6-wissen-detail.md` → „Report-Back".
+- **P38 Phase 3+4** — Parser-Trefferquote (5-10 Läufe gegen reale Personen) + API-Live-Smoke,
+  warten auf ein gebundenes Gemma-Modell auf dieser Maschine. Vollständige Checkliste:
+  `docs/archive/2026-07/2026-07-20_p38-gemma-web-discovery/README.md` → „Smoke-Checkliste"
+  (Wackelstellen zuerst nach Konfidenz-Ausweis sortiert) und `phase-4-api-routen.md` →
+  „AK dieser Phase" (🟡-Punkte).
+- **P38 Phase 8** — neu, noch nicht gegengeprüft: Personen-Karten-Chip/Nudge öffnet das
+  Detail-Modal ohne Navigation; Lightbox-Wissen-Tab zeigt Ring/„Vollständiges Profil"/„Weitere
+  Bilder von {Name}"/„Recherchieren"; „Interview starten"/„Recherchieren"/„Vollständiges Profil"
+  schließen die Lightbox und öffnen `/wissen` mit dem richtigen Deep-Link (Detail-Modal bzw.
+  vorbelegter Wizard). Details: `phase-8-personen-lightbox.md` → „Report-Back" (im Archiv-Pfad
+  oben).
+- **P35** GGUF-Gemma-Runtime → `docs/archive/2026-07/2026-07-20_p35-gemma-gguf-runtime/README.md`
+- **P26** Empfehlungs-Engine → `docs/archive/2026-07/2026-07-01_p26-recommendation-engine/README.md`
+- **Empfehlungs-Cache-Invalidierung** → `docs/archive/2026-07/2026-07-20_recommendation-cache-invalidation/README.md`
+- **Lightbox-Tab-Panel** → `docs/archive/2026-07/2026-07-20_lightbox-tabbed-panel.md`
 
-## Phase 5 erledigt (Wissen-Übersicht nach Design)
-
-Code fertig, `npx tsc --noEmit` grün, Produktions-Build läuft durch (vorbestehende
-Bundle-Budget-Warnung unverändert, keine Regression). Komplett neue Übersicht: Kopfzeile mit
-drei Knöpfen, Personen-Grid mit Vollständigkeits-Ring (`ui/completeness-ring/`, neu, auch für
-Phase 6/8 gedacht), Aufgaben-Reihe als Chip-Design (`work-queue/` umgebaut, „Später"/Snooze
-entfällt — im Design nicht vorgesehen), Sektion „Nicht verknüpfte Notizen" mit Personen-Suche
-(`link-entity-dialog` von `features/personen/` nach `ui/` verschoben + um einen zweiten Modus
-erweitert), Toast statt der beiden alten Bestätigungs-Banner. Reine Frontend-Phase, kein
-Live-Smoke nötig — Details/Abweichungen: `phase-5-wissen-uebersicht.md` → „Report-Back".
-
-**Zur Kenntnis (kein Blocker):** Entities in einer nicht-privaten Domäne ohne Personen-Link
-(z.B. eine Film-Entity) tauchen ab jetzt nirgends mehr in der Wissen-Übersicht auf — direkte
-Folge der personenzentrierten Neugestaltung, siehe Report-Back Phase 5 für Details.
-**Für Phase 6:** `EntityDto` hat kein Zeitstempel-Feld — „aktualisiert am {Datum}" im
-Detail-Kopf braucht entweder einen kleinen Backend-Zusatz oder muss entfallen (FINDINGS.md).
-
-## Phase 4 erledigt (Routen + Guards + neue Aufgaben-Arten) — Live-Smoke steht aus
-
-Code fertig, `ruff`/`mypy`/`npx tsc --noEmit` grün, voller Backend-Testlauf ohne neue
-Regressionen (438 grün, 13 rot = exakt die bekannte Vorbelastung unten). Sieben AK-Punkte
-sind 🟡 **Live-Smoke (User)** — brauchen einen laufenden Server/Browser, den diese Session
-(privates Profil) nicht selbst startet. Checkliste + was genau zu prüfen ist:
-`phase-4-api-routen.md` → „AK dieser Phase" (alle 🟡 markiert) und „Report-Back" (bekannte
-Grenze: Beschreibung/Beziehungen-Übernahme scheitert auf bereits `user`-owned Entities mit
-einer Ownership-Meldung in `errors` — bestehendes P22-Verhalten, keine Neuerung).
-
-`domains/personen.yaml` ist jetzt `private: true` (User-Entscheidung vor Phase-4-Start) —
-echte Kontakte sind von der Web-Recherche ausgenommen.
-
-## Phase 3 blockiert (KnowledgeDiscoveryJob — Code fertig, Live-Check aussteht)
-
-`jobs/knowledge_discovery_job.py` + `knowledge/slug.py` stehen, `ruff`/`mypy` grün, 23 neue
-gemockte Tests grün. Zwei AK bleiben offen, weil kein Gemma-Modell auf dieser Maschine
-registriert ist (`resolve_generator(Capability.KNOWLEDGE_DISCOVERY)` → `None`): der echte
-Job-Lauf gegen eine reale öffentliche Person und das Parser-Trefferquote-Protokoll (5-10
-Läufe). **Entscheidung (User, vor Phase 4):** Phase 4 trotzdem starten, Live-Check nachholen,
-sobald irgendwo ein Modell gebunden ist. Details + Tabelle zum Ausfüllen:
-`phase-3-discovery-job.md` → „Report-Back".
-
-## Phase 1+2 erledigt (Fundament Web-Recherche, Merkmale + Vollständigkeit)
-
-Websuche (`ddgs`), Capability `KNOWLEDGE_DISCOVERY`, Schalter `ai.autonomy.discovery`
-(Default aus), ADR-031. Merkmale als echte Felder mit eigenem Owner pro Feld, Vollständigkeit
-als reine Ableitung, ADR-032. Migration 0040 (Cache-Spiegel `knowledge_entities.attributes`)
-lief beim ersten App-Start seither mit. Details: `phase-1-fundament.md` / `phase-2-merkmale.md`.
-
-## Vorbelastung (nicht von P38)
+## Vorbelastung (unverändert)
 
 - `tests/test_comfyui_run.py` — 9 Fehler auf unverändertem Stand (`run_comfyui_run_job()`
   fehlt ein Argument).
 - `tests/test_comfyui_auto_import.py` (3×, `SimpleNamespace` ohne `toggles`) und
   `test_caption_config.py::test_validate_rejects_unimplemented_instruct_mode`.
-  Gesamt 13 rote Tests, alle P38-fremd, geprüft auf unverändertem Stand.
+  Gesamt 13 rote Tests, alle P38-fremd, zuletzt vor P38 Phase 4 geprüft.
 - `uv run ruff check .` über das **ganze** Backend meldet 7 Altbestand-Fehler (alte
   Migrationen 0020/0024, `api/assets.py` B008, `inference/tools.py`,
   `jobs/comfyui_run_job.py`). Geänderte Dateien sind grün.
 - `backend/photofant/api/persons.py:203` (Zeilennummer kann verschieben) — vorbestehender
-  `mypy`-Fehler in `_person_portrait_face_ids` (`dict()` gegen `Sequence[Row[Any]]`),
-  verifiziert auf unverändertem Stand vor P38 Phase 4.
-
-## Offene Smoke-Tests (User)
-
-- **P38 Phase 3+4** (siehe oben)
-- **P35** GGUF-Gemma-Runtime → `docs/archive/2026-07/2026-07-20_p35-gemma-gguf-runtime/README.md`
-- **P26** Empfehlungs-Engine → `docs/archive/2026-07/2026-07-01_p26-recommendation-engine/README.md`
-- **Empfehlungs-Cache-Invalidierung** → `docs/archive/2026-07/2026-07-20_recommendation-cache-invalidation/README.md`
-- **Lightbox-Tab-Panel** → `docs/archive/2026-07/2026-07-20_lightbox-tabbed-panel.md`
+  `mypy`-Fehler in `_person_portrait_face_ids` (`dict()` gegen `Sequence[Row[Any]]`).
 
 ## Backlog
 
@@ -128,3 +71,6 @@ lief beim ersten App-Start seither mit. Details: `phase-1-fundament.md` / `phase
   Tagging/Captioning/Embedding & Co. laufen (GIL-Kontention, nicht ein vergessenes `to_thread`).
   Alle Modell-Inferenz-Jobs ziehen in einen dauerhaften Worker-Prozess um. 4 Phasen, bereit zum
   Start, hängt an nichts.
+- `docs/planning/2026-07-22_gesichter-bereinigung/` — pro Person Ausreißer-Gesichter
+  (falsch geclustert oder technisch unbrauchbar) finden & gezielt löschen, ADR-033. 4 Phasen,
+  bereit zum Start, hängt an nichts.

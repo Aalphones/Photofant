@@ -19,7 +19,7 @@
 | 5 | Wissen-Übersicht nach Design | standard | ✅ complete |
 | 6 | Wissen-Detail (Modal) nach Design | standard | ✅ complete |
 | 7 | Wizards — Interview + Web-Suche mit Fakten-Bestätigung | standard | ✅ complete |
-| 8 | Personen-Karte + Lightbox-Wissen-Tab | standard | pending |
+| 8 | Personen-Karte + Lightbox-Wissen-Tab | standard | ✅ complete |
 
 ## Ziel
 Wissen über Personen wird sichtbar, messbar und befüllbar. Sichtbar: eine Übersicht mit
@@ -283,10 +283,52 @@ Wackelstellen zuerst (Konfidenz-Ausweis oben):
    reine Verifikation, keine neue Funktion.
 
 ## Bottom-Sektionen
-_(beim Archivieren füllen)_
 
 ### Summary
+Web-Recherche (Gemma + echte Websuche, nur bei explizitem Klick, nur auf öffentlichen
+Entitäten) und die komplett neue Wissens-Oberfläche aus dem Design-Handoff: Übersicht mit
+Personen-Karten + Vollständigkeits-Ring, Detail-Modal, zwei Wizards (Interview/Web-Suche),
+Personen-Karten-Chip und Lightbox-Wissen-Tab. Merkmale sind jetzt echte Felder mit eigenem
+Owner statt Freitext, Vollständigkeit eine reine, nie gespeicherte Ableitung. Zwei AK-Punkte
+(Phase 3 Parser-Trefferquote, Phase 4 API-Live-Smoke) warten weiter auf einen gebundenen
+Gemma-Lauf bzw. den User-Smoke — siehe STATE.md „Offene Smoke-Tests".
+
 ### Files touched
+**Backend:** `knowledge/` (schema/domains/parser/validator/service/repository/task_rules,
+neu: `slug.py`), `jobs/knowledge_discovery_job.py`, `api/knowledge.py` + `api/knowledge_ai.py`,
+`api/persons.py`/`api/assets.py` (EntityRefDto.completeness), Migration 0040, ADR-031/032.
+**Frontend:** `features/wissen/` (komplett neu: wissen.ts/html, knowledge-detail-dialog/,
+interview-dialog/, web-search-dialog/, wizard-shell/, work-queue/, person-knowledge-card/,
+entity-wizard-dialog/ erweitert), `features/personen/` (personen.ts/html + person-card/ —
+Wissens-Chip/Nudge + lokales Detail-Modal), `features/galerie/lightbox/` (lightbox.ts/html +
+lore-panel/ — Ring/Profil-Link/Weitere-Bilder/Recherchieren, alte Inline-Wizard-Lösung entfernt),
+`ui/completeness-ring/` (neu), `ui/link-entity-dialog/` (verschoben + zweiter Modus),
+`models/knowledge.model.ts`.
+
 ### Commits
+Siehe `git log` auf diesem Branch — ein Commit pro Phase (Konvention `mode-committing`), zuletzt
+Phase 8 „Personen-Karte + Lightbox-Wissen-Tab".
+
 ### Deviations from plan
+- Schreibverhalten von Auto-Write auf Bestätigungs-Liste umgestellt (User-Entscheidung
+  2026-07-21, vor Phase 3 — siehe „Vorgeschichte" oben).
+- `personen.yaml` nachträglich `private: true` gesetzt (User-Entscheidung vor Phase 4).
+- `WizardTarget` erweitert um `entityId` (über die Phase-7-Planvorgabe hinaus, FINDINGS Phase 7).
+- Phase 8: Lightbox-Aktionen navigieren nach `/wissen` statt Wizards inline zu duplizieren
+  (Doppelpflege vermieden); alte Inline-`entity-wizard-dialog`-Lösung für „Wissen anlegen"
+  entfernt (vestigial nach einem längst behobenen Routing-Guard-Bug). Details:
+  `phase-8-personen-lightbox.md` → „Report-Back".
+- P27-README: nur eine von zwei geplanten Amendment-Zeilen ergänzt (die andere war bereits
+  seit Phase 1 inhaltsgleich vorhanden).
+- Kein Datum („aktualisiert am") in Wissen-Detail/Übersicht — `EntityDto` hat keinen
+  Zeitstempel, User-Entscheidung: weglassen statt Backend-Zusatzfeld (vor Phase 6).
+
 ### Follow-ups
+- Phase 3 Parser-Trefferquote (5-10 Läufe gegen reale Personen) + Phase 4 API-Live-Smoke —
+  warten auf ein gebundenes Gemma-Modell auf dieser Maschine.
+- Bekannte Grenze aus Phase 7: Beziehungs-Chip-Navigation im Detail-Modal + danach geöffneter
+  Wizard trifft noch die ursprüngliche statt der nachnavigierten Person.
+- Bekannte Lücke aus Phase 6/8: „Web-Recherche starten" im leeren Detail-Zustand verknüpft die
+  neu angelegte Entity nicht automatisch mit der Person (kein `media_links`-Prefill im
+  Entity-Wizard) — Chip bleibt bis zur manuellen Verknüpfung auf „Wissen anlegen?" hängen.
+- Volltext-Scraping der gefundenen Seiten (Feature-Radar-Punkt, bewusst draußen gelassen).

@@ -14,6 +14,9 @@ Gemma sieht immer nur den aktuell nötigen Kontext (Dok 001 §4), besitzt kein d
 ## Scope
 **Drin:** AI-Layer — Capability- + Tool-Registry + ModelManager-Anbindung, Gemma-Adapter mit Lazy-Load/Idle-Unload · Prompt-Library als Markdown (`knowledge/prompts/`) · `KnowledgeImportJob` (Gemma füllt Wizard-Vorschlag) · `KnowledgeUpdateJob` (Gemma schlägt Ergänzungen vor) · Interview-Mode für private Entities (ADR-009).
 **Draußen:** Creative-Jobs/ComfyUI-Intelligenz → Roadmap-Phase 7 · Discovery → Phase 8 · autonome Hintergrundverarbeitung (bleibt bewusst aus, ADR-010 des Konzepts).
+*(Amendiert am 2026-07-22 durch P38 Phase 8: Web-Recherche für öffentliche Entitäten ist als
+P38 vorgezogen worden — vollautomatische Hintergrund-Discovery ohne User-Trigger bleibt
+weiterhin Phase 8.)*
 
 ## Abhängigkeiten
 **P22** (Service, Validator, Patch-Pfad) · **P23** (Wizard, Task-Queue) · **P25** (Patch-UI, Explainability-Element). Nutzt Bestand: `inference/` (session_manager, interfaces), `models/loader.py`/`vram.py`, Modell-Management-Feature (Download/In-Place/Gating), Muster der Heavy-Captioner (JoyCaption/Qwen-VL laufen schon über torch/transformers + Lazy-Load).

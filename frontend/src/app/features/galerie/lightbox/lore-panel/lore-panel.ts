@@ -16,16 +16,19 @@ import type {
   AcceptUpdateSuggestionResponse,
   AiAutonomyDto,
   ChangelogEntryDto,
+  DomainDto,
+  EntityDto,
   EntityRefDto,
   ExplainabilityPayload,
   Job,
   KnowledgeUpdateResult,
   LoreDto,
+  MediaRefDto,
   PatchJobResponse,
   ResolvedRelationshipDto,
   UpdateSuggestionResponse,
 } from '@photofant/models';
-import { ExplainabilityPopover, Icon } from '@photofant/ui';
+import { CompletenessRing, ExplainabilityPopover, Icon } from '@photofant/ui';
 
 type LoreStatus = 'loading' | 'ready' | 'empty';
 
@@ -47,7 +50,7 @@ interface LoreState {
 @Component({
   selector: 'pf-lore-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, ExplainabilityPopover],
+  imports: [Icon, ExplainabilityPopover, CompletenessRing],
   templateUrl: './lore-panel.html',
   styleUrl: './lore-panel.scss',
 })
@@ -57,6 +60,11 @@ export class LorePanel {
 
   readonly assetId = input<number | null>(null);
   readonly personId = input<number | null>(null);
+  // P38 Phase 8 — nur für "Weitere Bilder von {Name}" (Aufgabe 3): das aktuell in der
+  // Lightbox gezeigte Bild soll im Raster nicht nochmal auftauchen. Getrennt von `assetId`
+  // (das im Face-Modus null ist, per Backend-Kontrakt genau eines von beiden) — hier zählt
+  // immer das Quell-Asset, auch im Face-Modus.
+  readonly currentAssetId = input<number | null>(null);
   // Ob Wissen hier überhaupt sinnvoll wäre (Bild zeigt Personen) — steuert, ob der
   // „Noch kein Wissen — anlegen"-Zustand erscheint oder das Panel still ausgeblendet bleibt.
   readonly hasPersonContext = input(false);
@@ -67,6 +75,16 @@ export class LorePanel {
 
   readonly entitySelected = output<EntityRefDto>();
   readonly createRequested = output<void>();
+  // P38 Phase 8 — Aufgabe 2: „Vollständiges Profil" springt zur Wissen-Ansicht mit geöffnetem
+  // Detail für die aktuelle Person (Lightbox schließt vorher, siehe `lightbox.ts`).
+  readonly openFullProfile = output<number>();
+  // P38 Phase 8 — Aufgabe 3: Klick auf ein Foto im "Weitere Bilder"-Raster wechselt das
+  // Bild in derselben Lightbox (Weg wie `related-rail`s `cardClick`).
+  readonly assetSelected = output<number>();
+  // P38 Phase 8 — Aufgabe 4: „Recherchieren" öffnet den Web-Suche-Wizard aus Phase 7 mit
+  // vorbelegter Entity; Lightbox schließt vorher und navigiert (kein zweiter Recherche-Weg
+  // hier im Panel, siehe Phase-Doku).
+  readonly discoveryRequested = output<string>();
 
   // Bump nach einer erfolgreichen Korrektur (P25 Phase 3) — löst über den `switchMap`
   // unten einen erneuten `getLore`-Read aus, ohne dass der Nutzer die Lightbox schließen muss.
@@ -158,10 +176,22 @@ export class LorePanel {
   protected readonly updateSuggestionError = signal<string | null>(null);
   protected readonly updateAcceptPending = signal(false);
 
+  // ── Web-Recherche-Gate (P38 Phase 8, Aufgabe 4) ──────────────────────────────────────────
+  // Namen der privaten Domänen — einmalig geladen, dieselbe "dumme, self-contained"-Regel wie
+  // `updateAutonomy` oben (kein Store-Umweg). `lore.entity.domain` trägt nur den Domänen-Namen,
+  // nicht das Objekt (Plan-Vorgabe Aufgabe 4).
+  private readonly privateDomainNames = signal<Set<string>>(new Set());
+
   constructor() {
     this.knowledgeService.getAiAutonomy()
       .pipe(take(1), catchError(() => of(null)))
       .subscribe((autonomy: AiAutonomyDto | null): void => { this.updateAutonomy.set(autonomy); });
+
+    this.knowledgeService.listDomains()
+      .pipe(take(1), catchError(() => of([] as DomainDto[])))
+      .subscribe((domains: DomainDto[]): void => {
+        this.privateDomainNames.set(new Set(domains.filter((domain: DomainDto) => domain.private).map((domain: DomainDto) => domain.name)));
+      });
 
     // Schließt offene Korrektur/„Warum geändert?"/KI-Ergänzung-Zustände bei jedem
     // Lore-Reload (Bildwechsel oder frische Korrektur) — sonst zeigt ein Popover/Vorschlag
@@ -275,6 +305,13 @@ export class LorePanel {
     this.status() === 'empty' && this.hasPersonContext(),
   );
 
+  // P38 Phase 8, Aufgabe 2 — ohne jede Person auf dem Bild gab es bisher gar keinen
+  // Leer-Text (Panel blieb schlicht leer); jetzt genau ein Hinweis, der auf den
+  // Gesichter-Tab verweist.
+  protected readonly showNoPersonState = computed((): boolean =>
+    this.status() === 'empty' && !this.hasPersonContext(),
+  );
+
   // Ein Ziel ist nur navigierbar, wenn es eine aufgelöste Entity hat; unbekannte Ziele
   // kommen mit leerem Typ zurück (P25 Phase-1-Finding) — dann kein Navigationsziel.
   protected isNavigable(ref: EntityRefDto): boolean {
@@ -289,6 +326,46 @@ export class LorePanel {
 
   protected requestCreate(): void {
     this.createRequested.emit();
+  }
+
+  // ── P38 Phase 8, Aufgabe 2: Vollständigkeit + „Vollständiges Profil" ────────────────────
+  protected percentFor(entity: EntityDto): number {
+    return Math.round(entity.completeness * 100);
+  }
+
+  protected requestFullProfile(): void {
+    const personId = this.personId();
+    if (personId !== null) {
+      this.openFullProfile.emit(personId);
+    }
+  }
+
+  // ── P38 Phase 8, Aufgabe 3: „Weitere Bilder von {Name}" ─────────────────────────────────
+  // Nur Asset-Kacheln, ohne das gerade offene Bild — die bestehende "Eigene Bilder"-Sektion
+  // oben zeigt weiterhin alles (Personen + Assets) unangetastet, das hier ist ein zweiter,
+  // gefilterter Blick mit eigener Überschrift (Report-Back: Verwechslungsgefahr mit den
+  // Empfehlungen darunter sonst zu groß).
+  protected otherPhotosFor(lore: LoreDto): MediaRefDto[] {
+    const currentId = this.currentAssetId();
+    return lore.related_media.filter(
+      (media: MediaRefDto): boolean => media.kind === 'asset' && media.id !== currentId,
+    );
+  }
+
+  protected selectAsset(assetId: number): void {
+    this.assetSelected.emit(assetId);
+  }
+
+  // ── P38 Phase 8, Aufgabe 4: „Recherchieren" ──────────────────────────────────────────────
+  protected canRequestDiscoveryFor(lore: LoreDto): boolean {
+    const entity = lore.entity;
+    if (entity === null) { return false; }
+    if (this.updateAutonomy()?.discovery !== 'auto') { return false; }
+    return !this.privateDomainNames().has(entity.domain);
+  }
+
+  protected requestDiscovery(entityId: string): void {
+    this.discoveryRequested.emit(entityId);
   }
 
   protected relationTypeLabel(type: string): string {

@@ -356,10 +356,14 @@
           <pf-lore-panel
             [assetId]="isFaceMode() ? null : (asset()?.id ?? null)"
             [personId]="isFaceMode() ? (faceDetail()?.person_id ?? null) : null"
+            [currentAssetId]="isFaceMode() ? (faceDetail()?.source_asset_id ?? null) : (asset()?.id ?? null)"
             [hasPersonContext]="isFaceMode() ? (faceDetail()?.person_id != null) : faces().length > 0"
             [refreshKey]="loreRefreshKey()"
             (entitySelected)="openLinkedEntity($event)"
             (createRequested)="openKnowledgeCreate()"
+            (openFullProfile)="openFullProfile($event)"
+            (assetSelected)="openRelatedAsset($event)"
+            (discoveryRequested)="openDiscoveryFor($event)"
           />
 
           <!-- Empfehlungen (P26 + P36 zusammengeführt) — Graph-Empfehlungen und reine
@@ -922,16 +926,6 @@
       </div>
     </div>
   </div>
-}
-
-@if (showKnowledgeWizard()) {
-  <pf-entity-wizard-dialog
-    [domains]="knowledgeDomains()"
-    [isSaving]="isSavingKnowledgeEntity()"
-    [saveError]="knowledgeSaveError()"
-    (close)="onCloseKnowledgeWizard()"
-    (save)="onSaveKnowledgeEntity($event)"
-  />
 }
 
 @if (showRerunDialog()) {

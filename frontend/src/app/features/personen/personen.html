@@ -109,6 +109,7 @@
                     [person]="person"
                     [viewMode]="viewMode()"
                     [newPersonTask]="newPersonTaskByPersonId().get(person.id) ?? null"
+                    [domains]="knowledgeDomains()"
                     (rename)="onRename($event)"
                     (setGroup)="onSetGroup($event)"
                     (importFiles)="onImportFiles($event)"
@@ -122,6 +123,7 @@
                     (createKnowledge)="onCreateKnowledge($event)"
                     (snoozeNewPersonTask)="onSnoozeNewPersonTask($event)"
                     (dismissNewPersonTask)="onDismissNewPersonTask($event)"
+                    (openKnowledgeDetail)="openPersonDetail($event)"
                   />
                 </div>
               }
@@ -136,6 +138,7 @@
                 [person]="person"
                 [viewMode]="viewMode()"
                 [newPersonTask]="newPersonTaskByPersonId().get(person.id) ?? null"
+                [domains]="knowledgeDomains()"
                 (rename)="onRename($event)"
                 (setGroup)="onSetGroup($event)"
                 (importFiles)="onImportFiles($event)"
@@ -149,6 +152,7 @@
                 (createKnowledge)="onCreateKnowledge($event)"
                 (snoozeNewPersonTask)="onSnoozeNewPersonTask($event)"
                 (dismissNewPersonTask)="onDismissNewPersonTask($event)"
+                (openKnowledgeDetail)="openPersonDetail($event)"
               />
             </div>
           }
@@ -204,7 +208,7 @@
 
 @if (showKnowledgeWizard()) {
   <pf-entity-wizard-dialog
-    [domains]="knowledgeDomains()"
+    [domains]="discoverySetupPersonId() !== null ? discoverySetupDomains() : knowledgeDomains()"
     [isSaving]="isSavingEntity()"
     [saveError]="entitySaveError()"
     [prefill]="knowledgeWizardPrefill()"
@@ -219,4 +223,50 @@
     (close)="linkEntityPerson.set(null)"
     (select)="onLinkEntitySelect($event)"
   />
+}
+
+@if (showInterview()) {
+  <pf-interview-dialog
+    [domains]="knowledgeDomains()"
+    [persons]="knownPersons()"
+    [target]="wizardTarget()"
+    [isSaving]="isSavingEntity()"
+    [saveError]="entitySaveError()"
+    [loading]="interviewLoading()"
+    [result]="interviewResult()"
+    [error]="interviewError()"
+    (close)="closeInterview()"
+    (requestInterview)="onRequestInterview($event)"
+    (save)="onSaveKnowledgeEntity($event)"
+  />
+}
+
+@if (showWebSearchWizard()) {
+  <pf-web-search-dialog
+    [persons]="knownPersons()"
+    [target]="wizardTarget()"
+    (close)="closeWebSearchWizard()"
+    (applied)="onWebSearchApplied()"
+  />
+}
+
+@if (detailPersonId() !== null) {
+  <pf-knowledge-detail-dialog
+    [personId]="detailPersonId()"
+    [domains]="knowledgeDomains()"
+    [persons]="persons()"
+    [autonomy]="aiAutonomy()"
+    [refreshKey]="detailRefreshKey()"
+    (close)="closeDetail()"
+    (openInterview)="openInterviewForDetail()"
+    (openWebSearch)="openWebSearchForDetail()"
+    (openDiscoverySetup)="openDiscoverySetupForDetail()"
+    (openLightbox)="onOpenLightboxFromDetail($event)"
+    (linkRequested)="onDetailLinkRequested()"
+    (unlinkRequested)="onDetailUnlinkRequested($event)"
+  />
+}
+
+@if (lightboxId() != null) {
+  <pf-lightbox />
 }

@@ -6,7 +6,20 @@
       <!-- Kurzbio -->
       <div class="panel-sec lore-sec">
         @if (isFirst) {
-          <div class="psec-title">Wissen</div>
+          <div class="psec-title-row">
+            <div class="psec-title">Wissen</div>
+            @if (personId() !== null) {
+              <button class="lore-profile-link" type="button" (click)="requestFullProfile()">
+                Vollständiges Profil
+              </button>
+            }
+          </div>
+        }
+        @if (personId() !== null) {
+          <div class="lore-completeness">
+            <pf-completeness-ring [value]="ent.completeness" [size]="40" />
+            <span class="lore-completeness__pct">{{ percentFor(ent) }} % ausgefüllt</span>
+          </div>
         }
         <button
           class="lore-entity"
@@ -109,6 +122,9 @@
           @if (bioFor(lore); as text) {
             <p class="lore-bio">{{ text }}</p>
           }
+          @if (ent.owner === 'web') {
+            <p class="lore-web-hint">🌐 Aus einer Web-Recherche übernommen.</p>
+          }
           <div class="lore-actions">
             @if (canCorrectFor(lore)) {
               <button
@@ -140,6 +156,17 @@
               >
                 <pf-icon name="sparkle" [size]="11" />
                 Ergänzen (KI)
+              </button>
+            }
+            @if (canRequestDiscoveryFor(lore)) {
+              <button
+                class="lore-correct"
+                type="button"
+                (click)="requestDiscovery(ent.id)"
+                title="Sucht öffentlich verfügbare Angaben — du entscheidest danach, was übernommen wird"
+              >
+                <pf-icon name="search" [size]="11" />
+                Recherchieren
               </button>
             }
           </div>
@@ -210,6 +237,27 @@
         </div>
       }
 
+      <!-- Weitere Bilder von {Name} (P38 Phase 8, Aufgabe 3) — eigener, gefilterter Blick,
+           bewusst anders betitelt als "Eigene Bilder" oben (andere Frage: "wo ist diese Person
+           noch" statt "was hängt an dieser Notiz") -->
+      @if (personId() !== null && otherPhotosFor(lore).length > 0) {
+        <div class="panel-sec lore-sec">
+          <div class="psec-title">Weitere Bilder von {{ ent.title }}</div>
+          <div class="lore-photo-grid">
+            @for (media of otherPhotosFor(lore); track media.id) {
+              <button
+                class="lore-photo-cell"
+                type="button"
+                [title]="media.label ?? ''"
+                (click)="selectAsset(media.id)"
+              >
+                <img [src]="media.thumbnail_url" [alt]="media.label ?? ''" />
+              </button>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Quellen -->
       @if (lore.sources.length > 0) {
         <div class="panel-sec lore-sec">
@@ -238,7 +286,14 @@
     <div class="psec-title">Wissen</div>
     <button class="lore-empty" type="button" (click)="requestCreate()">
       <pf-icon name="sparkle" [size]="14" />
-      Noch kein Wissen — anlegen
+      Interview starten
     </button>
+  </div>
+} @else if (showNoPersonState()) {
+  <div class="panel-sec lore-sec">
+    <div class="psec-title">Wissen</div>
+    <p class="lore-bio lore-bio--empty">
+      Auf diesem Bild ist noch keine Person zugeordnet — das machst du im Tab „Gesichter".
+    </p>
   </div>
 }

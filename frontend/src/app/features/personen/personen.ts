@@ -8,11 +8,31 @@ import {
   signal,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import type { CreateEntityRequest, Density, EntityDto, EntityRefDto, PersonDto, TaskDto } from '@photofant/models';
+import type {
+  CreateEntityRequest,
+  Density,
+  DomainDto,
+  EntityDto,
+  EntityRefDto,
+  InterviewSynthesizeRequest,
+  PersonDto,
+  TaskDto,
+} from '@photofant/models';
 import { PersonService } from '@photofant/services';
-import { knowledgeActions, knowledgeSelectors, personsActions, personsSelectors } from '@photofant/store';
+import {
+  galleryActions,
+  gallerySelectors,
+  knowledgeActions,
+  knowledgeSelectors,
+  personsActions,
+  personsSelectors,
+} from '@photofant/store';
 import { Icon, LinkEntityDialog } from '@photofant/ui';
+import { Lightbox } from '../galerie/lightbox/lightbox';
 import { EntityWizardDialog } from '../wissen/entity-wizard-dialog/entity-wizard-dialog';
+import { InterviewDialog, type WizardTarget } from '../wissen/interview-dialog/interview-dialog';
+import { KnowledgeDetailDialog } from '../wissen/knowledge-detail-dialog/knowledge-detail-dialog';
+import { WebSearchDialog } from '../wissen/web-search-dialog/web-search-dialog';
 import { AlphabetRail } from './alphabet-rail/alphabet-rail';
 import { CreatePersonDialog } from './create-person-dialog/create-person-dialog';
 import { DeletePersonDialog } from './delete-person-dialog/delete-person-dialog';
@@ -41,6 +61,10 @@ const NO_GROUP = 'Ohne Gruppe';
     Icon,
     EntityWizardDialog,
     LinkEntityDialog,
+    KnowledgeDetailDialog,
+    InterviewDialog,
+    WebSearchDialog,
+    Lightbox,
   ],
   templateUrl: './personen.html',
   styleUrl: './personen.scss',
@@ -91,12 +115,47 @@ export class Personen implements OnInit {
   protected readonly showKnowledgeWizard = signal(false);
   private readonly activeNewPersonTask = signal<TaskDto | null>(null);
 
+  // P38 Phase 8 — zweiter Einstieg in denselben Wizard: "Web-Recherche starten" aus dem leeren
+  // Detail-Modal (kein Wissen zur Person, keine bestehende Notiz). Die Entity ist hier nur das
+  // Vehikel für Domäne/Typ — sobald sie steht, geht's im Effekt unten direkt in den
+  // Web-Suche-Wizard weiter (gleiches Muster wie `wissen.ts`).
+  protected readonly discoverySetupPersonId = signal<number | null>(null);
+  protected readonly discoverySetupDomains = computed((): DomainDto[] =>
+    this.knowledgeDomains().filter((domain: DomainDto) => !domain.private)
+  );
+
   protected readonly knowledgeWizardPrefill = computed((): Partial<CreateEntityRequest> => {
+    const discoveryPersonId = this.discoverySetupPersonId();
+    if (discoveryPersonId !== null) {
+      const person = this.persons().find((candidate: PersonDto) => candidate.id === discoveryPersonId) ?? null;
+      return person?.name ? { title: person.name } : {};
+    }
     const task = this.activeNewPersonTask();
     if (task === null) { return {}; }
     const ref = task.context['ref'];
     return typeof ref === 'string' && ref.length > 0 ? { title: ref } : {};
   });
+
+  // P38 Phase 8 — Wissens-Detail-Modal direkt auf der Personen-Seite (Chip/Nudge auf der
+  // Karte), damit der Nutzer für einen Blick aufs eigene Wissen nicht mehr nach `/wissen`
+  // wegnavigiert werden muss. Nur `detailPersonId` — anders als `wissen.ts` gibt es hier keine
+  // "Nicht verknüpfte Notizen"-Sektion, die eine zweite, entity-basierte Öffnung bräuchte.
+  protected readonly detailPersonId = signal<number | null>(null);
+  protected readonly detailRefreshKey = signal(0);
+
+  protected readonly aiAutonomy = this.store.selectSignal(knowledgeSelectors.selectAiAutonomy);
+  protected readonly interviewLoading = this.store.selectSignal(knowledgeSelectors.selectInterviewLoading);
+  protected readonly interviewResult = this.store.selectSignal(knowledgeSelectors.selectInterviewResult);
+  protected readonly interviewError = this.store.selectSignal(knowledgeSelectors.selectInterviewError);
+  protected readonly showInterview = signal(false);
+  protected readonly showWebSearchWizard = signal(false);
+  protected readonly wizardTarget = signal<WizardTarget | null>(null);
+
+  protected readonly knownPersons = computed((): PersonDto[] =>
+    this.persons().filter((person: PersonDto) => !person.is_unknown)
+  );
+
+  protected readonly lightboxId = this.store.selectSignal(gallerySelectors.selectLightboxId);
 
   protected readonly showMergeDialog = signal(false);
   protected readonly mergePreselectedFrom = signal<PersonDto | null>(null);
@@ -196,20 +255,43 @@ export class Personen implements OnInit {
   });
 
   constructor() {
-    // Entity angelegt, während der Wizard aus einer "🆕 Neue Person"-Karte kam:
-    // Person↔Entity verknüpfen (Phase-1-Route), danach die Aufgabe auflösen — der
-    // Task fällt dann aus store/knowledge, die Karte verliert den Banner von selbst.
+    // Entity angelegt, während der Wizard offen war — drei mögliche Herkünfte, die sich
+    // gegenseitig ausschließen (immer nur eine der beiden Ziel-Signale ist gesetzt):
+    // (a) "🆕 Neue Person"-Karte -> Person↔Entity verknüpfen + Aufgabe auflösen,
+    // (b) "Web-Recherche starten" aus dem leeren Detail-Modal -> direkt in den
+    // Web-Suche-Wizard weiterreichen (P38 Phase 8, Muster wie `wissen.ts`).
     effect(() => {
       const entity = this.lastCreatedEntity();
-      const task = this.activeNewPersonTask();
-      if (entity === null || task === null) { return; }
-      const personId = task.context['person_id'];
+      if (entity === null) { return; }
       this.showKnowledgeWizard.set(false);
-      this.activeNewPersonTask.set(null);
-      if (typeof personId !== 'number') { return; }
-      this.personService.linkEntity(personId, entity.id).subscribe(() => {
-        this.store.dispatch(knowledgeActions.resolveTask({ taskId: task.id }));
-      });
+      this.showInterview.set(false);
+
+      const discoveryPersonId = this.discoverySetupPersonId();
+      if (discoveryPersonId !== null) {
+        this.discoverySetupPersonId.set(null);
+        this.detailRefreshKey.update((tick: number): number => tick + 1);
+        this.wizardTarget.set({ personId: discoveryPersonId, entityId: entity.id, name: entity.title });
+        this.showWebSearchWizard.set(true);
+        return;
+      }
+
+      const task = this.activeNewPersonTask();
+      if (task !== null) {
+        this.activeNewPersonTask.set(null);
+        const personId = task.context['person_id'];
+        if (typeof personId === 'number') {
+          this.personService.linkEntity(personId, entity.id).subscribe(() => {
+            this.store.dispatch(knowledgeActions.resolveTask({ taskId: task.id }));
+          });
+        }
+        return;
+      }
+
+      // Übrig: Interview aus dem Detail-Modal — `interview-dialog.ts::onConfirm` hat die
+      // Entity bereits per `media_links.persons` mit der Person verknüpft, nur Personen/Detail
+      // neu laden, damit Chip-Prozentwert und Modal den frischen Stand zeigen.
+      this.store.dispatch(personsActions.loadPersons());
+      this.detailRefreshKey.update((tick: number): number => tick + 1);
     });
   }
 
@@ -217,6 +299,7 @@ export class Personen implements OnInit {
     this.store.dispatch(personsActions.loadPersons());
     this.store.dispatch(knowledgeActions.loadDomains());
     this.store.dispatch(knowledgeActions.loadTasks());
+    this.store.dispatch(knowledgeActions.loadAiAutonomy());
   }
 
   protected onCreateKnowledge(task: TaskDto): void {
@@ -236,10 +319,84 @@ export class Personen implements OnInit {
   protected onCloseKnowledgeWizard(): void {
     this.showKnowledgeWizard.set(false);
     this.activeNewPersonTask.set(null);
+    this.discoverySetupPersonId.set(null);
   }
 
   protected onSaveKnowledgeEntity(request: CreateEntityRequest): void {
     this.store.dispatch(knowledgeActions.createEntity({ request }));
+  }
+
+  // P38 Phase 8 — Chip/Nudge auf der Personen-Karte öffnen das Detail-Modal direkt hier.
+  protected openPersonDetail(personId: number): void {
+    this.detailPersonId.set(personId);
+  }
+
+  protected closeDetail(): void {
+    this.detailPersonId.set(null);
+  }
+
+  protected openInterviewForDetail(): void {
+    const personId = this.detailPersonId();
+    const person = personId !== null ? this.persons().find((candidate: PersonDto) => candidate.id === personId) ?? null : null;
+    this.wizardTarget.set({ personId, entityId: null, name: person?.name ?? null });
+    this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.resetInterview());
+    this.showInterview.set(true);
+  }
+
+  protected closeInterview(): void {
+    this.store.dispatch(knowledgeActions.resetInterview());
+    this.showInterview.set(false);
+  }
+
+  protected onRequestInterview(request: InterviewSynthesizeRequest): void {
+    this.store.dispatch(knowledgeActions.requestInterview({ request }));
+  }
+
+  protected openWebSearchForDetail(): void {
+    const personId = this.detailPersonId();
+    const person = personId !== null ? this.persons().find((candidate: PersonDto) => candidate.id === personId) ?? null : null;
+    this.wizardTarget.set({ personId, entityId: null, name: person?.name ?? null });
+    this.showWebSearchWizard.set(true);
+  }
+
+  protected closeWebSearchWizard(): void {
+    this.showWebSearchWizard.set(false);
+  }
+
+  protected onWebSearchApplied(): void {
+    this.store.dispatch(knowledgeActions.loadTasks());
+    this.store.dispatch(personsActions.loadPersons());
+    this.detailRefreshKey.update((tick: number): number => tick + 1);
+  }
+
+  // Leerer Detail-Zustand -> "Web-Recherche starten" (analog `wissen.ts`): legt eine Entity nur
+  // als Vehikel für Domäne/Typ an, der Effekt oben reicht danach in den Web-Suche-Wizard weiter.
+  protected openDiscoverySetupForDetail(): void {
+    const personId = this.detailPersonId();
+    if (personId === null) { return; }
+    this.store.dispatch(knowledgeActions.resetCreateEntityState());
+    this.store.dispatch(knowledgeActions.resetImportSuggestion());
+    this.activeNewPersonTask.set(null);
+    this.discoverySetupPersonId.set(personId);
+    this.showKnowledgeWizard.set(true);
+  }
+
+  protected onDetailLinkRequested(): void {
+    const personId = this.detailPersonId();
+    const person = personId !== null ? this.persons().find((candidate: PersonDto) => candidate.id === personId) ?? null : null;
+    if (person !== null) { this.linkEntityPerson.set(person); }
+  }
+
+  protected onDetailUnlinkRequested(entityId: string): void {
+    const personId = this.detailPersonId();
+    if (personId === null) { return; }
+    this.store.dispatch(personsActions.unlinkPersonEntity({ personId, entityId }));
+    this.detailRefreshKey.update((tick: number): number => tick + 1);
+  }
+
+  protected onOpenLightboxFromDetail(assetId: number): void {
+    this.store.dispatch(galleryActions.openAssetLightbox({ assetId }));
   }
 
   protected onRename(event: { id: number; name: string }): void {

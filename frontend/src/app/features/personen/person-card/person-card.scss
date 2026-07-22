@@ -211,34 +211,50 @@
   color: rgba(255, 255, 255, 0.65);
 }
 
-/* Verknüpfte Wissens-Entity (P24 Phase 3) — dezenter Chip, gleiche Frosted-Glass-Familie
-   wie .person-card__np-btn, damit kein neuer visueller Stil auf der Karte entsteht. */
-.person-card__entity-chip {
+/* Wissens-Chip/-Nudge (P38 Phase 8, Design `styles.css` .person-know-chip/-nudge) — löst
+   den alten reinen Verknüpfungs-Chip (P24 Phase 3) ab: zeigt jetzt den Vollständigkeits-
+   Prozentwert und öffnet das Detail-Modal statt wegzunavigieren. */
+.person-card__know-chip,
+.person-card__know-nudge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   align-self: flex-start;
-  margin-top: 2px;
-  padding: 3px 7px;
-  border-radius: var(--radius-s);
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 10px;
+  margin-top: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
   font-weight: 600;
-  transition: background 0.1s, color 0.1s;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.person-card__know-chip {
+  background: var(--accent-weak);
+  color: var(--accent);
+  border: 1px solid var(--accent-line);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.22);
-    color: #fff;
+    background: oklch(0.685 0.135 248 / .25);
   }
 }
 
-.person-card__entity-chip-text {
+.person-card__know-chip-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 140px;
+}
+
+.person-card__know-nudge {
+  background: transparent;
+  color: var(--text-3);
+  border: 1px dashed var(--line-2);
+
+  &:hover {
+    color: var(--text-2);
+    border-color: var(--line-2);
+  }
 }
 
 /* "🆕 Neue Person"-Affordance (P24 Phase 2) — dezente Zeile über dem Namen, kein Popup */

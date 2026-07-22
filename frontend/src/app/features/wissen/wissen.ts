@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import type {
   AiAutonomyMode,
@@ -45,6 +46,7 @@ export class Wissen {
   private readonly store = inject(Store);
   private readonly personService = inject(PersonService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   // Lightbox-Guard (wie Galerie/Favoriten/Alben): ohne dieses Signal rendert `<pf-lightbox />`
   // immer, auch ohne ausgewähltes Bild — die Lightbox hat keinen eigenen Leer-Zustand und
@@ -59,6 +61,7 @@ export class Wissen {
   protected readonly lastUpdatedEntity = this.store.selectSignal(knowledgeSelectors.selectLastUpdatedEntity);
 
   protected readonly entities = this.store.selectSignal(knowledgeSelectors.selectAllEntities);
+  protected readonly entitiesLoading = this.store.selectSignal(knowledgeSelectors.selectEntitiesLoading);
   private readonly entitiesById = this.store.selectSignal(knowledgeSelectors.selectEntityDictionary);
 
   protected readonly tasks = this.store.selectSignal(knowledgeSelectors.selectAllTasks);
@@ -233,6 +236,51 @@ export class Wissen {
         this.showToast(`„${created.title}" (${created.type}) angelegt.`);
       } else if (updated !== null) {
         this.showToast(`„${updated.title}" aktualisiert.`);
+      }
+    });
+
+    // P38 Phase 8 — Deep-Link von Personen-Karte/Lightbox: `?person=<id>` öffnet das
+    // Detail-Modal, `?entity=<id>` das für eine Notiz; `&open=interview`/`&open=discovery`
+    // öffnet stattdessen direkt den jeweiligen Wizard (Recherchieren/Interview starten aus dem
+    // Lore-Panel). Wartet auf den ersten Personen-/Entities-Ladevorgang, damit der
+    // Wizard-Titel/das Modal sofort einen Namen zeigt statt kurz leer aufzublitzen — feuert
+    // nur einmal pro Seitenaufruf (`deepLinkHandled`-Guard), sonst würde jeder Persons-/
+    // Entities-Reload danach den Deep-Link erneut auslösen.
+    const deepLinkHandled = signal(false);
+    effect(() => {
+      if (deepLinkHandled()) { return; }
+      const params = this.route.snapshot.queryParamMap;
+      const personParam = params.get('person');
+      const entityParam = params.get('entity');
+      if (personParam === null && entityParam === null) {
+        deepLinkHandled.set(true);
+        return;
+      }
+      if (personParam !== null && this.personsLoading()) { return; }
+      if (entityParam !== null && this.entitiesLoading()) { return; }
+      deepLinkHandled.set(true);
+
+      const openParam = params.get('open');
+      if (personParam !== null) {
+        const personId = Number(personParam);
+        if (openParam === 'interview') {
+          const person = this.knownPersons().find((candidate: PersonDto) => candidate.id === personId) ?? null;
+          this.wizardTarget.set({ personId, entityId: null, name: person?.name ?? null });
+          this.showInterview.set(true);
+        } else {
+          this.openPersonDetail(personId);
+        }
+        return;
+      }
+      if (entityParam !== null) {
+        if (openParam === 'discovery') {
+          const entity = this.entitiesById()[entityParam] ?? null;
+          this.wizardTarget.set({ personId: null, entityId: entityParam, name: entity?.title ?? null });
+          this.showWebSearchWizard.set(true);
+        } else {
+          this.detailEntityId.set(entityParam);
+          this.detailPersonId.set(null);
+        }
       }
     });
 

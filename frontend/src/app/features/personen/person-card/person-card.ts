@@ -11,8 +11,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import type { EntityRefDto, PersonDto, PersonFace, TaskDto } from '@photofant/models';
+import { RouterLink } from '@angular/router';
+import type { DomainDto, EntityRefDto, EntityType, PersonDto, PersonFace, TaskDto } from '@photofant/models';
 import { Icon } from '@photofant/ui';
 import { AssetService, PersonService } from '@photofant/services';
 import { groupColor } from '../group-color.util';
@@ -29,7 +29,6 @@ export type PersonViewMode = 'single' | 'grid4' | 'face';
 export class PersonCard {
   private readonly personService = inject(PersonService);
   private readonly assetService = inject(AssetService);
-  private readonly router = inject(Router);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -39,6 +38,8 @@ export class PersonCard {
   readonly viewMode = input<PersonViewMode>('face');
   // P24 Phase 2: offene "🆕 Neue Person"-Aufgabe für genau diese Person, falls vorhanden.
   readonly newPersonTask = input<TaskDto | null>(null);
+  // P38 Phase 8: nur für die Null-Prozent-Heuristik des Wissens-Chips (siehe `entityPercent`).
+  readonly domains = input<DomainDto[]>([]);
 
   readonly rename = output<{ id: number; name: string }>();
   readonly setGroup = output<{ id: number; groupName: string }>();
@@ -53,6 +54,9 @@ export class PersonCard {
   readonly createKnowledge = output<TaskDto>();
   readonly snoozeNewPersonTask = output<number>();
   readonly dismissNewPersonTask = output<number>();
+  // P38 Phase 8: Chip/Nudge öffnen das Wissens-Detail-Modal auf derselben Seite (kein
+  // Wegnavigieren mehr, siehe `onEntityChipClick`).
+  readonly openKnowledgeDetail = output<number>();
 
   protected readonly isEditing = signal(false);
   protected readonly editName = signal('');
@@ -254,15 +258,29 @@ export class PersonCard {
     this.dismissNewPersonTask.emit(task.id);
   }
 
-  // P24 Phase 3: verknüpfte Entity im Chip anklicken -> Wissens-Sicht. Chip liegt (wie
-  // Menü/Editoren) innerhalb des kartenweiten <a>. stopPropagation allein reicht hier NICHT —
-  // die native <a>-Navigation ist eine Default-Action des Klick-Events und wird nur durch
-  // preventDefault() verhindert, nicht durch gestoppte Propagation (die blockt nur Angulars
-  // eigenen RouterLink-Handler, der sonst seinerseits preventDefault() aufgerufen hätte).
-  protected onEntityChipClick(event: MouseEvent, entity: EntityRefDto): void {
+  // P38 Phase 8: Chip (verknüpft) und Nudge (unverknüpft) öffnen beide dasselbe
+  // Wissens-Detail-Modal auf der Personen-Seite selbst — kein Wegnavigieren mehr (P24-Verhalten
+  // abgelöst). Chip liegt (wie Menü/Editoren) innerhalb des kartenweiten <a>. stopPropagation
+  // allein reicht hier NICHT — die native <a>-Navigation ist eine Default-Action des
+  // Klick-Events und wird nur durch preventDefault() verhindert, nicht durch gestoppte
+  // Propagation (die blockt nur Angulars eigenen RouterLink-Handler, der sonst seinerseits
+  // preventDefault() aufgerufen hätte).
+  protected onKnowledgeClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.router.navigate(['/wissen'], { queryParams: { entity: entity.id } });
+    this.openKnowledgeDetail.emit(this.person().id);
+  }
+
+  // Null-Prozent wäre gelogen, wenn der Typ schlicht keine Merkmale kennt (Plan-Vorgabe
+  // Aufgabe 1) — statt "0 %" dann der Entity-Titel wie vor Phase 8. Sucht domänen-übergreifend
+  // nach dem ersten Typ mit diesem Namen, der mindestens ein Merkmal definiert: `EntityRefDto`
+  // trägt keine Domäne (FINDINGS Phase 5), ein Namenskollision-Risiko zwischen Domänen wird
+  // hier bewusst in Kauf genommen (gleiche Grenze wie andere `type`-basierte Lookups im Code).
+  protected entityPercent(entity: EntityRefDto): number | null {
+    const hasFields = this.domains().some((domain: DomainDto) =>
+      domain.entity_types.some((entityType: EntityType) => entityType.name === entity.type && entityType.fields.length > 0)
+    );
+    return hasFields ? Math.round(entity.completeness * 100) : null;
   }
 
   protected onImportClick(event: MouseEvent): void {
