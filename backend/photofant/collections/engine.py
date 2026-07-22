@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 
 from sqlalchemy import or_
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from photofant.db.models import (
@@ -109,6 +110,18 @@ def compute_smart_members(session: Session, collection: Collection) -> set[int]:
     return members
 
 
+def _insert_smart_member(session: Session, collection_id: int, asset_id: int) -> None:
+    """Idempotent insert — concurrent worker pools (tagging/captioning/reevaluate) can
+    race to add the same (collection_id, asset_id) row. `ON CONFLICT DO NOTHING` makes
+    the loser a no-op instead of an IntegrityError."""
+    stmt = (
+        sqlite_insert(CollectionItem)
+        .values(collection_id=collection_id, asset_id=asset_id, source="smart")
+        .on_conflict_do_nothing(index_elements=["collection_id", "asset_id"])
+    )
+    session.execute(stmt)
+
+
 def evaluate_collection(session: Session, collection_id: int) -> None:
     """Re-materialize the smart membership of one album (trigger change / manual re-eval)."""
     collection = session.get(Collection, collection_id)
@@ -121,7 +134,7 @@ def evaluate_collection(session: Session, collection_id: int) -> None:
 
     for asset_id in desired:
         if asset_id not in existing_asset_ids:
-            session.add(CollectionItem(collection_id=collection_id, asset_id=asset_id, source="smart"))
+            _insert_smart_member(session, collection_id, asset_id)
 
     for item in existing:
         if item.source == "smart" and item.asset_id not in desired:
@@ -142,7 +155,7 @@ def evaluate_asset(session: Session, asset_id: int) -> None:
             .first()
         )
         if matches and item is None:
-            session.add(CollectionItem(collection_id=collection.id, asset_id=asset_id, source="smart"))
+            _insert_smart_member(session, collection.id, asset_id)
         elif not matches and item is not None and item.source == "smart":
             session.delete(item)
 
