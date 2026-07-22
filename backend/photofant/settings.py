@@ -125,6 +125,11 @@ class AppSettings(TypedDict):
     face_auto_threshold: float
     face_review_threshold: float
     face_min_cluster_size: int
+    face_cleanup_min_faces: int
+    face_cleanup_min_crop_side: int
+    face_cleanup_low_score_threshold: float
+    face_cleanup_identity_weight: float
+    face_cleanup_quality_weight: float
     tagging_workers: int
     captioning_workers: int
     display: DisplaySettings
@@ -173,6 +178,15 @@ SETTINGS_DEFAULTS: AppSettings = {
     "face_auto_threshold": 0.6,
     "face_review_threshold": 0.45,
     "face_min_cluster_size": 3,
+    # Gesichts-Bereinigung (ADR-033) — Tuning-Konstanten ohne eigene Einstellungen-UI (bewusster
+    # Scope-Cut, siehe ADR). identity_weight + quality_weight sollten zu 1.0 summieren, damit
+    # cleanup_score in [0, 1] bleibt; keine Laufzeit-Validierung dafür (Vertrauensvorschuss wie
+    # bei recommendations.weights).
+    "face_cleanup_min_faces": 3,
+    "face_cleanup_min_crop_side": 100,
+    "face_cleanup_low_score_threshold": 0.65,
+    "face_cleanup_identity_weight": 0.6,
+    "face_cleanup_quality_weight": 0.4,
     "tagging_workers": 1,
     "captioning_workers": 1,
     "display": {
@@ -285,6 +299,11 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "face_auto_threshold": (float, int),
     "face_review_threshold": (float, int),
     "face_min_cluster_size": int,
+    "face_cleanup_min_faces": int,
+    "face_cleanup_min_crop_side": int,
+    "face_cleanup_low_score_threshold": (float, int),
+    "face_cleanup_identity_weight": (float, int),
+    "face_cleanup_quality_weight": (float, int),
     "tagging_workers": int,
     "captioning_workers": int,
     "display": dict,

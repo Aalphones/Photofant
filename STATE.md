@@ -1,9 +1,9 @@
 # STATE
 
-**Aktiver Plan:** (keiner) — Backlog unten, User wählt den nächsten.
-**Phase:** –
-**Nächster Schritt:** Nächsten Plan aus dem Backlog auswählen (`/implement` fragt danach) oder
-neuen Plan anlegen (`/plan`).
+**Aktiver Plan:** `docs/planning/2026-07-22_gesichter-bereinigung/`
+**Phase:** 1/4 — Backend-Scoring-Modul + Settings (complete)
+**Nächster Schritt:** `/clear`, dann Phase 2 (Backend-API: DTO-Erweiterung + Bulk-Delete),
+Modell `sonnet` reicht (Rating: standard).
 
 ## P38 „Wissen: Web-Recherche + neue Oberfläche" abgeschlossen (alle 8 Phasen)
 

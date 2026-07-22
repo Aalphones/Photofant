@@ -207,8 +207,12 @@ Hinweise für den Umsetzer:
 
 ## Checkliste
 
-- [ ] `backend/photofant/settings.py`: 5 Keys in `AppSettings`, `SETTINGS_DEFAULTS`, `_EXPECTED_TYPES`
-- [ ] `backend/photofant/clustering/cleanup.py` neu angelegt (Inhalt wie oben)
-- [ ] Kurzer manueller Check: Settings laden funktioniert, Modul importierbar
+- [x] `backend/photofant/settings.py`: 5 Keys in `AppSettings`, `SETTINGS_DEFAULTS`, `_EXPECTED_TYPES`
+- [x] `backend/photofant/clustering/cleanup.py` neu angelegt (Inhalt wie oben)
+- [x] Kurzer manueller Check: Settings laden funktioniert, Modul importierbar
 
 ## Report-Back
+
+- `load_settings()['face_cleanup_min_faces']` liefert `3` auf frischer Instanz — verifiziert.
+- `ruff check` + `mypy` auf beiden geänderten Dateien: sauber.
+- Plan 1:1 umgesetzt, keine Abweichungen, keine Findings für spätere Phasen.
