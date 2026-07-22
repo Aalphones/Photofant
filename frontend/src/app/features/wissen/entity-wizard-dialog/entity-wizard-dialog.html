@@ -47,6 +47,23 @@
         </div>
       </div>
 
+      @if (domains().length > 1) {
+        <div class="ew-field">
+          <label class="ew-label" for="ew-domain">Domäne</label>
+          <select
+            id="ew-domain"
+            class="ew-select"
+            [value]="selectedDomain()"
+            [disabled]="isEditMode()"
+            (change)="onDomainChange($any($event.target).value)"
+          >
+            @for (domain of domains(); track domain.name) {
+              <option [value]="domain.name">{{ domain.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
       @if (showSuggestionButton()) {
         <div class="ew-ai">
           <button
@@ -93,23 +110,6 @@
 
       @if (detailsOpen()) {
         <div class="ew-details">
-          @if (domains().length > 1) {
-            <div class="ew-field">
-              <label class="ew-label" for="ew-domain">Domäne</label>
-              <select
-                id="ew-domain"
-                class="ew-select"
-                [value]="selectedDomain()"
-                [disabled]="isEditMode()"
-                (change)="onDomainChange($any($event.target).value)"
-              >
-                @for (domain of domains(); track domain.name) {
-                  <option [value]="domain.name">{{ domain.name }}</option>
-                }
-              </select>
-            </div>
-          }
-
           <div class="ew-field">
             <label class="ew-label">
               Aliase
