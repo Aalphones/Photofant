@@ -1,11 +1,17 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-22_wissen-tiefe-und-design/`
-**Phase:** 3/8 — Merkmale speichern und im Wizard zeigen (standard — `sonnet` reicht)
-**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-3-merkmale-end-to-end.md`
-lesen und umsetzen; die zwei Phase-3-Einträge in `FINDINGS.md` mitnehmen. Phase 2 (Interview
-fragt Merkmale ab, ADR-034) ist committet, Backend-Volltest 460 grün / 13 rot (unveränderte
-Vorbelastung).
+**Phase:** 4/8 — Web-Recherche: bevorzugte Quellen + Einträge bestätigen (standard — `sonnet` reicht)
+**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-4-web-recherche.md`
+lesen und umsetzen. Konfidenz-Ausweis Punkt 2 der README beachten: zu Beginn eine
+Beispielanfrage gegen `search_web` fahren und prüfen, ob DuckDuckGo `site:`-Verknüpfungen mit
+`OR` zuverlässig annimmt — fällt das durch, je bevorzugter Quelle eine eigene Anfrage statt
+einer verknüpften. Phase 3 (Merkmale speichern + Interview-Zusammenfassung zeigt sie) ist
+committet.
+
+**🟡 Offen aus Phase 3 (kein Follow-up-Ticket, nur hier notiert):** Ein Interview über eine
+Person mit bereits bestehender Notiz schreibt die erkannten Merkmale noch nicht — nur beim
+Neuanlegen. Details/Grund: `phase-3-merkmale-end-to-end.md` → „Report-Back".
 
 ## „Gesichter-Bereinigung" abgeschlossen (alle 4 Phasen)
 

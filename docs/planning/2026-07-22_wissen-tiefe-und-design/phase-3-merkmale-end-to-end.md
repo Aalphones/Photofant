@@ -34,63 +34,89 @@ gleich aussieht. Kein eigener Entwurf.
 
 ## AK dieser Phase
 
-1. `POST /knowledge/entities` akzeptiert `attributes` und legt sie an; der Entity-Owner bleibt
+1. [x] `POST /knowledge/entities` akzeptiert `attributes` und legt sie an; der Entity-Owner bleibt
    `user`, jedes Merkmal behält den Owner aus dem Request (AK prüfbar: angelegte Entity hat
    `completeness > 0`, ein selbst eingetipptes Merkmal trägt Owner `user`, ein geschätztes
-   `inferred`).
-2. Die Interview-Zusammenfassung zeigt unter dem Profil-Text eine Sektion „Merkmale" mit je einer
-   Zeile Label / Wert / Owner-Pill — „Selbst angegeben" bzw. „KI-Schätzung".
-3. Liefert das Interview kein Merkmal, fehlt die Sektion komplett (keine leere Überschrift).
-4. Über der Sektion steht eine Zeile „N von M Merkmalen gefüllt".
-5. „Übernehmen" schreibt die Merkmale mit — nach dem Anlegen zeigt der Detail-Dialog dieselben
-   Werte.
-6. `uv run ruff check .`, `npm run lint`, `npm run build` grün.
+   `inferred`). Test: `test_create_entity_persists_attributes_with_own_owner`.
+2. [x] Die Interview-Zusammenfassung zeigt unter dem Profil-Text eine Sektion „Merkmale" mit je
+   einer Zeile Label / Wert / Owner-Pill — „Selbst angegeben" bzw. „KI-Schätzung".
+3. [x] Liefert das Interview kein Merkmal, fehlt die Sektion komplett (keine leere Überschrift) —
+   `@if (extractedAttributes().length > 0)`.
+4. [x] Über der Sektion steht eine Zeile „N von M Merkmalen gefüllt".
+5. [x] „Übernehmen" schreibt die Merkmale mit — nach dem Anlegen zeigt der Detail-Dialog dieselben
+   Werte (Backend-Pfad geprüft per Test; Detail-Dialog liest ohnehin live aus `EntityDto.attributes`).
+6. [x] `uv run ruff check .`, `npm run lint`, `npm run build` grün.
 
 ## Checkliste
 
 ### Backend
 
-- [ ] `AttributeDto` in `api/knowledge.py` bereitstellen (falls noch nicht vorhanden — sonst
+- [x] `AttributeDto` in `api/knowledge.py` bereitstellen (falls noch nicht vorhanden — sonst
       das bestehende wiederverwenden): `value: str`, `owner: str = "inferred"`,
-      `confidence: float = 1.0`.
-- [ ] `CreateEntityRequest.attributes: dict[str, AttributeDto] = {}` ergänzen.
-- [ ] `to_entity()`: die Merkmale in `Entity.attributes` übertragen (`Attribute`-Objekte mit
+      `confidence: float = 1.0`. War schon da (P38 Phase 2), nur die zwei Defaults ergänzt.
+- [x] `CreateEntityRequest.attributes: dict[str, AttributeDto] = {}` ergänzen.
+- [x] `to_entity()`: die Merkmale in `Entity.attributes` übertragen (`Attribute`-Objekte mit
       dem Owner aus dem DTO). Leere Werte überspringen.
-- [ ] Prüfen, dass `create_entity(entity, owner)` die Attribute mitspeichert (der Vault
-      serialisiert die ganze Entity) — falls nicht, dort ergänzen. **Nicht** den Entity-Owner
-      auf die Merkmale durchschlagen lassen.
-- [ ] Test: Create mit zwei Merkmalen → gespeicherte Entity hat beide, Owner `inferred`,
-      Entity-Owner `user`, `completeness > 0`.
+- [x] Geprüft: `create_entity(entity, owner)` speichert die Attribute bereits mit
+      (`Vault.save_entity` → `serialize_entity` → `attributes_to_mapping`, kam mit P38 Phase 2)
+      — keine Ergänzung nötig. Entity-Owner schlägt nicht durch (`to_entity()` übernimmt den
+      Owner pro Merkmal aus dem DTO, nicht den Request-`owner`).
+- [x] Test: Create mit zwei Merkmalen → gespeicherte Entity hat beide, ein Owner `user`, ein
+      `inferred`, Entity-Owner `user`, `completeness > 0`.
 
 ### Frontend — Model
 
-- [ ] `InterviewAttributeDto` ergänzen: `{ label: string; value: string; owner: Owner; confidence: number }`.
-- [ ] `KnowledgeInterviewSuggestion.attributes: Record<string, InterviewAttributeDto>`.
-- [ ] `CreateEntityRequest.attributes?: Record<string, { value: string; owner: Owner; confidence: number }>`.
+- [x] `InterviewAttributeDto` ergänzen: `{ label: string; value: string; owner: Owner; confidence: number }`.
+- [x] `KnowledgeInterviewSuggestion.attributes: Record<string, InterviewAttributeDto>`.
+- [x] `CreateEntityRequest.attributes?: Record<string, { value: string; owner: Owner; confidence: number }>`.
 
 ### Frontend — Interview-Dialog
 
-- [ ] In `interview-dialog.ts` ein `computed` `extractedAttributes(): InterviewAttributeRow[]`
+- [x] In `interview-dialog.ts` ein `computed` `extractedAttributes(): InterviewAttributeRow[]`
       (Typ mit `key`, `label`, `value`, `owner`) aus `result()?.suggestion?.attributes`,
       stabil sortiert nach Label.
-- [ ] `computed` `attributeSummary()` für „N von M Merkmalen erkannt" — M ist die Anzahl der
+- [x] `computed` `attributeSummary()` für „N von M Merkmalen gefüllt" — M ist die Anzahl der
       Merkmale des Ziel-Typs (`resolvedType()?.fields.length ?? 0`).
-- [ ] `interview-dialog.html`: unter `<p class="iv-summary__body">` die Sektion einhängen,
+- [x] `interview-dialog.html`: unter `<p class="iv-summary__body">` die Sektion einhängen,
       `@if (extractedAttributes().length > 0)`. Zeilenaufbau und Klassennamen analog
       `.kd-field-row` / `.kd-field-lbl` / `.kd-field-val` / `.kd-owner` aus dem Detail-Dialog,
       Präfix `iv-` statt `kd-`.
-- [ ] `interview-dialog.scss`: die entsprechenden Regeln aus `knowledge-detail-dialog.scss`
-      übernehmen (Owner-Pill-Farben inklusive).
-- [ ] `onConfirm()`: `attributes` aus der Suggestion in den `CreateEntityRequest` übernehmen
-      (Key → `{value, owner, confidence}`, ohne `label`).
-- [ ] Erklärungs-Affordance: an der Sektions-Überschrift ein `title`-Tooltip „‚Selbst angegeben'
+- [x] `interview-dialog.scss`: die entsprechenden Regeln aus `knowledge-detail-dialog.scss`
+      übernehmen (Owner-Pill-Farben inklusive) — nur zwei Owner-Fälle (`user`/`inferred`)
+      statt vier, eigene `ivOwnerLabel()`/`ivOwnerClass()` statt der Detail-Dialog-Variante
+      (dort heißt `user` „Manuell", hier bewusst „Selbst angegeben").
+- [x] `onConfirm()`: `attributes` aus der Suggestion in den `CreateEntityRequest` übernehmen
+      (Key → `{value, owner, confidence}`, ohne `label`) — nur im Anlege-Zweig (neue Entity).
+      Der Update-Zweig (Interview auf eine bereits verknüpfte Person mit bestehender Notiz)
+      patcht weiterhin nur `title`/`body` — siehe Report-Back.
+- [x] Erklärungs-Affordance: an der Sektions-Überschrift ein `title`-Tooltip „‚Selbst angegeben'
       hast du eingetippt, ‚KI-Schätzung' hat Gemma aus deinen Erzählungen abgeleitet. Beides
       kannst du später überschreiben."
 
 ### Docs
 
-- [ ] `docs/routes.md`: `POST /knowledge/entities` um das Feld `attributes` ergänzen.
-- [ ] `docs/models.md`: falls dort der Entity-Kontrakt beschrieben ist, `attributes` beim
-      Anlegen erwähnen.
+- [x] `docs/routes.md`: `POST /knowledge/entities` um das Feld `attributes` ergänzen.
+- [x] `docs/models.md`: Entity-Kontrakt ist schon schema-generisch beschrieben (Frontmatter-
+      Block, DB-Spalte) und endpoint-neutral — keine Änderung nötig, Duplikat vermieden.
 
 ## Report-Back
+
+**Backend:** `CreateEntityRequest.attributes` + `to_entity()`-Mapping in
+`backend/photofant/api/knowledge.py`; ein neuer API-Test. Serialisierung/Completeness-Rechnung
+gab es schon aus P38 Phase 2 — nichts davon musste angefasst werden.
+
+**Frontend:** `InterviewAttributeDto` + `attributes`-Feld auf `CreateEntityRequest`/
+`KnowledgeInterviewSuggestion` im Model; im Interview-Dialog eine neue Merkmale-Sektion in der
+Zusammenfassung (eigene Owner-Pills, zwei Fälle statt vier) plus die Übernahme in
+`onConfirm()`.
+
+**🟡 Bewusst nicht mitgefixt — dem User zur Entscheidung vorgelegt:** Läuft das Interview über
+eine Person, die schon eine Notiz hat (`target.entityId` gesetzt), geht die Bestätigung über
+den `UpdateEntityRequest`-Zweig, nicht `CreateEntityRequest`. Dieser Zweig schreibt bisher nur
+`title`/`body` — der Kontrakt dieser Phase (README Sektion 2) hat ausdrücklich nur das Anlegen
+erweitert, `PATCH .../entities/{id}` kennt `attributes` serverseitig noch gar nicht als
+patchbares Feld (`PATCHABLE_FIELDS` in `service.py`). Wer eine bereits verknüpfte Person erneut
+interviewt, bekommt die Merkmale also aktuell **nicht** gespeichert, nur bei neu angelegten
+Notizen. War nicht Teil des Kontrakts dieser Phase — bewusst ausgelassen, kein FINDINGS-Eintrag,
+weil keine der verbleibenden Phasen das Thema trägt. Falls gewünscht, ist es ein kleiner
+Folgeauftrag (attributes zu `PATCHABLE_FIELDS` + `set_attributes`-Aufruf statt Direkt-Patch).

@@ -57,6 +57,9 @@ export interface CreateEntityRequest {
   media_links?: MediaLinks;
   relationships?: Relationship[];
   sources?: string[];
+  // P39 Phase 3 — Merkmale beim Anlegen mitschreiben (Interview-Übernahme). Owner sitzt
+  // pro Merkmal, der Entity-Owner oben schlägt nicht auf sie durch (ADR-032).
+  attributes?: Record<string, { value: string; owner: Owner; confidence: number }>;
   body?: string;
 }
 
@@ -299,6 +302,15 @@ export interface KnowledgeInterviewExplainability {
   reason: string;
 }
 
+// P39 Phase 3 — ein aus dem Interview gewonnenes Merkmal. Das Label reist mit, damit die
+// Zusammenfassung keine eigene Domänen-Auflösung braucht (README-Kontrakt Sektion 1).
+export interface InterviewAttributeDto {
+  label: string;
+  value: string;
+  owner: Owner;
+  confidence: number;
+}
+
 // P27 Phase 4 — der aus den Antworten synthetisierte Vorschlag (nur bestätigungspflichtig,
 // wie der Import-Vorschlag). Aliase/Beziehungen bleiben leer — ein rohes Text-LM liefert
 // dafür nichts Verlässliches (FINDINGS Phase 2/3).
@@ -309,6 +321,9 @@ export interface KnowledgeInterviewSuggestion {
   aliases: string[];
   relationships: Relationship[];
   body: string;
+  // P39 Phase 3 — Keys ausschließlich aus den Feldern des Ziel-Typs; leer im Normalfall
+  // bei kargen Antworten.
+  attributes: Record<string, InterviewAttributeDto>;
 }
 
 // P27 Phase 4 — Ergebnis des InterviewJob, über den Job-Stream geliefert. `suggestion` ist

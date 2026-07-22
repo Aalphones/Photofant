@@ -23,7 +23,7 @@ from photofant.db.session import get_session
 from photofant.jobs.knowledge_patch_job import enqueue_knowledge_patch
 from photofant.knowledge.changelog import ChangelogService
 from photofant.knowledge.domains import Domain, DomainLoadError
-from photofant.knowledge.schema import Entity, MediaLinks, Owner, Relationship
+from photofant.knowledge.schema import Attribute, Entity, MediaLinks, Owner, Relationship
 from photofant.knowledge.service import (
     PATCHABLE_FIELDS,
     AmbiguousEntityError,
@@ -59,8 +59,8 @@ class AttributeDto(BaseModel):
     """Ein Merkmal mit eigenem Owner (P38 Phase 2)."""
 
     value: str
-    owner: str
-    confidence: float
+    owner: str = Owner.INFERRED.value
+    confidence: float = 1.0
 
 
 class EntityDto(BaseModel):
@@ -231,6 +231,7 @@ class CreateEntityRequest(BaseModel):
     media_links: MediaLinksDto = MediaLinksDto()
     relationships: list[RelationshipDto] = []
     sources: list[str] = []
+    attributes: dict[str, AttributeDto] = {}
     body: str = ""
 
     def to_entity(self) -> Entity:
@@ -248,6 +249,17 @@ class CreateEntityRequest(BaseModel):
                 for relationship in self.relationships
             ],
             sources=list(self.sources),
+            # Der Entity-Owner (oben, per Request-Feld ``owner``) schlägt hier nicht durch —
+            # jedes Merkmal behält seinen eigenen Owner aus dem DTO (ADR-032).
+            attributes={
+                key: Attribute(
+                    value=attribute.value,
+                    owner=_parse_owner(attribute.owner),
+                    confidence=attribute.confidence,
+                )
+                for key, attribute in self.attributes.items()
+                if attribute.value.strip()
+            },
             body=self.body,
         )
 

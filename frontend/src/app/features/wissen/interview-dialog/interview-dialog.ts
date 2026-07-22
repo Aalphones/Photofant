@@ -14,8 +14,10 @@ import type {
   EntityFieldDefDto,
   EntityType,
   InterviewAnswer,
+  InterviewAttributeDto,
   InterviewSynthesizeRequest,
   KnowledgeInterviewResult,
+  Owner,
   PersonDto,
   UpdateEntityRequest,
 } from '@photofant/models';
@@ -41,6 +43,14 @@ interface FieldQuestion {
   key: string;
   label: string;
   question: string;
+}
+
+// P39 Phase 3 — eine für die Zusammenfassung aufbereitete Merkmals-Zeile (Label/Wert/Owner).
+interface InterviewAttributeRow {
+  key: string;
+  label: string;
+  value: string;
+  owner: Owner;
 }
 
 // Preset, mit dem der Wizard aus einem Personen-Kontext (Karte, Detail, Aufgabe) geöffnet
@@ -144,6 +154,26 @@ export class InterviewDialog {
 
   protected readonly hasFieldStep = computed<boolean>(() => this.fieldQuestions().length > 0);
 
+  // P39 Phase 3 — die vom Backend synthetisierten Merkmale, aufbereitet für die
+  // Zusammenfassungs-Sektion. Stabil nach Label sortiert (keine Backend-Reihenfolge-Garantie).
+  protected readonly extractedAttributes = computed<InterviewAttributeRow[]>(() => {
+    const attributes = this.result()?.suggestion?.attributes ?? {};
+    return Object.entries(attributes)
+      .map(([key, attribute]: [string, InterviewAttributeDto]) => ({
+        key,
+        label: attribute.label,
+        value: attribute.value,
+        owner: attribute.owner,
+      }))
+      .sort((a: InterviewAttributeRow, b: InterviewAttributeRow) => a.label.localeCompare(b.label));
+  });
+
+  // AK 4 dieser Phase: „N von M Merkmalen gefüllt" — M ist die Anzahl der Merkmale des Typs.
+  protected readonly attributeSummary = computed<string>(() => {
+    const total = this.resolvedType()?.fields.length ?? 0;
+    return `${this.extractedAttributes().length} von ${total} Merkmalen gefüllt`;
+  });
+
   protected readonly totalSteps = computed<number>(() =>
     this.questions().length + (this.hasFieldStep() ? 1 : 0)
   );
@@ -197,6 +227,17 @@ export class InterviewDialog {
 
   protected confidencePercent(confidence: number): number {
     return Math.round(confidence * 100);
+  }
+
+  // Zwei Fälle nur (Kontrakt README Sektion 1: Interview liefert ausschließlich
+  // 'user'/'inferred') — bewusst eigene Labels statt der Detail-Dialog-Variante
+  // ("Manuell"), weil "Selbst angegeben" hier den Moment des Eintippens meint.
+  protected ivOwnerLabel(owner: Owner): string {
+    return owner === 'user' ? 'Selbst angegeben' : 'KI-Schätzung';
+  }
+
+  protected ivOwnerClass(owner: Owner): string {
+    return owner === 'user' ? 'iv-owner--user' : 'iv-owner--inferred';
   }
 
   protected answeredCount(): number {
@@ -313,6 +354,10 @@ export class InterviewDialog {
     }
 
     const personId = this.linkedPersonId();
+    const attributes: Record<string, { value: string; owner: Owner; confidence: number }> = {};
+    for (const [key, attribute] of Object.entries(suggestion.attributes)) {
+      attributes[key] = { value: attribute.value, owner: attribute.owner, confidence: attribute.confidence };
+    }
     const request: CreateEntityRequest = {
       id: `${type.folder}/${this.slugify(this.name())}`,
       type: type.name,
@@ -322,6 +367,7 @@ export class InterviewDialog {
       // Vorbelegte oder per Chip gewählte Person verknüpft die entstehende Notiz sofort
       // (Design-Vorgabe „automatische Verknüpfung") — ohne Person bleibt sie eigenständig.
       media_links: { persons: personId !== null ? [personId] : [], assets: [] },
+      attributes,
     };
     this.save.emit(request);
   }

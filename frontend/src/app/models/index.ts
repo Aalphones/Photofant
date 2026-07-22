@@ -170,6 +170,7 @@ export type {
   AcceptUpdateSuggestionRequest,
   AcceptUpdateSuggestionResponse,
   InterviewAnswer,
+  InterviewAttributeDto,
   InterviewSynthesizeRequest,
   InterviewSynthesizeResponse,
   KnowledgeInterviewExplainability,

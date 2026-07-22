@@ -1076,7 +1076,7 @@ comfyui.result_wait_timeout_seconds = 1800
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
 | `/wissen` | `GET` | `/api/knowledge/domains` | — | `DomainDto[] { name, entity_types: { name, folder, fields: { key, label }[] }[], relationship_types: string[], private }` — nicht im P22-Kontrakt, P23 Phase 2 ergänzt sie für den Wizard-Typ-Dropdown; `fields` (P38 Phase 2) sind die Merkmale des Typs |
-| `/wissen` | `POST` | `/api/knowledge/entities` | `CreateEntityRequest { id, type, title, domain, aliases?, status?, owner? ("user" default), confidence?, media_links?, relationships?, sources?, body? }` | `EntityDto` (201) — 409 bei bereits vergebener `id`, 422 bei unbekanntem Typ/Beziehungstyp/Owner |
+| `/wissen` | `POST` | `/api/knowledge/entities` | `CreateEntityRequest { id, type, title, domain, aliases?, status?, owner? ("user" default), confidence?, media_links?, relationships?, sources?, attributes? { [key]: { value, owner, confidence } } (P39 Phase 3 — Entity-Owner schlägt nicht auf sie durch), body? }` | `EntityDto` (201) — 409 bei bereits vergebener `id`, 422 bei unbekanntem Typ/Beziehungstyp/Owner |
 | *(ab P23, ungenutzt)* | `GET` | `/api/knowledge/entities` | `q?`, `type?`, `domain?` | `EntityDto[]` — Titel/Alias-Suche, leeres `q` = alle |
 | `/wissen` (Beziehungs-Autocomplete im Wizard) | `GET` | `/api/knowledge/entities/search` | `q` (Pflicht), `type?`, `domain?` | `EntityDto[]` — identische Logik wie oben, eigener Pfad laut Kontrakt |
 | *(ab P23, ungenutzt)* | `GET` | `/api/knowledge/entities/{id}` | `{id}` ist `id` **oder** Alias | `EntityDto` — 404 nicht gefunden, 409 bei mehrdeutigem Alias (mehrere Treffer, keine automatische Auflösung) |

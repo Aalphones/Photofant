@@ -144,6 +144,36 @@ async def test_create_entity_persists_body_as_markdown(app_with_deps: tuple[Any,
 
 
 @pytest.mark.asyncio
+async def test_create_entity_persists_attributes_with_own_owner(
+    app_with_deps: tuple[Any, Session, Vault]
+) -> None:
+    """AK 1 Phase 3: Entity-Owner bleibt ``user``, jedes Merkmal behält seinen eigenen Owner."""
+    app, _session, vault = app_with_deps
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/knowledge/entities",
+            json=_entity_payload(
+                attributes={
+                    "geburtstag": {"value": "4. April 1965", "owner": "user", "confidence": 1.0},
+                    "geburtsort": {"value": "New York City", "owner": "inferred", "confidence": 0.6},
+                }
+            ),
+        )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["owner"] == "user"
+    assert body["completeness"] > 0
+    assert body["attributes"]["geburtstag"] == {
+        "value": "4. April 1965", "owner": "user", "confidence": 1.0,
+    }
+    assert body["attributes"]["geburtsort"]["owner"] == "inferred"
+    markdown = (vault.root / "actors" / "robert-downey-jr.md").read_text(encoding="utf-8")
+    assert "geburtstag" in markdown
+
+
+@pytest.mark.asyncio
 async def test_list_domains_returns_seeded_domains(
     app_with_deps: tuple[Any, Session, Vault]
 ) -> None:

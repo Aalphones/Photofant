@@ -26,6 +26,25 @@
         <div class="iv-summary__label">Vorschlag für <strong>{{ name() }}</strong></div>
         <p class="iv-summary__body">{{ suggestion.body }}</p>
 
+        @if (extractedAttributes().length > 0) {
+          <div class="iv-section">
+            <div
+              class="iv-section__title"
+              title="'Selbst angegeben' hast du eingetippt, 'KI-Schätzung' hat Gemma aus deinen Erzählungen abgeleitet. Beides kannst du später überschreiben."
+            >Merkmale</div>
+            <div class="iv-fields-summary">{{ attributeSummary() }}</div>
+            <div class="iv-field-rows">
+              @for (row of extractedAttributes(); track row.key) {
+                <div class="iv-field-row">
+                  <span class="iv-field-lbl">{{ row.label }}</span>
+                  <span class="iv-field-val">{{ row.value }}</span>
+                  <span class="iv-owner" [class]="ivOwnerClass(row.owner)">{{ ivOwnerLabel(row.owner) }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
         @if (result()?.explainability; as explainability) {
           <div class="iv-meta">
             <pf-icon name="info" [size]="12" />
