@@ -37,25 +37,43 @@ Er braucht die geladene Domäne — die liegt an der Bau-Stelle des DTOs ohnehin
 
 ### Backend
 
-- [ ] `Vault.entity_path(entity, domain)` verwenden (siehe oben).
-- [ ] Funktion, die zu einer Entity die Datei-`mtime` als `datetime` liefert; `FileNotFoundError`
+- [x] `Vault.entity_path(entity, domain)` verwenden (siehe oben).
+- [x] Funktion, die zu einer Entity die Datei-`mtime` als `datetime` liefert; `FileNotFoundError`
       und `OSError` → `None` (AK 3).
-- [ ] `EntityDto.updated_at: datetime | None = None` ergänzen und an der Bau-Stelle befüllen.
-- [ ] Test: Entity anlegen → `updated_at` ist gesetzt und liegt nicht in der Zukunft.
-- [ ] Test: nicht auflösbarer Pfad → `None`, kein Fehler.
+- [x] `EntityDto.updated_at: datetime | None = None` ergänzen und an der Bau-Stelle befüllen.
+- [x] Test: Entity anlegen → `updated_at` ist gesetzt und liegt nicht in der Zukunft.
+- [x] Test: nicht auflösbarer Pfad → `None`, kein Fehler.
 
 ### Frontend
 
-- [ ] `EntityDto.updated_at: string | null` im Model ergänzen.
-- [ ] In `knowledge-detail-dialog.ts` ein `computed` `updatedLabel(): string | null` — formatiert
+- [x] `EntityDto.updated_at: string | null` im Model ergänzen.
+- [x] In `knowledge-detail-dialog.ts` ein `computed` `updatedLabel(): string | null` — formatiert
       mit `Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })`.
       Bei `null` oder unparsebarem Wert `null` zurückgeben. **Kein** hand-gebauter Monatsname.
-- [ ] `knowledge-detail-dialog.html` Zeile 66: die Sub-Zeile um `@if (updatedLabel(); as label)`
+- [x] `knowledge-detail-dialog.html` Zeile 66: die Sub-Zeile um `@if (updatedLabel(); as label)`
       erweitern — `· aktualisiert {{ label }}`.
 
 ### Docs
 
-- [ ] `docs/models.md`: `updated_at` beim Entity-Kontrakt ergänzen, mit dem Hinweis, dass er aus
+- [x] `docs/models.md`: `updated_at` beim Entity-Kontrakt ergänzen, mit dem Hinweis, dass er aus
       der Dateizeit stammt und nicht persistiert wird.
 
 ## Report-Back
+
+**Umsetzung wie geplant, keine Abweichungen.** `updated_at_for(entity, domain=None)` in
+`knowledge/service.py` folgt exakt dem Muster von `completeness_for` (gleiches Domänen-Memo,
+gleiche Signatur-Form) — `Vault.entity_path` + `path.stat().st_mtime`, `OSError` (deckt
+`FileNotFoundError` mit ab) → `None`. Alle 7 direkten `EntityDto.from_entity`-Aufrufstellen
+und beide `LoreDto.from_lore`-Aufrufstellen in `api/knowledge.py` bekamen den dritten Parameter
+— keine vergessen, per Grep vor Abschluss gegengeprüft.
+
+**Konfidenz:** hoch, keine wacklige Stelle. Backend-Tests (2 neu, `test_knowledge_service.py`)
+und die volle Suite (`test_knowledge_service.py` + `test_knowledge_api.py`, 59 grün) laufen
+durch, `ruff check` auf den geänderten Dateien sauber, `npm run lint`/`npm run build` grün
+(Bundle-Budget-Warnungen sind Vorbelastung, unverändert von dieser Phase).
+
+Dateien: `backend/photofant/api/knowledge.py`, `backend/photofant/knowledge/service.py`,
+`backend/tests/test_knowledge_service.py`, `frontend/src/app/models/knowledge.model.ts`,
+`frontend/src/app/features/wissen/knowledge-detail-dialog/knowledge-detail-dialog.ts`,
+`frontend/src/app/features/wissen/knowledge-detail-dialog/knowledge-detail-dialog.html`,
+`docs/models.md`.

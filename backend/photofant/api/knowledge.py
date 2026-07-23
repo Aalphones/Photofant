@@ -10,6 +10,7 @@ Request-Parameter statt serverseitig hart auf ``user`` fixiert zu sein.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -79,9 +80,14 @@ class EntityDto(BaseModel):
     # Anteil gefüllter Merkmale — immer berechnet, nie gespeichert (ADR-025/032).
     completeness: float = 0.0
     body: str
+    # Änderungszeit der Vault-Markdown-Datei — nie gespeichert, `None` wenn nicht
+    # auflösbar (P39 Phase 5).
+    updated_at: datetime | None = None
 
     @classmethod
-    def from_entity(cls, entity: Entity, completeness: float = 0.0) -> EntityDto:
+    def from_entity(
+        cls, entity: Entity, completeness: float = 0.0, updated_at: datetime | None = None
+    ) -> EntityDto:
         return cls(
             id=entity.id,
             type=entity.type,
@@ -109,6 +115,7 @@ class EntityDto(BaseModel):
             },
             completeness=completeness,
             body=entity.body,
+            updated_at=updated_at,
         )
 
 
@@ -198,11 +205,15 @@ class LoreDto(BaseModel):
 
     @classmethod
     def from_lore(
-        cls, lore: Lore, related_media: list[MediaRefDto], completeness: float = 0.0
+        cls,
+        lore: Lore,
+        related_media: list[MediaRefDto],
+        completeness: float = 0.0,
+        updated_at: datetime | None = None,
     ) -> LoreDto:
         return cls(
             entity=(
-                EntityDto.from_entity(lore.entity, completeness)
+                EntityDto.from_entity(lore.entity, completeness, updated_at)
                 if lore.entity is not None
                 else None
             ),
@@ -362,7 +373,7 @@ def _parse_owner(value: str) -> Owner:
 
 def _search(service: KnowledgeService, q: str, type: str | None, domain: str | None) -> list[EntityDto]:
     return [
-        EntityDto.from_entity(entity, service.completeness_for(entity))
+        EntityDto.from_entity(entity, service.completeness_for(entity), service.updated_at_for(entity))
         for entity in service.search_entities(q, type=type, domain=domain)
     ]
 
@@ -467,6 +478,7 @@ async def get_lore_for_media(
             lore,
             _resolve_media_refs(session, lore.related_media),
             service.completeness_for(lore.entity) if lore.entity is not None else 0.0,
+            service.updated_at_for(lore.entity) if lore.entity is not None else None,
         )
         for lore in lores
     ]
@@ -493,7 +505,7 @@ async def create_entity(body: CreateEntityRequest, session: DbSession, vault: Va
         raise HTTPException(status_code=409, detail=str(error)) from error
     except (ValidationError, DomainLoadError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return EntityDto.from_entity(entity, service.completeness_for(entity))
+    return EntityDto.from_entity(entity, service.completeness_for(entity), service.updated_at_for(entity))
 
 
 @router.get("/entities", response_model=list[EntityDto])
@@ -547,7 +559,7 @@ async def create_relationship(
     from photofant.recommendation.context import assets_for_entity
 
     invalidate_recommendations(session, assets_for_entity(session, entity_id))
-    return EntityDto.from_entity(entity, service.completeness_for(entity))
+    return EntityDto.from_entity(entity, service.completeness_for(entity), service.updated_at_for(entity))
 
 
 @router.delete("/entities/{entity_id:path}/relationships", response_model=EntityDto)
@@ -571,7 +583,7 @@ async def remove_relationship(
     from photofant.recommendation.context import assets_for_entity
 
     invalidate_recommendations(session, assets_for_entity(session, entity_id))
-    return EntityDto.from_entity(entity, service.completeness_for(entity))
+    return EntityDto.from_entity(entity, service.completeness_for(entity), service.updated_at_for(entity))
 
 
 @router.post("/entities/{entity_id:path}/patch", response_model=PatchJobResponse)
@@ -618,7 +630,7 @@ async def get_entity(entity_id: str, session: DbSession, vault: VaultDep) -> Ent
         raise HTTPException(status_code=409, detail=str(error)) from error
     if entity is None:
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' nicht gefunden")
-    return EntityDto.from_entity(entity, service.completeness_for(entity))
+    return EntityDto.from_entity(entity, service.completeness_for(entity), service.updated_at_for(entity))
 
 
 @router.patch("/entities/{entity_id:path}", response_model=EntityDto)
@@ -644,7 +656,7 @@ async def update_entity(
 
     if needs_invalidation:
         invalidate_recommendations(session, before_ids | assets_for_entity(session, entity_id))
-    return EntityDto.from_entity(entity, service.completeness_for(entity))
+    return EntityDto.from_entity(entity, service.completeness_for(entity), service.updated_at_for(entity))
 
 
 @router.delete("/entities/{entity_id:path}", status_code=204)

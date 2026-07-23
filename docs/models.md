@@ -512,6 +512,11 @@ aus `attributes` + den Felddefinitionen der Domäne berechnet (`knowledge/servic
 und **nie** gespeichert — ein persistierter Wert würde gegen die Markdown-Wahrheit driften
 (ADR-025/[032](decisions/032-merkmale-mit-eigenem-owner.md)).
 
+**`updated_at` ist ebenfalls keine Spalte** (P39 Phase 5). `EntityDto.updated_at` wird bei
+jedem Ausliefern aus der Änderungszeit (`mtime`) der Vault-Markdown-Datei gelesen
+(`knowledge/service.py::updated_at_for`, Pfad über `Vault.entity_path`) und nie gespeichert.
+Ist die Datei nicht auflösbar, ist der Wert `null` — kein Fehler.
+
 **Entity-Frontmatter, `attributes`-Block** (die Wahrheit, Markdown):
 
 ```yaml

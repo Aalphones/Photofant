@@ -43,6 +43,8 @@ export interface EntityDto {
   // Anteil gefüllter Merkmale (0..1) — vom Backend berechnet, nie gespeichert.
   completeness: number;
   body: string;
+  // P39 Phase 5 — Änderungszeit der Vault-Markdown-Datei; null, wenn nicht auflösbar.
+  updated_at: string | null;
 }
 
 export interface CreateEntityRequest {

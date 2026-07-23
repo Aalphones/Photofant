@@ -63,7 +63,12 @@
           </pf-completeness-ring>
           <div class="kd-head__info">
             <div class="kd-name">{{ displayName() }}</div>
-            <div class="kd-sub">{{ percent() }} % vollständig · {{ ent.domain }}</div>
+            <div class="kd-sub">
+              {{ percent() }} % vollständig · {{ ent.domain }}
+              @if (updatedLabel(); as label) {
+                · aktualisiert {{ label }}
+              }
+            </div>
           </div>
           <div class="kd-actions">
             <button class="kd-btn" type="button" (click)="openInterview.emit()">

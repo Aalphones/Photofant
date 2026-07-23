@@ -1,6 +1,7 @@
 """KnowledgeService — Ownership-Regel, Markdown-first-CRUD, Lore-Stub (P22 Phase 3)."""
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -61,6 +62,23 @@ def test_create_entity_writes_markdown_and_cache(service: KnowledgeService, vaul
     assert created.confidence == 1.0
     assert (vault.root / "actors" / "robert-downey-jr.md").exists()
     assert service.entities.get("actors/robert-downey-jr") is not None
+
+
+def test_updated_at_for_reflects_markdown_file_mtime(service: KnowledgeService) -> None:
+    created = service.create_entity(_actor(), Owner.USER)
+
+    updated_at = service.updated_at_for(created)
+
+    assert updated_at is not None
+    assert updated_at.tzinfo is not None
+    assert updated_at <= datetime.now(UTC)
+
+
+def test_updated_at_for_unresolvable_path_returns_none(service: KnowledgeService, vault: Vault) -> None:
+    created = service.create_entity(_actor(), Owner.USER)
+    (vault.root / "actors" / "robert-downey-jr.md").unlink()
+
+    assert service.updated_at_for(created) is None
 
 
 def test_create_entity_forces_confidence_1_for_user_owner(service: KnowledgeService) -> None:

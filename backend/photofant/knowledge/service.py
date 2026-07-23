@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -202,6 +203,19 @@ class KnowledgeService:
             key for key, attribute in entity.attributes.items() if attribute.value.strip()
         }
         return _completeness(filled_keys, resolved_domain.fields_for(entity.type))
+
+    def updated_at_for(self, entity: Entity, domain: Domain | None = None) -> datetime | None:
+        """Änderungszeit der Vault-Markdown-Datei — nie gespeichert (P39 Phase 5).
+
+        ``None``, wenn die Datei nicht auflösbar ist (z.B. zwischen Lesen und Anzeigen
+        gelöscht) — kein Fehler, das Frontend blendet die Angabe dann aus.
+        """
+        resolved_domain = domain if domain is not None else self._domain(entity.domain)
+        path = self.vault.entity_path(entity, resolved_domain)
+        try:
+            return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+        except OSError:
+            return None
 
     def set_attributes(
         self, entity_id: str, attributes: dict[str, Attribute], owner: Owner

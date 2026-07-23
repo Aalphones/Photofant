@@ -190,6 +190,16 @@ export class KnowledgeDetailDialog {
 
   protected readonly percent = computed((): number => Math.round((this.entity()?.completeness ?? 0) * 100));
 
+  // P39 Phase 5 — `null` sowohl bei fehlendem Zeitstempel (Datei nicht auflösbar) als auch
+  // bei unparsebarem Wert; die Kopfzeile blendet die Angabe dann komplett aus (AK 5).
+  protected readonly updatedLabel = computed((): string | null => {
+    const raw = this.entity()?.updated_at ?? null;
+    if (raw === null) { return null; }
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) { return null; }
+    return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed);
+  });
+
   private readonly domain = computed((): DomainDto | null =>
     this.domains().find((candidate: DomainDto) => candidate.name === this.entity()?.domain) ?? null
   );

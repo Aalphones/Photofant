@@ -1,11 +1,12 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-22_wissen-tiefe-und-design/`
-**Phase:** 5/8 — „aktualisiert am …" end-to-end (standard — `sonnet` reicht)
-**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-5-zeitstempel.md`
-lesen und umsetzen. Phase 4 (bevorzugte Quellen in der Web-Recherche + gefundene Verknüpfungen
-im Wizard abhakbar) ist committet — Konfidenz-Check bestätigt: DuckDuckGo (`ddgs`) nimmt
-`site:`-Verknüpfungen mit `OR` zuverlässig an.
+**Phase:** 6/8 — Detail-Dialog: Album-Button + KI-Banner (standard — `sonnet` reicht)
+**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-6-detail-dialog.md`
+lesen und umsetzen. Phase 5 („aktualisiert am …" end-to-end) ist committet — Kopfzeile im
+Detail-Dialog zeigt jetzt „N % vollständig · Domäne · aktualisiert TT. Mon JJJJ", `updated_at`
+kommt aus der Vault-Datei-Zeit, nie gespeichert. Phase 7 (Foto-Verknüpfung) ist unabhängig und
+könnte auch zuerst laufen.
 
 **🟡 Offen aus Phase 3 (kein Follow-up-Ticket, nur hier notiert):** Ein Interview über eine
 Person mit bereits bestehender Notiz schreibt die erkannten Merkmale noch nicht — nur beim
