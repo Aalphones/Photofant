@@ -21,6 +21,8 @@ const {
   selectSelectionMode,
   selectSelectedIds,
   selectAnchorId,
+  selectSelectedFaceIds,
+  selectFaceAnchorId,
   selectFaceItems,
   selectFaceTotal,
 } = galleryFeature;
@@ -162,6 +164,8 @@ export const gallerySelectors = {
   selectSelectionMode,
   selectSelectedIds,
   selectAnchorId,
+  selectSelectedFaceIds,
+  selectFaceAnchorId,
   selectFaceItems,
   selectFaceTotal,
   selectFaceHasMore,

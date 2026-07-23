@@ -18,7 +18,7 @@
 | 2 | Collections-API: Face-Items hinzufügen/entfernen/auflisten | standard | ✅ complete |
 | 3 | Trainingsset-Stats + Export mit Face-Items | standard | ✅ complete |
 | 4 | Face-Upscale: ComfyUI-Auto-Import auf Face-Ziele erweitern (ADR-036) | heikel | ✅ complete |
-| 5 | Face-Selection: eigener NgRx-State-Slice | standard | pending |
+| 5 | Face-Selection: eigener NgRx-State-Slice | standard | ✅ complete |
 | 6 | Face-Grid/-Cell: Checkbox-Overlay + Klick-Verdrahtung | standard | pending |
 | 7 | Face-Bulk-Bar: Löschen / Hochskalieren / Zu Trainingsset | standard | pending |
 | 8 | Doku (code-map, models, routes) | mechanisch | pending |

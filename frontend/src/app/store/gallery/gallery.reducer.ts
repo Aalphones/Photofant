@@ -22,6 +22,10 @@ export interface GalleryState extends EntityState<AssetDto> {
   selectionMode: boolean;
   selectedIds: number[];
   anchorId: number | null;
+  // Face-Selection — eigene ID-Liste (Face-IDs ≠ Asset-IDs), `selectionMode` bleibt der
+  // gemeinsame Schalter für beide Tabs (siehe Selection-Reducer unten)
+  selectedFaceIds: number[];
+  faceAnchorId: number | null;
   faceItems: FaceGalleryItemDto[];
   faceTotal: number;
 }
@@ -49,6 +53,8 @@ const initialState: GalleryState = adapter.getInitialState({
   selectionMode: false,
   selectedIds: [],
   anchorId: null,
+  selectedFaceIds: [],
+  faceAnchorId: null,
   faceItems: [],
   faceTotal: 0,
 });
@@ -135,10 +141,11 @@ export const galleryFeature = createFeature({
     }),
     // Selection
     on(galleryActions.enableSelectionMode, (state: GalleryState) => ({
-      ...state, selectionMode: true, anchorId: null,
+      ...state, selectionMode: true, anchorId: null, faceAnchorId: null,
     })),
     on(galleryActions.disableSelectionMode, (state: GalleryState) => ({
       ...state, selectionMode: false, selectedIds: [], anchorId: null,
+      selectedFaceIds: [], faceAnchorId: null,
     })),
     on(galleryActions.toggleSelected, (state: GalleryState, { id }) => {
       const isSelected = state.selectedIds.includes(id);
@@ -156,6 +163,21 @@ export const galleryFeature = createFeature({
     })),
     on(galleryActions.clearSelection, (state: GalleryState) => ({
       ...state, selectedIds: [], selectionMode: false, anchorId: null,
+      selectedFaceIds: [], faceAnchorId: null,
+    })),
+    on(galleryActions.toggleFaceSelected, (state: GalleryState, { id }) => {
+      const isSelected = state.selectedFaceIds.includes(id);
+      const selectedFaceIds = isSelected
+        ? state.selectedFaceIds.filter((existingId: number) => existingId !== id)
+        : [...state.selectedFaceIds, id];
+      return { ...state, selectedFaceIds, faceAnchorId: id };
+    }),
+    on(galleryActions.selectAllFaces, (state: GalleryState, { ids }) => {
+      const merged = Array.from(new Set([...state.selectedFaceIds, ...ids]));
+      return { ...state, selectedFaceIds: merged };
+    }),
+    on(galleryActions.selectFaceRange, (state: GalleryState, { ids }) => ({
+      ...state, selectedFaceIds: ids,
     })),
     on(galleryActions.removeFaceItem, (state: GalleryState, { id }) => ({
       ...state,

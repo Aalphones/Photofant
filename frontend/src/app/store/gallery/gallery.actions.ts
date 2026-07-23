@@ -40,5 +40,10 @@ export const galleryActions = createActionGroup({
     'Select Range':              props<{ ids: number[] }>(),
     'Clear Selection':           emptyProps(),
     'Remove Face Item':          props<{ id: number }>(),
+    // Face-Selection — eigene ID-Liste, teilt sich `selectionMode`/Enable/Disable/Clear mit den
+    // Asset-Aktionen oben (ein Schalter für beide Tabs, siehe GalleryState-Kommentar)
+    'Toggle Face Selected':      props<{ id: number }>(),
+    'Select All Faces':          props<{ ids: number[] }>(),
+    'Select Face Range':         props<{ ids: number[] }>(),
   },
 });

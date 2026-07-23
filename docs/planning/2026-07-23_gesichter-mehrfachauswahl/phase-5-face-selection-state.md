@@ -149,13 +149,13 @@ export const gallerySelectors = {
 
 ## AK dieser Phase
 
-- [ ] `gallerySelectors.selectSelectedFaceIds` und `selectFaceAnchorId` existieren und sind über
+- [x] `gallerySelectors.selectSelectedFaceIds` und `selectFaceAnchorId` existieren und sind über
       den Store abfragbar (kurzer Konsolen-Check reicht, keine UI in dieser Phase).
-- [ ] `galleryActions.toggleFaceSelected({id})` fügt/entfernt die ID in `selectedFaceIds`, ohne
+- [x] `galleryActions.toggleFaceSelected({id})` fügt/entfernt die ID in `selectedFaceIds`, ohne
       `selectedIds` (Asset-Liste) zu berühren.
-- [ ] `galleryActions.disableSelectionMode()` und `clearSelection()` leeren **beide** ID-Listen
+- [x] `galleryActions.disableSelectionMode()` und `clearSelection()` leeren **beide** ID-Listen
       (`selectedIds` und `selectedFaceIds`) plus beide Anker.
-- [ ] `tsc`/Build läuft fehlerfrei (neue Felder korrekt typisiert, keine bestehenden
+- [x] `tsc`/Build läuft fehlerfrei (neue Felder korrekt typisiert, keine bestehenden
       Selection-Aufrufer kaputt — `galerie.ts` nutzt `selectedIds`/`selectionMode` unverändert
       weiter für den Foto-Tab).
 
@@ -166,4 +166,5 @@ mit der UI-Anbindung relevant.
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: nichts Ungewöhnliches erwartet — bei Abweichung hier vermerken)_
+Plan 1:1 umgesetzt, keine Abweichung. Drei Dateien geändert (`gallery.actions.ts`,
+`gallery.reducer.ts`, `gallery.selectors.ts`), `npx tsc --noEmit -p tsconfig.app.json` grün.
