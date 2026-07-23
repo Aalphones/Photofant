@@ -1,9 +1,9 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-23_gesichter-mehrfachauswahl/`
-**Phase:** 4/8 — Face-Upscale: ComfyUI-Auto-Import auf Face-Ziele erweitern (ADR-036) (✅ complete)
-**Nächster Schritt:** Phase 5 — Face-Selection: eigener NgRx-State-Slice
-(`phase-5-face-selection-state.md`, Komplexität `standard` → `/model sonnet` reicht).
+**Phase:** 5/8 — Face-Selection: eigener NgRx-State-Slice (✅ complete)
+**Nächster Schritt:** Phase 6 — Face-Grid/-Cell: Checkbox-Overlay + Klick-Verdrahtung
+(`phase-6-face-grid-cell-ui.md`, Komplexität `standard` → `/model sonnet` reicht).
 
 ## P39 „Wissen: mehr Tiefe, Design nachgezogen" abgeschlossen (alle 8 Phasen)
 
