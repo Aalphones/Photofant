@@ -5,7 +5,6 @@ import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, cast
 
-import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import ColumnElement, delete, exists, func, select, update
@@ -14,7 +13,7 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from photofant.config import get_data_root
-from photofant.db import vector_index
+from photofant.db import embeddings, vector_index
 from photofant.db.models import Asset, AssetInstance, ReviewItem
 from photofant.db.session import get_session
 
@@ -270,8 +269,8 @@ async def get_similar_assets(asset_id: int, session: DbSession) -> list[SimilarA
 
     matches: dict[int, float] = {}
 
-    if clip_enabled and asset.clip_embedding is not None:
-        query_embedding = np.frombuffer(asset.clip_embedding, dtype=np.float32)
+    query_embedding = embeddings.get_semantic(session, asset_id) if clip_enabled else None
+    if query_embedding is not None:
         for similar_id, cosine_similarity in vector_index.search(session, query_embedding, limit=20):
             if similar_id == asset_id:
                 continue

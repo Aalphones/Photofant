@@ -17,10 +17,10 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import asc, desc, func, or_, select
 from sqlalchemy.orm import Query as OrmQuery
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from photofant.config import get_data_root
-from photofant.db import text_index, vector_index
+from photofant.db import embeddings, text_index, vector_index
 from photofant.db.cache import get_cache_db_path, get_thumbnail, init_cache_db, store_thumbnail
 from photofant.db.models import (
     Asset,
@@ -246,6 +246,19 @@ class PatchCaptionRequest(BaseModel):
     caption: str
 
 
+def _resolve_has_embedding(asset: Asset, has_embedding: bool | None) -> bool:
+    """The "has semantic embedding" flag for a DTO.
+
+    List callers pass a pre-batched value (`has_embedding`); single-asset callers
+    pass `None` and we resolve it via the embeddings access layer, using the asset's
+    own session (the embedding column is a deferred BLOB, so one cheap extra query).
+    """
+    if has_embedding is not None:
+        return has_embedding
+    session = object_session(asset)
+    return session is not None and embeddings.has_semantic(session, asset.id)
+
+
 def build_asset_dto(
     asset: Asset,
     instance: AssetInstance,
@@ -255,13 +268,7 @@ def build_asset_dto(
     stack_group_id: int | None = None,
     has_embedding: bool | None = None,
 ) -> AssetDto:
-    # `clip_embedding` is a deferred BLOB column (see db/models.py) — touching it per
-    # instance in a list loop would trigger one extra SELECT per row. Callers that build
-    # many DTOs at once (list_assets) pass a pre-batched value; single-asset call sites
-    # fall back to the ORM attribute (one cheap extra query).
-    resolved_has_embedding = (
-        has_embedding if has_embedding is not None else asset.clip_embedding is not None
-    )
+    resolved_has_embedding = _resolve_has_embedding(asset, has_embedding)
     return AssetDto(
         id=asset.id,
         content_hash=asset.content_hash,
@@ -299,9 +306,7 @@ def _build_version_pseudo_dto(
     params = version.params or {}
     width = params.get("width") or asset.width
     height = params.get("height") or asset.height
-    resolved_has_embedding = (
-        has_embedding if has_embedding is not None else asset.clip_embedding is not None
-    )
+    resolved_has_embedding = _resolve_has_embedding(asset, has_embedding)
     return AssetDto(
         id=asset.id,
         content_hash=asset.content_hash,
@@ -835,16 +840,9 @@ async def list_assets(
         session, [entry.instance.id for entry in page_entries if entry.kind == "asset"],
     )
 
-    # `clip_embedding` ist eine deferred BLOB-Spalte — ein Zugriff pro Zeile würde pro
-    # Galerie-Seite bis zu `page_size` Extra-SELECTs auslösen. Stattdessen einmalig als
-    # ID-Set laden.
-    embedding_ids: set[int] = set(
-        session.execute(
-            select(Asset.id).where(
-                Asset.id.in_(asset_ids_on_page), Asset.clip_embedding.is_not(None),
-            )
-        ).scalars()
-    )
+    # Ein deferred-BLOB-Zugriff pro Zeile würde pro Galerie-Seite bis zu `page_size`
+    # Extra-SELECTs auslösen. Stattdessen einmalig als ID-Set über die Zugriffsschicht.
+    embedding_ids: set[int] = embeddings.assets_with_semantic(session, list(asset_ids_on_page))
 
     items: list[AssetDto] = []
     for entry in page_entries:

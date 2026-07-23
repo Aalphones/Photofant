@@ -27,8 +27,8 @@ import numpy as np
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from photofant.db import vector_index
-from photofant.db.models import Asset, AssetInstance
+from photofant.db import embeddings, vector_index
+from photofant.db.models import AssetInstance
 from photofant.recommendation.context import (
     AssetGraphContext,
     build_context,
@@ -228,10 +228,7 @@ def _clip_candidates(
 
 
 def _load_embedding(session: Session, asset_id: int) -> np.ndarray | None:
-    asset = session.get(Asset, asset_id)
-    if asset is None or asset.clip_embedding is None:
-        return None
-    return np.frombuffer(asset.clip_embedding, dtype=np.float32)
+    return embeddings.get_semantic(session, asset_id)
 
 
 def _active_asset_ids(session: Session, asset_ids: list[int]) -> set[int]:

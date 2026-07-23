@@ -6,7 +6,8 @@ actually look alike — same composition, perspective, colour, style — rise to
 
 The heavy lifting is `_rank_by_cosine`, a pure function over already-loaded vectors
 (unit-tested without a DB). `rerank_by_appearance` is the thin public seam: it loads
-the candidates' DINOv2 vectors via the vector index and hands them to the ranker.
+the candidates' DINOv2 vectors via the embeddings access layer and hands them to the
+ranker.
 
 Degradation is the caller's job (api/search.py): re-ranking only ever fires when a
 query *image* exists and a DINOv2 vector is available. Given no candidate has a
@@ -19,7 +20,7 @@ from collections.abc import Sequence
 import numpy as np
 from sqlalchemy.orm import Session
 
-from photofant.db import vector_index
+from photofant.db import embeddings
 
 
 def _rank_by_cosine(
@@ -68,5 +69,5 @@ def rerank_by_appearance(
     vector are ranked; the rest are absent from the result (the caller appends
     them in their original SigLIP2 order). Returns at most *top_k* pairs.
     """
-    candidate_vectors = vector_index.load_dino_embeddings(session, candidate_asset_ids)
+    candidate_vectors = embeddings.load_visual(session, candidate_asset_ids)
     return _rank_by_cosine(query_dino_vec, candidate_vectors, top_k)

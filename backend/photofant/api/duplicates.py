@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from photofant.db import embeddings
 from photofant.db.models import Asset, AssetInstance, Person
 from photofant.db.session import get_session
 
@@ -65,7 +66,7 @@ async def search_person_duplicates(
     clip_threshold = max(_MIN_DINO_THRESHOLD, min(clip_threshold_input, _MAX_DINO_THRESHOLD))
 
     rows = session.execute(
-        select(AssetInstance.asset_id, Asset.content_hash, Asset.dino_embedding)
+        select(AssetInstance.asset_id, Asset.content_hash)
         .join(Asset, Asset.id == AssetInstance.asset_id)
         .where(
             AssetInstance.person_id == body.person_id,
@@ -78,12 +79,13 @@ async def search_person_duplicates(
 
     hash_by_id: dict[int, str] = {int(row[0]): str(row[1]) for row in rows}
 
-    dino_assets = [(int(row[0]), bytes(row[2])) for row in rows if row[2] is not None]
+    vectors_by_id = embeddings.load_visual(session, list(hash_by_id))
+    dino_assets = [(asset_id, vectors_by_id[asset_id]) for asset_id in hash_by_id if asset_id in vectors_by_id]
 
     pairs: list[DupePairDto] = []
     if len(dino_assets) >= 2:
         asset_ids = [asset_id for asset_id, _ in dino_assets]
-        vectors = np.stack([np.frombuffer(blob, dtype=np.float32) for _, blob in dino_assets])
+        vectors = np.stack([vector for _, vector in dino_assets])
         similarities = vectors @ vectors.T
         for i in range(len(asset_ids)):
             for j in range(i + 1, len(asset_ids)):

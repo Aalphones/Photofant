@@ -20,7 +20,7 @@ from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from photofant.db import vector_index
+from photofant.db import embeddings, vector_index
 from photofant.db.models import Asset, AssetInstance
 from photofant.db.session import get_session
 from photofant.inference.interfaces import Embedder, TextEmbedder
@@ -93,10 +93,10 @@ def _decode_upload(content: bytes) -> np.ndarray:
 
 
 def _embedding_for_asset(session: Session, asset_id: int) -> np.ndarray:
-    asset = session.get(Asset, asset_id)
-    if asset is None:
+    if session.get(Asset, asset_id) is None:
         raise HTTPException(status_code=404, detail="Asset not found")
-    if asset.clip_embedding is None:
+    embedding = embeddings.get_semantic(session, asset_id)
+    if embedding is None:
         raise HTTPException(
             status_code=409,
             detail={
@@ -104,7 +104,7 @@ def _embedding_for_asset(session: Session, asset_id: int) -> np.ndarray:
                 "message": "Für dieses Bild liegt noch kein Embedding vor.",
             },
         )
-    return np.frombuffer(asset.clip_embedding, dtype=np.float32)
+    return embedding
 
 
 def _dino_embedding_for_asset(session: Session, asset_id: int) -> np.ndarray | None:
@@ -113,10 +113,7 @@ def _dino_embedding_for_asset(session: Session, asset_id: int) -> np.ndarray | N
     A missing DINOv2 embedding is a valid state (ADR-024) — the caller then skips
     re-ranking and keeps the plain SigLIP2 order. Never raises for the missing case.
     """
-    asset = session.get(Asset, asset_id)
-    if asset is None or asset.dino_embedding is None:
-        return None
-    return np.frombuffer(asset.dino_embedding, dtype=np.float32)
+    return embeddings.get_visual(session, asset_id)
 
 
 def _embed_upload_dino(image: np.ndarray) -> np.ndarray | None:

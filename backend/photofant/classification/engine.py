@@ -2,7 +2,7 @@
 
 Contract: docs/planning/2026-06-30_p18-bildklassifizierung/README.md.
 
-Reads already-computed signals (`asset.clip_embedding`, `asset_tag.score`) —
+Reads already-computed signals (the stored semantic embedding, `asset_tag.score`) —
 never loads the image and never runs a vision model. The retro-run over an
 existing library is therefore cheap: no model inference, just DB reads +
 fusion math.
@@ -23,6 +23,7 @@ import numpy as np
 from sqlalchemy.orm import Session
 
 from photofant.classification.scoring import score_label_wd14, score_labels_clip
+from photofant.db import embeddings
 from photofant.db.models import Asset, AssetTag, ClassificationCategory, ClassificationLabel, Tag
 from photofant.inference.image_embedder import resolve_image_embedder
 from photofant.settings import load_settings
@@ -93,8 +94,8 @@ def classify_asset(session: Session, asset_id: int) -> list[ClassificationResult
     prompt_template = settings["clip_prompt_template"]
 
     image_embedding: np.ndarray | None = None
-    if asset.clip_embedding is not None and resolve_image_embedder() is not None:
-        image_embedding = np.frombuffer(asset.clip_embedding, dtype=np.float32)
+    if resolve_image_embedder() is not None:
+        image_embedding = embeddings.get_semantic(session, asset_id)
 
     tag_scores = _stored_tag_scores(session, asset_id)
 

@@ -2,8 +2,8 @@
 
 One job per asset; controlled by ProcessingLedger.embedding_done (run exactly once).
 The embedder is resolved by capability (ADR-022), so this job names no model. The
-canonical embedding lives on `asset.clip_embedding` (float32 BLOB — the column name
-stays for continuity); the searchable copy goes into the sqlite-vec index (ADR-001).
+canonical embedding is persisted through the embeddings access layer (`db/embeddings.py`);
+the searchable copy goes into the sqlite-vec index (ADR-001).
 """
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ import numpy as np
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
+from photofant.db import embeddings
 from photofant.db.models import Asset, ProcessingLedger, ReviewItem
 from photofant.db.session import SessionLocal
 from photofant.db.vector_index import search_dino, upsert_dino_embedding, upsert_embedding
@@ -129,14 +130,14 @@ def _embed_asset_inner(asset_id: int, *, semantic: bool, dino: bool) -> None:
 
         if semantic_embedder is not None:
             semantic_embedding = semantic_embedder.embed(image)
-            asset.clip_embedding = np.ascontiguousarray(semantic_embedding, dtype=np.float32).tobytes()
+            embeddings.set_semantic(session, asset_id, semantic_embedding)
             upsert_embedding(session, asset_id, semantic_embedding)
             if ledger is not None:
                 ledger.embedding_done = True
 
         if dino_embedder is not None:
             dino_embedding = dino_embedder.embed(image)
-            asset.dino_embedding = np.ascontiguousarray(dino_embedding, dtype=np.float32).tobytes()
+            embeddings.set_visual(session, asset_id, dino_embedding)
             upsert_dino_embedding(session, asset_id, dino_embedding)
             if ledger is not None:
                 ledger.dino_embedding_done = True

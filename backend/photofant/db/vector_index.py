@@ -26,11 +26,12 @@ from __future__ import annotations
 import contextlib
 import logging
 import sqlite3
-from collections.abc import Sequence
 
 import numpy as np
-from sqlalchemy import bindparam, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+from photofant.db import embeddings
 
 log = logging.getLogger(__name__)
 
@@ -142,28 +143,24 @@ def _search(
     return [(int(asset_id), 1.0 - float(distance)) for asset_id, distance in rows]
 
 
-def _rebuild(session: Session, table: str, source_column: str) -> int:
-    """Rebuild *table* from the `asset.<source_column>` BLOBs. Returns row count.
+def _rebuild(session: Session, table: str, dim: int, vectors: dict[int, np.ndarray]) -> int:
+    """Rebuild *table* from the canonical *vectors* (asset_id -> vector). Returns row count.
 
     Used to heal index/BLOB drift or to populate the index for an existing
-    library. Commits its own transaction.
+    library. Commits its own transaction. The canonical vectors come from the
+    ``embeddings`` access layer — this function only owns the ``vec0`` index.
     """
     if not _index_available(session, table):
         log.warning("Vector index %s missing — cannot rebuild", table)
         return 0
 
     session.execute(text(f"DELETE FROM {table}"))
-    rows = session.execute(
-        text(f"SELECT id, {source_column} FROM asset WHERE {source_column} IS NOT NULL")
-    ).fetchall()
 
     inserted = 0
-    for asset_id, blob in rows:
-        if blob is None:
-            continue
+    for asset_id, vector in vectors.items():
         session.execute(
             text(f"INSERT INTO {table}(rowid, embedding) VALUES (:rowid, :embedding)"),
-            {"rowid": int(asset_id), "embedding": bytes(blob)},
+            {"rowid": int(asset_id), "embedding": _serialize(vector, dim)},
         )
         inserted += 1
 
@@ -193,8 +190,8 @@ def search(session: Session, query_embedding: np.ndarray, limit: int) -> list[tu
 
 
 def rebuild_index(session: Session) -> int:
-    """Rebuild the SigLIP2 index from `asset.clip_embedding` BLOBs. Returns row count."""
-    return _rebuild(session, _TABLE, "clip_embedding")
+    """Rebuild the SigLIP2 index from the canonical semantic vectors. Returns row count."""
+    return _rebuild(session, _TABLE, EMBEDDING_DIM, embeddings.load_all_semantic(session))
 
 
 # ----------------------------------------------------------------------------
@@ -219,27 +216,3 @@ def search_dino(session: Session, query_embedding: np.ndarray, limit: int) -> li
     SigLIP2 `search`, pinned to `vec_asset_dino`/`DINO_EMBEDDING_DIM`.
     """
     return _search(session, _DINO_TABLE, DINO_EMBEDDING_DIM, query_embedding, limit)
-
-
-def load_dino_embeddings(
-    session: Session, asset_ids: Sequence[int]
-) -> dict[int, np.ndarray]:
-    """Load the DINOv2 embedding vectors for *asset_ids* from `asset.dino_embedding`.
-
-    Returns a mapping asset_id -> 1-D float32 vector for the subset that actually
-    has a DINOv2 embedding — assets without one (a valid state, ADR-024) are simply
-    absent from the result. Reads the canonical BLOB column directly (not the vec0
-    index), because the rerank fetches vectors *by id*, not by nearest-neighbour.
-    """
-    if not asset_ids:
-        return {}
-    statement = text(
-        "SELECT id, dino_embedding FROM asset "
-        "WHERE id IN :ids AND dino_embedding IS NOT NULL"
-    ).bindparams(bindparam("ids", expanding=True))
-    rows = session.execute(statement, {"ids": list(asset_ids)}).fetchall()
-    return {
-        int(asset_id): np.frombuffer(blob, dtype=np.float32)
-        for asset_id, blob in rows
-        if blob is not None
-    }

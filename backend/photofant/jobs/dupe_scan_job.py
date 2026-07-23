@@ -11,10 +11,11 @@ import logging
 from datetime import UTC, datetime
 
 import numpy as np
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-from photofant.db.models import Asset, ReviewItem
+from photofant.db import embeddings
+from photofant.db.models import ReviewItem
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
@@ -28,7 +29,7 @@ def _now_utc() -> datetime:
 
 
 def _compare_chunk_dino(
-    asset_embeddings: list[tuple[int, bytes]],
+    asset_embeddings: list[tuple[int, np.ndarray]],
     start: int,
     end: int,
     threshold: float,
@@ -40,9 +41,7 @@ def _compare_chunk_dino(
     a_id < b_id and distance <= threshold.
     """
     asset_ids = [asset_id for asset_id, _ in asset_embeddings]
-    vectors = np.stack([
-        np.frombuffer(blob, dtype=np.float32) for _, blob in asset_embeddings
-    ])
+    vectors = np.stack([vector for _, vector in asset_embeddings])
 
     chunk = vectors[start:end]
     similarities = chunk @ vectors.T
@@ -110,17 +109,14 @@ async def run_dupe_scan_job(
         await asyncio.to_thread(_purge_unresolved_dupe_candidates)
         log.info("dupe_scan: purged unresolved dupe-candidate items before full scan")
 
-    dino_assets: list[tuple[int, bytes]] = []
+    dino_assets: list[tuple[int, np.ndarray]] = []
     if dino_enabled:
         with SessionLocal() as session:
-            dino_query = select(Asset.id, Asset.dino_embedding).where(
-                Asset.dino_embedding.is_not(None)
-            )
             if scope == "selection" and asset_ids:
-                dino_query = dino_query.where(Asset.id.in_(asset_ids))
-            dino_assets = [
-                (asset_id, bytes(blob)) for asset_id, blob in session.execute(dino_query).all()
-            ]
+                vectors_by_id = embeddings.load_visual(session, asset_ids)
+            else:
+                vectors_by_id = embeddings.load_all_visual(session)
+            dino_assets = list(vectors_by_id.items())
 
     if not dino_assets:
         log.info(

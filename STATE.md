@@ -1,9 +1,11 @@
 # STATE
 
-**Aktiver Plan:** (keiner — Backlog offen, siehe unten)
-**Nächster Schritt:** einen Backlog-Plan wählen (`docs/planning/2026-07-21_asset-embeddings-auslagern.md`
-oder `docs/planning/2026-07-22_ml-jobs-worker-prozess/`, beide bereit zum Start) oder
-`/session-review`.
+**Aktiver Plan:** `docs/planning/2026-07-21_asset-embeddings-auslagern.md`
+**Phase:** 1/3 — Zugriffsschicht einziehen (in Arbeit)
+**Nächster Schritt:** `db/embeddings.py` fertig verdrahten, ruff/mypy/Tests grün, committen.
+
+Danach Phase 2 (Nebentabelle) + Phase 3 (Spalten droppen) — je eine Session, Pflicht-Clear
+an der Grenze. Weiterer Backlog: `docs/planning/2026-07-22_ml-jobs-worker-prozess/`.
 
 ## „Gesichter-Mehrfachauswahl" abgeschlossen (alle 8 Phasen)
 

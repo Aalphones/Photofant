@@ -20,6 +20,7 @@ from photofant.api.assets import TagDto
 from photofant.collections.captions import CaptionAction
 from photofant.collections.stats import compute_training_set_stats
 from photofant.config import get_data_root
+from photofant.db import embeddings
 from photofant.db.models import (
     Asset,
     AssetInstance,
@@ -728,24 +729,24 @@ async def list_collection_duplicates(
     effective_threshold = max(0.0, min(effective_threshold, _DUPE_MAX_THRESHOLD))
 
     rows = (
-        session.query(Asset.id, Asset.dino_embedding, Asset.content_hash)
+        session.query(Asset.id, Asset.content_hash)
         .join(CollectionItem, CollectionItem.asset_id == Asset.id)
         .join(AssetInstance, AssetInstance.asset_id == Asset.id)
         .filter(
             CollectionItem.collection_id == collection_id,
             AssetInstance.deleted_at.is_(None),
-            Asset.dino_embedding.is_not(None),
         )
         .distinct()
         .all()
     )
-    assets = [(row[0], bytes(row[1]), row[2]) for row in rows]
+    vectors_by_id = embeddings.load_visual(session, [row[0] for row in rows])
+    assets = [(row[0], vectors_by_id[row[0]], row[1]) for row in rows if row[0] in vectors_by_id]
 
     pairs: list[CollectionDupePairDto] = []
     if len(assets) >= 2:
         asset_ids = [asset_id for asset_id, _, _ in assets]
         content_hashes = [content_hash for _, _, content_hash in assets]
-        vectors = np.stack([np.frombuffer(blob, dtype=np.float32) for _, blob, _ in assets])
+        vectors = np.stack([vector for _, vector, _ in assets])
         similarities = vectors @ vectors.T
         distances = 1.0 - similarities
 

@@ -72,6 +72,28 @@ Umzustellende Stellen (Stand 2026-07-21, elf Zugriffe in zehn Dateien):
 **Fertig, wenn:** Kein Modul außer `db/embeddings.py` nennt die Spalten noch beim Namen.
 Alle Tests grün, keine neuen Meldungen von ruff/mypy.
 
+**✅ Erledigt (2026-07-23).** Naht steht: `db/embeddings.py` gibt Vektoren (`np.ndarray` /
+`dict[id→ndarray]`) statt Spalten/BLOBs raus — versteckt damit Spalte **und** Byte-Layout,
+sodass Phase 2 wirklich nur diese eine Datei anfasst. Gates: ruff/mypy ohne neue Meldungen,
+481 Tests grün (13 rot = unveränderte comfyui/caption-Vorbelastung).
+
+**Abweichungen von der Tabelle oben (Plan war 2 Tage alt, Wahrheit per Grep geholt):**
+- **Fehlten:** `jobs/embedding_job.py` (der **Schreibpfad** — muss zwingend durch die Naht,
+  sonst schreibt Phase 2 an zwei Orten) und `jobs/dupe_scan_job.py` (liest alle DINOv2-Vektoren
+  für den Voll-Scan). Beide mit umgestellt.
+- **Falsch etikettiert:** `media/moves.py` nennt die Spalten gar nicht — es löscht nur die
+  *Index*-Zeilen (`delete_embedding`/`delete_dino_embedding`); die Spalte stirbt mit der
+  Asset-Zeile. Nichts zu tun.
+- **Neu durch die Naht gezogen:** `db/vector_index.py` liest die Spalte nicht mehr per rohem
+  SQL (Rebuild + das umgezogene `load_dino_embeddings` → jetzt `embeddings.load_visual`).
+
+**Offen für Phase 2 (Prosa, bricht nichts in Phase 1):** Docstrings, die die Spalte noch als
+kanonischen Speicherort benennen, werden erst falsch, wenn Phase 2 den Ort verschiebt — dann
+nachziehen: `db/vector_index.py` (Kopf-Docstring), `jobs/embedding_job.py`, `jobs/rebuild_job.py`,
+sowie `docs/models.md` (asset-Zeilen `clip_embedding`/`dino_embedding` = „Source of truth").
+Ebenso seeden die Tests (`test_search_rerank`, `test_dupe_scan_dino`, `test_classification_engine`)
+die Spalten noch direkt per ORM-kwarg — in Phase 2 auf die Nebentabelle umstellen.
+
 ### Phase 2 — Nebentabelle anlegen und befüllen
 
 Migration: neue Tabelle mit einer Zeile je Bild, die beide Vektoren aufnimmt; vorhandene

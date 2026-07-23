@@ -18,6 +18,7 @@ import numpy as np
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from photofant.db import embeddings
 from photofant.db.models import Asset, AssetTag, CollectionItem, Face, Tag
 
 _BUCKET_BASES = (512, 768, 1024)
@@ -85,18 +86,18 @@ def _quality_bucket_label(index: int) -> str:
     return f"{low}-{high}%"
 
 
-def _near_dupe_rate(embeddings: list[bytes], threshold: float) -> float:
+def _near_dupe_rate(vecs: list[np.ndarray], threshold: float) -> float:
     """Fraction of images that have at least one near-dupe partner in the set.
 
-    Embeddings are already L2-normalized (ADR-001), so cosine similarity is a
+    Vectors are already L2-normalized (ADR-001), so cosine similarity is a
     plain dot product; distance = 1 - similarity. DINOv2-sourced since P37
     Phase 4 (ADR-024) — visual appearance, not semantic content, defines a
     near-dupe in a training set.
     """
-    total = len(embeddings)
+    total = len(vecs)
     if total < 2:
         return 0.0
-    vectors = np.stack([np.frombuffer(blob, dtype=np.float32) for blob in embeddings])
+    vectors = np.stack(vecs)
     distances = 1.0 - (vectors @ vectors.T)
     has_partner = [False] * total
     for i in range(total):
@@ -120,7 +121,7 @@ def compute_training_set_stats(session: Session, collection_id: int) -> Training
 
     asset_rows = (
         session.query(
-            Asset.id, Asset.framing, Asset.quality_score, Asset.width, Asset.height, Asset.dino_embedding
+            Asset.id, Asset.framing, Asset.quality_score, Asset.width, Asset.height
         )
         .join(CollectionItem, CollectionItem.asset_id == Asset.id)
         .filter(CollectionItem.collection_id == collection_id)
@@ -169,9 +170,9 @@ def compute_training_set_stats(session: Session, collection_id: int) -> Training
     ) if asset_ids else []
     tag_frequencies = [TagFrequency(name=row.name, count=row.cnt) for row in tag_rows]
 
-    embeddings = [bytes(row.dino_embedding) for row in asset_rows if row.dino_embedding is not None]
+    dino_vectors = list(embeddings.load_visual(session, asset_ids).values())
     near_dupe_threshold = load_settings()["training_near_dupe_dino_threshold"]
-    near_dupe_rate = _near_dupe_rate(embeddings, near_dupe_threshold)
+    near_dupe_rate = _near_dupe_rate(dino_vectors, near_dupe_threshold)
 
     return TrainingSetStats(
         total=total,
