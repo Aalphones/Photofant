@@ -17,21 +17,39 @@ entity_types:
   - name: Person
     folder: people
     fields:
+      - key: spitzname
+        label: Spitzname
+        question: Wie nennst du {name} normalerweise?
       - key: geburtstag
         label: Geburtstag
         question: Wann hat {name} Geburtstag?
+      - key: geburtsort
+        label: Geburtsort
+        question: Wo ist {name} geboren?
+      - key: nationalitaet
+        label: Nationalität
+        question: Welche Nationalität hat {name}?
       - key: beruf
         label: Beruf
         question: Was macht {name} beruflich?
       - key: wohnort
         label: Wohnort
         question: Wo wohnt {name}?
+      - key: telefon
+        label: Telefonnummer
+        question: Wie erreichst du {name} am schnellsten (Telefonnummer)?
       - key: vorlieben
         label: Vorlieben
         question: Was mag {name} besonders — Hobbys, Vorlieben, Eigenheiten?
       - key: beziehung
         label: Beziehungsstatus
         question: In welcher Beziehung steht {name} — Partnerschaft, Familie?
+      - key: kennengelernt_von
+        label: Kenne ich von
+        question: Woher kennst du {name} — Schule, Arbeit, Verein?
+      - key: kennengelernt_durch
+        label: Kenne ich durch
+        question: Durch wen hast du {name} kennengelernt?
   - name: Pet
     folder: pets
     fields:
