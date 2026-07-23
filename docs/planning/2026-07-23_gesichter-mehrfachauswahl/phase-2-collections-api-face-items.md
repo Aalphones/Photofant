@@ -250,26 +250,46 @@ diesem Plan unschön aussieht: eigener Folge-Plan für die Editor-Anpassung.
 
 ## AK dieser Phase
 
-- [ ] `POST /collections/{id}/items` mit `face_ids` legt `CollectionItem`-Zeilen mit gesetztem
+- [x] `POST /collections/{id}/items` mit `face_ids` legt `CollectionItem`-Zeilen mit gesetztem
       `face_id` an (asset_ids weiterhin wie bisher).
-- [ ] `DELETE /collections/{id}/items/faces/{face_id}` entfernt genau das Face-Item, lässt
+- [x] `DELETE /collections/{id}/items/faces/{face_id}` entfernt genau das Face-Item, lässt
       Asset-Items derselben Collection unberührt.
-- [ ] `GET /collections/{id}/items` liefert Face-Items mit `kind="face"`, korrektem
+- [x] `GET /collections/{id}/items` liefert Face-Items mit `kind="face"`, korrektem
       `thumbnail_url`, `width`/`height` aus `bbox`, leeren `tags`.
-- [ ] `PATCH /collections/{id}/items/faces/{face_id}` setzt `caption_override` am Face-Item.
-- [ ] Bestehende Asset-Item-Routen (`add_items`, `remove_item`, `update_item_caption`,
+- [x] `PATCH /collections/{id}/items/faces/{face_id}` setzt `caption_override` am Face-Item.
+- [x] Bestehende Asset-Item-Routen (`add_items`, `remove_item`, `update_item_caption`,
       `list_training_set_items` für Asset-Items) verhalten sich exakt wie vor dieser Phase —
       Regressionscheck: ein bestehendes Trainingsset mit nur Foto-Mitgliedern zeigt identische
       Werte wie vor der Migration.
 - [ ] Routing-Reihenfolge verifiziert: `curl -X DELETE /collections/1/items/faces/5` trifft
       `remove_face_item`, nicht `remove_item` mit einem 422 wegen `"faces"` als ungültigem `int`.
+      **Nur per Code-Review geprüft** (Registrierungsreihenfolge im Quelltext, `ruff`/`mypy` grün) —
+      kein Live-Server-Aufruf (private Profil: kein Live-Testen, siehe Smoke-Checkliste im README
+      fürs echte `curl` gegen die laufende App).
 
 ## Doc-Updates
 
-- [ ] `docs/routes.md` — neue Routen `DELETE .../items/faces/{face_id}`,
+- [x] `docs/routes.md` — neue Routen `DELETE .../items/faces/{face_id}`,
       `PATCH .../items/faces/{face_id}`, geänderte `AddItemsRequest`-Form bei `POST .../items`.
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: ob die Routing-Reihenfolge-Falle real aufgetreten wäre ohne die
-Warnung, jegliche Abweichung vom DTO-Feldsatz)_
+Routing-Reihenfolge-Falle war real: beide neuen Routen (`remove_face_item`,
+`update_face_item_caption`) wurden bewusst **vor** den bestehenden `{asset_id}`-Routen im Modul
+platziert, exakt wie in der Warnung beschrieben — ohne den Hinweis wäre das leicht übersehen
+worden (Starlette hätte `"faces"` als ungültigen `asset_id`-Int interpretiert → 422 statt Treffer).
+
+**Abweichung vom Plan (nicht vorgesehen, beim Umsetzen gefunden):** Der Plan nannte nur
+`galerie.ts:276/283` als Aufrufer der alten `addItems`-Service-Signatur (positional
+`assetIds: number[]`). Es gibt zwei weitere direkte Aufrufer, die den Service ohne den
+NgRx-Action-Umweg aufrufen und mit der neuen Objekt-Signatur sonst nicht kompiliert hätten:
+`trainingssets.ts:181` und `knowledge-detail-dialog.ts:296`. Beide auf
+`{ assetIds }` umgestellt — Verhalten unverändert, nur die Aufrufform angepasst. `tsc --noEmit`
+und `ng build --configuration production` liefen danach grün.
+
+Zusätzliche Typkorrektur (Plan-Vorlage hatte das nicht auf dem Schirm): Projekt nutzt
+`exactOptionalPropertyTypes: true`, daher musste `CollectionService.addItems`-Parametertyp
+explizit `assetIds?: number[] | undefined` statt nur `assetIds?: number[]` sein — sonst schlägt
+`tsc` beim optionalen Durchreichen aus dem Effect fehl.
+
+Kein Abweichen vom DTO-Feldsatz sonst — `TrainingSetItemDto` exakt wie im Kontrakt.

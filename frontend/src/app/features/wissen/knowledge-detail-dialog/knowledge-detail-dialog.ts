@@ -293,7 +293,7 @@ export class KnowledgeDetailDialog {
       .createCollection({ name: title, kind: 'album' })
       .pipe(
         switchMap((detail: CollectionDetail): Observable<CollectionDetail> =>
-          this.collectionService.addItems(detail.id, assetIds).pipe(map((): CollectionDetail => detail)),
+          this.collectionService.addItems(detail.id, { assetIds }).pipe(map((): CollectionDetail => detail)),
         ),
       )
       .subscribe({

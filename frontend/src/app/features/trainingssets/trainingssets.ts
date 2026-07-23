@@ -178,7 +178,7 @@ export class Trainingssets {
               this.store.dispatch(collectionsActions.load());
               return;
             }
-            this.collectionService.addItems(created.id, assetIds)
+            this.collectionService.addItems(created.id, { assetIds })
               .pipe(takeUntilDestroyed(this.destroyRef))
               .subscribe(() => this.store.dispatch(collectionsActions.load()));
           });

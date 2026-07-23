@@ -43,7 +43,7 @@ export const collectionsActions = createActionGroup({
     'Delete Trigger Success': props<{ collectionId: number }>(),
     'Delete Trigger Failure': props<{ error: string }>(),
 
-    'Add Items':             props<{ collectionId: number; assetIds: number[] }>(),
+    'Add Items':             props<{ collectionId: number; assetIds?: number[]; faceIds?: number[] }>(),
     'Add Items Success':     emptyProps(),
     'Add Items Failure':     props<{ error: string }>(),
 

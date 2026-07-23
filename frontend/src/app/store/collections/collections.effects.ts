@@ -143,8 +143,8 @@ export class CollectionsEffects {
   readonly addItems$ = createEffect(() =>
     this.actions$.pipe(
       ofType(collectionsActions.addItems),
-      mergeMap(({ collectionId, assetIds }) =>
-        this.collectionService.addItems(collectionId, assetIds).pipe(
+      mergeMap(({ collectionId, assetIds, faceIds }) =>
+        this.collectionService.addItems(collectionId, { assetIds, faceIds }).pipe(
           map(() => collectionsActions.addItemsSuccess()),
           catchError((error: HttpErrorResponse) =>
             of(collectionsActions.addItemsFailure({ error: error.message }))

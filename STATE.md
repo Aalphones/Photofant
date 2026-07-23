@@ -1,10 +1,10 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-23_gesichter-mehrfachauswahl/`
-**Phase:** 1/8 — `collection_item` Schema-Erweiterung für Face-Items (✅ complete)
-**Nächster Schritt:** Phase 2 — Collections-API: Face-Items hinzufügen/entfernen/auflisten
-(`phase-2-collections-api-face-items.md`). Baut auf der neuen `face_id`-Spalte auf. Phase 2 ist
-`standard` → `sonnet` reicht.
+**Phase:** 2/8 — Collections-API: Face-Items hinzufügen/entfernen/auflisten (✅ complete)
+**Nächster Schritt:** Phase 3 — Trainingsset-Stats + Export mit Face-Items
+(`phase-3-stats-export-face-items.md`). Baut auf der neuen `face_id`-Spalte + den Phase-2-Routen
+auf. Phase 3 ist `standard` → `sonnet` reicht.
 
 ## P39 „Wissen: mehr Tiefe, Design nachgezogen" abgeschlossen (alle 8 Phasen)
 

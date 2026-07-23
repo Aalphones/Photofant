@@ -26,6 +26,7 @@ from photofant.db.models import (
     AssetTag,
     Collection,
     CollectionItem,
+    Face,
     Person,
     SmartTrigger,
     Tag,
@@ -106,8 +107,11 @@ class ReorderItemsRequest(BaseModel):
 
 
 class TrainingSetItemDto(BaseModel):
-    id: int
-    content_hash: str
+    kind: Literal["asset", "face"] = "asset"
+    id: int  # asset.id bei kind="asset", face.id bei kind="face"
+    face_id: int | None = None  # gespiegelt für face-Items, erleichtert Frontend-Discriminated-Union
+    thumbnail_url: str | None = None  # nur bei kind="face" gesetzt — Frontend baut Asset-URLs weiter selbst
+    content_hash: str | None
     width: int | None
     height: int | None
     framing: str | None
@@ -159,7 +163,8 @@ class UpdateTriggerRequest(BaseModel):
 
 
 class AddItemsRequest(BaseModel):
-    asset_ids: list[int]
+    asset_ids: list[int] = []
+    face_ids: list[int] = []
 
 
 class JobStarted(BaseModel):
@@ -474,7 +479,7 @@ async def reevaluate_collection(collection_id: int, session: DbSession) -> JobSt
 
 @router.post("/{collection_id}/items", status_code=204)
 async def add_items(collection_id: int, body: AddItemsRequest, session: DbSession) -> Response:
-    """Add hand-picked members (Bulk-Bar „Zu Album"). Manual rows win over smart ones."""
+    """Add hand-picked members (Bulk-Bar „Zu Album"/"Zu Trainingsset"). Manual rows win over smart ones."""
     _get_collection_or_404(session, collection_id)
     for asset_id in body.asset_ids:
         item = (
@@ -486,8 +491,21 @@ async def add_items(collection_id: int, body: AddItemsRequest, session: DbSessio
             session.add(CollectionItem(collection_id=collection_id, asset_id=asset_id, source="manual"))
         else:
             item.source = "manual"
+    for face_id in body.face_ids:
+        item = (
+            session.query(CollectionItem)
+            .filter_by(collection_id=collection_id, face_id=face_id)
+            .first()
+        )
+        if item is None:
+            session.add(CollectionItem(collection_id=collection_id, face_id=face_id, source="manual"))
+        else:
+            item.source = "manual"
     session.commit()
-    log.info("Added %d manual item(s) to collection %d", len(body.asset_ids), collection_id)
+    log.info(
+        "Added %d asset item(s) + %d face item(s) to collection %d",
+        len(body.asset_ids), len(body.face_ids), collection_id,
+    )
     return Response(status_code=204)
 
 
@@ -515,6 +533,19 @@ async def export_collection(collection_id: int, body: CollectionExportRequest, s
     return JobStarted(job_id=status.id)
 
 
+@router.delete("/{collection_id}/items/faces/{face_id}", status_code=204)
+async def remove_face_item(collection_id: int, face_id: int, session: DbSession) -> Response:
+    item = (
+        session.query(CollectionItem)
+        .filter_by(collection_id=collection_id, face_id=face_id)
+        .first()
+    )
+    if item is not None:
+        session.delete(item)
+        session.commit()
+    return Response(status_code=204)
+
+
 @router.delete("/{collection_id}/items/{asset_id}", status_code=204)
 async def remove_item(collection_id: int, asset_id: int, session: DbSession) -> Response:
     item = (
@@ -531,9 +562,14 @@ async def remove_item(collection_id: int, asset_id: int, session: DbSession) -> 
 @router.get("/{collection_id}/items", response_model=list[TrainingSetItemDto])
 async def list_training_set_items(collection_id: int, session: DbSession) -> list[TrainingSetItemDto]:
     """Full item detail for the training-set editor (caption/tags/quality — the gallery
-    grid's `AssetDto` deliberately stays thin, so this is its own read model)."""
+    grid's `AssetDto` deliberately stays thin, so this is its own read model).
+
+    Face-Items (P-Gesichter-Mehrfachauswahl, ADR-035) haben keine Tags/Framing/Quality/Caption —
+    die Felder bleiben None/[] statt Fantasiewerte zu erfinden."""
     _get_collection_or_404(session, collection_id)
-    rows = (
+    items: list[TrainingSetItemDto] = []
+
+    asset_rows = (
         session.query(Asset, CollectionItem.caption_override)
         .join(CollectionItem, CollectionItem.asset_id == Asset.id)
         .join(AssetInstance, AssetInstance.asset_id == Asset.id)
@@ -541,8 +577,7 @@ async def list_training_set_items(collection_id: int, session: DbSession) -> lis
         .distinct()
         .all()
     )
-    items: list[TrainingSetItemDto] = []
-    for asset, caption_override in rows:
+    for asset, caption_override in asset_rows:
         tag_rows = (
             session.query(Tag.id, Tag.name, AssetTag.kind, AssetTag.score)
             .join(AssetTag, AssetTag.tag_id == Tag.id)
@@ -551,6 +586,7 @@ async def list_training_set_items(collection_id: int, session: DbSession) -> lis
         )
         items.append(
             TrainingSetItemDto(
+                kind="asset",
                 id=asset.id,
                 content_hash=asset.content_hash,
                 width=asset.width,
@@ -563,7 +599,54 @@ async def list_training_set_items(collection_id: int, session: DbSession) -> lis
                 tags=[TagDto(id=row.id, name=row.name, kind=row.kind, score=row.score) for row in tag_rows],
             )
         )
+
+    face_rows = (
+        session.query(Face, CollectionItem.caption_override)
+        .join(CollectionItem, CollectionItem.face_id == Face.id)
+        .filter(CollectionItem.collection_id == collection_id)
+        .distinct()
+        .all()
+    )
+    for face, caption_override in face_rows:
+        bbox = face.bbox or {}
+        width = int(bbox["x2"] - bbox["x1"]) if bbox else None
+        height = int(bbox["y2"] - bbox["y1"]) if bbox else None
+        items.append(
+            TrainingSetItemDto(
+                kind="face",
+                id=face.id,
+                face_id=face.id,
+                thumbnail_url=f"/api/faces/{face.id}/thumbnail",
+                content_hash=None,
+                width=width,
+                height=height,
+                framing=None,
+                quality=None,
+                caption=None,
+                caption_override=caption_override,
+                effective_caption=caption_override,
+                tags=[],
+            )
+        )
     return items
+
+
+@router.patch("/{collection_id}/items/faces/{face_id}", status_code=204)
+async def update_face_item_caption(
+    collection_id: int, face_id: int, body: UpdateItemCaptionRequest, session: DbSession
+) -> Response:
+    """Face-Items haben keine Original-Caption (anders als Assets) — caption_override ist hier
+    die einzige Caption-Quelle, nicht nur ein Override."""
+    item = (
+        session.query(CollectionItem)
+        .filter_by(collection_id=collection_id, face_id=face_id)
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found in collection")
+    item.caption_override = (body.caption_override or "").strip() or None
+    session.commit()
+    return Response(status_code=204)
 
 
 @router.patch("/{collection_id}/items/{asset_id}", status_code=204)

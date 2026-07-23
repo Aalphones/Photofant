@@ -51,8 +51,14 @@ export class CollectionService {
     return this.http.delete<void>(`/api/collections/${collectionId}/triggers/${triggerId}`);
   }
 
-  addItems(collectionId: number, assetIds: number[]): Observable<void> {
-    return this.http.post<void>(`/api/collections/${collectionId}/items`, { asset_ids: assetIds });
+  addItems(
+    collectionId: number,
+    params: { assetIds?: number[] | undefined; faceIds?: number[] | undefined },
+  ): Observable<void> {
+    return this.http.post<void>(`/api/collections/${collectionId}/items`, {
+      asset_ids: params.assetIds ?? [],
+      face_ids: params.faceIds ?? [],
+    });
   }
 
   removeItem(collectionId: number, assetId: number): Observable<void> {
