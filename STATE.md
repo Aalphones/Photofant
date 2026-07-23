@@ -1,13 +1,13 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-22_wissen-tiefe-und-design/`
-**Phase:** 7/8 — Fotos: echte Verknüpfung zur Person (standard — `sonnet` reicht)
-**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-7-foto-verknuepfung.md`
-lesen und umsetzen. Phase 6 (Album-Button + KI-Banner) ist committet — der Detail-Dialog zeigt
-jetzt unter den Sektionen eine Album-Zeile (erzeugt per Klick ein echtes Album aus den
-verknüpften Fotos) und der KI-Auslöser ist ein vollbreiter Banner mit Nutzen+Kosten-Satz statt
-eines schmalen Textlinks, Opt-in bleibt unverändert. Phase 8 (Captions/Tags-Signal) ist
-unabhängig und könnte auch zuerst laufen.
+**Phase:** 8/8 — Captions/Tags als Signal für die KI-Ergänzung (standard — `sonnet` reicht)
+**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-8-captions-tags-signal.md`
+lesen und umsetzen — letzte Phase des Plans. Phase 7 (Fotos: echte Verknüpfung zur Person) ist
+committet — der Detail-Dialog zeigt jetzt unter „Verknüpfte Fotos" automatisch die Fotos, auf
+denen die verknüpfte Person erkannt wurde (live aus `AssetInstance` gelesen, nicht im Vault
+gespiegelt), gedeckelt auf die neuesten 24 mit „und N weitere"-Hinweis; manuell verknüpfte
+Assets bleiben zusätzlich möglich.
 
 **🟡 Offen aus Phase 3 (kein Follow-up-Ticket, nur hier notiert):** Ein Interview über eine
 Person mit bereits bestehender Notiz schreibt die erkannten Merkmale noch nicht — nur beim

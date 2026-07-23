@@ -201,6 +201,11 @@ class LoreDto(BaseModel):
     relationships: list[ResolvedRelationshipDto]
     franchises: list[EntityRefDto]
     related_media: list[MediaRefDto]
+    # P39 Phase 7 — Gesamtzahl der Fotos vor dem `_MAX_RELATED_PHOTOS`-Deckel (manuell
+    # verknüpfte Assets + erkannte Fotos der verknüpften Person(en), dedupliziert). Für
+    # das „und N weitere"-Frontend-AK; bei Bild-Lore (kein Person-Anteil) = len(related_media)
+    # ohne die "person"-Chips.
+    related_photos_total: int
     sources: list[str]
 
     @classmethod
@@ -208,6 +213,7 @@ class LoreDto(BaseModel):
         cls,
         lore: Lore,
         related_media: list[MediaRefDto],
+        related_photos_total: int,
         completeness: float = 0.0,
         updated_at: datetime | None = None,
     ) -> LoreDto:
@@ -226,6 +232,7 @@ class LoreDto(BaseModel):
             ],
             franchises=[_entity_ref_dto(ref) for ref in lore.franchises],
             related_media=related_media,
+            related_photos_total=related_photos_total,
             sources=list(lore.sources),
         )
 
@@ -399,11 +406,46 @@ def _portrait_face_ids(session: Session, person_ids: list[int]) -> dict[int, int
     return dict(rows)
 
 
-def _resolve_media_refs(session: Session, media_links: MediaLinks) -> list[MediaRefDto]:
+# Deckel für die im Detail-Dialog gezeigten Fotos (P39 Phase 7, AK 3) — die neuesten zuerst,
+# der Rest bleibt der Personen-Galerie vorbehalten. Kein Messwert, nur eine plausible Startgröße
+# (2 Reihen à 12 in der bestehenden Grid-Breite); FINDINGS, falls sie sich als falsch erweist.
+_MAX_RELATED_PHOTOS = 24
+
+
+def _combined_photo_asset_ids(
+    session: Session, manual_asset_ids: list[int], person_ids: list[int]
+) -> list[int]:
+    """Vereinigt manuell verknüpfte Assets (``media_links.assets``) mit den Fotos, auf denen
+    eine der verknüpften Personen erkannt wurde (``AssetInstance``, dasselbe Muster wie die
+    Personen-Galerie in ``assets.py``) — dedupliziert, neueste zuerst (Kontrakt AK 2)."""
+    asset_ids: set[int] = set(manual_asset_ids)
+    if person_ids:
+        rows = session.execute(
+            select(AssetInstance.asset_id)
+            .where(AssetInstance.person_id.in_(person_ids), AssetInstance.deleted_at.is_(None))
+            .distinct()
+        ).all()
+        asset_ids |= {int(row[0]) for row in rows}
+    if not asset_ids:
+        return []
+    sort_col = func.coalesce(Asset.created_at, Asset.imported_at)
+    rows = session.execute(
+        select(Asset.id).where(Asset.id.in_(asset_ids)).order_by(sort_col.desc())
+    ).all()
+    return [int(row[0]) for row in rows]
+
+
+def _resolve_media_refs(session: Session, media_links: MediaLinks) -> tuple[list[MediaRefDto], int]:
     """Löst ``media_links`` (rohe Person-/Asset-ids) zu anzeigbaren Refs mit Thumbnail auf.
 
     Personen ohne Portrait (keine Gesichts-Aufnahme) werden ausgelassen — kein Bild zum
     Zeigen ist kein Fehler, aber auch kein Eintrag in "Eigene Bilder".
+
+    Ist mindestens eine Person verknüpft, kommen zusätzlich deren erkannte Fotos als
+    ``kind="asset"``-Einträge dazu (P39 Phase 7) — live aus ``AssetInstance`` gelesen, nie in
+    den Vault zurückgeschrieben (README → „Fotos live lesen statt im Vault spiegeln"). Gedeckelt
+    auf die neuesten ``_MAX_RELATED_PHOTOS``; der zweite Rückgabewert ist die Gesamtzahl vor dem
+    Deckel, damit das Frontend „und N weitere" zeigen kann.
     """
     refs: list[MediaRefDto] = []
     if media_links.persons:
@@ -419,15 +461,21 @@ def _resolve_media_refs(session: Session, media_links: MediaLinks) -> list[Media
                     label=person.name,
                 )
             )
-    if media_links.assets:
-        assets = session.query(Asset).filter(Asset.id.in_(media_links.assets)).all()
+
+    photo_ids = _combined_photo_asset_ids(session, media_links.assets, media_links.persons)
+    photo_total = len(photo_ids)
+    capped_ids = photo_ids[:_MAX_RELATED_PHOTOS]
+    if capped_ids:
+        order = {asset_id: index for index, asset_id in enumerate(capped_ids)}
+        assets = session.query(Asset).filter(Asset.id.in_(capped_ids)).all()
+        assets.sort(key=lambda asset: order[asset.id])
         for asset in assets:
             refs.append(
                 MediaRefDto(
                     kind="asset", id=asset.id, thumbnail_url=f"/api/assets/{asset.id}/thumbnail",
                 )
             )
-    return refs
+    return refs, photo_total
 
 
 def _person_ids_on_asset(session: Session, asset_id: int) -> list[int]:
@@ -473,15 +521,19 @@ async def get_lore_for_media(
         ]
 
     lores = service.get_lore_bundle(targets)
-    return [
-        LoreDto.from_lore(
-            lore,
-            _resolve_media_refs(session, lore.related_media),
-            service.completeness_for(lore.entity) if lore.entity is not None else 0.0,
-            service.updated_at_for(lore.entity) if lore.entity is not None else None,
+    result: list[LoreDto] = []
+    for lore in lores:
+        media_refs, photos_total = _resolve_media_refs(session, lore.related_media)
+        result.append(
+            LoreDto.from_lore(
+                lore,
+                media_refs,
+                photos_total,
+                service.completeness_for(lore.entity) if lore.entity is not None else 0.0,
+                service.updated_at_for(lore.entity) if lore.entity is not None else None,
+            )
         )
-        for lore in lores
-    ]
+    return result
 
 
 @router.get("/domains", response_model=list[DomainDto])
@@ -616,9 +668,9 @@ async def get_lore(entity_id: str, session: DbSession, vault: VaultDep) -> LoreD
         lore = service.get_lore(entity_id)
     except EntityNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    media_refs = _resolve_media_refs(session, lore.related_media)
+    media_refs, photos_total = _resolve_media_refs(session, lore.related_media)
     completeness = service.completeness_for(lore.entity) if lore.entity is not None else 0.0
-    return LoreDto.from_lore(lore, media_refs, completeness)
+    return LoreDto.from_lore(lore, media_refs, photos_total, completeness)
 
 
 @router.get("/entities/{entity_id:path}", response_model=EntityDto)

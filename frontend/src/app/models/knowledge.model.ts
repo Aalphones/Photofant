@@ -108,6 +108,9 @@ export interface LoreDto {
   relationships: ResolvedRelationshipDto[];
   franchises: EntityRefDto[];
   related_media: MediaRefDto[];
+  // P39 Phase 7 — Gesamtzahl der Fotos (manuell + über die Person erkannt, dedupliziert)
+  // vor dem Backend-Deckel; > related_media-Foto-Anzahl heißt "und N weitere".
+  related_photos_total: number;
   sources: string[];
 }
 

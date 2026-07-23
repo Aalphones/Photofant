@@ -387,6 +387,13 @@
   font-style: italic;
 }
 
+.kd-photos-overflow {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--text-3);
+  text-align: center;
+}
+
 @media (max-width: 860px) {
   .kd-cols { grid-template-columns: 1fr; }
   .kd-photo-grid { grid-template-columns: repeat(4, 1fr); }

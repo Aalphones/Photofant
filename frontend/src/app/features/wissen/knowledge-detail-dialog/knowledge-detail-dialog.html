@@ -266,6 +266,9 @@
                   </button>
                 }
               </div>
+              @if (relatedPhotosOverflow() > 0) {
+                <p class="kd-photos-overflow">und {{ relatedPhotosOverflow() }} weitere</p>
+              }
             } @else {
               <p class="kd-photos-empty">Noch keine verknüpften Fotos.</p>
             }

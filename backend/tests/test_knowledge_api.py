@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from photofant.db.models import Asset, Base, Face, Person
+from photofant.db.models import Asset, AssetInstance, Base, Face, Person
 from photofant.db.session import get_session
 from photofant.knowledge.changelog import ChangelogService
 from photofant.knowledge.vault import Vault, open_vault
@@ -298,6 +299,7 @@ async def test_relationship_lifecycle_and_lore(app_with_deps: tuple[Any, Session
     ]
     assert lore_body["franchises"] == []
     assert lore_body["related_media"] == []
+    assert lore_body["related_photos_total"] == 0
     assert lore_body["sources"] == []
     assert removed.status_code == 200
     assert removed.json()["relationships"] == []
@@ -367,6 +369,93 @@ async def test_lore_by_person_id_resolves_linked_entity_and_media(
     assert person_ref["thumbnail_url"] == "/api/faces/7/thumbnail"
     asset_ref = next(ref for ref in block["related_media"] if ref["kind"] == "asset")
     assert asset_ref["thumbnail_url"] == "/api/assets/99/thumbnail"
+    assert block["related_photos_total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_lore_includes_recognized_photos_of_linked_person(
+    app_with_deps: tuple[Any, Session, Vault],
+) -> None:
+    """P39 Phase 7 AK 1 — Fotos, auf denen die verknüpfte Person erkannt wurde, tauchen ohne
+    manuelles Verknüpfen unter ``related_media`` auf."""
+    app, session, _vault = app_with_deps
+    session.add(Person(id=42, name="Robert Downey Jr.", is_unknown=False))
+    for asset_id in (101, 102, 103):
+        session.add(Asset(id=asset_id, content_hash=f"hash-{asset_id}"))
+        session.add(AssetInstance(asset_id=asset_id, person_id=42, path=f"/img/{asset_id}.jpg"))
+    session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            "/api/knowledge/entities",
+            json=_entity_payload(media_links={"persons": [42], "assets": []}),
+        )
+        response = await client.get("/api/knowledge/lore", params={"person_id": 42})
+
+    assert response.status_code == 200
+    block = response.json()[0]
+    asset_refs = [ref for ref in block["related_media"] if ref["kind"] == "asset"]
+    assert {ref["id"] for ref in asset_refs} == {101, 102, 103}
+    assert block["related_photos_total"] == 3
+
+
+@pytest.mark.asyncio
+async def test_lore_keeps_manual_asset_when_person_has_no_recognized_photos(
+    app_with_deps: tuple[Any, Session, Vault],
+) -> None:
+    """P39 Phase 7 AK 2 — ein manuell verknüpftes Asset bleibt erhalten, auch wenn die
+    verknüpfte Person kein einziges erkanntes Foto hat."""
+    app, session, _vault = app_with_deps
+    session.add(Person(id=42, name="Robert Downey Jr.", is_unknown=False))
+    session.add(Asset(id=99, content_hash="abc"))
+    session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            "/api/knowledge/entities",
+            json=_entity_payload(media_links={"persons": [42], "assets": [99]}),
+        )
+        response = await client.get("/api/knowledge/lore", params={"person_id": 42})
+
+    assert response.status_code == 200
+    block = response.json()[0]
+    asset_refs = [ref for ref in block["related_media"] if ref["kind"] == "asset"]
+    assert [ref["id"] for ref in asset_refs] == [99]
+    assert block["related_photos_total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_lore_caps_recognized_photos_and_reports_total(
+    app_with_deps: tuple[Any, Session, Vault],
+) -> None:
+    """P39 Phase 7 AK 3 — bei mehr Fotos als der Deckel bleibt die Liste gedeckelt (neueste
+    zuerst), die Gesamtzahl im DTO zählt trotzdem korrekt."""
+    app, session, _vault = app_with_deps
+    session.add(Person(id=42, name="Robert Downey Jr.", is_unknown=False))
+    base_time = datetime(2026, 1, 1)
+    total_photos = 30
+    for offset in range(total_photos):
+        asset_id = 200 + offset
+        session.add(
+            Asset(id=asset_id, content_hash=f"hash-{asset_id}", created_at=base_time + timedelta(days=offset))
+        )
+        session.add(AssetInstance(asset_id=asset_id, person_id=42, path=f"/img/{asset_id}.jpg"))
+    session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            "/api/knowledge/entities",
+            json=_entity_payload(media_links={"persons": [42], "assets": []}),
+        )
+        response = await client.get("/api/knowledge/lore", params={"person_id": 42})
+
+    assert response.status_code == 200
+    block = response.json()[0]
+    asset_refs = [ref for ref in block["related_media"] if ref["kind"] == "asset"]
+    assert len(asset_refs) == 24
+    assert block["related_photos_total"] == total_photos
+    newest_ids = {200 + offset for offset in range(total_photos - 24, total_photos)}
+    assert {ref["id"] for ref in asset_refs} == newest_ids
 
 
 @pytest.mark.asyncio

@@ -253,6 +253,12 @@ export class KnowledgeDetailDialog {
     (this.lore()?.related_media ?? []).filter((media: MediaRefDto) => media.kind === 'asset')
   );
 
+  // P39 Phase 7 AK 3 — Backend deckelt auf die neuesten `_MAX_RELATED_PHOTOS`; die Differenz
+  // zur Gesamtzahl wird als "und N weitere" gezeigt statt den Dialog aufzublähen.
+  protected readonly relatedPhotosOverflow = computed((): number =>
+    Math.max(0, (this.lore()?.related_photos_total ?? 0) - this.relatedPhotos().length)
+  );
+
   protected readonly sources = computed((): string[] => this.lore()?.sources ?? []);
 
   // ── Album aus den verknüpften Fotos (P39 Phase 6) ────────────────────────────────────────

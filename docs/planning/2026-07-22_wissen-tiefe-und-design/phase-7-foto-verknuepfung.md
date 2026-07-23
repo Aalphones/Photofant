@@ -51,28 +51,46 @@ für Fälle ohne Person (z.B. eine reine Notiz, der man einzelne Fotos manuell z
 
 ### Backend
 
-- [ ] In `get_lore`/`_resolve_media_refs` (oder einer neuen Helper-Funktion in `knowledge.py`):
-      ist mindestens eine Person in `media_links.persons`, zusätzlich deren erkannte Fotos
-      (Query analog `assets.py` Zeile 616-633) als `kind="asset"`-`MediaRefDto` anhängen,
-      dedupliziert gegen bereits vorhandene `media_links.assets`-Einträge.
-- [ ] Obergrenze + Gesamtzahl einbauen (z.B. neueste N, Rest als Zähler). **Nicht raten** — mit
-      dem bestehenden Pagination-Muster in `assets.py` abgleichen, ob es dafür schon eine
-      Konvention gibt, statt eine neue zu erfinden.
-- [ ] Test: Person mit 3 erkannten Fotos, 0 manuell verknüpften Assets → `related_media` enthält
-      alle 3 als `kind=asset`.
-- [ ] Test: Person ohne ein einziges erkanntes Foto, aber mit einem manuell verknüpften Asset →
-      `related_media` enthält weiterhin genau das eine.
-- [ ] Test: Person mit mehr Fotos als die Obergrenze → Liste ist gedeckelt, Zähler stimmt.
+- [x] In `_resolve_media_refs` (`knowledge.py`): ist mindestens eine Person in
+      `media_links.persons`, zusätzlich deren erkannte Fotos (Query über `AssetInstance`,
+      analog dem `person_id`-Filter in `assets.py`) als `kind="asset"`-`MediaRefDto` anhängen,
+      dedupliziert gegen `media_links.assets` — neue Helper `_combined_photo_asset_ids`
+      vereinigt beide Quellen als Set, sortiert neueste zuerst
+      (`func.coalesce(Asset.created_at, Asset.imported_at)`, dasselbe Muster wie die Galerie).
+- [x] Obergrenze + Gesamtzahl eingebaut: `_MAX_RELATED_PHOTOS = 24` (neueste zuerst), neues
+      `LoreDto.related_photos_total` trägt die ungedeckelte Gesamtzahl — Konvention `items` +
+      `total` aus `AssetsPage` (`assets.py`) übernommen statt neu erfunden.
+- [x] Test: Person mit 3 erkannten Fotos, 0 manuell verknüpften Assets → `related_media` enthält
+      alle 3 als `kind=asset` (`test_lore_includes_recognized_photos_of_linked_person`).
+- [x] Test: Person ohne ein einziges erkanntes Foto, aber mit einem manuell verknüpften Asset →
+      `related_media` enthält weiterhin genau das eine
+      (`test_lore_keeps_manual_asset_when_person_has_no_recognized_photos`).
+- [x] Test: Person mit mehr Fotos als die Obergrenze → Liste ist gedeckelt, Zähler stimmt
+      (`test_lore_caps_recognized_photos_and_reports_total`, 30 Fotos → 24 gezeigt, `total=30`,
+      geprüft auch, dass es wirklich die neuesten 24 sind).
 
 ### Frontend
 
-- [ ] Prüfen, ob `relatedPhotos()` (und der Album-Button aus Phase 6) mit einer eventuellen
-      „und N weitere"-Erweiterung im DTO noch klaglos läuft — eigener Code nur, falls das
-      Backend nicht schon eine fertige, gedeckelte Liste liefert.
+- [x] `relatedPhotos()` unverändert (Backend liefert schon eine fertige, gedeckelte Liste).
+      Neuer Computed `relatedPhotosOverflow()` zeigt „und N weitere" unter dem Foto-Grid, wenn
+      `related_photos_total` über der gezeigten Anzahl liegt. Album-Button (Phase 6) bleibt
+      unverändert, liest weiterhin `relatedPhotos()`.
 
 ### Docs
 
-- [ ] `docs/routes.md`: Beschreibung von `GET .../lore` ergänzen — `related_media` enthält bei
-      `personId` jetzt auch die erkannten Fotos der Person, nicht nur manuell verknüpfte.
+- [x] `docs/routes.md`: `LoreDto`-Beschreibung um `related_photos_total` und die
+      Live-Foto-Erweiterung ergänzt.
 
 ## Report-Back
+
+Backend liest jetzt live die Fotos der verknüpften Person(en) aus `AssetInstance` und mischt
+sie dedupliziert mit manuell verknüpften Assets — neueste 24 zuerst, Rest über
+`related_photos_total` gezählt. Nichts davon landet in der Vault-Markdown (bewusste Ausnahme,
+README-Begründung). Frontend zeigt bei Überhang „und N weitere" unter dem Foto-Grid; Album-Button
+aus Phase 6 läuft unverändert weiter, weil er weiterhin nur `relatedPhotos()` liest.
+
+**Kein Grund gefunden, der gegen "live lesen statt spiegeln" spricht** — die Query ist ein
+einzelner, indizierter Join (kein Vollscan), keine FINDINGS-Eintrag nötig.
+
+**Konfidenz:** Deckel von 24 ist wie im Plan angemerkt eine Startgröße, keine gemessene — Rest
+unverändert seit dem Konfidenz-Ausweis im README.
