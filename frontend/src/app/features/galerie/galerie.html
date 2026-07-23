@@ -59,8 +59,13 @@
       <pf-face-grid
         [faceItems]="faceItems()"
         [isLoading]="isLoading()"
+        [selectionMode]="selectionMode()"
+        [selectedFaceIds]="selectedFaceIds()"
+        [isArmed]="isArmed()"
         (openFace)="isArmed() ? onBindFace($event) : onOpenFace($event)"
         (loadMore)="onFaceLoadMore()"
+        (toggleFaceSelect)="onToggleFaceSelect($event)"
+        (rangeFaceSelect)="onFaceRangeSelect($event)"
       />
     } @else {
       <pf-galerie-grid

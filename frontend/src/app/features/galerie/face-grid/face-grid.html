@@ -9,7 +9,12 @@
     <pf-face-cell
       [face]="face"
       [cellSize]="CELL_SIZE"
+      [selectionMode]="selectionMode()"
+      [isSelected]="selectedFaceIdSet().has(face.id)"
+      [isArmed]="isArmed()"
       (openFace)="onOpenFace($event)"
+      (toggleSelect)="toggleFaceSelect.emit($event)"
+      (rangeSelect)="rangeFaceSelect.emit($event)"
     />
   }
 

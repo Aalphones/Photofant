@@ -315,25 +315,28 @@ Phase 7 zusammen mit der neuen Face-Bulk-Leiste.
 
 ## AK dieser Phase
 
-- [ ] Im Gesichter-Tab „Auswählen" aktivieren → Klick auf ein Gesicht öffnet **nicht** mehr die
+- [x] Im Gesichter-Tab „Auswählen" aktivieren → Klick auf ein Gesicht öffnet **nicht** mehr die
       Lightbox, sondern selektiert (Checkbox-Overlay erscheint/färbt sich).
-- [ ] Strg/Cmd-Klick auf ein Gesicht selektiert **auch außerhalb** des expliziten
+- [x] Strg/Cmd-Klick auf ein Gesicht selektiert **auch außerhalb** des expliziten
       Auswahl-Modus (analog zum Foto-Tab).
-- [ ] Shift-Klick wählt einen zusammenhängenden Bereich (Anker = zuletzt einzeln
+- [x] Shift-Klick wählt einen zusammenhängenden Bereich (Anker = zuletzt einzeln
       angeklicktes Gesicht).
-- [ ] „Alle auswählen" im Gesichter-Tab selektiert alle geladenen Gesichter, im Foto-Tab
+- [x] „Alle auswählen" im Gesichter-Tab selektiert alle geladenen Gesichter, im Foto-Tab
       unverändert alle Fotos (Regressionscheck).
-- [ ] Ein scharfer Workflow-Slot (Run-Leiste) bindet weiterhin per Klick, auch wenn
+- [x] Ein scharfer Workflow-Slot (Run-Leiste) bindet weiterhin per Klick, auch wenn
       `selectionMode` zufällig aktiv ist (Armed schlägt Selection).
-- [ ] Foto-Tab-Auswahl (`GalerieCell`/`pf-galerie-grid`) verhält sich exakt wie vor dieser Phase
+- [x] Foto-Tab-Auswahl (`GalerieCell`/`pf-galerie-grid`) verhält sich exakt wie vor dieser Phase
       (kein Code dort geändert).
 
 ## Doc-Updates
 
-- [ ] `docs/code-map.md` — Zeile „Personen & Faces": `face-grid`/`face-cell` jetzt mit
-      Mehrfachauswahl-Fähigkeit vermerken.
+- [x] `docs/code-map.md` — Zeile „Personen & Faces": `face-grid`/`face-cell` jetzt mit
+      Mehrfachauswahl-Fähigkeit vermerkt.
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: Verhalten bei sehr großen Gesichter-Listen, ob das `Set`-Pattern
-spürbar war/nicht war)_
+Alle 6 Aufgaben 1:1 nach Plan umgesetzt, keine Abweichungen. `tsc --noEmit` läuft sauber durch.
+AK durch Code-Review bestätigt (private Profil: kein Live-Test, Smoke folgt am Plan-Ende durch
+den User). Das `Set`-Pattern in `FaceGrid.selectedFaceIdSet` wurde 1:1 aus dem Plan übernommen
+(kein eigener Befund) — Verhalten bei sehr großen Listen (`FACE_PAGE_SIZE = 500`) daher
+theoretisch sauber, aber nicht separat gemessen.

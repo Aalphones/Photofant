@@ -10,6 +10,20 @@
 
 <div class="face-cell__veil"></div>
 
+@if (!isArmed()) {
+  <button
+    class="face-cell__pick"
+    [class.face-cell__pick--selected]="isSelected()"
+    (click)="onPickClick($event)"
+    [attr.aria-label]="isSelected() ? 'Abwählen' : 'Auswählen'"
+    [attr.aria-pressed]="isSelected()"
+  >
+    @if (isSelected()) {
+      <pf-icon name="check" [size]="13" />
+    }
+  </button>
+}
+
 <div class="face-cell__info">
   <span class="face-cell__name">{{ label() }}</span>
   @if (scorePercent()) {

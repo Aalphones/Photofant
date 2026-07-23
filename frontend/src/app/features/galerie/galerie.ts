@@ -46,6 +46,8 @@ export class Galerie {
   protected readonly mediaType     = this.store.selectSignal(filtersSelectors.mediaType);
   protected readonly faceItems     = this.store.selectSignal(gallerySelectors.selectFaceItems);
   protected readonly faceHasMore   = this.store.selectSignal(gallerySelectors.selectFaceHasMore);
+  protected readonly selectedFaceIds = this.store.selectSignal(gallerySelectors.selectSelectedFaceIds);
+  private readonly faceAnchorId      = this.store.selectSignal(gallerySelectors.selectFaceAnchorId);
 
   private readonly filterSources      = this.store.selectSignal(filtersSelectors.sources);
   private readonly filterQualityMin   = this.store.selectSignal(filtersSelectors.qualityMin);
@@ -233,6 +235,10 @@ export class Galerie {
   }
 
   protected onSelectAllClick(): void {
+    if (this.mediaType() === 'faces') {
+      this.store.dispatch(galleryActions.selectAllFaces({ ids: this.faceItems().map((face) => face.id) }));
+      return;
+    }
     this.onSelectAll(this.allAssets().map((asset: AssetDto) => asset.id));
   }
 
@@ -253,6 +259,29 @@ export class Galerie {
     const end = Math.max(anchorIndex, targetIndex);
     const rangeIds = assets.slice(start, end + 1).map((asset) => asset.id);
     this.store.dispatch(galleryActions.selectRange({ ids: rangeIds }));
+  }
+
+  protected onToggleFaceSelect(faceId: number): void {
+    this.store.dispatch(galleryActions.toggleFaceSelected({ id: faceId }));
+  }
+
+  protected onFaceRangeSelect(targetId: number): void {
+    const anchorId = this.faceAnchorId();
+    if (anchorId === null) {
+      this.store.dispatch(galleryActions.toggleFaceSelected({ id: targetId }));
+      return;
+    }
+    const faces = this.faceItems();
+    const anchorIndex = faces.findIndex((face) => face.id === anchorId);
+    const targetIndex = faces.findIndex((face) => face.id === targetId);
+    if (anchorIndex === -1 || targetIndex === -1) {
+      this.store.dispatch(galleryActions.toggleFaceSelected({ id: targetId }));
+      return;
+    }
+    const start = Math.min(anchorIndex, targetIndex);
+    const end = Math.max(anchorIndex, targetIndex);
+    const rangeIds = faces.slice(start, end + 1).map((face) => face.id);
+    this.store.dispatch(galleryActions.selectFaceRange({ ids: rangeIds }));
   }
 
   protected onBulkClose(): void {

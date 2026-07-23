@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -22,11 +23,20 @@ import { FaceCell } from '../face-cell/face-cell';
 export class FaceGrid {
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly faceItems = input.required<FaceGalleryItemDto[]>();
-  readonly isLoading = input.required<boolean>();
+  readonly faceItems      = input.required<FaceGalleryItemDto[]>();
+  readonly isLoading      = input.required<boolean>();
+  readonly selectionMode  = input<boolean>(false);
+  readonly selectedFaceIds = input<number[]>([]);
+  readonly isArmed        = input<boolean>(false);
 
-  readonly openFace = output<{ faceId: number; assetId: number | null; versionId: number | null }>();
-  readonly loadMore = output<void>();
+  readonly openFace        = output<{ faceId: number; assetId: number | null; versionId: number | null }>();
+  readonly loadMore        = output<void>();
+  readonly toggleFaceSelect = output<number>();
+  readonly rangeFaceSelect  = output<number>();
+
+  protected readonly selectedFaceIdSet = computed((): Set<number> =>
+    new Set(this.selectedFaceIds())
+  );
 
   private readonly sentinel = viewChild.required<ElementRef<HTMLDivElement>>('loadSentinel');
 

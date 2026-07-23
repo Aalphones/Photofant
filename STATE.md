@@ -1,9 +1,9 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-23_gesichter-mehrfachauswahl/`
-**Phase:** 5/8 — Face-Selection: eigener NgRx-State-Slice (✅ complete)
-**Nächster Schritt:** Phase 6 — Face-Grid/-Cell: Checkbox-Overlay + Klick-Verdrahtung
-(`phase-6-face-grid-cell-ui.md`, Komplexität `standard` → `/model sonnet` reicht).
+**Phase:** 6/8 — Face-Grid/-Cell: Checkbox-Overlay + Klick-Verdrahtung (✅ complete)
+**Nächster Schritt:** Phase 7 — Face-Bulk-Bar: Löschen / Hochskalieren / Zu Trainingsset
+(`phase-7-face-bulk-bar.md`, Komplexität `standard` → `/model sonnet` reicht).
 
 ## P39 „Wissen: mehr Tiefe, Design nachgezogen" abgeschlossen (alle 8 Phasen)
 
