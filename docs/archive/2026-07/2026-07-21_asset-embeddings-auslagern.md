@@ -1,6 +1,6 @@
 # Embedding-BLOBs aus der Asset-Tabelle auslagern
 
-**Status:** in Umsetzung — Phase 1 + 2 ✅, Phase 3 offen
+**Status:** in Umsetzung — Phase 1 + 2 + 3 ✅ (Code fertig, Migration/Messwerte beim User)
 **Warum jetzt:** Die Galerie wurde am 2026-07-21 vermessen (siehe „Messwerte"). Die drei
 schnellen Hebel sind umgesetzt; dieser hier ist der letzte verbliebene und der einzige,
 der *alle* Abfragen betrifft statt nur die Galerie.
@@ -143,6 +143,22 @@ Nach dem Entfernen müssen die Tabellen-Statistiken neu erhoben werden (`ANALYZE
 plant SQLite weiter mit der alten Größe. Gleiche Falle wie bei Migration 0041.
 
 **Fertig, wenn:** Die vier Messwerte oben sind reproduziert, Bild-Tabelle unter 15 MB.
+
+**✅ Code fertig (2026-07-23).** Migration 0044 droppt beide Spalten via
+`batch_alter_table` (SQLite kennt kein natives `DROP COLUMN`) und fährt danach
+`ANALYZE` — gleiche Falle wie 0041, ohne frische Statistiken bliebe der Planer
+bei der alten Tabellengröße. `Asset`-Model verliert `clip_embedding`/
+`dino_embedding` (waren seit 0043 ohnehin nur noch Rollback-Leichen), `docs/
+models.md` und der Kopf-Docstring von `db/embeddings.py` sind nachgezogen.
+Migrationskette geprüft (`alembic heads` → `0044`), ruff grün, mypy ohne neue
+Meldung (6 vorbestehende `unused-ignore` in `models.py`, unverändert zur
+Zeilenzahl vor dieser Phase).
+
+**Nicht von mir gelaufen (private-Profil, User-Smoke):** `alembic upgrade head`
+auf der echten DB und die vier Messwerte — steht in STATE.md als offener
+Smoke-Punkt. Migrationen 0042 und 0043 warten laut STATE.md ohnehin schon auf
+denselben `alembic upgrade head`-Lauf; 0044 reiht sich da ein, kein separater
+Schritt nötig.
 
 ## Risiken
 

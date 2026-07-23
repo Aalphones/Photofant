@@ -59,14 +59,9 @@ class Asset(Base):
     )
     tagger: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
-    # LEGACY storage — kept only for rollback. Since migration 0043 the canonical
-    # vectors live in the ``asset_embedding`` side table (off the wide asset row so
-    # gallery scans stop reading over ~75 MB of BLOB). Nothing reads or writes these
-    # columns anymore; the ``photofant/db/embeddings`` seam owns storage. Migration
-    # 0044 (plan phase 3) drops them and the space is finally reclaimed. Still
-    # ``deferred`` so a stray default-select never pulls them.
-    clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
-    dino_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
+    # clip_embedding / dino_embedding lived here until migration 0044 (plan phase 3)
+    # dropped them — canonical storage is the `asset_embedding` side table since
+    # migration 0043, reached only through the `photofant/db/embeddings` seam.
     caption_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
     original_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("asset.id"), nullable=True, index=True,

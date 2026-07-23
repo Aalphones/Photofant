@@ -55,8 +55,6 @@ One row per unique content-hash (canonical image).
 | `caption_preset_id` | INTEGER FK → `caption_preset.id` | provenance: which preset produced the caption (FK added P5 Phase 4, `fk_asset_caption_preset`) |
 | `tagger` | TEXT | model name (filled in P5) |
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
-| `clip_embedding` | BLOB | **LEGACY seit Migration 0043** — Source of truth ist jetzt `asset_embedding.clip_embedding`. Spalte bleibt bis Plan-Phase 3 (Migration 0044) nur für Rollback stehen, wird von keinem Code mehr gelesen/geschrieben. `deferred=True`. |
-| `dino_embedding` | BLOB | **LEGACY seit Migration 0043** — Source of truth ist jetzt `asset_embedding.dino_embedding`. Wie `clip_embedding`: bleibt bis Plan-Phase 3 nur für Rollback. `deferred=True`. |
 | `caption_edited` | BOOLEAN | `1` = Caption wurde manuell editiert; Captioner überspringt den Asset beim nächsten Rerun (P6 Phase 3) |
 | `original_id` | INTEGER FK → `asset.id` | gesetzt wenn dieses Asset ein Edit eines anderen ist — bei Review-Entscheidung „A/B ist Original" (migration 0014) |
 | `created_at` | DATETIME | EXIF capture date; UTC naive |

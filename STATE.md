@@ -1,19 +1,23 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-21_asset-embeddings-auslagern.md`
-**Phase:** 3/3 — Alte Spalten entfernen (offen, noch nicht begonnen)
-**Nächster Schritt:** Migration 0044 droppt `asset.clip_embedding` + `asset.dino_embedding`
-(SQLite → `batch_alter_table`), danach `ANALYZE` (sonst plant SQLite mit alter Größe — gleiche
-Falle wie Migration 0041). Erst danach tritt der Geschwindigkeitsgewinn ein. Fertig, wenn die
-vier Messwerte im Plan reproduziert sind und die Bild-Tabelle unter 15 MB liegt.
+**Aktiver Plan:** (keiner — Backlog unten, nächster Kandidat `docs/planning/
+2026-07-22_ml-jobs-worker-prozess/`)
+**Nächster Schritt:** `/plan` oder `/implement` mit dem gewünschten Backlog-Plan starten.
 
-**Vor dem Lauf prüfen (Plan-Risiko):** freier Speicher — Phase 3 legt vorübergehend eine zweite
-DB-Kopie an (bei 287 MB unkritisch, aber checken).
+## „Embedding-BLOBs aus der Asset-Tabelle auslagern" abgeschlossen (alle 3 Phasen)
 
-Phase 1 ✅ (`f45b439`) · Phase 2 ✅ (Migration 0043 = Nebentabelle `asset_embedding` + Copy,
-Naht liest/schreibt dort, Löschstelle nimmt Nebenzeile mit, alte Spalten stehen für Rollback).
-481 Tests grün, 13 rot = unveränderte comfyui/caption-Vorbelastung. Weiterer Backlog:
-`docs/planning/2026-07-22_ml-jobs-worker-prozess/`.
+Archiviert: `docs/archive/2026-07/2026-07-21_asset-embeddings-auslagern.md` (Report-Back
+je Phase direkt im Dokument, kein separates README). Bild-Tabelle verliert die beiden
+BLOB-Spalten (90,8 → soll 11 MB), alle Voll-Abfragen sollen 3-5× schneller werden. Zugriff
+läuft komplett über `photofant/db/embeddings.py` (Phase 1), Vektoren liegen in der
+Nebentabelle `asset_embedding` (Migration 0043, Phase 2), die alten Spalten sind per
+Migration 0044 (Phase 3) rausgefallen. ruff grün, mypy ohne neue Meldung, Migrationskette
+geprüft (`alembic heads` → `0044`).
+
+**🟡 Noch offen (private-Profil, User-Smoke — nicht von mir gelaufen):** `alembic upgrade
+head` auf der echten DB (Migrationen 0042, 0043, 0044 in einem Rutsch) plus die vier
+Messwerte aus dem Plan (Ziel: Bild-Tabelle unter 15 MB). Vorher Speicher checken — Phase 3
+legt vorübergehend eine zweite DB-Kopie an (bei 287 MB unkritisch, 320 GB frei).
 
 ## „Gesichter-Mehrfachauswahl" abgeschlossen (alle 8 Phasen)
 
@@ -73,10 +77,16 @@ für die kein Modell aktiv ist (braucht eine Modell-Abfrage im Zählpfad, die Mo
 - **„Gesichter-Mehrfachauswahl"** — alle 8 Phasen, noch nicht gegengeprüft. Vollständige
   Checkliste (Wackelstellen zuerst): `docs/archive/2026-07/2026-07-23_gesichter-mehrfachauswahl/
   README.md` → „Smoke-Checkliste". Kernpfad: **zuerst** `alembic upgrade head` laufen lassen
-  (Migration 0042 — PK-Umbau, ungewöhnlichster Migrations-Schritt im ganzen Projekt), danach im
-  Gesichter-Tab „Auswählen" → mehrere Gesichter anklicken (Checkbox statt Lightbox), löschen,
-  hochskalieren (Crop wird größer/schärfer, Cleanup-Score-Ansicht zeigt es danach nicht mehr als
+  (Migration 0042 — PK-Umbau, ungewöhnlichster Migrations-Schritt im ganzen Projekt — läuft in
+  einem Rutsch bis 0044 durch, siehe „Embedding-BLOBs"-Smoke unten), danach im Gesichter-Tab
+  „Auswählen" → mehrere Gesichter anklicken (Checkbox statt Lightbox), löschen, hochskalieren
+  (Crop wird größer/schärfer, Cleanup-Score-Ansicht zeigt es danach nicht mehr als
   upscale-bedürftig), zu einem Trainingsset hinzufügen (auch ein Gesicht ohne Quell-Foto testen).
+- **„Embedding-BLOBs aus der Asset-Tabelle auslagern"** — Code fertig, Migration nicht
+  gelaufen. Nach `alembic upgrade head`: Bild-Tabelle unter 15 MB? Die vier Messwerte aus
+  `docs/archive/2026-07/2026-07-21_asset-embeddings-auslagern.md` → „Messwerte" grob
+  reproduzieren (Gesamtzahl zählen, Facette „Quelle"/„Bildausschnitt", Sortierung nach Datum
+  spürbar schneller). Vorher Speicher checken (Phase 3 legt kurz eine zweite DB-Kopie an).
 - **P39 „Wissen: mehr Tiefe, Design nachgezogen"** — alle 8 Phasen, noch nicht gegengeprüft.
   Vollständige Checkliste (Wackelstellen zuerst): `docs/archive/2026-07/
   2026-07-22_wissen-tiefe-und-design/README.md` → „Smoke-Checkliste". Kernpfad: Interview mit

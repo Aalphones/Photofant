@@ -13,9 +13,9 @@ underlying columns. That makes this the *one* place a later move has to touch
 Callers speak in ``numpy`` vectors and asset ids only — never in BLOBs or column
 names. Storage today is the ``asset_embedding`` side table (one row per asset,
 migration 0043), keyed by ``asset_id``; that is an implementation detail of this
-module alone. The legacy ``asset.clip_embedding`` / ``asset.dino_embedding`` columns
-still exist for rollback until plan phase 3 drops them, but nothing reads or writes
-them anymore.
+module alone. The old ``asset.clip_embedding`` / ``asset.dino_embedding`` columns
+were dropped by migration 0044 (plan phase 3) — the side table is the only copy
+left.
 
 This layer owns the *canonical vectors*. The rebuildable ``vec0`` search indexes
 over them live in ``photofant/db/vector_index.py`` — a sibling, not a caller of
