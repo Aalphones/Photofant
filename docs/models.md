@@ -300,20 +300,32 @@ negated triggers exclude. Evaluation: `photofant/collections/engine.py`.
 | `phrase` | TEXT | set when `type=caption`; case-insensitive substring match on `asset.caption` |
 | `negate` | BOOLEAN | `1` = exclude matches instead of include |
 
-### `collection_item` (migration 0012)
+### `collection_item` (migration 0012, umgebaut 0042)
 
 Membership rows. Smart membership is materialized (`source='smart'`) and recomputed by the
 re-evaluation engine; hand-picked rows (`source='manual'`) are never auto-removed and win on
 conflict (a manual member that also matches the triggers stays `manual`).
 
+Ein Item ist entweder ein Foto (`asset_id`) **oder** ein Face-Crop (`face_id`) — XOR, nie beides
+(ADR-035). Face-Items existieren nur in Trainingssets und können auch auf Faces ohne Quell-Foto
+zeigen. Migration `0042` hat dafür den zusammengesetzten PK auf einen surrogaten `id`-PK
+umgestellt (nötig, damit mehrere Face-Items mit `asset_id IS NULL` in derselben Collection
+unterscheidbar bleiben).
+
 | Column | Type | Notes |
 |---|---|---|
-| `collection_id` | INTEGER PK, FK → `collection.id` | |
-| `asset_id` | INTEGER PK, FK → `asset.id` | indexed |
+| `id` | INTEGER PK | surrogat, autoincrement (ab 0042) |
+| `collection_id` | INTEGER FK → `collection.id` | not null, indexed |
+| `asset_id` | INTEGER FK → `asset.id` | nullable (XOR mit `face_id`), indexed |
+| `face_id` | INTEGER FK → `face.id` | nullable (XOR mit `asset_id`), indexed — Face-Crop-Mitglied (ADR-035) |
 | `source` | TEXT | `manual` (hand-picked) \| `smart` (auto via triggers) |
 | `caption_override` | TEXT | training sets only |
+| `position` | INTEGER | nullable; manuelle Reihenfolge (asset-only) |
 
-PK: `(collection_id, asset_id)`. Index: `ix_collection_item_asset_id`.
+PK: `id`. XOR-Check: `ck_collection_item_xor`. Uniqueness pro Achse über partielle Indizes
+`uq_collection_item_asset` (`WHERE asset_id IS NOT NULL`) und `uq_collection_item_face`
+(`WHERE face_id IS NOT NULL`) — je `(collection_id, <achse>)`. Plain-Indizes:
+`ix_collection_item_collection_id`, `ix_collection_item_asset_id`, `ix_collection_item_face_id`.
 
 **Re-evaluation triggers (Konzept §10.1):** a tag/caption change on an asset re-evaluates that
 asset against every smart album; a trigger / match-mode change re-evaluates the whole album.

@@ -200,21 +200,36 @@ Face-Crop vorhanden, nicht angefragt).
 
 ## AK dieser Phase
 
-- [ ] Migration `0042` läuft gegen eine Kopie der Dev-DB fehlerfrei (`alembic upgrade head`).
-- [ ] `sqlite3 <db> ".schema collection_item"` zeigt: `id` als PK, `face_id`-Spalte, XOR-Check.
-- [ ] Zeilenzahl `collection_item` vor/nach Migration identisch (keine Zeile verloren).
-- [ ] Bestehende Alben/Trainingssets zeigen nach der Migration unverändert ihre alten Mitglieder
-      (Sanity-Check über einen bekannten Testfall, z. B. ein Album mit >1 Foto).
-- [ ] `downgrade()` funktioniert (einmal testweise durchlaufen, dann wieder hoch).
-- [ ] ADR-035 liegt unter `docs/decisions/035-collection-item-face-support.md`.
+- [x] Migration `0042` läuft gegen eine Kopie der Dev-DB fehlerfrei (`alembic upgrade head`).
+- [x] `sqlite3 <db> ".schema collection_item"` zeigt: `id` als PK, `face_id`-Spalte, XOR-Check.
+- [x] Zeilenzahl `collection_item` vor/nach Migration identisch (keine Zeile verloren) — im
+      Test mit 3 Seed-Items verifiziert (Dev-DB selbst hat 0 collection_item-Zeilen).
+- [x] Bestehende Alben/Trainingssets zeigen nach der Migration unverändert ihre alten Mitglieder
+      — Seed-Asset-Items überlebten Upgrade und Downgrade/Re-Upgrade.
+- [x] `downgrade()` funktioniert (einmal testweise durchlaufen, dann wieder hoch).
+- [x] ADR-035 liegt unter `docs/decisions/035-collection-item-face-support.md`.
 
 ## Doc-Updates
 
-- [ ] `docs/models.md` — `collection_item`-Tabellenbeschreibung: `id`-PK, neue `face_id`-Spalte,
+- [x] `docs/models.md` — `collection_item`-Tabellenbeschreibung: `id`-PK, neue `face_id`-Spalte,
       XOR-Hinweis.
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: tatsächliche Migrationsnummer falls abweichend von 0042, Ergebnis des
-Dev-DB-Kopie-Tests, ob `create_primary_key` im zweiten batch-Block wie geschrieben funktioniert
-hat oder eine andere Reihenfolge nötig war)_
+- **Migrationsnummer:** `0042` wie geplant (`down_revision = "0041"`, verifiziert — Kopf auf Platte
+  war `0041_asset_sort_date_index`). ADR-Nummer `035` frei (letzte auf Platte `034`).
+- **Abweichung von der Plan-Mechanik (contract-neutral, gleiches Zielschema):** Nicht der
+  `batch_alter_table(recreate="always")`-Zwei-Pass mit `drop_constraint(type_="primary")` +
+  `create_primary_key`, sondern ein **manueller Tabellen-Neuaufbau** (create `collection_item_new`
+  → `INSERT SELECT` → `drop_table` → `rename_table`). Grund: SQLite speichert den PK-Constraint-
+  Namen nicht, der reflektierte PK heißt nicht `pk_collection_item` → Drop per Name unzuverlässig.
+  Keine Fremdtabelle referenziert `collection_item` per FK (geprüft) → drop+rename gefahrlos.
+  Idempotent über Spalten-Guard (`face_id` da → return), wie python.md verlangt.
+- **Dev-DB-Kopie-Test (Alembic 1.18.4, `PHOTOFANT_SETTINGS_PATH` → Kopie):** Upgrade→Schema exakt
+  (id-PK, asset/face nullable, XOR-Check, 5 Indizes, 3 FKs). XOR weist „beide gesetzt" und „keins
+  gesetzt" ab; partielle Unique-Indizes weisen doppeltes Face bzw. Asset pro Collection ab.
+  Downgrade löscht Face-Zeile, stellt zusammengesetzten PK wieder her (Daten der Asset-Zeilen
+  erhalten), Re-Upgrade zurück auf 0042 mit intakten Daten.
+- **Lint/Typen:** `ruff` grün auf Migration + models.py; `mypy --strict` sauber auf der Migration.
+  models.py hat 4-6 vorbestehende „unused type: ignore" auf JSON-Spalten (nicht meine Zeilen —
+  gegen HEAD verifiziert, meine Änderung fügt **null** neue Fehler hinzu).

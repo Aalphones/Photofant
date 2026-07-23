@@ -14,7 +14,7 @@
 
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | `collection_item` Schema-Erweiterung für Face-Items (Migration 0042, ADR-035) | heikel | pending |
+| 1 | `collection_item` Schema-Erweiterung für Face-Items (Migration 0042, ADR-035) | heikel | ✅ complete |
 | 2 | Collections-API: Face-Items hinzufügen/entfernen/auflisten | standard | pending |
 | 3 | Trainingsset-Stats + Export mit Face-Items | standard | pending |
 | 4 | Face-Upscale: ComfyUI-Auto-Import auf Face-Ziele erweitern (ADR-036) | heikel | pending |

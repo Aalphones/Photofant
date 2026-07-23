@@ -1,8 +1,10 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Nächster Schritt:** Backlog sichten (`docs/planning/*`) — zwei startbereite Pläne liegen dort,
-siehe Abschnitt „Backlog" unten.
+**Aktiver Plan:** `docs/planning/2026-07-23_gesichter-mehrfachauswahl/`
+**Phase:** 1/8 — `collection_item` Schema-Erweiterung für Face-Items (✅ complete)
+**Nächster Schritt:** Phase 2 — Collections-API: Face-Items hinzufügen/entfernen/auflisten
+(`phase-2-collections-api-face-items.md`). Baut auf der neuen `face_id`-Spalte auf. Phase 2 ist
+`standard` → `sonnet` reicht.
 
 ## P39 „Wissen: mehr Tiefe, Design nachgezogen" abgeschlossen (alle 8 Phasen)
 

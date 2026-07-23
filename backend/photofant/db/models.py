@@ -187,9 +187,18 @@ class SmartTrigger(Base):
 
 class CollectionItem(Base):
     __tablename__ = "collection_item"
+    __table_args__ = (
+        # ADR-035: ein Item ist entweder ein Foto (asset_id) oder ein Face-Crop (face_id), nie beides.
+        CheckConstraint(
+            "(asset_id IS NOT NULL AND face_id IS NULL) OR (asset_id IS NULL AND face_id IS NOT NULL)",
+            name="ck_collection_item_xor",
+        ),
+    )
 
-    collection_id: Mapped[int] = mapped_column(ForeignKey("collection.id"), primary_key=True)
-    asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    collection_id: Mapped[int] = mapped_column(ForeignKey("collection.id"), nullable=False, index=True)
+    asset_id: Mapped[int | None] = mapped_column(ForeignKey("asset.id"), nullable=True, index=True)
+    face_id: Mapped[int | None] = mapped_column(ForeignKey("face.id"), nullable=True, index=True)  # ADR-035
     source: Mapped[str] = mapped_column(Text, nullable=False, server_default="manual")  # manual | smart
     caption_override: Mapped[str | None] = mapped_column(Text, nullable=True)
     position: Mapped[int | None] = mapped_column(Integer, nullable=True)  # P10 Phase 1 — manuelle Reihenfolge
