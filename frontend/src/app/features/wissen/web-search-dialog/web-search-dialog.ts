@@ -5,6 +5,7 @@ import type {
   DiscoveryApplyResponse,
   DiscoveryResponse,
   Job,
+  KnowledgeDiscoveryEntitySuggestion,
   KnowledgeDiscoveryFact,
   KnowledgeDiscoveryResult,
   PersonDto,
@@ -99,6 +100,7 @@ export class WebSearchDialog {
   protected readonly step = signal<Step>('pick');
 
   protected readonly checked = signal<Record<number, boolean>>({});
+  protected readonly checkedEntities = signal<Record<number, boolean>>({});
 
   private readonly searchRequested = signal(false);
   private readonly searchState = toSignal(
@@ -140,7 +142,7 @@ export class WebSearchDialog {
         const facts = this.acceptedFacts();
         if (!requested || entityId === null) { return of(IDLE_APPLY_STATE); }
         return this.knowledgeService
-          .applyDiscovery({ entity_id: entityId, facts, entity_suggestions: this.searchResult()?.entity_suggestions ?? [] })
+          .applyDiscovery({ entity_id: entityId, facts, entity_suggestions: this.acceptedEntitySuggestions() })
           .pipe(
             map((response: DiscoveryApplyResponse): ApplyState => ({ pending: false, response, error: null })),
             startWith({ pending: true, response: null, error: null } as ApplyState),
@@ -155,9 +157,19 @@ export class WebSearchDialog {
   protected readonly applyPending = computed<boolean>(() => this.applyState().pending);
   protected readonly applyError = computed<string | null>(() => this.applyState().error);
 
-  protected readonly acceptedCount = computed<number>(() =>
-    Object.values(this.checked()).filter((value: boolean) => value).length
-  );
+  protected readonly acceptedEntitySuggestions = computed<KnowledgeDiscoveryEntitySuggestion[]>(() => {
+    const suggestions = this.searchResult()?.entity_suggestions ?? [];
+    return suggestions.filter(
+      (_suggestion: KnowledgeDiscoveryEntitySuggestion, index: number) => this.isEntityChecked(index),
+    );
+  });
+
+  protected readonly acceptedCount = computed<number>(() => {
+    const factCount = this.searchResult()?.facts.length ?? 0;
+    const acceptedFactCount = Array.from({ length: factCount }, (_unused, index: number) => index)
+      .filter((index: number) => this.isChecked(index)).length;
+    return acceptedFactCount + this.acceptedEntitySuggestions().length;
+  });
 
   protected readonly canStartSearch = computed<boolean>(() => this.resolvedEntityId() !== null);
 
@@ -167,7 +179,7 @@ export class WebSearchDialog {
     if (this.step() === 'searching') { return null; }
     if (this.step() === 'pick') { return 'Suchen'; }
     if (this.applyResponse() !== null) { return null; }
-    return `${this.acceptedCount()} Fakten übernehmen`;
+    return `${this.acceptedCount()} Einträge übernehmen`;
   });
 
   protected readonly primaryDisabled = computed<boolean>(() => {
@@ -210,6 +222,17 @@ export class WebSearchDialog {
     this.checked.update((current: Record<number, boolean>) => ({ ...current, [index]: !this.isChecked(index) }));
   }
 
+  protected isEntityChecked(index: number): boolean {
+    return this.checkedEntities()[index] ?? true;
+  }
+
+  protected toggleEntity(index: number): void {
+    this.checkedEntities.update((current: Record<number, boolean>) => ({
+      ...current,
+      [index]: !this.isEntityChecked(index),
+    }));
+  }
+
   protected confidenceClass(confidence: number): string {
     return confidence >= 0.75 ? 'high' : 'mid';
   }
@@ -247,6 +270,7 @@ export class WebSearchDialog {
   private startSearch(): void {
     if (!this.canStartSearch()) { return; }
     this.checked.set({});
+    this.checkedEntities.set({});
     this.step.set('searching');
     this.searchRequested.set(true);
   }

@@ -1,13 +1,11 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-22_wissen-tiefe-und-design/`
-**Phase:** 4/8 — Web-Recherche: bevorzugte Quellen + Einträge bestätigen (standard — `sonnet` reicht)
-**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-4-web-recherche.md`
-lesen und umsetzen. Konfidenz-Ausweis Punkt 2 der README beachten: zu Beginn eine
-Beispielanfrage gegen `search_web` fahren und prüfen, ob DuckDuckGo `site:`-Verknüpfungen mit
-`OR` zuverlässig annimmt — fällt das durch, je bevorzugter Quelle eine eigene Anfrage statt
-einer verknüpften. Phase 3 (Merkmale speichern + Interview-Zusammenfassung zeigt sie) ist
-committet.
+**Phase:** 5/8 — „aktualisiert am …" end-to-end (standard — `sonnet` reicht)
+**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-5-zeitstempel.md`
+lesen und umsetzen. Phase 4 (bevorzugte Quellen in der Web-Recherche + gefundene Verknüpfungen
+im Wizard abhakbar) ist committet — Konfidenz-Check bestätigt: DuckDuckGo (`ddgs`) nimmt
+`site:`-Verknüpfungen mit `OR` zuverlässig an.
 
 **🟡 Offen aus Phase 3 (kein Follow-up-Ticket, nur hier notiert):** Ein Interview über eine
 Person mit bereits bestehender Notiz schreibt die erkannten Merkmale noch nicht — nur beim

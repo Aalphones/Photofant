@@ -14,8 +14,10 @@ from photofant.db.models import Base
 from photofant.inference.capabilities import GenerationResult
 from photofant.inference.web_search import WebSearchError, WebSearchResult
 from photofant.jobs.knowledge_discovery_job import (
+    _build_queries,
     _build_user_prompt,
     _field_labels_for,
+    _merge_results,
     _parse_discovery_output,
     _run_discovery,
 )
@@ -234,6 +236,73 @@ def test_run_discovery_broken_output_degrades_to_empty_result(
     assert status.result["errors"] == []
 
 
+def test_run_discovery_uses_preferred_sources_query(
+    session_factory, vault: Vault, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Actor trägt in movies.yaml `preferred_sources: [imdb.com, wikipedia.org]` — der Job
+    muss zuerst eingeschränkt, dann offen suchen und beide Treffer zusammenführen."""
+    _seed_actor(session_factory, vault)
+    queries: list[str] = []
+
+    def _fake_search(query: str, max_results: int = 5) -> list[WebSearchResult]:
+        queries.append(query)
+        if "site:" in query:
+            return [WebSearchResult(title="RDJ — IMDb", url="https://imdb.com/rdj", snippet="x")]
+        return [
+            WebSearchResult(title="RDJ — IMDb", url="https://imdb.com/rdj", snippet="x"),
+            WebSearchResult(title="RDJ — Sonstwo", url="https://example.test/rdj", snippet="y"),
+        ]
+
+    monkeypatch.setattr("photofant.jobs.knowledge_discovery_job.search_web", _fake_search)
+    monkeypatch.setattr(
+        "photofant.jobs.knowledge_discovery_job.generate",
+        lambda *args, **kwargs: _fake_generation(_WELL_FORMED_OUTPUT),
+    )
+
+    _run_discovery(_job_status(), _ACTOR_ID)
+
+    assert len(queries) == 2
+    assert "(site:imdb.com OR site:wikipedia.org)" in queries[0]
+    assert "site:" not in queries[1]
+
+
+def test_run_discovery_restricted_search_error_falls_back_to_open(
+    session_factory, vault: Vault, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ein zu enger site:-Filter darf die Recherche nicht scheitern lassen (AK Teil A #4)."""
+    _seed_actor(session_factory, vault)
+
+    def _fake_search(query: str, max_results: int = 5) -> list[WebSearchResult]:
+        if "site:" in query:
+            raise WebSearchError("leer/gedrosselt")
+        return [WebSearchResult(title="RDJ", url="https://imdb.com/rdj", snippet="x")]
+
+    monkeypatch.setattr("photofant.jobs.knowledge_discovery_job.search_web", _fake_search)
+    monkeypatch.setattr(
+        "photofant.jobs.knowledge_discovery_job.generate",
+        lambda *args, **kwargs: _fake_generation(_WELL_FORMED_OUTPUT),
+    )
+
+    status = _job_status()
+    _run_discovery(status, _ACTOR_ID)
+
+    assert status.result is not None  # kein Absturz, der offene Lauf trägt
+
+
+def test_run_discovery_open_search_error_still_raises(
+    session_factory, vault: Vault, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Scheitert auch der offene Durchlauf, bleibt es beim bisherigen Fehlerverhalten."""
+    _seed_actor(session_factory, vault)
+
+    def _fake_search(query: str, max_results: int = 5) -> list[WebSearchResult]:
+        raise WebSearchError("Rate-Limit")
+
+    monkeypatch.setattr("photofant.jobs.knowledge_discovery_job.search_web", _fake_search)
+    with pytest.raises(RuntimeError, match="Rate-Limit"):
+        _run_discovery(_job_status(), _ACTOR_ID)
+
+
 def test_run_discovery_already_set_attribute_appears_in_prompt(
     session_factory, vault: Vault, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -256,6 +325,62 @@ def test_run_discovery_already_set_attribute_appears_in_prompt(
     _run_discovery(_job_status(), _ACTOR_ID)
 
     assert "taetigkeit = Schauspieler (von dir gesetzt)" in captured["prompt"]
+
+
+# --- Query-Bau / Merge-Unit-Tests (keine DB/Modell nötig) ----------------------------
+
+
+def _actor_entity() -> Entity:
+    return Entity(id=_ACTOR_ID, type="Actor", title="Robert Downey Jr.", domain="Movies")
+
+
+def test_build_queries_without_preferred_returns_single_unchanged_query() -> None:
+    queries = _build_queries(_actor_entity(), hint=None, preferred=())
+    assert queries == ["Robert Downey Jr. Actor"]
+
+
+def test_build_queries_with_preferred_returns_restricted_then_open() -> None:
+    queries = _build_queries(_actor_entity(), hint=None, preferred=("imdb.com", "wikipedia.org"))
+    assert queries == [
+        "Robert Downey Jr. Actor (site:imdb.com OR site:wikipedia.org)",
+        "Robert Downey Jr. Actor",
+    ]
+
+
+def test_build_queries_appends_hint_to_every_query() -> None:
+    queries = _build_queries(_actor_entity(), hint="Marvel", preferred=("imdb.com",))
+    assert queries == [
+        "Robert Downey Jr. Actor Marvel (site:imdb.com)",
+        "Robert Downey Jr. Actor Marvel",
+    ]
+
+
+def test_build_queries_ignores_blank_hint() -> None:
+    queries = _build_queries(_actor_entity(), hint="   ", preferred=())
+    assert queries == ["Robert Downey Jr. Actor"]
+
+
+def test_merge_results_dedupes_by_url_preferred_first() -> None:
+    primary = [WebSearchResult(title="A", url="https://imdb.com/a", snippet="")]
+    fallback = [
+        WebSearchResult(title="A dup", url="https://imdb.com/a", snippet=""),
+        WebSearchResult(title="B", url="https://example.test/b", snippet=""),
+    ]
+    merged = _merge_results(primary, fallback, limit=5)
+    assert [result.url for result in merged] == ["https://imdb.com/a", "https://example.test/b"]
+
+
+def test_merge_results_respects_limit() -> None:
+    primary = [WebSearchResult(title="A", url=f"https://x.test/{i}", snippet="") for i in range(3)]
+    fallback = [WebSearchResult(title="B", url=f"https://y.test/{i}", snippet="") for i in range(3)]
+    merged = _merge_results(primary, fallback, limit=4)
+    assert len(merged) == 4
+    assert [result.url for result in merged] == [
+        "https://x.test/0",
+        "https://x.test/1",
+        "https://x.test/2",
+        "https://y.test/0",
+    ]
 
 
 # --- Parser-Unit-Tests (keine DB/Modell nötig) ---------------------------------------

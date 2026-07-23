@@ -29,15 +29,15 @@ zurückkommen; dann stünde die Recherche ohne alles da. Also erst gezielt, dann
 
 ### Checkliste Teil A
 
-- [ ] In `_run_discovery` die Domäne laden (falls nicht schon vorhanden) und
+- [x] In `_run_discovery` die Domäne laden (falls nicht schon vorhanden) und
       `domain.preferred_sources_for(entity.type)` holen.
-- [ ] Hilfsfunktion `_build_queries(entity, hint, preferred) -> list[str]`: bei leerem
+- [x] Hilfsfunktion `_build_queries(entity, hint, preferred) -> list[str]`: bei leerem
       `preferred` genau eine Anfrage wie bisher; sonst zwei (eingeschränkt, dann offen).
-- [ ] Hilfsfunktion `_merge_results(primary, fallback, limit) -> list[WebSearchResult]`:
+- [x] Hilfsfunktion `_merge_results(primary, fallback, limit) -> list[WebSearchResult]`:
       Reihenfolge erhalten, nach `url` entdoppeln, auf `limit` kürzen.
-- [ ] `WebSearchError` des **eingeschränkten** Laufs abfangen und mit leerer Liste weitermachen
+- [x] `WebSearchError` des **eingeschränkten** Laufs abfangen und mit leerer Liste weitermachen
       (AK 4); der offene Lauf behält sein bisheriges Fehlerverhalten.
-- [ ] Tests: mit/ohne bevorzugte Quellen, Entdoppelung, Reihenfolge, Fehler im ersten Lauf.
+- [x] Tests: mit/ohne bevorzugte Quellen, Entdoppelung, Reihenfolge, Fehler im ersten Lauf.
 
 ## Teil B — Gefundene Einträge sichtbar bestätigen (Frontend)
 
@@ -73,25 +73,52 @@ Grundsatz des ganzen Wegs („Gemma schlägt vor, du bestätigst", ADR-031).
 
 ### Checkliste Teil B
 
-- [ ] Zweiter Auswahl-Zustand analog zu den Fakten: `checkedEntities`, `isEntityChecked(index)`,
+- [x] Zweiter Auswahl-Zustand analog zu den Fakten: `checkedEntities`, `isEntityChecked(index)`,
       `toggleEntity(index)` — **Muster von `isChecked`/`toggleFact` übernehmen**.
-- [ ] Vorbelegung: beim Eintreffen des Ergebnisses alle Indizes angehakt, gleicher Mechanismus
+- [x] Vorbelegung: beim Eintreffen des Ergebnisses alle Indizes angehakt, gleicher Mechanismus
       wie bei den Fakten.
-- [ ] `acceptedEntitySuggestions()` als `computed`.
-- [ ] Zeile 143: `entity_suggestions: this.acceptedEntitySuggestions()`. **Das ist der Fix.**
-- [ ] `acceptedCount()` um die angehakten Verknüpfungen erweitern (steuert Button-Label und
+- [x] `acceptedEntitySuggestions()` als `computed`.
+- [x] Zeile 143: `entity_suggestions: this.acceptedEntitySuggestions()`. **Das ist der Fix.**
+- [x] `acceptedCount()` um die angehakten Verknüpfungen erweitern (steuert Button-Label und
       `primaryDisabled`).
-- [ ] Button-Label „{{ acceptedCount() }} Einträge übernehmen".
-- [ ] Template: neue Sektion nach der Fakten-Schleife,
+- [x] Button-Label „{{ acceptedCount() }} Einträge übernehmen".
+- [x] Template: neue Sektion nach der Fakten-Schleife,
       `@if ((searchResult()?.entity_suggestions ?? []).length > 0)`, Überschrift im Stil
       `.ws-summary-label`, Zeilen im Stil `.ws-fact-row`.
-- [ ] Erklärungs-Affordance: `title`-Tooltip an der Überschrift — „Neue Einträge, die Gemma
+- [x] Erklärungs-Affordance: `title`-Tooltip an der Überschrift — „Neue Einträge, die Gemma
       zusätzlich gefunden hat. Nur Angehaktes wird angelegt."
-- [ ] `.scss` um die Beziehungstyp-Zeile ergänzen, bestehende Fakten-Klassen wiederverwenden.
+- [x] `.scss` um die Beziehungstyp-Zeile ergänzt (`.ws-entity-body`), bestehende Fakten-Klassen
+      wiederverwendet (`.ws-fact-row`, `.ws-fact-body`, `.ws-fact-field`, `.ws-summary-label`).
 
 ## Docs
 
-- [ ] `docs/models.md` bzw. die Domänen-Doku: bevorzugte Quellen als Domänen-/Typ-Schlüssel
-      erwähnen (Verweis auf Phase 1 genügt, nicht doppelt beschreiben).
+- [x] `docs/models.md`: bevorzugte Quellen sind seit Phase 1 dokumentiert (Zeile ~530), inkl.
+      der Private-Domänen-Ausnahme, die der Web-Recherche-Pfad hier unverändert respektiert —
+      kein weiterer Eintrag nötig (Verweis genügt, s. Plan-Auflage).
 
 ## Report-Back
+
+**Konfidenz-Check (README-Punkt 2) aufgelöst:** Live-Anfrage `"Tatiana Maslany Actor
+(site:imdb.com OR site:wikipedia.org)"` gegen `search_web` gefahren — alle 8 Treffer kamen
+ausschließlich von `imdb.com`/`wikipedia.org`. `ddgs` nimmt den `site:`-OR-Filter zuverlässig
+an, kein Rückfallweg nötig.
+
+**Gefundener und mitgefixter Bug (nicht Teil des ursprünglichen Auftrags, aber in derselben
+Stelle, die Teil B ohnehin anfassen musste):** `acceptedCount()` zählte bisher
+`Object.values(this.checked())` — ein Record, das erst durch Klicks befüllt wird. Ungeklickte
+Zeilen sind visuell angehakt (`isChecked()` fällt auf `true` zurück), zählten aber nirgends mit.
+Ergebnis: der „Fakten übernehmen"-Button blieb bis zum ersten Klick auf 0 stehen und war
+disabled — ein Nutzer, der alle Vorschläge unverändert übernehmen wollte, kam nie durch. Fix:
+`acceptedCount()` leitet sich jetzt direkt aus `isChecked()`/`isEntityChecked()` ab (Default
+`true` korrekt mitgezählt) statt aus dem rohen Toggle-Record. Betrifft auch die neue
+Verknüpfungs-Sektion — ohne den Fix wäre dort derselbe Fehler neu eingebaut worden.
+
+Teil A: zwei Suchdurchläufe (eingeschränkt → offen), Merge dedupliziert nach URL und behält
+bevorzugte Quellen vorn. Ohne `preferred_sources` unverändert eine Anfrage (AK 3 geprüft per
+Unit-Test). 6 neue Backend-Tests (2 Integration über `_run_discovery`, 4 reine Query-/Merge-Unit-Tests
+für Teil A) + Handling für Teil B — alle grün, `ruff`/`mypy` sauber.
+
+Teil B: zweite abhakbare Sektion „Gefundene Verknüpfungen" nach den Fakten, gleiches
+Vorbelegungs-/Toggle-Muster, eigener `computed` für die Übernahme-Filterung. `entity_suggestions`
+gehen jetzt gefiltert statt ungefiltert in `applyDiscovery` — das war der eigentliche Fix aus
+dem Plan (Zeile 143 alt). `npm run lint` (tsc --noEmit) und `npm run build` grün.

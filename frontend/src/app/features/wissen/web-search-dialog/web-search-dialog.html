@@ -105,6 +105,23 @@
               </label>
             }
           }
+          @if (result.entity_suggestions.length > 0) {
+            <div class="ws-summary-label" title="Neue Einträge, die Gemma zusätzlich gefunden hat. Nur Angehaktes wird angelegt.">
+              Gefundene Verknüpfungen
+            </div>
+            @for (suggestion of result.entity_suggestions; track $index) {
+              <label class="ws-fact-row">
+                <input type="checkbox" [checked]="isEntityChecked($index)" (change)="toggleEntity($index)" />
+                <div class="ws-fact-body">
+                  <div class="ws-fact-field">{{ suggestion.title }}</div>
+                  <div class="ws-fact-val">{{ suggestion.type }} · {{ suggestion.relationship_type }}</div>
+                  @if (suggestion.body) {
+                    <div class="ws-entity-body">{{ suggestion.body }}</div>
+                  }
+                </div>
+              </label>
+            }
+          }
         }
         @if (applyError(); as error) {
           <div class="ws-error">{{ error }}</div>

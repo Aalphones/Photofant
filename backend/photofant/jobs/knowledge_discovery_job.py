@@ -270,6 +270,36 @@ def _entity_to_dict(entity: DiscoveredEntity) -> dict[str, Any]:
     }
 
 
+def _build_queries(entity: Entity, hint: str | None, preferred: tuple[str, ...]) -> list[str]:
+    """Baut die Suchanfrage(n) für *entity*. Ohne bevorzugte Quellen exakt eine Anfrage
+    (unverändertes Verhalten); mit bevorzugten Quellen zusätzlich davor eine auf sie
+    eingeschränkte Anfrage (`site:` mit `OR` verknüpft — verifiziert gegen `ddgs`)."""
+    base = f"{entity.title} {entity.type}"
+    if hint is not None and hint.strip():
+        base = f"{base} {hint.strip()}"
+    if not preferred:
+        return [base]
+    site_filter = " OR ".join(f"site:{source}" for source in preferred)
+    return [f"{base} ({site_filter})", base]
+
+
+def _merge_results(
+    primary: list[WebSearchResult], fallback: list[WebSearchResult], limit: int
+) -> list[WebSearchResult]:
+    """Führt *primary* (bevorzugte Quellen) vor *fallback* (offene Suche) zusammen,
+    entdoppelt nach URL unter Beibehaltung der Reihenfolge, kürzt auf *limit*."""
+    merged: list[WebSearchResult] = []
+    seen_urls: set[str] = set()
+    for result in (*primary, *fallback):
+        if result.url in seen_urls:
+            continue
+        seen_urls.add(result.url)
+        merged.append(result)
+        if len(merged) >= limit:
+            break
+    return merged
+
+
 def _run_discovery(status: JobStatus, entity_id: str, hint: str | None = None) -> None:
     prompt = PromptLibrary().get(_PROMPT_NAME)
     if prompt is None:
@@ -295,13 +325,26 @@ def _run_discovery(status: JobStatus, entity_id: str, hint: str | None = None) -
     job_queue.update(status, progress=0.3, state=JobState.RUNNING)
     # Optionaler Hinweis aus dem Web-Suche-Wizard (Beruf, Stadt, Link …) — hilft bei
     # Namensvettern, hat aber keinen eigenen Kontrakt-Slot im Prompt, nur in der Suchanfrage.
-    query = f"{entity.title} {entity.type}"
-    if hint is not None and hint.strip():
-        query = f"{query} {hint.strip()}"
-    try:
-        results = search_web(query, max_results=MAX_SEARCH_RESULTS)
-    except WebSearchError as error:
-        raise RuntimeError(str(error)) from error
+    preferred_sources = domain.preferred_sources_for(entity.type)
+    queries = _build_queries(entity, hint, preferred_sources)
+    if len(queries) == 1:
+        try:
+            results = search_web(queries[0], max_results=MAX_SEARCH_RESULTS)
+        except WebSearchError as error:
+            raise RuntimeError(str(error)) from error
+    else:
+        restricted_query, open_query = queries
+        try:
+            restricted_results = search_web(restricted_query, max_results=MAX_SEARCH_RESULTS)
+        except WebSearchError:
+            # Ein zu enger site:-Filter darf die Recherche nicht scheitern lassen —
+            # der offene Durchlauf trägt (AK Teil A #4).
+            restricted_results = []
+        try:
+            open_results = search_web(open_query, max_results=MAX_SEARCH_RESULTS)
+        except WebSearchError as error:
+            raise RuntimeError(str(error)) from error
+        results = _merge_results(restricted_results, open_results, MAX_SEARCH_RESULTS)
 
     field_labels = _field_labels_for(domain, entity.type)
     user_prompt = _build_user_prompt(entity, domain, results)
