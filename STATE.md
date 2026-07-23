@@ -1,9 +1,17 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-07-23_gesichter-mehrfachauswahl/`
-**Phase:** 7/8 — Face-Bulk-Bar: Löschen / Hochskalieren / Zu Trainingsset (✅ complete)
-**Nächster Schritt:** Phase 8 — Doku (code-map, models, routes)
-(`phase-8-doku.md`, Komplexität `mechanisch` → `/model sonnet` reicht).
+**Aktiver Plan:** (keiner — Backlog offen, siehe unten)
+**Nächster Schritt:** einen Backlog-Plan wählen (`docs/planning/2026-07-21_asset-embeddings-auslagern.md`
+oder `docs/planning/2026-07-22_ml-jobs-worker-prozess/`, beide bereit zum Start) oder
+`/session-review`.
+
+## „Gesichter-Mehrfachauswahl" abgeschlossen (alle 8 Phasen)
+
+Archiviert: `docs/archive/2026-07/2026-07-23_gesichter-mehrfachauswahl/README.md` (Summary/Files
+touched/Commits/Deviations/Follow-ups in den Bottom-Sektionen dort). Der „Auswählen"-Button im
+Gesichter-Tab ist jetzt echt: Checkbox-Overlay, Mehrfachauswahl, Bulk-Leiste mit Löschen /
+Hochskalieren (echtes Face-Upscale, ADR-036) / Zu-Trainingsset-hinzufügen (Face-Crops als
+eigenständige Mitglieder, ADR-035, `CollectionItem.face_id`).
 
 ## P39 „Wissen: mehr Tiefe, Design nachgezogen" abgeschlossen (alle 8 Phasen)
 
@@ -52,6 +60,13 @@ für die kein Modell aktiv ist (braucht eine Modell-Abfrage im Zählpfad, die Mo
 
 ## Offene Smoke-Tests (User)
 
+- **„Gesichter-Mehrfachauswahl"** — alle 8 Phasen, noch nicht gegengeprüft. Vollständige
+  Checkliste (Wackelstellen zuerst): `docs/archive/2026-07/2026-07-23_gesichter-mehrfachauswahl/
+  README.md` → „Smoke-Checkliste". Kernpfad: **zuerst** `alembic upgrade head` laufen lassen
+  (Migration 0042 — PK-Umbau, ungewöhnlichster Migrations-Schritt im ganzen Projekt), danach im
+  Gesichter-Tab „Auswählen" → mehrere Gesichter anklicken (Checkbox statt Lightbox), löschen,
+  hochskalieren (Crop wird größer/schärfer, Cleanup-Score-Ansicht zeigt es danach nicht mehr als
+  upscale-bedürftig), zu einem Trainingsset hinzufügen (auch ein Gesicht ohne Quell-Foto testen).
 - **P39 „Wissen: mehr Tiefe, Design nachgezogen"** — alle 8 Phasen, noch nicht gegengeprüft.
   Vollständige Checkliste (Wackelstellen zuerst): `docs/archive/2026-07/
   2026-07-22_wissen-tiefe-und-design/README.md` → „Smoke-Checkliste". Kernpfad: Interview mit
