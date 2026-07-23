@@ -1,12 +1,13 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-22_wissen-tiefe-und-design/`
-**Phase:** 6/8 — Detail-Dialog: Album-Button + KI-Banner (standard — `sonnet` reicht)
-**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-6-detail-dialog.md`
-lesen und umsetzen. Phase 5 („aktualisiert am …" end-to-end) ist committet — Kopfzeile im
-Detail-Dialog zeigt jetzt „N % vollständig · Domäne · aktualisiert TT. Mon JJJJ", `updated_at`
-kommt aus der Vault-Datei-Zeit, nie gespeichert. Phase 7 (Foto-Verknüpfung) ist unabhängig und
-könnte auch zuerst laufen.
+**Phase:** 7/8 — Fotos: echte Verknüpfung zur Person (standard — `sonnet` reicht)
+**Nächster Schritt:** `docs/planning/2026-07-22_wissen-tiefe-und-design/phase-7-foto-verknuepfung.md`
+lesen und umsetzen. Phase 6 (Album-Button + KI-Banner) ist committet — der Detail-Dialog zeigt
+jetzt unter den Sektionen eine Album-Zeile (erzeugt per Klick ein echtes Album aus den
+verknüpften Fotos) und der KI-Auslöser ist ein vollbreiter Banner mit Nutzen+Kosten-Satz statt
+eines schmalen Textlinks, Opt-in bleibt unverändert. Phase 8 (Captions/Tags-Signal) ist
+unabhängig und könnte auch zuerst laufen.
 
 **🟡 Offen aus Phase 3 (kein Follow-up-Ticket, nur hier notiert):** Ein Interview über eine
 Person mit bereits bestehender Notiz schreibt die erkannten Merkmale noch nicht — nur beim

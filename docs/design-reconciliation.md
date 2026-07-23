@@ -160,6 +160,18 @@ Markup-Verschiebung in `lightbox.html`, keine neue Komponente, kein Backend-Bezu
 „Tags" steht in „Übersicht" jetzt vor „Caption" (vorher umgekehrt). Entscheidung Sascha
 (2026-07-20).
 
+**Wissen-Detail-Dialog (P39 Phase 6, 2026-07-23) — zwei bewusste Abweichungen vom neueren
+Mockup `…\design_handoff_photofant\wissen-feature\js\knowledge.jsx` (`KDetail`,
+`.kw-album-sugg`/`.kw-ai-banner`), mit dem Plan freigegeben:**
+- **Album-Box:** Mockup zeigt eine Attrappe mit erfundenem KI-Titelvorschlag („6 Fotos + Wissen
+  deuten auf ein Album ‚Sommerurlaub 2025' hin"). Gebaut ist die ehrliche Variante: Anzahl
+  verknüpfter Fotos nennen, Titel abfragen (vorbelegt mit Name), echtes Album über
+  `createCollection` + `addItems` anlegen (`knowledge-detail-dialog.ts` → `createAlbum()`).
+- **KI-Banner:** Mockup löst den Vorschlag sofort beim Öffnen aus. Bestand bleibt strikt Opt-in
+  (P38-Prinzip „KI nur auf explizite Aktion") — nur die Optik wandert auf den vollbreiten
+  Banner-Rahmen, der Klick-Auslöser nennt jetzt Nutzen und Kosten in einem Satz statt eines
+  schmalen Textlinks.
+
 ---
 
 ### Personen-View

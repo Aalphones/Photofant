@@ -97,10 +97,17 @@
 
         @if (canOfferUpdateSuggestion()) {
           @if (!updateSuggestionRequested()) {
-            <button class="kd-ai-prompt" type="button" (click)="requestUpdateSuggestion()">
-              <pf-icon name="sparkle" [size]="13" />
-              Gemma nach einer Ergänzung fragen?
-            </button>
+            <div class="kd-ai-banner">
+              <pf-icon name="sparkle" [size]="14" />
+              <span class="kd-ai-txt">
+                Gemma kann aus Fotos und vorhandenem Wissen eine Ergänzung vorschlagen — startet einen Modell-Lauf.
+              </span>
+              <div class="kd-ai-acts">
+                <button class="kd-btn kd-btn--primary" type="button" (click)="requestUpdateSuggestion()">
+                  Vorschlag holen
+                </button>
+              </div>
+            </div>
           } @else if (updateSuggestionPending()) {
             <div class="kd-ai-banner">
               <pf-icon name="sparkle" [size]="14" />
@@ -203,6 +210,47 @@
                       <span>{{ source }}</span>
                     }
                   </div>
+                }
+              </div>
+            }
+
+            @if (relatedPhotos().length > 0) {
+              <div class="kd-album">
+                <pf-icon name="layers" [size]="15" />
+                @if (albumCreatedTitle(); as createdTitle) {
+                  <span class="kd-album__text">Album „{{ createdTitle }}" wurde angelegt.</span>
+                } @else if (albumFormOpen()) {
+                  <div class="kd-album__form">
+                    <input
+                      class="kd-album__input"
+                      type="text"
+                      placeholder="Albumtitel"
+                      autofocus
+                      [value]="albumTitle()"
+                      (input)="albumTitle.set($any($event.target).value)"
+                    />
+                    <div class="kd-album__acts">
+                      <button
+                        class="kd-btn kd-btn--primary"
+                        type="button"
+                        [disabled]="albumPending() || albumTitle().trim().length === 0"
+                        (click)="createAlbum()"
+                      >
+                        {{ albumPending() ? 'Legt an…' : 'Anlegen' }}
+                      </button>
+                      <button class="kd-btn kd-btn--ghost" type="button" [disabled]="albumPending()" (click)="cancelAlbumForm()">
+                        Abbrechen
+                      </button>
+                    </div>
+                    @if (albumError(); as error) {
+                      <span class="kd-album__error">{{ error }}</span>
+                    }
+                  </div>
+                } @else {
+                  <span class="kd-album__text">{{ relatedPhotos().length }} verknüpfte Fotos.</span>
+                  <button class="kd-btn kd-btn--primary" type="button" (click)="openAlbumForm()">
+                    Album daraus anlegen
+                  </button>
                 }
               </div>
             }

@@ -23,6 +23,7 @@ import {
 } from 'rxjs';
 import type {
   AiAutonomyDto,
+  CollectionDetail,
   DomainDto,
   EntityDto,
   EntityFieldDefDto,
@@ -36,7 +37,7 @@ import type {
   ResolvedRelationshipDto,
   UpdateSuggestionResponse,
 } from '@photofant/models';
-import { JobsService, KnowledgeService, PersonService } from '@photofant/services';
+import { CollectionService, JobsService, KnowledgeService, PersonService } from '@photofant/services';
 import { CompletenessRing, Icon } from '@photofant/ui';
 
 type LoreLoadStatus = 'loading' | 'ready' | 'empty';
@@ -77,6 +78,7 @@ export class KnowledgeDetailDialog {
   private readonly knowledgeService = inject(KnowledgeService);
   private readonly personService = inject(PersonService);
   private readonly jobsService = inject(JobsService);
+  private readonly collectionService = inject(CollectionService);
 
   // Genau einer der beiden ist beim Öffnen gesetzt (Person aus dem Grid, Entity aus der
   // Notizen-Sektion). Ein Klick auf eine Beziehungs-Chip navigiert intern weiter (siehe
@@ -127,6 +129,11 @@ export class KnowledgeDetailDialog {
       this.lastResetEntityId = id;
       this.updateSuggestionRequested.set(false);
       this.updateAccepted.set(false);
+      this.albumFormOpen.set(false);
+      this.albumTitle.set('');
+      this.albumPending.set(false);
+      this.albumCreatedTitle.set(null);
+      this.albumError.set(null);
     });
   }
 
@@ -247,6 +254,54 @@ export class KnowledgeDetailDialog {
   );
 
   protected readonly sources = computed((): string[] => this.lore()?.sources ?? []);
+
+  // ── Album aus den verknüpften Fotos (P39 Phase 6) ────────────────────────────────────────
+  // Bewusst kein erfundener KI-Titelvorschlag (Mockup-Attrappe) — die ehrliche Variante:
+  // Anzahl nennen, Titel abfragen, echtes Album über `createCollection` + `addItems` anlegen
+  // (der Kontrakt trägt keine Asset-Ids direkt, s. `backend/photofant/api/collections.py:89`).
+  protected readonly albumFormOpen = signal(false);
+  protected readonly albumTitle = signal('');
+  protected readonly albumPending = signal(false);
+  protected readonly albumCreatedTitle = signal<string | null>(null);
+  protected readonly albumError = signal<string | null>(null);
+
+  protected openAlbumForm(): void {
+    this.albumTitle.set(this.displayName());
+    this.albumError.set(null);
+    this.albumFormOpen.set(true);
+  }
+
+  protected cancelAlbumForm(): void {
+    this.albumFormOpen.set(false);
+    this.albumError.set(null);
+  }
+
+  protected createAlbum(): void {
+    const title = this.albumTitle().trim();
+    const assetIds = this.relatedPhotos().map((photo: MediaRefDto) => photo.id);
+    if (title.length === 0 || assetIds.length === 0) { return; }
+
+    this.albumPending.set(true);
+    this.albumError.set(null);
+    this.collectionService
+      .createCollection({ name: title, kind: 'album' })
+      .pipe(
+        switchMap((detail: CollectionDetail): Observable<CollectionDetail> =>
+          this.collectionService.addItems(detail.id, assetIds).pipe(map((): CollectionDetail => detail)),
+        ),
+      )
+      .subscribe({
+        next: (detail: CollectionDetail): void => {
+          this.albumPending.set(false);
+          this.albumFormOpen.set(false);
+          this.albumCreatedTitle.set(detail.name);
+        },
+        error: (): void => {
+          this.albumPending.set(false);
+          this.albumError.set('Album konnte nicht angelegt werden.');
+        },
+      });
+  }
 
   protected relationTypeLabel(type: string): string {
     return type.replaceAll('_', ' ');

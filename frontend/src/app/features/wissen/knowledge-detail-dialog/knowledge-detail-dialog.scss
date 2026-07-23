@@ -153,23 +153,6 @@
   &:hover:not(:disabled) { background: var(--accent-press); }
 }
 
-.kd-ai-prompt {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  align-self: flex-start;
-  margin-top: 16px;
-  padding: 8px 12px;
-  border-radius: var(--radius);
-  background: var(--accent-weak);
-  border: 1px solid var(--accent-line);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-
-  &:hover { background: var(--accent); color: var(--bg); }
-}
-
 .kd-ai-banner {
   display: flex;
   align-items: flex-start;
@@ -323,6 +306,59 @@
   padding: 5px 0;
 
   ::ng-deep svg { color: var(--text-3); flex: none; }
+}
+
+.kd-album {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--semantic-weak);
+  border: 1px solid color-mix(in oklch, var(--semantic) 30%, transparent);
+  color: var(--semantic);
+
+  ::ng-deep svg { flex: none; }
+}
+
+.kd-album__text {
+  flex: 1;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.kd-album__form {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kd-album__input {
+  flex: 1;
+  min-width: 140px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 12.5px;
+
+  &:focus { outline: none; border-color: var(--accent-line); }
+}
+
+.kd-album__acts {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.kd-album__error {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  color: var(--danger);
 }
 
 .kd-photo-grid {
