@@ -48,22 +48,31 @@ beim Halluzinations-Risiko in der README (ADR-034).
 
 ### Backend
 
-- [ ] `_build_user_prompt` (oder ein neuer Helper) erweitert: bei vorhandenem
-      `media_links.persons`-Eintrag Captions + Tags der Fotos dieser Person laden (Query analog
-      `assets.py` Zeile 616-633) und als eigenen Abschnitt an den Prompt anhängen.
-- [ ] Deckelung/Aggregation festlegen. **Nicht raten** — prüfen, ob es für „häufigste Tags einer
-      Personen-Foto-Menge" schon eine Query/Helper gibt (z.B. in `collections/engine.py` oder
-      `collections/captions.py`), bevor eine neue geschrieben wird.
-- [ ] Test: Person mit Fotos, deren Caption z.B. „am Strand in Portugal" lautet → Prompt enthält
-      diesen Text. Person ganz ohne Fotos → Prompt unverändert wie heute.
-- [ ] Prompt-Datei (`PromptLibrary`-Eintrag `_PROMPT_NAME`) ggf. anpassen, falls das
-      System-Prompt-Wording auf die neue Abschnitts-Struktur eingehen soll — erst den
-      bestehenden Prompt-Text lesen, nicht danebenschreiben.
+- [x] `_build_user_prompt` erweitert: neuer Parameter `photo_signal`, gefüllt von
+      `_photo_signal_section()` — bei vorhandenem `media_links.persons`-Eintrag Captions + Tags
+      der erkannten Fotos dieser Person laden (`_recognized_photo_asset_ids`, eigene Query statt
+      Import aus `api/knowledge.py` — Jobs importieren nicht aus der API-Schicht) und als eigenen
+      Abschnitt an den Prompt anhängen.
+- [x] Deckelung/Aggregation festgelegt: `_MAX_PHOTO_CAPTIONS = 8` (neueste zuerst), `_MAX_PHOTO_TAGS
+      = 12` (häufigste zuerst, `manually_removed` ausgeschlossen). Keine bestehende Helper-Query
+      für „häufigste Tags einer Foto-Menge" gefunden (`collections/engine.py`, `captions.py`,
+      `stats.py` geprüft — dort nur `Counter` für Framing/Bucket-Stats, nichts Wiederverwendbares)
+      — Startwert, kein Messwert; FINDINGS falls zu klein/groß.
+- [x] Test: Person mit Fotos (Caption „am Strand in Portugal", Tag „strand") → Prompt enthält
+      beides. Entity ganz ohne Personen-Verknüpfung → Prompt unverändert (kein Foto-Abschnitt).
+- [x] Prompt-Datei (`knowledge_update.md`) angepasst: neue Regel „Captions/Tags sind Hinweise,
+      keine bestätigten Fakten" (gleiche Vorsicht wie ADR-034), Version 1 → 2.
 
 ### Docs
 
-- [ ] `docs/routes.md` bzw. eine kurze ADR-Notiz: Vermerk, dass die KI-Ergänzung jetzt auch
-      Captions/Tags als Quelle nutzt — Transparenz, falls später jemand nachfragt, woher ein
-      Vorschlag stammt.
+- [x] `docs/routes.md` beim `knowledge_update`-Ergebnis ergänzt: Captions/Tags fließen bei
+      Personen-Verknüpfung als Hinweis in den Prompt ein, kein neues Feld/keine neue DTO.
 
 ## Report-Back
+
+Nur Backend geändert — reine Prompt-Erweiterung, keine Schnittstelle betroffen. Frontend bleibt
+unverändert (README-Vermutung bestätigt). `_recognized_photo_asset_ids` nutzt bewusst nur
+`media_links.persons` (nicht zusätzlich `media_links.assets`), damit AK 2 exakt gilt: manuell
+verknüpfte, aber nicht personen-zugeordnete Assets liefern kein Foto-Signal. Zwei neue Tests in
+`test_knowledge_update_job.py` decken AK 1/2/3 ab. `uv run ruff check .` und `uv run mypy
+photofant/jobs/knowledge_update_job.py` grün für die geänderte Datei; volle Testsuite läuft.

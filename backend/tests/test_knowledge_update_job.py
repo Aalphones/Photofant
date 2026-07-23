@@ -7,11 +7,11 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from photofant.db.models import Base
+from photofant.db.models import Asset, AssetInstance, AssetTag, Base, Person, Tag
 from photofant.inference.capabilities import GenerationResult
 from photofant.jobs.knowledge_update_job import SUGGESTION_CONFIDENCE, _run_update
 from photofant.jobs.queue import JobKind, JobStatus
-from photofant.knowledge.schema import Entity, Owner
+from photofant.knowledge.schema import Entity, MediaLinks, Owner
 from photofant.knowledge.service import EntityNotFoundError, KnowledgeService
 from photofant.knowledge.vault import Vault
 
@@ -169,3 +169,56 @@ def test_run_update_proposal_can_be_generated_for_user_owned_entity(
 
     assert status.result is not None
     assert status.result["proposal"] == {"body": "Ergänzter Text."}
+
+
+def test_run_update_includes_photo_captions_and_tags_for_linked_person(
+    session_factory, vault: Vault, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """P39 Phase 8, AK 1+3: personen-verknüpfte Entity zieht Captions + Top-Tags der
+    erkannten Fotos als zusätzlichen Hinweis in den Prompt."""
+    _seed_entity(session_factory, vault, media_links=MediaLinks(persons=[42]))
+    with session_factory() as session:
+        session.add(Person(id=42, name="Robert Downey Jr.", is_unknown=False))
+        session.add(Asset(id=101, content_hash="hash-101", caption="am Strand in Portugal"))
+        session.add(AssetInstance(asset_id=101, person_id=42, path="/img/101.jpg"))
+        tag = Tag(name="strand")
+        session.add(tag)
+        session.flush()
+        session.add(AssetTag(asset_id=101, tag_id=tag.id, kind="auto"))
+        session.commit()
+
+    captured_prompts: list[str] = []
+
+    def _fake_generate(capability, user_prompt, **kwargs):  # type: ignore[no-untyped-def]
+        captured_prompts.append(user_prompt)
+        return _fake_generation("Ergänzter Text.")
+
+    monkeypatch.setattr("photofant.jobs.knowledge_update_job.generate", _fake_generate)
+
+    _run_update(_job_status(), "actors/robert-downey-jr")
+
+    assert len(captured_prompts) == 1
+    assert "am Strand in Portugal" in captured_prompts[0]
+    assert "strand" in captured_prompts[0]
+    assert "keine bestätigten Fakten" in captured_prompts[0]
+
+
+def test_run_update_prompt_unchanged_without_person_link(
+    session_factory, vault: Vault, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """P39 Phase 8, AK 2: reine Notiz ohne Personen-Verknüpfung bleibt unverändert — es
+    gibt keine Fotos, aus denen sich etwas ableiten ließe."""
+    _seed_entity(session_factory, vault)
+
+    captured_prompts: list[str] = []
+
+    def _fake_generate(capability, user_prompt, **kwargs):  # type: ignore[no-untyped-def]
+        captured_prompts.append(user_prompt)
+        return _fake_generation("Ergänzter Text.")
+
+    monkeypatch.setattr("photofant.jobs.knowledge_update_job.generate", _fake_generate)
+
+    _run_update(_job_status(), "actors/robert-downey-jr")
+
+    assert len(captured_prompts) == 1
+    assert "Hinweise aus Fotos" not in captured_prompts[0]
