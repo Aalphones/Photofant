@@ -159,7 +159,8 @@ class RunRequest(BaseModel):
 
 
 class DefaultRunRequest(RunRequest):
-    target_asset_ids: list[int]
+    target_asset_ids: list[int] = []
+    target_face_ids: list[int] = []
 
 
 class RunJobDto(BaseModel):
@@ -654,12 +655,21 @@ async def run_default_workflow(task: str, body: DefaultRunRequest) -> RunRespons
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    if len(body.target_asset_ids) != len(expanded):
+    if body.target_asset_ids and body.target_face_ids:
+        raise HTTPException(
+            status_code=422, detail="target_asset_ids und target_face_ids schließen sich aus",
+        )
+    targets = body.target_asset_ids or body.target_face_ids
+    if not targets:
+        raise HTTPException(
+            status_code=422, detail="target_asset_ids oder target_face_ids erforderlich",
+        )
+    if len(targets) != len(expanded):
         raise HTTPException(
             status_code=422,
             detail=(
-                "target_asset_ids muss genau zur Anzahl expandierter Jobs passen "
-                f"(erwartet {len(expanded)}, erhalten {len(body.target_asset_ids)})"
+                "Ziel-Liste muss genau zur Anzahl expandierter Jobs passen "
+                f"(erwartet {len(expanded)}, erhalten {len(targets)})"
             ),
         )
 
@@ -672,7 +682,8 @@ async def run_default_workflow(task: str, body: DefaultRunRequest) -> RunRespons
         workflow_name=workflow_item.name,
         mask_input_key=mask_input_key,
         mask_data_url=mask_data_url,
-        auto_import_targets=body.target_asset_ids,
+        auto_import_targets=body.target_asset_ids or None,
+        auto_import_face_targets=body.target_face_ids or None,
         auto_import_task=task,
         auto_import_workflow_key=key,
         auto_import_output_node_id=output_node_id,

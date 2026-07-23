@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic
 from typing import Any
@@ -20,7 +21,7 @@ from photofant.comfyui.importer import (
     import_comfyui_output,
     select_output_from_history,
 )
-from photofant.db.models import Asset, AssetInstance, Face, Version
+from photofant.db.models import Asset, AssetInstance, Face, Person, Version
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.settings import load_settings
@@ -360,7 +361,7 @@ async def _wait_and_import_output(
     poll_interval_seconds = float(auto_import["poll_interval_seconds"])
     wait_timeout_seconds = float(auto_import["wait_timeout_seconds"])
     output_dir = str(auto_import["output_dir"])
-    target_asset_id = int(auto_import["target_asset_id"])
+    target_asset_id = auto_import.get("target_asset_id")
     workflow_key = str(auto_import["workflow_key"])
     task = str(auto_import["task"])
 
@@ -383,10 +384,23 @@ async def _wait_and_import_output(
         raise TimeoutError(f"Timeout beim Warten auf ComfyUI-Output fuer Prompt {prompt_id}")
 
     job_queue.update(status, progress=0.9, state=JobState.RUNNING)
+
+    target_face_id = auto_import.get("target_face_id")
+    if target_face_id is not None:
+        version_id, destination = await asyncio.to_thread(
+            _import_face_upscale_result, client, int(target_face_id), output, output_dir,
+        )
+        from photofant.media.versions import generate_version_thumbnail
+        await generate_version_thumbnail(version_id, destination)
+        return
+
+    if target_asset_id is None:
+        raise ValueError("Auto-Import ohne Ziel: weder target_asset_id noch target_face_id gesetzt")
+
     imported = await asyncio.to_thread(
         _import_and_cleanup,
         client,
-        target_asset_id,
+        int(target_asset_id),
         output,
         output_dir,
         task,
@@ -396,6 +410,55 @@ async def _wait_and_import_output(
 
     from photofant.jobs.import_job import enqueue_post_import_pipeline
     await enqueue_post_import_pipeline([imported.asset_id])
+
+
+def _import_face_upscale_result(
+    client: ComfyUIClient, face_id: int, output: ComfyUIOutputRef, output_dir: str,
+) -> tuple[int, Path]:
+    """Sync-Hälfte des Face-Upscale-Imports: DB-Schreiben + lokales Output-Cleanup. Baut exakt
+    dasselbe Version-Muster wie edit_sessions.py::save_session (Editor-Speicherpfad) nach, nur
+    mit ComfyUI-Ergebnisbytes statt gerenderten Editor-Steps — beide Pfade teilen sich seit
+    Aufgabe 2 dieselben Helfer (unset_current_versions/generate_version_thumbnail), damit sie
+    nicht auseinanderdriften. Thumbnail-Erzeugung ist async (eigene to_thread-Aufrufe) und läuft
+    getrennt im Aufrufer — analog zum bestehenden Split zwischen _import_and_cleanup und
+    enqueue_post_import_pipeline für den Asset-Pfad."""
+    from photofant.comfyui.importer import (
+        delete_imported_local_output,
+        read_comfyui_output,
+        write_edit_file,
+    )
+    from photofant.media.versions import unset_current_versions
+
+    with SessionLocal() as session:
+        face = session.get(Face, face_id)
+        if face is None:
+            raise ValueError(f"Gesicht {face_id} nicht gefunden")
+        person = session.get(Person, face.person_id or 1)
+        if person is None:
+            raise ValueError(f"Person fuer Gesicht {face_id} nicht gefunden")
+
+        image_bytes, _local_source_path = read_comfyui_output(client, output, output_dir)
+        destination = write_edit_file(person, output.filename, image_bytes)
+
+        unset_current_versions(session, None, face_id)
+        version = Version(
+            instance_id=None,
+            face_id=face_id,
+            type="upscale",
+            parent_id=None,
+            path=str(destination.resolve()),
+            is_current=True,
+            params={"source": "comfyui_auto_import", "task": "upscale"},
+            created_at=datetime.now(UTC),
+        )
+        session.add(version)
+        face.is_upscaled = True
+        session.commit()
+        session.refresh(version)
+        version_id = version.id
+
+    delete_imported_local_output(output_dir, output)
+    return version_id, destination
 
 
 def _import_and_cleanup(
@@ -437,6 +500,7 @@ async def enqueue_comfyui_runs(
     mask_input_key: str | None = None,
     mask_data_url: str | None = None,
     auto_import_targets: list[int] | None = None,
+    auto_import_face_targets: list[int] | None = None,
     auto_import_task: str | None = None,
     auto_import_workflow_key: str | None = None,
     auto_import_output_node_id: str | None = None,
@@ -463,6 +527,16 @@ async def enqueue_comfyui_runs(
         if auto_import_targets is not None:
             auto_import = {
                 "target_asset_id": auto_import_targets[index],
+                "task": auto_import_task,
+                "workflow_key": auto_import_workflow_key,
+                "output_node_id": auto_import_output_node_id,
+                "output_dir": output_dir,
+                "poll_interval_seconds": poll_interval_seconds,
+                "wait_timeout_seconds": wait_timeout_seconds,
+            }
+        elif auto_import_face_targets is not None:
+            auto_import = {
+                "target_face_id": auto_import_face_targets[index],
                 "task": auto_import_task,
                 "workflow_key": auto_import_workflow_key,
                 "output_node_id": auto_import_output_node_id,

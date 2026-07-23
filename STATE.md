@@ -1,10 +1,9 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-23_gesichter-mehrfachauswahl/`
-**Phase:** 3/8 — Trainingsset-Stats + Export mit Face-Items (✅ complete)
-**Nächster Schritt:** Phase 4 — Face-Upscale: ComfyUI-Auto-Import auf Face-Ziele erweitern
-(ADR-036, `phase-4-face-upscale-backend.md`). Phase 4 ist `heikel` → `/model opusplan`
-empfohlen (Opus plant, Sonnet setzt um).
+**Phase:** 4/8 — Face-Upscale: ComfyUI-Auto-Import auf Face-Ziele erweitern (ADR-036) (✅ complete)
+**Nächster Schritt:** Phase 5 — Face-Selection: eigener NgRx-State-Slice
+(`phase-5-face-selection-state.md`, Komplexität `standard` → `/model sonnet` reicht).
 
 ## P39 „Wissen: mehr Tiefe, Design nachgezogen" abgeschlossen (alle 8 Phasen)
 

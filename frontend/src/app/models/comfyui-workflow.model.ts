@@ -109,7 +109,8 @@ export type DefaultRunTask = 'upscale' | 'edit' | 'inpaint';
 
 /** Request-Body für POST /api/comfyui/defaults/{task}/run */
 export interface DefaultRunRequest {
-  target_asset_ids: number[];
+  target_asset_ids?: number[];
+  target_face_ids?: number[];
   inputs: Record<string, number | number[]>;
   face_inputs?: Record<string, number | number[]>;
   prompt?: string | null;

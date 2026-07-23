@@ -1047,15 +1047,18 @@ interface RunRequest {
 }
 
 interface DefaultRunRequest extends RunRequest {
-  target_asset_ids: number[];
+  target_asset_ids?: number[];
+  target_face_ids?: number[];
 }
 ```
 
 **Default-Run-Regeln:** Der Workflow-Key kommt aus `settings.json`
-(`default_upscale`, `default_edit`, `default_inpaint`), nie aus dem Request. Jeder
-expandierte Job muss genau einem `target_asset_ids`-Eintrag entsprechen. Auto-Import
-ist nur fuer diesen Default-Endpunkt erlaubt; `POST /api/comfyui/workflows/{key}/run`
-bleibt Fire-and-forget.
+(`default_upscale`, `default_edit`, `default_inpaint`), nie aus dem Request. Genau eine
+der beiden Ziel-Listen darf gesetzt sein (`target_asset_ids` XOR `target_face_ids`, sonst
+422), und jeder expandierte Job muss genau einem Eintrag der gewählten Liste entsprechen.
+Face-Ziele importieren das Ergebnis als face-gebundene `Version` mit `is_upscaled=True`
+(ADR-036) statt als neues Asset (ADR-013). Auto-Import ist nur fuer diesen
+Default-Endpunkt erlaubt; `POST /api/comfyui/workflows/{key}/run` bleibt Fire-and-forget.
 
 **Default-Output-Auswahl:** Bevorzugt wird ein Save-Node mit
 `_meta.title = "Photofant Output"`. Ohne Marker ist genau ein SaveImage-kompatibler

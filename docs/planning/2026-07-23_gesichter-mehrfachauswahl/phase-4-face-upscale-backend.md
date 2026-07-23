@@ -398,16 +398,33 @@ bekommt `is_upscaled = True`.
 - [ ] Bestehender Asset-Upscale-Bulk-Flow (`onBulkUpscale`, Foto-Tab) funktioniert unverändert
       (Regressionscheck).
 - [ ] `target_asset_ids` + `target_face_ids` gleichzeitig gesetzt → 422.
-- [ ] ADR-036 liegt unter `docs/decisions/036-face-upscale-auto-import.md`.
+- [x] ADR-036 liegt unter `docs/decisions/036-face-upscale-auto-import.md`.
 
 ## Doc-Updates
 
-- [ ] `docs/routes.md` — `DefaultRunRequest`-Form bei `POST /comfyui/defaults/{task}/run`
-      ergänzen (`target_face_ids`).
-- [ ] `docs/code-map.md` — Zeile „Personen & Faces" oder „ComfyUI": Hinweis auf
-      `photofant/media/versions.py` als gemeinsamen Helfer für Editor-Speichern + Face-Upscale.
+- [x] `docs/routes.md` — `DefaultRunRequest`-Form bei `POST /comfyui/defaults/{task}/run`
+      ergänzt (`target_face_ids`), plus XOR-Regel + ADR-036/013-Verweis in den Default-Run-Regeln.
+- [x] `docs/code-map.md` — „Generativ"-Zeile: Hinweis auf `photofant/media/versions.py` als
+      gemeinsamer Helfer für Editor-Speichern + Face-Upscale (ADR-036).
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: ob die Extraktion nach `media/versions.py` reibungslos lief, echte
-Laufzeit eines Face-Upscale-Jobs, jegliche Abweichung vom auto_import-Dict-Schema)_
+Umsetzung folgte dem Plan 1:1; Zeilennummern stimmten alle noch. Statische Gates grün
+(ruff auf allen 5 geänderten Dateien sauber, mypy ohne neue Fehler ggü. HEAD, Frontend-tsc grün).
+Echte Laufzeit eines Face-Upscale-Jobs steht aus (privates Profil, kein Live-Test) → Smoke beim User.
+
+**Abweichungen / Anmerkungen:**
+- **ADR-013-Dateiname im Plan falsch.** Der Plan verlinkte ADR-013 als
+  `013-comfyui-asset-import.md`; real heißt sie `013-comfyui-edit-als-asset.md`. In ADR-036
+  korrigiert, sonst wäre der Querverweis tot gewesen.
+- **`person_id or 1`-Fallback** (Plan-Vorgabe, Aufgabe 5): Ein Gesicht ohne Person schreibt seine
+  hochskalierte Version in den `edits`-Ordner von Person 1. Fehlt Person 1 in der DB, wirft der
+  Job `ValueError` statt still zu scheitern — akzeptabel, aber der Ordner-Zielort für
+  unzugeordnete Gesichter ist eine stille Konvention, die im Smoke mit einem Person-losen Gesicht
+  bestätigt werden sollte.
+- **Neuer Guard gegen den Typprüfer:** Nach dem Face-Zweig steht ein `if target_asset_id is None:
+  raise ValueError(...)` vor dem Asset-Import — der Wechsel von `auto_import["target_asset_id"]`
+  auf `.get(...)` machte den Typ `Any | None`, der Guard narrowt sauber (statt Non-Null-Assertion)
+  und ist zugleich defensiv gegen ein Auto-Import-Dict ohne Ziel.
+- **Kein neuer Cross-Phase-Fund** (FINDINGS.md bleibt leer): Der Phase-7-Aufrufer
+  `onFaceBulkUpscale` ist bereits in Aufgabe 6 als Nachfolge-Arbeit beschrieben.

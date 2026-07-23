@@ -179,7 +179,8 @@ export class ComfyUIService {
     return this.http.post<{ jobs: { job_id: string }[] }>(
       `/api/comfyui/defaults/${task}/run`,
       {
-        target_asset_ids: payload.target_asset_ids,
+        target_asset_ids: payload.target_asset_ids ?? [],
+        target_face_ids: payload.target_face_ids ?? [],
         inputs: payload.inputs,
         face_inputs: payload.face_inputs ?? {},
         prompt: payload.prompt ?? null,

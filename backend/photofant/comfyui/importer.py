@@ -152,7 +152,7 @@ def import_comfyui_output(
         raise ValueError(f"Person {source_instance.person_id} nicht gefunden")
 
     image_bytes, local_source_path = read_comfyui_output(client, output, output_dir)
-    destination = _write_edit_file(person, output.filename, image_bytes)
+    destination = write_edit_file(person, output.filename, image_bytes)
     meta = read_meta(destination)
 
     existing_asset = session.query(Asset).filter(Asset.content_hash == meta.content_hash).first()
@@ -265,7 +265,7 @@ def generate_asset_thumbnails(asset_id: int, file_path: Path) -> None:
             log.warning("Thumbnail-Generierung fehlgeschlagen fuer %s (size %d)", file_path, thumb_size)
 
 
-def _write_edit_file(person: Person, filename: str, image_bytes: bytes) -> Path:
+def write_edit_file(person: Person, filename: str, image_bytes: bytes) -> Path:
     data_root_path = Path(get_data_root())
     person_dir = ensure_person_folder(data_root_path, person)
     edits_dir = person_dir / "edits"
