@@ -1,11 +1,18 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-21_asset-embeddings-auslagern.md`
-**Phase:** 1/3 — Zugriffsschicht einziehen (in Arbeit)
-**Nächster Schritt:** `db/embeddings.py` fertig verdrahten, ruff/mypy/Tests grün, committen.
+**Phase:** 2/3 — Nebentabelle anlegen und befüllen (offen, noch nicht begonnen)
+**Nächster Schritt:** Migration für die Vektor-Nebentabelle (eine Zeile je Bild, beide
+Vektoren), Bestand kopieren, `db/embeddings.py` auf Lesen/Schreiben dort umstellen — **alte
+Spalten bleiben stehen** (Rollback ohne Datenverlust). Nur `db/embeddings.py` und die Migration
+werden angefasst (das war der Sinn von Phase 1).
 
-Danach Phase 2 (Nebentabelle) + Phase 3 (Spalten droppen) — je eine Session, Pflicht-Clear
-an der Grenze. Weiterer Backlog: `docs/planning/2026-07-22_ml-jobs-worker-prozess/`.
+**Wackelstelle Phase 2 (aus dem Plan):** Zwei-Wahrheiten-Fenster — nichts darf in diesem Zustand
+noch in die alten Spalten schreiben. Löschen eines Bildes muss die Nebenzeile mitnehmen.
+Gegen echte Daten prüfen (Suche/Dubletten/Empfehlungen/Index-Neuaufbau liefern dasselbe).
+
+Phase 1 ✅ committet (`f45b439`). Phase 3 = alte Spalten droppen + `ANALYZE`. Weiterer Backlog:
+`docs/planning/2026-07-22_ml-jobs-worker-prozess/`.
 
 ## „Gesichter-Mehrfachauswahl" abgeschlossen (alle 8 Phasen)
 
