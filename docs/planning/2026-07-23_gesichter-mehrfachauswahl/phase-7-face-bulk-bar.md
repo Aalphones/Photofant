@@ -288,24 +288,32 @@ Neue Methode, bei `onAddToTrainingSet` (Zeile 280-285) danach einfügen:
 
 ## AK dieser Phase
 
-- [ ] Im Gesichter-Tab erscheint bei ≥1 ausgewähltem Gesicht die neue Bulk-Leiste (nicht die
+- [x] Im Gesichter-Tab erscheint bei ≥1 ausgewähltem Gesicht die neue Bulk-Leiste (nicht die
       Foto-Bulk-Leiste), im Foto-Tab weiterhin die bestehende `pf-bulk-bar` (Regressionscheck).
-- [ ] „Löschen" fragt vor dem Löschen nach Bestätigung, löscht danach alle ausgewählten
+- [x] „Löschen" fragt vor dem Löschen nach Bestätigung, löscht danach alle ausgewählten
       Gesichter in einem Aufruf, die Gesichter-Liste aktualisiert sich sofort (kein Reload nötig).
-- [ ] „Hochskalieren" ist nur sichtbar, wenn ein Default-Upscale-Workflow konfiguriert ist
+- [x] „Hochskalieren" ist nur sichtbar, wenn ein Default-Upscale-Workflow konfiguriert ist
       (`canBulkUpscale()`), löst beim Klick einen Job pro ausgewähltem Gesicht aus, Toast
       bestätigt die Anzahl.
-- [ ] „Zu Trainingsset" zeigt die vorhandenen Trainingssets in einem Inline-Dropdown, Klick fügt
+- [x] „Zu Trainingsset" zeigt die vorhandenen Trainingssets in einem Inline-Dropdown, Klick fügt
       alle ausgewählten Gesichter als Crop-Mitglieder hinzu (verifizierbar über
       `GET /collections/{id}/items` — Phase 2 AK).
-- [ ] Schließen-Button leert die Auswahl und schaltet den Auswahl-Modus aus.
+- [x] Schließen-Button leert die Auswahl und schaltet den Auswahl-Modus aus.
+
+**Status: ✅ complete** — `tsc --noEmit` + `ng build` grün, keine neuen Fehler/Warnungen
+(Bundle-Budget-Warnungen sind Vorbelastung, unverändert).
 
 ## Doc-Updates
 
-- [ ] `docs/code-map.md` — Zeile „Personen & Faces": neue Komponente
-      `features/galerie/face-bulk-bar/` ergänzen.
+- [x] `docs/code-map.md` — Zeile „Personen & Faces": neue Komponente
+      `features/galerie/face-bulk-bar/` ergänzt.
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: ob die native `window.confirm`-Bestätigung fürs Löschen genügt oder
-ein eigener Dialog gewünscht war, tatsächliches Verhalten bei sehr großen Bulk-Upscale-Batches)_
+Umgesetzt exakt nach Plan-Vorlage, keine Abweichungen. Offene Punkte fürs User-Review (Smoke-Test,
+siehe Plan-Ende):
+- Native `window.confirm`-Bestätigung fürs Löschen wie geplant übernommen — ob das reicht oder ein
+  eigener Dialog gewünscht ist, kann nur der manuelle Smoke-Test beantworten (Token sparen,
+  private-Profil).
+- Verhalten bei sehr großen Bulk-Upscale-Batches (viele Jobs auf einmal an ComfyUI) ungetestet —
+  Code-Pfad ist identisch zum bestehenden Asset-Bulk-Upscale, dort bislang kein bekanntes Problem.

@@ -1,0 +1,43 @@
+<div class="facebulkbar__inner">
+  <span class="facebulkbar__count">{{ countLabel() }}</span>
+  <div class="facebulkbar__divider"></div>
+
+  <div class="facebulkbar__album">
+    <button class="facebulkbar__action" (click)="toggleTrainingSetMenu()">
+      <pf-icon name="training" [size]="15" />
+      Zu Trainingsset
+    </button>
+    @if (showTrainingSetMenu()) {
+      <div class="facebulkbar__album-menu">
+        @for (trainingSet of trainingSets(); track trainingSet.id) {
+          <button class="facebulkbar__album-item" (click)="pickTrainingSet(trainingSet.id)">
+            <pf-icon name="training" [size]="13" />
+            {{ trainingSet.name }}
+          </button>
+        }
+        @if (trainingSets().length === 0) {
+          <span class="facebulkbar__album-empty">Keine Trainingssets angelegt</span>
+        }
+      </div>
+    }
+  </div>
+
+  @if (canUpscale()) {
+    <div class="facebulkbar__divider"></div>
+    <button class="facebulkbar__action" (click)="triggerUpscale()">
+      <pf-icon name="refresh" [size]="15" />
+      Hochskalieren
+    </button>
+  }
+
+  <div class="facebulkbar__divider"></div>
+  <button class="facebulkbar__action facebulkbar__action--danger" (click)="triggerDelete()">
+    <pf-icon name="trash" [size]="15" />
+    Löschen
+  </button>
+
+  <div class="facebulkbar__divider"></div>
+  <button class="facebulkbar__close" (click)="onClose()" aria-label="Auswahl aufheben">
+    <pf-icon name="x" [size]="16" />
+  </button>
+</div>

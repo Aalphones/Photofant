@@ -1,9 +1,9 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-23_gesichter-mehrfachauswahl/`
-**Phase:** 6/8 — Face-Grid/-Cell: Checkbox-Overlay + Klick-Verdrahtung (✅ complete)
-**Nächster Schritt:** Phase 7 — Face-Bulk-Bar: Löschen / Hochskalieren / Zu Trainingsset
-(`phase-7-face-bulk-bar.md`, Komplexität `standard` → `/model sonnet` reicht).
+**Phase:** 7/8 — Face-Bulk-Bar: Löschen / Hochskalieren / Zu Trainingsset (✅ complete)
+**Nächster Schritt:** Phase 8 — Doku (code-map, models, routes)
+(`phase-8-doku.md`, Komplexität `mechanisch` → `/model sonnet` reicht).
 
 ## P39 „Wissen: mehr Tiefe, Design nachgezogen" abgeschlossen (alle 8 Phasen)
 

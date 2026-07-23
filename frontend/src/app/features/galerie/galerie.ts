@@ -7,6 +7,7 @@ import type { AssetDto } from '@photofant/models';
 import { AssetService, ClassifyService, ComfyUIService, PersonService, RunDraftService } from '@photofant/services';
 import { GalerieGrid } from './grid/grid';
 import { FaceGrid } from './face-grid/face-grid';
+import { FaceBulkBar } from './face-bulk-bar/face-bulk-bar';
 import { SubToolbar } from './sub-toolbar/sub-toolbar';
 import { Lightbox } from './lightbox/lightbox';
 import { FilterRail } from './filter-rail/filter-rail';
@@ -18,7 +19,7 @@ import type { BulkEditPayload, ExportDialogFilters, RerunPayload } from '@photof
 @Component({
   selector: 'pf-galerie',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SubToolbar, GalerieGrid, FaceGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, BulkEditDialog, RerunDialog, ExportDialog, AssignPersonDialog, RouterLink],
+  imports: [SubToolbar, GalerieGrid, FaceGrid, Lightbox, FilterRail, RunLeiste, Icon, BulkBar, FaceBulkBar, BulkEditDialog, RerunDialog, ExportDialog, AssignPersonDialog, RouterLink],
   templateUrl: './galerie.html',
   styleUrl: './galerie.scss',
   host: { '(document:keydown.escape)': 'onEscape()' },
@@ -128,6 +129,7 @@ export class Galerie {
   });
 
   protected readonly selectedCount = computed((): number => this.selectedIds().length);
+  protected readonly selectedFaceCount = computed((): number => this.selectedFaceIds().length);
 
   constructor() {
     // Always clear favourite filter when entering gallery — Favoriten-View locks it to true
@@ -288,6 +290,10 @@ export class Galerie {
     this.store.dispatch(galleryActions.clearSelection());
   }
 
+  protected onFaceBulkClose(): void {
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
   protected onBulkTag(payload: { add: string[]; remove: number[] }): void {
     const ids = this.selectedIds();
     if (!ids.length) { return; }
@@ -310,6 +316,13 @@ export class Galerie {
     const ids = this.selectedIds();
     if (!ids.length) { return; }
     this.store.dispatch(collectionsActions.addItems({ collectionId, assetIds: ids }));
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onFaceAddToTrainingSet(collectionId: number): void {
+    const ids = this.selectedFaceIds();
+    if (!ids.length) { return; }
+    this.store.dispatch(collectionsActions.addItems({ collectionId, faceIds: ids }));
     this.store.dispatch(galleryActions.clearSelection());
   }
 
@@ -404,6 +417,44 @@ export class Galerie {
         },
       });
     this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onFaceBulkUpscale(): void {
+    const workflow = this.upscaleWorkflow();
+    const ids = this.selectedFaceIds();
+    if (workflow == null || ids.length === 0) { return; }
+    const imageSlot = workflow.inputs.find((input) => input.kind === 'image');
+    if (imageSlot == null) { return; }
+    this.comfyuiService.runDefaultWorkflow('upscale', {
+      target_face_ids: ids,
+      inputs: {},
+      face_inputs: { [imageSlot.key]: ids },
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response: { jobs: { job_id: string }[] }) => {
+          const count = response.jobs.length;
+          this.showRunToast(`${count} Upscale-Job${count !== 1 ? 's' : ''} gestartet — Ergebnis wird automatisch importiert`);
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Fehler beim Senden an ComfyUI';
+          this.showRunToast(`Fehler: ${message}`);
+        },
+      });
+    this.store.dispatch(galleryActions.clearSelection());
+  }
+
+  protected onFaceBulkDelete(): void {
+    const ids = this.selectedFaceIds();
+    if (!ids.length) { return; }
+    this.personService.bulkDeleteFaces(ids)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        for (const id of ids) {
+          this.store.dispatch(galleryActions.removeFaceItem({ id }));
+        }
+        this.store.dispatch(galleryActions.clearSelection());
+      });
   }
 
   protected onBulkTrash(): void {

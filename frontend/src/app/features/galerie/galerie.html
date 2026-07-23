@@ -90,7 +90,19 @@
   <pf-lightbox />
 }
 
-@if (selectedCount() > 0) {
+@if (mediaType() === 'faces') {
+  @if (selectedFaceCount() > 0) {
+    <pf-face-bulk-bar
+      [count]="selectedFaceCount()"
+      [trainingSets]="trainingSets()"
+      [canUpscale]="canBulkUpscale()"
+      (close)="onFaceBulkClose()"
+      (deleteAction)="onFaceBulkDelete()"
+      (upscaleAction)="onFaceBulkUpscale()"
+      (addToTrainingSet)="onFaceAddToTrainingSet($event)"
+    />
+  }
+} @else if (selectedCount() > 0) {
   <pf-bulk-bar
     [count]="selectedCount()"
     [albums]="albums()"

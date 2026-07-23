@@ -20,7 +20,7 @@
 | 4 | Face-Upscale: ComfyUI-Auto-Import auf Face-Ziele erweitern (ADR-036) | heikel | ✅ complete |
 | 5 | Face-Selection: eigener NgRx-State-Slice | standard | ✅ complete |
 | 6 | Face-Grid/-Cell: Checkbox-Overlay + Klick-Verdrahtung | standard | ✅ complete |
-| 7 | Face-Bulk-Bar: Löschen / Hochskalieren / Zu Trainingsset | standard | pending |
+| 7 | Face-Bulk-Bar: Löschen / Hochskalieren / Zu Trainingsset | standard | ✅ complete |
 | 8 | Doku (code-map, models, routes) | mechanisch | pending |
 
 ## Ziel
