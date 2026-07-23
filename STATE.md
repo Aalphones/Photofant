@@ -1,10 +1,10 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-23_gesichter-mehrfachauswahl/`
-**Phase:** 2/8 — Collections-API: Face-Items hinzufügen/entfernen/auflisten (✅ complete)
-**Nächster Schritt:** Phase 3 — Trainingsset-Stats + Export mit Face-Items
-(`phase-3-stats-export-face-items.md`). Baut auf der neuen `face_id`-Spalte + den Phase-2-Routen
-auf. Phase 3 ist `standard` → `sonnet` reicht.
+**Phase:** 3/8 — Trainingsset-Stats + Export mit Face-Items (✅ complete)
+**Nächster Schritt:** Phase 4 — Face-Upscale: ComfyUI-Auto-Import auf Face-Ziele erweitern
+(ADR-036, `phase-4-face-upscale-backend.md`). Phase 4 ist `heikel` → `/model opusplan`
+empfohlen (Opus plant, Sonnet setzt um).
 
 ## P39 „Wissen: mehr Tiefe, Design nachgezogen" abgeschlossen (alle 8 Phasen)
 

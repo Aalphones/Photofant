@@ -18,7 +18,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from photofant.config import get_data_root
-from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Person, Tag
+from photofant.db.models import Asset, AssetInstance, AssetTag, CollectionItem, Face, Person, Tag
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 
@@ -260,11 +260,12 @@ def _sidecar_content(mode: str, tags: list[str], caption: str | None) -> str:
 def _collection_item_rows(collection_id: int) -> list[tuple[Path, str | None, list[str]]]:
     """Active members: (source path, effective caption, effective tag names).
 
-    Effective caption = `caption_override` (set-only, Phase 2/3 caption tools) if set,
-    else the gallery's original `Asset.caption` — same precedence as `TrainingSetItemDto`.
-    """
+    Asset-Items: effective caption = `caption_override` if set, else `Asset.caption` (Galerie-
+    Original). Face-Items (P-Gesichter-Mehrfachauswahl, ADR-035) haben keine Galerie-Caption —
+    `caption_override` ist hier die einzige Quelle (leer bleibt leer, kein Foto-Fallback), Tags
+    bleiben immer `[]` (kein Face-Tag-Konzept)."""
     with SessionLocal() as session:
-        rows = (
+        asset_rows = (
             session.query(AssetInstance.path, Asset.id, Asset.caption, CollectionItem.caption_override)
             .join(Asset, Asset.id == AssetInstance.asset_id)
             .join(CollectionItem, CollectionItem.asset_id == Asset.id)
@@ -273,7 +274,7 @@ def _collection_item_rows(collection_id: int) -> list[tuple[Path, str | None, li
             .all()
         )
         items: list[tuple[Path, str | None, list[str]]] = []
-        for path, asset_id, caption, caption_override in rows:
+        for path, asset_id, caption, caption_override in asset_rows:
             tag_rows = (
                 session.query(Tag.name)
                 .join(AssetTag, AssetTag.tag_id == Tag.id)
@@ -282,6 +283,17 @@ def _collection_item_rows(collection_id: int) -> list[tuple[Path, str | None, li
                 .all()
             )
             items.append((Path(path), caption_override or caption, [row[0] for row in tag_rows]))
+
+        face_rows = (
+            session.query(Face.crop_path, CollectionItem.caption_override)
+            .join(CollectionItem, CollectionItem.face_id == Face.id)
+            .filter(CollectionItem.collection_id == collection_id)
+            .distinct()
+            .all()
+        )
+        for crop_path, caption_override in face_rows:
+            items.append((Path(crop_path), caption_override, []))
+
         return items
 
 

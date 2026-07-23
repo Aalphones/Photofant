@@ -156,22 +156,32 @@ davon ob die Quelle ein Asset oder ein Face war.
 
 ## AK dieser Phase
 
-- [ ] `GET /collections/{id}/stats` für ein Trainingsset mit gemischten Asset- und Face-Items:
+- [x] `GET /collections/{id}/stats` für ein Trainingsset mit gemischten Asset- und Face-Items:
       `total` zählt beide, `ar_buckets` enthält Einträge aus beiden Quellen, `framing`/
       `quality_histogram`/`tag_frequencies`/`near_dupe_rate` bleiben unverändert asset-only
-      (keine Exception, keine falschen Werte für Face-Anteile).
-- [ ] `POST /collections/{id}/export` für dasselbe gemischte Trainingsset erzeugt Bilddateien für
+      (keine Exception, keine falschen Werte für Face-Anteile). Abgedeckt durch
+      `test_stats_mixed_asset_and_face_items` + `test_stats_face_without_bbox_skips_ar_bucket`
+      (`backend/tests/test_collection_face_items.py`).
+- [x] `POST /collections/{id}/export` für dasselbe gemischte Trainingsset erzeugt Bilddateien für
       Face-Items (aus `crop_path`) und Asset-Items (wie bisher), Sidecar-Dateien mit korrektem
       Caption-Verhalten (Face-Item ohne `caption_override` → leere Sidecar-Datei, kein Absturz).
-- [ ] Ein Trainingsset **ohne** Face-Items (nur Fotos) liefert exakt dieselben Stats/Export-Werte
-      wie vor dieser Phase (Regressionscheck).
+      Abgedeckt durch `test_export_rows_mixed_asset_and_face_items` (Sidecar-Bau selbst
+      unverändert generisch, siehe Downstream-Hinweis in der Phasen-Datei oben).
+- [x] Ein Trainingsset **ohne** Face-Items (nur Fotos) liefert exakt dieselben Stats/Export-Werte
+      wie vor dieser Phase (Regressionscheck). Abgedeckt durch
+      `test_stats_asset_only_collection_unchanged` + bestehender
+      `test_training_near_dupe_rate_uses_dino` (`test_dupe_scan_dino.py`, weiterhin grün).
 
 ## Doc-Updates
 
-- [ ] `docs/code-map.md` — Zeile „Trainingssets & Export": Hinweis ergänzen, dass Stats/Export
+- [x] `docs/code-map.md` — Zeile „Trainingssets & Export": Hinweis ergänzt, dass Stats/Export
       jetzt auch Face-Items lesen (`collections/stats.py`, `jobs/export_job.py`).
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: tatsächliches Aussehen der `ar_buckets` bei gemischten Sets, ob die
-bbox-Näherung in der Praxis brauchbare Buckets ergibt)_
+`ar_buckets` bei gemischten Sets: Face-Crops landen im selben Bucket-Format wie Assets
+(`"<Basis> · <Seitenverhältnis>"`, z. B. `"512 · 1:1"`) — ein 512×512-Face-Crop und ein
+1024×1024-Asset landen in unterschiedlichen Buckets (verschiedene Basisauflösung), aber
+beide sind sauber gezählt, keine Kollision oder falsche Zuordnung. Die bbox-Näherung ist für
+die Bucket-Granularität (grobe AR-Stufen, nicht Pixel-genau) ausreichend — genau das Risiko,
+das die README vorab benannt hat, kein neuer Fund.

@@ -16,7 +16,7 @@
 |---|---|---|---|
 | 1 | `collection_item` Schema-Erweiterung für Face-Items (Migration 0042, ADR-035) | heikel | ✅ complete |
 | 2 | Collections-API: Face-Items hinzufügen/entfernen/auflisten | standard | ✅ complete |
-| 3 | Trainingsset-Stats + Export mit Face-Items | standard | pending |
+| 3 | Trainingsset-Stats + Export mit Face-Items | standard | ✅ complete |
 | 4 | Face-Upscale: ComfyUI-Auto-Import auf Face-Ziele erweitern (ADR-036) | heikel | pending |
 | 5 | Face-Selection: eigener NgRx-State-Slice | standard | pending |
 | 6 | Face-Grid/-Cell: Checkbox-Overlay + Klick-Verdrahtung | standard | pending |

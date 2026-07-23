@@ -18,7 +18,7 @@ import numpy as np
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from photofant.db.models import Asset, AssetTag, CollectionItem, Tag
+from photofant.db.models import Asset, AssetTag, CollectionItem, Face, Tag
 
 _BUCKET_BASES = (512, 768, 1024)
 
@@ -110,9 +110,15 @@ def _near_dupe_rate(embeddings: list[bytes], threshold: float) -> float:
 
 
 def compute_training_set_stats(session: Session, collection_id: int) -> TrainingSetStats:
+    """Face-Items (ADR-035) zählen in `total`/`ar_buckets` mit (bbox-Maße statt echter
+
+    Crop-Pixel-Maße — Näherung, siehe Plan-README Risiken), bleiben aber außen vor bei
+    `framing`/`quality_histogram`/`tag_frequencies`/`near_dupe_rate` — diese Eigenschaften
+    existieren am Face-Modell nicht bzw. (Near-Dupe) fehlt das nötige Embedding.
+    """
     from photofant.settings import load_settings
 
-    rows = (
+    asset_rows = (
         session.query(
             Asset.id, Asset.framing, Asset.quality_score, Asset.width, Asset.height, Asset.dino_embedding
         )
@@ -120,15 +126,21 @@ def compute_training_set_stats(session: Session, collection_id: int) -> Training
         .filter(CollectionItem.collection_id == collection_id)
         .all()
     )
-    total = len(rows)
+    face_rows = (
+        session.query(Face.bbox)
+        .join(CollectionItem, CollectionItem.face_id == Face.id)
+        .filter(CollectionItem.collection_id == collection_id)
+        .all()
+    )
+    total = len(asset_rows) + len(face_rows)
     if total == 0:
         return TrainingSetStats(total=0)
 
-    framing_counts = Counter(row.framing for row in rows if row.framing is not None)
+    framing_counts = Counter(row.framing for row in asset_rows if row.framing is not None)
     framing = [DistItem(value=value, count=count) for value, count in framing_counts.most_common()]
 
     quality_buckets = [0] * 5
-    for row in rows:
+    for row in asset_rows:
         if row.quality_score is None:
             continue
         index = min(int(row.quality_score * 5), 4)
@@ -138,12 +150,14 @@ def compute_training_set_stats(session: Session, collection_id: int) -> Training
         for index, count in enumerate(quality_buckets)
     ]
 
-    bucket_counts = Counter(
-        key for key in (_bucket_key(row.width, row.height) for row in rows) if key is not None
-    )
+    ar_keys = [_bucket_key(row.width, row.height) for row in asset_rows]
+    for (bbox,) in face_rows:
+        if bbox:
+            ar_keys.append(_bucket_key(int(bbox["x2"] - bbox["x1"]), int(bbox["y2"] - bbox["y1"])))
+    bucket_counts = Counter(key for key in ar_keys if key is not None)
     ar_buckets = [DistItem(value=value, count=count) for value, count in bucket_counts.most_common()]
 
-    asset_ids = [row.id for row in rows]
+    asset_ids = [row.id for row in asset_rows]
     tag_rows = (
         session.query(Tag.name, func.count(AssetTag.id).label("cnt"))
         .join(AssetTag, AssetTag.tag_id == Tag.id)
@@ -152,10 +166,10 @@ def compute_training_set_stats(session: Session, collection_id: int) -> Training
         .order_by(func.count(AssetTag.id).desc())
         .limit(20)
         .all()
-    )
+    ) if asset_ids else []
     tag_frequencies = [TagFrequency(name=row.name, count=row.cnt) for row in tag_rows]
 
-    embeddings = [bytes(row.dino_embedding) for row in rows if row.dino_embedding is not None]
+    embeddings = [bytes(row.dino_embedding) for row in asset_rows if row.dino_embedding is not None]
     near_dupe_threshold = load_settings()["training_near_dupe_dino_threshold"]
     near_dupe_rate = _near_dupe_rate(embeddings, near_dupe_threshold)
 
