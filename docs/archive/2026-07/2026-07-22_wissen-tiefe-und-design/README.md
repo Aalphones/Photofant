@@ -210,16 +210,37 @@ Wackelstellen zuerst:
 
 ## Summary
 
-_(beim Archivieren füllen)_
+Alle 8 Phasen umgesetzt. Das Interview fragt jetzt die Merkmale des Typs aktiv ab (statt sie aus
+Prosa zu raten) und legt sie feldgenau mit Owner-Pill an; die Web-Recherche durchsucht bevorzugte
+Quellen zuerst und zeigt gefundene Einträge abhakbar; der Detail-Dialog zeigt Zeitstempel,
+Album-Button und KI-Banner im Design; eine personen-verknüpfte Entity zeigt deren erkannte Fotos
+automatisch; und der KI-Ergänzungsvorschlag bezieht Captions/Tags dieser Fotos als Hinweis ein.
 
 ## Files touched
 
-_(beim Archivieren füllen)_
+Backend: `knowledge/domain.py`, `knowledge/schema.py`, `jobs/interview_job.py`,
+`jobs/knowledge_discovery_job.py`, `jobs/knowledge_update_job.py`, `api/knowledge.py`,
+`api/knowledge_ai.py`, `knowledge/service.py`, `inference/prompts/{interview,knowledge_update,
+knowledge_discovery}.md`, Domänen-YAMLs (`movies.yaml`, `private.yaml`).
+Frontend: Interview-Dialog + Wizards, Detail-Dialog (`knowledge.tsx`/`-detail-dialog`),
+Web-Recherche-Wizard, zugehörige `.scss`.
+Docs: `docs/routes.md`, dieser Plan-Ordner.
 
 ## Deviations from plan
 
-_(beim Archivieren füllen)_
+- Interview-Merkmalsfelder liegen alle auf einem Schritt („Eckdaten") statt je einem
+  Wizard-Schritt pro Feld — bewusste Abweichung vom Mockup, siehe README „Kritisch gegenlesen".
+- Fotos einer verknüpften Person werden live aus `AssetInstance` gelesen, nie in den Vault
+  gespiegelt — bewusste Ausnahme vom sonstigen `media_links`-Muster (Phase 7, Begründung dort).
+- Phase 8 nutzt für das Foto-Signal ausschließlich `media_links.persons` (nicht zusätzlich
+  `media_links.assets`), damit AK 2 exakt gilt — engere Wahl als die kombinierte Fotomenge der
+  „Verknüpfte Fotos"-Anzeige aus Phase 7.
 
 ## Follow-ups
 
-_(beim Archivieren füllen)_
+- 🟡 Aus Phase 3 offen (siehe STATE.md): ein Interview über eine Person mit bereits bestehender
+  Notiz schreibt die erkannten Merkmale noch nicht — nur beim Neuanlegen.
+- Deckelung der Foto-/Caption-Anzahl (Phase 7: 24 Fotos; Phase 8: 8 Captions/12 Tags) ist ein
+  Startwert, kein Messwert — bei Bedarf nachjustieren.
+- Smoke-Checkliste unten ist User-Sache (Token) — insbesondere Punkte 1-4 (Interview-Pfade,
+  Web-Recherche) sind noch nicht gegengeprüft.
