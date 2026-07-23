@@ -769,6 +769,7 @@ Der Rerun-Step `heuristics` liest vorhandene Face-Zeilen und aktualisiert `asset
 | Angular Route | Method | Backend Endpoint | Request | Response |
 |---|---|---|---|---|
 | `/galerie` (Gesichter-Tab, P21) | `GET` | `/api/faces/gallery` | `page`, `page_size`, `person_id` (optional), `asset_ids[]` (repeatable, optional) | `FacesGalleryPage { items, total, page, page_size }` — `items[]` sind flache Einzeleinträge (Face **oder** Version-Pseudo-Eintrag), je mit `kind` (`face\|version`), `version_id`, `stack_size`, `stack_group_id` (ADR-012) |
+| `/galerie` (Gesichter-Bulk-Bar „Löschen" · Gesichter-Mehrfachauswahl) | `POST` | `/api/faces/bulk-delete` | `{ face_ids: number[] }` | `BulkDeleteFacesResultDto { deleted: number, asset_ids: number[] }` — bestehender Endpunkt, jetzt zusätzlich aus der Galerie erreichbar; unbekannte `face_ids` werden still übersprungen |
 | Lightbox (Face-Matches) | `GET` | `/api/faces/{face_id}/matches` | — | `FaceMatchDto[]` |
 | Lightbox (Face-Thumbnail) | `GET` | `/api/faces/{face_id}/thumbnail` | — | JPEG blob (256 px) |
 | `/einstellungen` / manuell | `POST` | `/api/faces/cluster` | — | `{ job_id: string }` |

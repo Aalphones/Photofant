@@ -22,13 +22,13 @@ wurde, plus die zwei Tabellen-Zeilen, die mehrere Phasen gemeinsam betreffen.
 
 Gegen jede Phasendatei prüfen, ob ihr „Doc-Updates"-Abschnitt tatsächlich umgesetzt wurde:
 
-- [ ] Phase 1: `docs/models.md` — `collection_item` (`id`-PK, `face_id`, XOR).
-- [ ] Phase 2: `docs/routes.md` — neue Face-Item-Routen.
-- [ ] Phase 3: `docs/code-map.md` — Trainingssets-Zeile (Stats/Export lesen jetzt Face-Items).
-- [ ] Phase 4: `docs/routes.md` (`DefaultRunRequest`), `docs/code-map.md`
+- [x] Phase 1: `docs/models.md` — `collection_item` (`id`-PK, `face_id`, XOR).
+- [x] Phase 2: `docs/routes.md` — neue Face-Item-Routen.
+- [x] Phase 3: `docs/code-map.md` — Trainingssets-Zeile (Stats/Export lesen jetzt Face-Items).
+- [x] Phase 4: `docs/routes.md` (`DefaultRunRequest`), `docs/code-map.md`
       (`photofant/media/versions.py`).
-- [ ] Phase 6: `docs/code-map.md` — Personen-&-Faces-Zeile (Mehrfachauswahl-Fähigkeit).
-- [ ] Phase 7: `docs/code-map.md` — neue `face-bulk-bar`-Komponente.
+- [x] Phase 6: `docs/code-map.md` — Personen-&-Faces-Zeile (Mehrfachauswahl-Fähigkeit).
+- [x] Phase 7: `docs/code-map.md` — neue `face-bulk-bar`-Komponente.
 
 Fehlt eine dieser Zeilen (z. B. weil eine Phase von einem anderen Modell/einer anderen Session
 umgesetzt wurde, ohne den Doc-Update-Schritt mitzuziehen) — hier nachholen, nicht überspringen.
@@ -79,12 +79,27 @@ ohne eigene Trainingsset-Editor-UI-Anpassung (siehe Plan-Phase-2 „Bewusst auß
 
 ## AK dieser Phase
 
-- [ ] Alle sechs Cross-Check-Punkte aus Aufgabe 1 sind erledigt (nicht nur geplant).
-- [ ] `docs/code-map.md`, `docs/routes.md` beschreiben den Endzustand aller 7 Code-Phasen korrekt
+- [x] Alle sechs Cross-Check-Punkte aus Aufgabe 1 sind erledigt (nicht nur geplant).
+- [x] `docs/code-map.md`, `docs/routes.md` beschreiben den Endzustand aller 7 Code-Phasen korrekt
       — stichprobenartig: ein Entwickler, der nur `code-map.md` liest, findet
       `face-bulk-bar`/`media/versions.py` ohne den Code selbst zu durchsuchen.
-- [ ] ADR-Querverweise sind reale, existierende Dateien (kein toter Link).
+- [x] ADR-Querverweise sind reale, existierende Dateien (kein toter Link).
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: welche Doc-Zeile in der Praxis am meisten Nacharbeit brauchte)_
+Cross-Check (Aufgabe 1) zeigte: Phasen 1, 2, 3, 4, 6, 7 hatten ihre lokalen Doc-Updates
+tatsächlich schon vollständig nachgezogen — kein einziger Punkt musste hier nachgeholt werden.
+Die meiste Nacharbeit brauchte trotzdem `code-map.md` Zeile „Personen & Faces": die
+Backend-Spalte kannte `db/models.py` (`CollectionItem.face_id`) und den
+`comfyui_run_job.py`/`media/versions.py`-Face-Upscale-Pfad noch gar nicht — Phase 4 hatte den
+`media/versions.py`-Verweis nur in der „Generativ"-Zeile hinterlegt (aus Implementierungssicht),
+nicht zusätzlich hier (aus Feature-Sicht). Bei der „Trainingssets & Export"-Zeile ergänzt statt
+neu geschrieben: ADR-035-Verweis, `bbox`-Näherungshinweis und der Editor-UI-Scope-Caveat fehlten.
+`docs/routes.md` fehlte nur eine einzige Zeile komplett: `POST /api/faces/bulk-delete` war nirgends
+dokumentiert — beim Nachtragen fiel auf, dass die Response kein `204` ist (wie Aufgabe 4 im Plan
+vorschlug), sondern `BulkDeleteFacesResultDto { deleted, asset_ids }` (Code gegengelesen,
+`backend/photofant/api/faces.py:575-581`) — Plan-Vorlage korrigiert übernommen. Die
+„Hochskalieren"/„Zu Trainingsset"-Zeilen aus Aufgabe 4 waren dagegen bereits vollständig vorhanden
+(Phase 2/4/7 hatten sie live mitgepflegt) — nicht doppelt eingefügt. ADR-035/036 (Aufgabe 5)
+verlinkten beide schon korrekt auf reale Dateien, der im Plan befürchtete Platzhalter-Link `[018]`
+existierte nicht (mutmaßlich schon in Phase 1 sauber aufgelöst).

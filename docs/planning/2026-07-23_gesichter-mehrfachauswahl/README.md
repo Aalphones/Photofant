@@ -21,7 +21,7 @@
 | 5 | Face-Selection: eigener NgRx-State-Slice | standard | ✅ complete |
 | 6 | Face-Grid/-Cell: Checkbox-Overlay + Klick-Verdrahtung | standard | ✅ complete |
 | 7 | Face-Bulk-Bar: Löschen / Hochskalieren / Zu Trainingsset | standard | ✅ complete |
-| 8 | Doku (code-map, models, routes) | mechanisch | pending |
+| 8 | Doku (code-map, models, routes) | mechanisch | ✅ complete |
 
 ## Ziel
 
@@ -224,10 +224,52 @@ Backlog-Kandidat, falls Trainingssets mit Face-Items in der Praxis Kuratierung b
 
 ## Bottom-Sektionen
 
-_(beim Archivieren füllen)_
-
 ### Summary
+
+Der „Auswählen"-Button im Gesichter-Tab funktioniert jetzt echt: Checkbox-Overlay,
+Mehrfachauswahl, eigener NgRx-State-Slice, und eine Bulk-Leiste mit drei Aktionen —
+Löschen, Hochskalieren (echtes Face-Upscale, ersetzt den Crop als neue Version,
+`is_upscaled=True`, ADR-036) und Zu-Trainingsset-hinzufügen (Face-Crops als eigenständige
+`CollectionItem`-Mitglieder über eine neue `face_id`-Spalte mit XOR-Constraint, ADR-035).
+Export und Stats für Trainingssets lesen Face-Items jetzt mit. Alle 8 Phasen durchgelaufen,
+keine Blocker.
+
 ### Files touched
+
+46 Dateien (Backend + Frontend), Kernstücke: `backend/photofant/db/models.py`
+(`CollectionItem.face_id`), Migration `0042`, `backend/photofant/api/collections.py`
+(Face-Item-Routen), `backend/photofant/media/versions.py` (neuer gemeinsamer Helfer für
+Editor-Speichern + Face-Upscale), `backend/photofant/collections/stats.py`,
+`backend/photofant/jobs/export_job.py`, `frontend/src/app/store/gallery/*`
+(Face-Selection-State), `frontend/src/app/features/galerie/face-grid/`, `face-cell/`,
+`face-bulk-bar/` (neu). Vollständige Liste: `git diff --stat 68ee985^ f9abc3f`.
+
 ### Commits
+
+`50e1d0a` Phase 1 (Schema+Migration) · `95f81a2` Phase 2 (Collections-API) ·
+`79281d7` Phase 3 (Stats+Export) · `5591f07` Phase 4 (Face-Upscale-Backend) ·
+`b63a5ac` Phase 5 (Selection-State) · `34f49eb` Phase 6 (Grid/Cell-UI) ·
+`f9abc3f` Phase 7 (Bulk-Bar) · Phase 8 (diese Doku-Konsolidierung) folgt als eigener
+Commit direkt im Anschluss.
+
 ### Deviations from plan
+
+- Phase 1: Migration als manueller Tabellen-Neuaufbau statt
+  `batch_alter_table(recreate="always")` — contract-neutral, gleiches Zielschema (Grund:
+  SQLite speichert PK-Constraint-Namen nicht zuverlässig, siehe Phase-1-Report-Back).
+- Phase 2: zwei zusätzliche direkte Aufrufer der alten `addItems`-Signatur gefunden und
+  mitgezogen (Plan nannte nur zwei von vieren).
+- Phase 4: ADR-013-Dateiname im Plan falsch benannt, beim Verlinken korrigiert
+  (`013-comfyui-edit-als-asset.md`).
+- Phase 8: Aufgabe-4-Textvorschlag für die `bulk-delete`-Zeile in `routes.md` nannte
+  fälschlich `204` als Response — tatsächlich `BulkDeleteFacesResultDto { deleted,
+  asset_ids }` (gegen den Code verifiziert, korrigiert übernommen).
+
 ### Follow-ups
+
+- 🟡 Trainingsset-Editor-UI (`features/trainingssets/training-set-item`) stellt
+  Face-Items noch mit leeren Tag/Framing/Caption-Feldern dar statt speziell dafür gebaut
+  zu sein — bewusster Scope-Schnitt, kein Versehen (README „Risiken").
+- Backlog-Kandidat (nicht angefragt): manuelle Reihenfolge (Reorder) und Near-Dupe-Review
+  für Face-Items in Trainingssets — siehe „Bewusst draußen" oben.
+- Smoke-Test steht noch aus (User) — siehe Checkliste unten, in `STATE.md` verlinkt.
