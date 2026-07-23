@@ -1,8 +1,24 @@
 # STATE
 
-**Aktiver Plan:** (keiner — Backlog unten, nächster Kandidat `docs/planning/
-2026-07-22_ml-jobs-worker-prozess/`)
-**Nächster Schritt:** `/plan` oder `/implement` mit dem gewünschten Backlog-Plan starten.
+**Aktiver Plan:** `docs/planning/2026-07-22_ml-jobs-worker-prozess/`
+**Phase:** 1/4 — Fundament: IPC-Brücke + Worker-Skeleton (complete, Code fertig)
+**Nächster Schritt:** `/clear`, dann `/model sonnet` (Phase 2 ist heikel — nach den ersten zwei
+Job-Migrationen ggf. `opusplan` prüfen, falls der Cross-Process-Signalisierungs-Check hakt),
+danach `/implement` → Phase 2 „Erstmigration — Captioning + Tagging".
+
+**🟡 Phase 1 komplett, Laufzeit-Verhalten noch nicht gegengeprüft (private-Profil, User-Smoke):**
+Worker-Prozess (`backend/photofant/worker/`) + Remote-Proxy in `jobs/queue.py` stehen, `ruff`
+und `mypy --strict` sind grün (0 Fehler in den 7 berührten Dateien). Noch nicht live getestet:
+Worker startet automatisch (Log „Worker-Prozess bereit"), `POST /api/jobs/demo` läuft über die
+neue IPC-Strecke mit weiterhin live sichtbarem Fortschritt im Job-Dock, sauberer Shutdown ohne
+Zombie-Prozess, Kill-Test (Worker im Task-Manager beenden → API bleibt erreichbar). Details +
+Deviations: `docs/planning/2026-07-22_ml-jobs-worker-prozess/phase-1-fundament-ipc.md` →
+„Report-Back". SQLite-Parallelzugriff-Check konnte mit dem DEMO-Job noch nicht sinnvoll geprüft
+werden (rührt die DB nicht an) — auf Phase 2 verschoben, in FINDINGS.md getaggt.
+
+ADR-033 war beim Planen die nächste freie Nummer, ist inzwischen an vier andere Pläne vergeben
+(033-036) — die reale Nummer für diesen Plan ist **ADR-037**
+(`docs/decisions/037-ml-jobs-worker-prozess.md`).
 
 ## „Embedding-BLOBs aus der Asset-Tabelle auslagern" abgeschlossen (alle 3 Phasen)
 

@@ -14,7 +14,7 @@
 
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
-| 1 | Fundament — IPC-Brücke + Worker-Skeleton, ADR-033 | heikel | pending |
+| 1 | Fundament — IPC-Brücke + Worker-Skeleton, ADR-037 | heikel | complete |
 | 2 | Erstmigration — Captioning + Tagging | heikel | pending |
 | 3 | Rest-Migration — Embedding, Heuristics, Classification, Face, Clustering, Dupe-Scan | standard | pending |
 | 4 | Härtung + Cleanup | standard | pending |
@@ -160,7 +160,7 @@ Standardbibliothek genug.
 - [ ] Kein API-Route-Handler und keine I/O-Jobklasse (Import, Export, Thumbnail, Backup, Download,
       ComfyUI-Run) fasst nach diesem Plan noch `session_manager`/`generative_engine`/`gguf_engine`
       an — die leben ausschließlich im Worker.
-- [ ] ADR-033 dokumentiert die Entscheidung inkl. verworfener Alternativen.
+- [ ] ADR-037 dokumentiert die Entscheidung inkl. verworfener Alternativen.
 
 ## Risiken
 

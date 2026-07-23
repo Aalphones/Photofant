@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
+from photofant.jobs.queue import JobKind, JobStatus, job_queue
 
 router = APIRouter(prefix="/jobs")
 
@@ -56,24 +56,14 @@ async def jobs_stream() -> EventSourceResponse:
     return EventSourceResponse(_event_generator())
 
 
-async def _demo_coro(status: JobStatus) -> None:
-    steps = 5
-    for step in range(1, steps + 1):
-        await asyncio.sleep(1.0)
-        job_queue.update(status, progress=step / steps, state=JobState.RUNNING)
-
-
 class RunDemoResponse(BaseModel):
     job_id: str
 
 
 @router.post("/demo", response_model=RunDemoResponse)
 async def run_demo_job() -> RunDemoResponse:
-    status = await job_queue.enqueue(
-        kind=JobKind.DEMO,
-        label="Demo-Job",
-        coro_factory=_demo_coro,
-    )
+    """Läuft seit ADR-037 im Worker-Prozess — beweist die IPC-Strecke (worker/dispatch.py)."""
+    status = await job_queue.enqueue_remote(kind=JobKind.DEMO, label="Demo-Job", payload={})
     return RunDemoResponse(job_id=status.id)
 
 

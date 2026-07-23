@@ -1,4 +1,4 @@
-# Phase 1 — Fundament: IPC-Brücke + Worker-Skeleton, ADR-033
+# Phase 1 — Fundament: IPC-Brücke + Worker-Skeleton, ADR-037
 
 **Komplexität:** heikel (neue Prozess-Grenze, neuer Transport-Mechanismus, Architektur-ADR).
 
@@ -198,14 +198,14 @@ normalerweise unkritisch, da der Uvicorn-Reloader selbst schon einen eigenen Pro
 hat) — beim ersten echten Start beobachten, ob `multiprocessing` mit einer
 `RuntimeError`/Endlos-Neustart-Schleife reagiert; falls ja, Guard ergänzen.
 
-## Aufgabe 7 — ADR-033
+## Aufgabe 7 — ADR-037
 
-Nummer verifizieren (`grep -rn "ADR-0[3-9][0-9]" docs/planning/` — letzte bekannte Nummer war 032,
-falls seither ein anderer Plan entstanden ist, hochzählen). Neue Datei
-`docs/decisions/033-ml-jobs-worker-prozess.md`:
+Nummer verifiziert (`ls docs/decisions | sort | tail`): 032 war die letzte Nummer beim
+Planen, inzwischen sind 033-036 an andere Pläne vergeben — echte nächste Nummer ist 037.
+Neue Datei `docs/decisions/037-ml-jobs-worker-prozess.md`:
 
 ```markdown
-# ADR-033 — Modell-Inferenz-Jobs laufen in einem eigenen Worker-Prozess
+# ADR-037 — Modell-Inferenz-Jobs laufen in einem eigenen Worker-Prozess
 
 **Status:** Akzeptiert — 2026-07-22
 **Querverweise:** [017](017-inference-session-pool.md) (Pool-Verwaltung bleibt, zieht nur um)
@@ -247,23 +247,64 @@ ComfyUI-Run) bleiben im API-Prozess — sie sind nicht GIL-belastend.
 
 ## AK dieser Phase
 
-- [ ] `backend/photofant/worker/` existiert mit `protocol.py`, `process.py`, `dispatch.py`.
-- [ ] Worker-Prozess startet beim Backend-Start automatisch (Log-Zeile „Worker-Prozess bereit").
-- [ ] `POST /api/jobs/demo` läuft über die neue IPC-Strecke — Fortschritt (5 Schritte, 1×/Sekunde)
-      kommt weiterhin live im Job-Dock an, ununterscheidbar vom bisherigen Verhalten.
-- [ ] Backend-Shutdown (Strg+C) beendet den Worker-Prozess mit, kein Zombie-Prozess danach.
-- [ ] Worker-Prozess im Task-Manager gezielt beendet, während der Demo-Job läuft: API bleibt
+- [x] `backend/photofant/worker/` existiert mit `protocol.py`, `process.py`, `dispatch.py`.
+- [ ] 🟡 Worker-Prozess startet beim Backend-Start automatisch (Log-Zeile „Worker-Prozess bereit").
+      **Code fertig, nicht live gestartet — User-Smoke.**
+- [ ] 🟡 `POST /api/jobs/demo` läuft über die neue IPC-Strecke — Fortschritt (5 Schritte, 1×/Sekunde)
+      kommt weiterhin live im Job-Dock an, ununterscheidbar vom bisherigen Verhalten. **User-Smoke.**
+- [ ] 🟡 Backend-Shutdown (Strg+C) beendet den Worker-Prozess mit, kein Zombie-Prozess danach.
+      **User-Smoke.**
+- [ ] 🟡 Worker-Prozess im Task-Manager gezielt beendet, während der Demo-Job läuft: API bleibt
       erreichbar (z.B. `GET /api/health` antwortet weiter), Beweis der Isolation — noch **ohne**
-      automatischen Neustart (das ist Phase 4).
-- [ ] SQLite-Parallelzugriff geprüft (Konfidenz-Ausweis README Punkt 2): aus beiden Prozessen
-      gleichzeitig lesen/schreiben, kein `database is locked`.
-- [ ] ADR-033 liegt unter `docs/decisions/033-ml-jobs-worker-prozess.md` (Nummer verifiziert).
+      automatischen Neustart (das ist Phase 4). **User-Smoke.**
+- [ ] 🟡 SQLite-Parallelzugriff (Konfidenz-Ausweis README Punkt 2) — **nicht mit dem DEMO-Job
+      prüfbar**, der rührt die DB nicht an (bewusst kein GPU/DB, siehe Aufgabe 1). Echte Prüfung
+      erst sinnvoll, sobald ein Job im Worker die DB anfasst → verschoben auf Phase 2
+      (CAPTIONING/TAGGING), dort in FINDINGS.md getaggt.
+- [x] ADR-037 liegt unter `docs/decisions/037-ml-jobs-worker-prozess.md` (Nummer verifiziert —
+      032 war der Stand beim Planen, 033-036 inzwischen an andere Pläne vergeben).
 
 ## Doc-Updates
 
-- [ ] `docs/code-map.md` — Zeile „Jobs / Queue" ergänzen: neuer Worker-Prozess + `worker/`-Modul.
+- [x] `docs/code-map.md` — Zeile „Jobs / Queue" ergänzt: neuer Worker-Prozess + `worker/`-Modul.
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: was abweicht, was die Windows-`spawn`-Startzeit tatsächlich war,
-Ergebnis des SQLite-Parallelzugriff-Checks)_
+**Abweichungen vom Plan-Text (bewusst, mit Begründung):**
+
+1. **ADR-Nummer 033 → 037.** War beim Planen die nächste freie Nummer, ist inzwischen von vier
+   anderen Plänen belegt (033-036). In README + dieser Datei + allen Code-Kommentaren korrigiert.
+2. **`job_id`-Passthrough in `enqueue()`.** Der Plan-Text erwähnt nicht explizit, dass die
+   worker-lokale `JobQueue.enqueue()` dieselbe `job_id` verwenden muss, die die API-seitige
+   `enqueue_remote()` schon vergeben hat — sonst kennen beide Prozesse denselben Job unter
+   verschiedenen IDs, und der Status-Rückkanal kann ihn nie wiederfinden. `enqueue()` hat jetzt
+   einen optionalen `job_id`-Parameter (Default: neu generiert, wie bisher).
+3. **Kein zweiter `JobQueue()`-Instanz-Aufbau im Worker.** Aufgabe 2 skizzierte `worker_queue =
+   JobQueue()` als neue, eigene Instanz. Tatsächlich verwendet der Worker den Modul-Singleton
+   `photofant.jobs.queue.job_queue` direkt (im Kindprozess ohnehin eine eigene, vom API-Prozess
+   unabhängige Instanz dank Windows `spawn`). Grund: migrierte Job-Handler (Phase 2/3) importieren
+   `job_queue` aus genau diesem Modul und rufen `.update()`/`.set_result()` darauf auf — mit einer
+   zweiten, separaten Instanz würden diese Aufrufe ins Leere laufen (falscher Subscriber-Satz,
+   keine Meldung würde beim Status-Forwarder ankommen). Das war der eigentliche Sinn von Aufgabe 3s
+   Hinweis „nicht `job_queue.update()` aus dem API-Prozess aufrufen, das Muster 1:1 übernehmen" —
+   mit einer separaten Worker-Instanz wäre das Ziel („Fortschritt kommt weiterhin live an")
+   technisch unerreichbar gewesen.
+4. **`_remote_status_forwarder` pollt mit 1s-Timeout statt unbegrenzt zu blocken.** `mp.Queue.get()`
+   ohne Timeout lässt sich per `asyncio.Task.cancel()` nicht unterbrechen, sobald der Executor-Call
+   schon läuft — `JobQueue.stop()` hätte beim Shutdown unbegrenzt gehängt. Mit Timeout reagiert
+   `stop()` binnen ~1s.
+5. **`_bind_handler`-Helper statt Default-Arg-Lambda** in `worker/process.py` (Aufgabe 2s
+   Codebeispiel) — mypy kann den Typ einer Lambda mit Default-Parametern in diesem Kontext nicht
+   inferieren (`Cannot infer type of lambda`). Eine kleine benannte Funktion löst das sauber, ohne
+   das Late-Binding-Problem zurückzuholen, das die Default-Args eigentlich vermeiden sollten.
+
+**Windows-`spawn`-Startzeit:** nicht gemessen (kein Live-Start in dieser Session, private-Profil-
+Konvention: kein Server-Hochfahren zur Verifikation). User-Smoke prüft das mit.
+
+**SQLite-Parallelzugriff:** siehe AK-Liste oben — mit dem DEMO-Job nicht sinnvoll prüfbar,
+verschoben auf Phase 2.
+
+**Statisch geprüft:** `ruff check` auf allen geänderten/neuen Dateien grün, `mypy --strict`
+ebenfalls grün (0 Fehler in den 7 berührten Dateien). Voller `mypy --strict`-Lauf über das ganze
+Backend zeigt 126 Vorbelastungs-Fehler in 38 unberührten Dateien — keiner davon in Dateien, die
+diese Phase anfasst.

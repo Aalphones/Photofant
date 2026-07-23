@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import multiprocessing as mp
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +51,10 @@ from photofant.jobs.queue import job_queue
 from photofant.mcp.server import mcp_server, mount_mcp
 from photofant.models.loader import load_manifest
 from photofant.settings import ensure_settings_file, load_settings
+from photofant.worker.process import run_worker_process
+
+if TYPE_CHECKING:
+    from photofant.worker.protocol import JobRequest, WorkerStatusMessage
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger(__name__)
@@ -69,6 +75,18 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     log.info("Starting Photofant backend")
     ensure_settings_file()
     load_manifest()  # validate manifest.json at startup; logs errors, never crashes
+
+    # Worker-Prozess für Modell-Inferenz-Jobs (ADR-037) — vor job_queue.start(), damit der
+    # Remote-Status-Rückkanal von Anfang an läuft. Windows nutzt `spawn`: der Kindprozess
+    # importiert alle Module frisch, siehe worker/process.py.
+    request_queue: mp.Queue[JobRequest | None] = mp.Queue()
+    status_queue: mp.Queue[WorkerStatusMessage] = mp.Queue()
+    job_queue.set_remote_transport(request_queue, status_queue)
+    worker_process = mp.Process(
+        target=run_worker_process, args=(request_queue, status_queue), daemon=True, name="photofant-worker"
+    )
+    worker_process.start()
+
     job_queue.start()
     # Auto-scan: register any models already present in models_dir so a new
     # instance picks up existing downloads without manual intervention.
@@ -100,6 +118,16 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     eviction_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await eviction_task
+
+    # Worker-Prozess zuerst stoppen (Poison Pill), damit seine letzten Status-Meldungen noch
+    # über job_queue.stop()s Remote-Forwarder ankommen, bevor der den Kanal schließt.
+    await asyncio.to_thread(request_queue.put, None)
+    await asyncio.to_thread(worker_process.join, 5)
+    if worker_process.is_alive():
+        log.warning("Worker-Prozess reagiert nicht auf Poison-Pill — erzwungener Stopp")
+        worker_process.terminate()
+        await asyncio.to_thread(worker_process.join, 5)
+
     await job_queue.stop()
     generative_engine.unload()
     gguf_engine.unload()

@@ -7,7 +7,15 @@ import uuid
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from queue import Empty
+from typing import TYPE_CHECKING, Any
+
+from photofant.worker.protocol import JobRequest
+
+if TYPE_CHECKING:
+    import multiprocessing as mp
+
+    from photofant.worker.protocol import WorkerStatusMessage
 
 log = logging.getLogger(__name__)
 
@@ -112,6 +120,10 @@ _BACKGROUND_KINDS: frozenset[JobKind] = frozenset(_BACKGROUND_PRIORITY)
 _TAGGING_KINDS: frozenset[JobKind] = frozenset({JobKind.TAGGING})
 _CAPTIONING_KINDS: frozenset[JobKind] = frozenset({JobKind.CAPTIONING})
 
+# Job kinds whose Handler im Worker-Prozess läuft statt lokal im API-Prozess (ADR-037).
+# Startet mit DEMO (Phase 1, Beweis-Fall), wächst in Phase 2/3 um die echten Inferenz-Jobs.
+_REMOTE_KINDS: frozenset[JobKind] = frozenset({JobKind.DEMO})
+
 
 @dataclass
 class _Job:
@@ -136,6 +148,18 @@ class JobQueue:
         self._tagging_worker_tasks: set[asyncio.Task[None]] = set()
         self._captioning_worker_tasks: set[asyncio.Task[None]] = set()
         self._parallel_tasks: set[asyncio.Task[None]] = set()
+        # Remote-Transport (ADR-037) — nur im API-Prozess gesetzt, via set_remote_transport()
+        # vor start(). Bleibt None im Worker-Prozess (der hat keinen eigenen Remote-Kanal).
+        self._request_queue: mp.Queue[JobRequest | None] | None = None
+        self._status_queue: mp.Queue[WorkerStatusMessage] | None = None
+        self._remote_forwarder_task: asyncio.Task[None] | None = None
+
+    def set_remote_transport(
+        self, request_queue: mp.Queue[JobRequest | None], status_queue: mp.Queue[WorkerStatusMessage]
+    ) -> None:
+        """Verdrahtet den API-Prozess mit dem Worker-Prozess — vor start() aufrufen."""
+        self._request_queue = request_queue
+        self._status_queue = status_queue
 
     def start(self) -> None:
         from photofant.jobs.classification_pipeline import classification_pipeline
@@ -147,6 +171,8 @@ class JobQueue:
         classification_pipeline.set_loop(asyncio.get_running_loop())
         self._worker_task = asyncio.create_task(self._worker())
         self._background_worker_task = asyncio.create_task(self._background_worker())
+        if self._status_queue is not None:
+            self._remote_forwarder_task = asyncio.create_task(self._remote_status_forwarder())
         self._scale_pool(
             self._tagging_worker_tasks, self._tagging_queue, self._tagging_worker, settings["tagging_workers"]
         )
@@ -186,7 +212,7 @@ class JobQueue:
                 queue.put_nowait(None)
 
     async def stop(self) -> None:
-        singleton_worker_tasks = (self._worker_task, self._background_worker_task)
+        singleton_worker_tasks = (self._worker_task, self._background_worker_task, self._remote_forwarder_task)
         for worker_task in singleton_worker_tasks:
             if worker_task:
                 worker_task.cancel()
@@ -213,8 +239,17 @@ class JobQueue:
     def snapshot(self) -> list[JobStatus]:
         return list(self._jobs.values())
 
-    async def enqueue(self, kind: JobKind, label: str, coro_factory: CoroFactory) -> JobStatus:
-        job_id = str(uuid.uuid4())
+    async def enqueue(
+        self, kind: JobKind, label: str, coro_factory: CoroFactory, job_id: str | None = None
+    ) -> JobStatus:
+        """Reiht einen Job lokal in diesem Prozess ein.
+
+        `job_id` ist normalerweise None (frisch generiert) — der Worker-Prozess übergibt
+        hier die bereits API-seitig vergebene ID weiter (siehe worker/process.py), damit
+        beide Prozesse denselben Job unter derselben ID kennen (Korrelation über
+        enqueue_remote()/_remote_status_forwarder()).
+        """
+        job_id = job_id or str(uuid.uuid4())
         status = JobStatus(id=job_id, kind=kind, label=label)
         self._jobs[job_id] = status
         self._notify(status)
@@ -232,6 +267,25 @@ class JobQueue:
             await self._background_queue.put((_BACKGROUND_PRIORITY[kind], self._bg_seq, job))
         else:
             await self._queue.put(job)
+        return status
+
+    async def enqueue_remote(self, kind: JobKind, label: str, payload: dict[str, Any]) -> JobStatus:
+        """Reiht einen Job im Worker-Prozess ein (ADR-037) — `kind` muss in _REMOTE_KINDS stehen.
+
+        Der `JobStatus` wird trotzdem lokal in `self._jobs` angelegt und benachrichtigt (wie
+        bei `enqueue()`) — nur die Ausführung passiert im Worker-Prozess. `_remote_status_forwarder`
+        spielt dessen Fortschritt über `job_id` in genau dieses Objekt zurück.
+        """
+        if kind not in _REMOTE_KINDS:
+            raise ValueError(f"JobKind {kind!r} ist nicht in _REMOTE_KINDS registriert")
+        if self._request_queue is None:
+            raise RuntimeError("Remote transport nicht konfiguriert — set_remote_transport() zuerst aufrufen")
+        job_id = str(uuid.uuid4())
+        status = JobStatus(id=job_id, kind=kind, label=label)
+        self._jobs[job_id] = status
+        self._notify(status)
+        request = JobRequest(job_id=job_id, kind=kind.value, label=label, payload=payload)
+        await asyncio.to_thread(self._request_queue.put, request)
         return status
 
     def update(self, status: JobStatus, progress: float, state: JobState, error: str | None = None) -> None:
@@ -297,6 +351,33 @@ class JobQueue:
                 await self._run_job(job.status, job.coro_factory)
             finally:
                 self._captioning_queue.task_done()
+
+    async def _remote_status_forwarder(self) -> None:
+        """Liest Status-Nachrichten vom Worker-Prozess und spiegelt sie in self._jobs.
+
+        `mp.Queue.get()` ist ein echter Blocking-Call in einem Executor-Thread — ohne Timeout
+        könnte `stop()`s `task.cancel()` ihn nie unterbrechen (ein bereits laufender
+        Executor-Aufruf lässt sich nicht abbrechen). Der 1s-Timeout gibt der Cancellation
+        regelmäßig eine Chance zuzuschlagen, statt den Shutdown auf unbestimmte Zeit zu blockieren.
+        """
+        assert self._status_queue is not None
+        loop = asyncio.get_running_loop()
+        status_queue = self._status_queue
+        while True:
+            try:
+                message = await loop.run_in_executor(None, status_queue.get, True, 1.0)
+            except Empty:
+                continue
+            if message.type == "pipeline_signal":
+                # Ab Phase 2 verdrahtet: face_pipeline/classification_pipeline.signal(asset_id)
+                continue
+            status = self._jobs.get(message.job_id)
+            if status is None:
+                log.warning("Remote-Status für unbekannten Job %s empfangen — verworfen", message.job_id)
+                continue
+            if message.result is not None:
+                self.set_result(status, message.result)
+            self.update(status, progress=message.progress, state=JobState(message.state), error=message.error)
 
 
 job_queue = JobQueue()
