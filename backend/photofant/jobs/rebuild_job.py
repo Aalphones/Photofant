@@ -37,7 +37,11 @@ async def _rebuild_thumbnails(status: JobStatus) -> None:
 
 
 async def _rebuild_embeddings(status: JobStatus) -> None:
-    """Rebuild the sqlite-vec vector index from asset.clip_embedding BLOBs."""
+    """Rebuild the sqlite-vec vector index from the canonical semantic vectors.
+
+    Source is the ``photofant/db/embeddings`` access layer (``asset_embedding`` side
+    table, migration 0043) — not the legacy asset column.
+    """
     import asyncio
 
     from photofant.db.vector_index import rebuild_index

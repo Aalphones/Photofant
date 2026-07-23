@@ -21,6 +21,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from photofant.api import search as search_api
+from photofant.db import embeddings
 from photofant.db.models import Asset, AssetInstance, Base, Person
 from photofant.db.session import get_session
 from photofant.main import create_app
@@ -69,14 +70,13 @@ def _seed_asset(
     clip: np.ndarray | None = None,
     dino: np.ndarray | None = None,
 ) -> Asset:
-    asset = Asset(
-        content_hash=content_hash,
-        source="original",
-        clip_embedding=clip.tobytes() if clip is not None else None,
-        dino_embedding=dino.tobytes() if dino is not None else None,
-    )
+    asset = Asset(content_hash=content_hash, source="original")
     session.add(asset)
     session.flush()
+    if clip is not None:
+        embeddings.set_semantic(session, asset.id, clip)
+    if dino is not None:
+        embeddings.set_visual(session, asset.id, dino)
     session.add(AssetInstance(asset_id=asset.id, person_id=1, path=f"/tmp/{content_hash}.jpg"))
     session.commit()
     return asset

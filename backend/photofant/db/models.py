@@ -59,10 +59,13 @@ class Asset(Base):
     )
     tagger: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
+    # LEGACY storage — kept only for rollback. Since migration 0043 the canonical
+    # vectors live in the ``asset_embedding`` side table (off the wide asset row so
+    # gallery scans stop reading over ~75 MB of BLOB). Nothing reads or writes these
+    # columns anymore; the ``photofant/db/embeddings`` seam owns storage. Migration
+    # 0044 (plan phase 3) drops them and the space is finally reclaimed. Still
+    # ``deferred`` so a stray default-select never pulls them.
     clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
-    # P37: second, purely visual embedding (DINOv2, 768-dim) — its own vector space
-    # (vec_asset_dino), independent of the SigLIP2 space above. A NULL here is a valid
-    # state (asset not yet DINOv2-embedded); rerank degrades to plain SigLIP2 then.
     dino_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
     caption_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")  # P6 Phase 3
     original_id: Mapped[int | None] = mapped_column(
@@ -71,6 +74,27 @@ class Asset(Base):
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     imported_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class AssetEmbedding(Base):
+    """Off-loaded storage for an asset's two embedding vectors (migration 0043).
+
+    Moved out of the wide ``asset`` row so gallery/full-table scans stop reading
+    over ~75 MB of BLOB they never touch. One row per asset that carries at least
+    one vector; either column may be NULL independently (a missing DINOv2 vector is
+    a valid state, ADR-024). Accessed *only* through ``photofant/db/embeddings.py``
+    — no other module names these columns.
+
+    ``asset_id`` is the primary key (one row per asset) and the FK back to ``asset``.
+    SQLite foreign-key enforcement is off in this app (``db/engine.py``), so the row
+    does not cascade on asset deletion — the delete site calls the seam explicitly.
+    """
+
+    __tablename__ = "asset_embedding"
+
+    asset_id: Mapped[int] = mapped_column(ForeignKey("asset.id"), primary_key=True)
+    clip_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    dino_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
 
 
 class AssetInstance(Base):

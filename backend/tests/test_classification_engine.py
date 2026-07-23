@@ -17,6 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from photofant.classification import engine
+from photofant.db import embeddings
 from photofant.db.models import (
     Asset,
     AssetTag,
@@ -52,11 +53,11 @@ def db_session(tmp_path) -> Generator[Session, None, None]:
 
 
 def _make_asset(session: Session, *, with_embedding: bool = True) -> Asset:
-    asset = Asset(
-        content_hash="hash-1",
-        clip_embedding=np.zeros(768, dtype=np.float32).tobytes() if with_embedding else None,
-    )
+    asset = Asset(content_hash="hash-1")
     session.add(asset)
+    session.flush()
+    if with_embedding:
+        embeddings.set_semantic(session, asset.id, np.zeros(768, dtype=np.float32))
     session.commit()
     return asset
 

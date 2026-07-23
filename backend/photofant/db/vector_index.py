@@ -3,10 +3,13 @@
 Two independent `vec0` virtual tables live in the main DB, both keyed by
 `asset.id` as rowid:
 
-- `vec_asset_embedding` — SigLIP2 semantic-search space (`float[1024]`), canonical
-  BLOB on `asset.clip_embedding`.
-- `vec_asset_dino` — DINOv2 visual-rerank space (`float[768]`, P37/ADR-024),
-  canonical BLOB on `asset.dino_embedding`.
+- `vec_asset_embedding` — SigLIP2 semantic-search space (`float[1024]`), rebuilt
+  from the canonical semantic vectors served by `photofant/db/embeddings.py`.
+- `vec_asset_dino` — DINOv2 visual-rerank space (`float[768]`, P37/ADR-024), rebuilt
+  from the canonical visual vectors served by `photofant/db/embeddings.py`.
+
+Both canonical vectors live in the `asset_embedding` side table (migration 0043),
+reached only through that access layer — never named here.
 
 The two spaces are separate on purpose: different models, different dimensions,
 no shared index. An asset may sit in one, both, or neither — a missing DINOv2

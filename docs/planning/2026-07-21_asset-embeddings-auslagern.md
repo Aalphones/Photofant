@@ -1,6 +1,6 @@
 # Embedding-BLOBs aus der Asset-Tabelle auslagern
 
-**Status:** geplant, nicht begonnen
+**Status:** in Umsetzung — Phase 1 + 2 ✅, Phase 3 offen
 **Warum jetzt:** Die Galerie wurde am 2026-07-21 vermessen (siehe „Messwerte"). Die drei
 schnellen Hebel sind umgesetzt; dieser hier ist der letzte verbliebene und der einzige,
 der *alle* Abfragen betrifft statt nur die Galerie.
@@ -106,6 +106,32 @@ und ob die Nebentabelle die Verknüpfung selbst erzwingt oder der Code sie pfleg
 
 **Fertig, wenn:** Suche, Dubletten, Empfehlungen und Neuaufbau des Suchindex liefern
 dieselben Ergebnisse wie vorher — an echten Daten geprüft, nicht nur an Testdaten.
+
+**✅ Erledigt (2026-07-23).** Nebentabelle `asset_embedding` (PK = `asset_id`, beide
+BLOBs) via Migration 0043 angelegt, Bestand per `INSERT … SELECT` herüberkopiert
+(idempotent über `NOT IN`). Die Zugriffsschicht liest/schreibt jetzt ausschließlich dort;
+Writer sind Upserts (`_row_for_write` legt die Zeile bei Bedarf an, aber nur für ein
+existierendes Asset — die alte „skip wenn Asset weg"-Garantie erhalten). Alte Spalten stehen
+unangetastet für Rollback. Gates: ruff grün, mypy ohne neue Meldung in den geänderten Dateien
+(mypy ist ohnehin nicht im CI-Gate), 481 Tests grün (13 rot = unveränderte comfyui/caption-
+Vorbelastung).
+
+**Abweichungen vom „nur embeddings.py + Migration":** Der Löschpfad musste mit — FK-Enforcement
+ist in dieser App aus (`db/engine.py`), also cascadet die Nebenzeile nicht von selbst. Neue
+`embeddings.delete(session, asset_id)`, aufgerufen an der einzigen Asset-Löschstelle
+(`media/moves.py`, neben den bestehenden Index-Löschungen). Das war genau die im Plan als
+Wackelstelle markierte „Nebenzeile muss beim Löschen mit" — ohne diese Zeile geht sie in
+Phase 3 verloren. Zusätzlich mitgezogen: `AssetEmbedding`-Model, die in Phase 1 als „Phase-2-
+Prosa" vorgemerkten Docstrings (`vector_index.py`, `rebuild_job.py`), `docs/models.md`
+(neue Tabelle + `clip/dino_embedding` als LEGACY markiert), und die drei Tests, die die Spalten
+noch direkt seedeten (`test_search_rerank`, `test_dupe_scan_dino`, `test_classification_engine`)
+laufen jetzt über die Naht (`set_semantic`/`set_visual`) — damit auch für Phase 3 swap-proof.
+
+**Für Phase 3:** Migration 0044 droppt `asset.clip_embedding` + `asset.dino_embedding`
+(SQLite → `batch_alter_table`), dann `ANALYZE`. Der Copy in 0043 ist ein Snapshot — das ist
+unkritisch, weil ab 0043 **kein Code mehr** in die alten Spalten schreibt (Naht ist einziger
+Schreiber, sie schreibt in die Nebentabelle). Die Model-Kommentare und `models.md` verweisen
+bereits auf „Migration 0044" — beim Umsetzen konsistent halten.
 
 ### Phase 3 — Alte Spalten entfernen
 

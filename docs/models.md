@@ -55,8 +55,8 @@ One row per unique content-hash (canonical image).
 | `caption_preset_id` | INTEGER FK → `caption_preset.id` | provenance: which preset produced the caption (FK added P5 Phase 4, `fk_asset_caption_preset`) |
 | `tagger` | TEXT | model name (filled in P5) |
 | `generation_meta` | JSON | raw ComfyUI workflow / A1111 parameters |
-| `clip_embedding` | BLOB | Image embedding of the active semantic_search model, float32 unit-norm bytes (1024-dim seit SigLIP2, P35 Phase 2; vorher CLIP 768-dim). Spaltenname bleibt inert (ADR-022). Source of truth für den Vector Index (P5 Phase 4); `deferred=True` (P32 Phase 1) — nicht Teil des Default-Selects, muss explizit geladen werden |
-| `dino_embedding` | BLOB | DINOv2 visual-rerank embedding, float32 unit-norm bytes (768-dim, P37 / ADR-024). Zweiter, rein visueller Vektorraum neben `clip_embedding` — unabhängig, kann NULL sein (Asset noch nicht DINOv2-embedded → Rerank degradiert auf SigLIP2). Source of truth für `vec_asset_dino`; `deferred=True` |
+| `clip_embedding` | BLOB | **LEGACY seit Migration 0043** — Source of truth ist jetzt `asset_embedding.clip_embedding`. Spalte bleibt bis Plan-Phase 3 (Migration 0044) nur für Rollback stehen, wird von keinem Code mehr gelesen/geschrieben. `deferred=True`. |
+| `dino_embedding` | BLOB | **LEGACY seit Migration 0043** — Source of truth ist jetzt `asset_embedding.dino_embedding`. Wie `clip_embedding`: bleibt bis Plan-Phase 3 nur für Rollback. `deferred=True`. |
 | `caption_edited` | BOOLEAN | `1` = Caption wurde manuell editiert; Captioner überspringt den Asset beim nächsten Rerun (P6 Phase 3) |
 | `original_id` | INTEGER FK → `asset.id` | gesetzt wenn dieses Asset ein Edit eines anderen ist — bei Review-Entscheidung „A/B ist Original" (migration 0014) |
 | `created_at` | DATETIME | EXIF capture date; UTC naive |
@@ -222,11 +222,27 @@ Also added in migration 0028: `ix_asset_effective_date`, an expression index on
 `asset (coalesce(created_at, imported_at))` mirroring the exact sort expression
 `list_assets` uses for date ordering.
 
+### `asset_embedding` (migration 0043)
+
+Nebentabelle für die beiden Embedding-Vektoren eines Assets — ausgelagert aus der breiten
+`asset`-Zeile, damit Galerie-/Voll-Scans nicht mehr über ~75 MB BLOB lesen müssen. Eine Zeile
+je Asset, das mindestens einen Vektor trägt; beide Spalten unabhängig NULL-bar (fehlender
+DINOv2-Vektor ist gültig, ADR-024). Zugriff **ausschließlich** über `photofant/db/embeddings.py`
+— kein anderes Modul nennt diese Spalten. Kein DB-seitiges Cascade (SQLite-FK-Enforcement aus,
+`db/engine.py`): die Löschstelle (`media/moves.py`) räumt die Zeile über die Zugriffsschicht mit ab.
+
+| Column | Type | Notes |
+|---|---|---|
+| `asset_id` | INTEGER PK, FK → `asset.id` | eine Zeile je Asset |
+| `clip_embedding` | BLOB | SigLIP2 semantic-search Vektor, float32 unit-norm (1024-dim); Source of truth für `vec_asset_embedding` |
+| `dino_embedding` | BLOB | DINOv2 visual-rerank Vektor, float32 unit-norm (768-dim, P37/ADR-024); Source of truth für `vec_asset_dino`; NULL = noch nicht DINOv2-embedded |
+
 ### `vec_asset_embedding` (migration 0007, dim 1024 seit 0032)
 
 sqlite-vec `vec0` virtual table — the searchable image-embedding vector index (ADR-001, ADR-022). Rowid =
-`asset.id`; one row per embedded asset. The canonical embedding lives on
-`asset.clip_embedding` (BLOB); this table is a **rebuildable** index over those BLOBs
+`asset.id`; one row per embedded asset. The canonical embedding lives in the
+`asset_embedding` side table (BLOB, migration 0043), reached only through
+`photofant/db/embeddings.py`; this table is a **rebuildable** index over those vectors
 (`photofant/db/vector_index.py:rebuild_index`). Persists in `db.sqlite`, so it survives a
 restart with no reconstruction. Maintained on import (insert) and final delete (remove);
 not part of `Base.metadata` — created only by the migration, so code that touches it
@@ -244,8 +260,9 @@ degrades gracefully when the table is absent (e.g. throw-away test DBs).
 
 sqlite-vec `vec0` virtual table — the searchable **DINOv2 visual-rerank** vector index (P37, ADR-024).
 Second, independent space next to `vec_asset_embedding`: same rowid (`asset.id`), different model and
-dimension, no shared index. Canonical embedding on `asset.dino_embedding` (BLOB); rebuildable over those
-BLOBs via the shared parametrized core in `photofant/db/vector_index.py`. An asset may be indexed here, in
+dimension, no shared index. Canonical embedding in the `asset_embedding` side table (BLOB, migration 0043,
+via `photofant/db/embeddings.py`); rebuildable over those vectors through the shared parametrized core in
+`photofant/db/vector_index.py`. An asset may be indexed here, in
 `vec_asset_embedding`, in both, or in neither — a missing row is a valid state (rerank degrades to plain
 SigLIP2). Maintained on embed (upsert) and final delete (remove, both indexes).
 
@@ -484,7 +501,7 @@ PK: `(asset_id, label_id)`. **Cascade-Deletes sind hier explizit im Code** (`api
 `PRAGMA foreign_keys=ON`, die deklarierten `ON DELETE CASCADE` feuern also nicht von selbst.
 
 **Berechnung:** `photofant/classification/engine.py:classify_asset()` liest ausschließlich
-bereits gespeicherte Signale (`asset.clip_embedding`, `asset_tag.score`) — kein Modell-Neulauf,
+bereits gespeicherte Signale (semantischer Vektor via `photofant/db/embeddings.py`, `asset_tag.score`) — kein Modell-Neulauf,
 kein Bild-I/O. Pro Kategorie wird je Label ein CLIP-Softmax-Score und/oder ein WD14-Score
 gewichtet fusioniert (`classification.clip_weight`/`wd14_weight` in `settings.json`); `single`
 wählt die Klasse mit dem höchsten Score über `min_confidence`, `multi` alle Klassen über

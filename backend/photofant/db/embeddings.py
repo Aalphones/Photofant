@@ -11,9 +11,11 @@ underlying columns. That makes this the *one* place a later move has to touch
 ``docs/planning/2026-07-21_asset-embeddings-auslagern.md``).
 
 Callers speak in ``numpy`` vectors and asset ids only — never in BLOBs or column
-names. Storage today is two ``deferred`` BLOB columns on ``asset``
-(``clip_embedding`` / ``dino_embedding``); that is an implementation detail of
-this module alone.
+names. Storage today is the ``asset_embedding`` side table (one row per asset,
+migration 0043), keyed by ``asset_id``; that is an implementation detail of this
+module alone. The legacy ``asset.clip_embedding`` / ``asset.dino_embedding`` columns
+still exist for rollback until plan phase 3 drops them, but nothing reads or writes
+them anymore.
 
 This layer owns the *canonical vectors*. The rebuildable ``vec0`` search indexes
 over them live in ``photofant/db/vector_index.py`` — a sibling, not a caller of
@@ -27,7 +29,7 @@ import numpy as np
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from photofant.db.models import Asset
+from photofant.db.models import Asset, AssetEmbedding
 
 _DTYPE = np.float32
 
@@ -44,6 +46,33 @@ def _to_blob(embedding: np.ndarray) -> bytes:
     return np.ascontiguousarray(embedding, dtype=_DTYPE).tobytes()
 
 
+def _row_for_write(session: Session, asset_id: int) -> AssetEmbedding | None:
+    """The asset's side row, creating it on first write — but only if the asset exists.
+
+    Mirrors the pre-move guard that silently skipped writes to a non-existent asset
+    (the SQLite FK is not enforced, so a blind insert would leave an orphan row).
+    """
+    row = session.get(AssetEmbedding, asset_id)
+    if row is not None:
+        return row
+    if session.get(Asset, asset_id) is None:
+        return None
+    row = AssetEmbedding(asset_id=asset_id)
+    session.add(row)
+    return row
+
+
+def delete(session: Session, asset_id: int) -> None:
+    """Remove the asset's side row — both vectors go with it (no commit).
+
+    Called from the asset-deletion site: SQLite FK enforcement is off in this app
+    (``db/engine.py``), so the side row does not cascade on its own.
+    """
+    row = session.get(AssetEmbedding, asset_id)
+    if row is not None:
+        session.delete(row)
+
+
 # ----------------------------------------------------------------------------
 # Semantic space (SigLIP2) — canonical vector behind vec_asset_embedding
 # ----------------------------------------------------------------------------
@@ -56,7 +85,7 @@ def get_semantic(session: Session, asset_id: int) -> np.ndarray | None:
     callers that must tell those apart check asset existence separately.
     """
     blob = session.execute(
-        select(Asset.clip_embedding).where(Asset.id == asset_id)
+        select(AssetEmbedding.clip_embedding).where(AssetEmbedding.asset_id == asset_id)
     ).scalar_one_or_none()
     return _to_vector(blob)
 
@@ -64,7 +93,9 @@ def get_semantic(session: Session, asset_id: int) -> np.ndarray | None:
 def has_semantic(session: Session, asset_id: int) -> bool:
     """True if the asset has a semantic embedding (cheap existence check)."""
     row = session.execute(
-        select(Asset.id).where(Asset.id == asset_id, Asset.clip_embedding.is_not(None))
+        select(AssetEmbedding.asset_id).where(
+            AssetEmbedding.asset_id == asset_id, AssetEmbedding.clip_embedding.is_not(None)
+        )
     ).first()
     return row is not None
 
@@ -79,8 +110,8 @@ def assets_with_semantic(session: Session, asset_ids: Sequence[int]) -> set[int]
         return set()
     return set(
         session.execute(
-            select(Asset.id).where(
-                Asset.id.in_(asset_ids), Asset.clip_embedding.is_not(None)
+            select(AssetEmbedding.asset_id).where(
+                AssetEmbedding.asset_id.in_(asset_ids), AssetEmbedding.clip_embedding.is_not(None)
             )
         ).scalars()
     )
@@ -92,16 +123,18 @@ def load_all_semantic(session: Session) -> dict[int, np.ndarray]:
     The canonical source for rebuilding ``vec_asset_embedding``.
     """
     rows = session.execute(
-        select(Asset.id, Asset.clip_embedding).where(Asset.clip_embedding.is_not(None))
+        select(AssetEmbedding.asset_id, AssetEmbedding.clip_embedding).where(
+            AssetEmbedding.clip_embedding.is_not(None)
+        )
     ).all()
     return {int(asset_id): np.frombuffer(blob, dtype=_DTYPE) for asset_id, blob in rows if blob is not None}
 
 
 def set_semantic(session: Session, asset_id: int, embedding: np.ndarray) -> None:
     """Persist the asset's semantic embedding (no commit — caller owns the tx)."""
-    asset = session.get(Asset, asset_id)
-    if asset is not None:
-        asset.clip_embedding = _to_blob(embedding)
+    row = _row_for_write(session, asset_id)
+    if row is not None:
+        row.clip_embedding = _to_blob(embedding)
 
 
 # ----------------------------------------------------------------------------
@@ -116,7 +149,7 @@ def get_visual(session: Session, asset_id: int) -> np.ndarray | None:
     covers a missing asset, matching every current caller's degrade-to-SigLIP2 path.
     """
     blob = session.execute(
-        select(Asset.dino_embedding).where(Asset.id == asset_id)
+        select(AssetEmbedding.dino_embedding).where(AssetEmbedding.asset_id == asset_id)
     ).scalar_one_or_none()
     return _to_vector(blob)
 
@@ -131,8 +164,8 @@ def load_visual(session: Session, asset_ids: Sequence[int]) -> dict[int, np.ndar
     if not asset_ids:
         return {}
     rows = session.execute(
-        select(Asset.id, Asset.dino_embedding).where(
-            Asset.id.in_(asset_ids), Asset.dino_embedding.is_not(None)
+        select(AssetEmbedding.asset_id, AssetEmbedding.dino_embedding).where(
+            AssetEmbedding.asset_id.in_(asset_ids), AssetEmbedding.dino_embedding.is_not(None)
         )
     ).all()
     return {int(asset_id): np.frombuffer(blob, dtype=_DTYPE) for asset_id, blob in rows if blob is not None}
@@ -145,13 +178,15 @@ def load_all_visual(session: Session) -> dict[int, np.ndarray]:
     ``vec_asset_dino``).
     """
     rows = session.execute(
-        select(Asset.id, Asset.dino_embedding).where(Asset.dino_embedding.is_not(None))
+        select(AssetEmbedding.asset_id, AssetEmbedding.dino_embedding).where(
+            AssetEmbedding.dino_embedding.is_not(None)
+        )
     ).all()
     return {int(asset_id): np.frombuffer(blob, dtype=_DTYPE) for asset_id, blob in rows if blob is not None}
 
 
 def set_visual(session: Session, asset_id: int, embedding: np.ndarray) -> None:
     """Persist the asset's visual embedding (no commit — caller owns the tx)."""
-    asset = session.get(Asset, asset_id)
-    if asset is not None:
-        asset.dino_embedding = _to_blob(embedding)
+    row = _row_for_write(session, asset_id)
+    if row is not None:
+        row.dino_embedding = _to_blob(embedding)

@@ -17,6 +17,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from photofant.db import embeddings
 from photofant.db.models import (
     Asset,
     AssetInstance,
@@ -49,14 +50,13 @@ def _seed_asset(
     dino: np.ndarray | None = None,
     person_id: int = 1,
 ) -> Asset:
-    asset = Asset(
-        content_hash=content_hash,
-        source="original",
-        clip_embedding=clip.tobytes() if clip is not None else None,
-        dino_embedding=dino.tobytes() if dino is not None else None,
-    )
+    asset = Asset(content_hash=content_hash, source="original")
     session.add(asset)
     session.flush()
+    if clip is not None:
+        embeddings.set_semantic(session, asset.id, clip)
+    if dino is not None:
+        embeddings.set_visual(session, asset.id, dino)
     session.add(AssetInstance(asset_id=asset.id, person_id=person_id, path=f"/tmp/{content_hash}.jpg"))
     session.commit()
     return asset

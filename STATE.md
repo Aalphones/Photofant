@@ -1,17 +1,18 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-21_asset-embeddings-auslagern.md`
-**Phase:** 2/3 — Nebentabelle anlegen und befüllen (offen, noch nicht begonnen)
-**Nächster Schritt:** Migration für die Vektor-Nebentabelle (eine Zeile je Bild, beide
-Vektoren), Bestand kopieren, `db/embeddings.py` auf Lesen/Schreiben dort umstellen — **alte
-Spalten bleiben stehen** (Rollback ohne Datenverlust). Nur `db/embeddings.py` und die Migration
-werden angefasst (das war der Sinn von Phase 1).
+**Phase:** 3/3 — Alte Spalten entfernen (offen, noch nicht begonnen)
+**Nächster Schritt:** Migration 0044 droppt `asset.clip_embedding` + `asset.dino_embedding`
+(SQLite → `batch_alter_table`), danach `ANALYZE` (sonst plant SQLite mit alter Größe — gleiche
+Falle wie Migration 0041). Erst danach tritt der Geschwindigkeitsgewinn ein. Fertig, wenn die
+vier Messwerte im Plan reproduziert sind und die Bild-Tabelle unter 15 MB liegt.
 
-**Wackelstelle Phase 2 (aus dem Plan):** Zwei-Wahrheiten-Fenster — nichts darf in diesem Zustand
-noch in die alten Spalten schreiben. Löschen eines Bildes muss die Nebenzeile mitnehmen.
-Gegen echte Daten prüfen (Suche/Dubletten/Empfehlungen/Index-Neuaufbau liefern dasselbe).
+**Vor dem Lauf prüfen (Plan-Risiko):** freier Speicher — Phase 3 legt vorübergehend eine zweite
+DB-Kopie an (bei 287 MB unkritisch, aber checken).
 
-Phase 1 ✅ committet (`f45b439`). Phase 3 = alte Spalten droppen + `ANALYZE`. Weiterer Backlog:
+Phase 1 ✅ (`f45b439`) · Phase 2 ✅ (Migration 0043 = Nebentabelle `asset_embedding` + Copy,
+Naht liest/schreibt dort, Löschstelle nimmt Nebenzeile mit, alte Spalten stehen für Rollback).
+481 Tests grün, 13 rot = unveränderte comfyui/caption-Vorbelastung. Weiterer Backlog:
 `docs/planning/2026-07-22_ml-jobs-worker-prozess/`.
 
 ## „Gesichter-Mehrfachauswahl" abgeschlossen (alle 8 Phasen)

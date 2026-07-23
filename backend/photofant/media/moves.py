@@ -24,6 +24,7 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from photofant.db import embeddings
 from photofant.db.cache import delete_thumbnails, init_cache_db
 from photofant.db.face_vector_index import delete_embedding as delete_face_embedding
 from photofant.db.models import Asset, AssetInstance, Face, ProcessingLedger
@@ -250,6 +251,7 @@ async def purge(session: Session, instance: AssetInstance, cache_db_path: Path) 
             if ledger is not None:
                 session.delete(ledger)
             session.delete(asset)
+            embeddings.delete(session, asset_id)  # side row (migration 0043); FK not enforced
             delete_embedding(session, asset_id)
             delete_dino_embedding(session, asset_id)  # P37: second index, else orphan row
 
