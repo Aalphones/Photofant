@@ -116,6 +116,7 @@ export type {
   StrandedFace,
   IncompleteMetadata,
   CorruptedFile,
+  BlockedMetadata,
   ReconcileReport,
   RepairItem,
   RepairAction,

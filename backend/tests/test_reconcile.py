@@ -10,6 +10,7 @@ from photofant.maintenance.reconcile import (
     CORRUPT_UNDECODABLE,
     InstanceRecord,
     assess_file_integrity,
+    classify_metadata_gap,
     classify_orphaned_edits,
     classify_reconcile,
     norm_path,
@@ -185,3 +186,64 @@ def test_unknown_size_falls_back_to_decode_probe() -> None:
 def test_unknown_size_and_no_probe_result_is_treated_as_intact() -> None:
     # decodable=None with no reference size → nothing to accuse the file of.
     assert assess_file_integrity(999, expected_size=None, decodable=None) is None
+
+
+# ── metadata gap: reprocessable vs blocked (the "fixed it, it comes back" fix) ──
+
+
+def _flags(tags: bool, caption: bool, embedding: bool) -> dict[str, bool]:
+    return {"tags": tags, "caption": caption, "embedding": embedding}
+
+
+def test_wanted_available_and_undone_is_reprocessable() -> None:
+    # Enabled, a model is active, not done yet → the Nachziehen button will do something.
+    missing, blocked = classify_metadata_gap(
+        wanted=_flags(True, True, True),
+        available=_flags(True, True, True),
+        done=_flags(False, False, False),
+    )
+    assert missing == ["tags", "caption", "embedding"]
+    assert blocked == []
+
+
+def test_wanted_but_no_model_is_blocked_not_reprocessable() -> None:
+    # This is the zombie: on in settings, no model → it must NOT be offered as a reprocess row.
+    missing, blocked = classify_metadata_gap(
+        wanted=_flags(True, True, True),
+        available=_flags(False, False, False),
+        done=_flags(False, False, False),
+    )
+    assert missing == []
+    assert blocked == ["tags", "caption", "embedding"]
+
+
+def test_done_steps_are_neither_missing_nor_blocked() -> None:
+    missing, blocked = classify_metadata_gap(
+        wanted=_flags(True, True, True),
+        available=_flags(True, True, True),
+        done=_flags(True, True, True),
+    )
+    assert missing == []
+    assert blocked == []
+
+
+def test_disabled_step_is_ignored_even_without_a_model() -> None:
+    # auto_caption off → not a gap at all, regardless of model availability.
+    missing, blocked = classify_metadata_gap(
+        wanted=_flags(True, False, True),
+        available=_flags(True, False, True),
+        done=_flags(False, False, False),
+    )
+    assert missing == ["tags", "embedding"]
+    assert blocked == []
+
+
+def test_mixed_availability_splits_per_step() -> None:
+    # tags has a model (reprocessable), embedding is on but modelless (blocked), caption done.
+    missing, blocked = classify_metadata_gap(
+        wanted=_flags(True, True, True),
+        available=_flags(True, True, False),
+        done=_flags(False, True, False),
+    )
+    assert missing == ["tags"]
+    assert blocked == ["embedding"]

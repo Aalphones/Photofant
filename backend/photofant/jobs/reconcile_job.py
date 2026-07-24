@@ -10,12 +10,13 @@ from sqlalchemy import select
 from photofant.config import get_data_root
 from photofant.db.models import Asset, AssetInstance, Face, Person, ProcessingLedger, Version
 from photofant.db.session import SessionLocal
-from photofant.jobs.import_job import steps_from_settings
+from photofant.jobs.import_job import model_availability, steps_from_settings
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.maintenance.reconcile import (
     CORRUPT_EMPTY,
     CORRUPT_SIZE_MISMATCH,
     AcknowledgedMissingItem,
+    BlockedMetadataItem,
     CorruptedFileItem,
     IncompleteMetadataItem,
     InstanceRecord,
@@ -23,6 +24,7 @@ from photofant.maintenance.reconcile import (
     OrphanedFaceItem,
     StrandedFaceItem,
     assess_file_integrity,
+    classify_metadata_gap,
     classify_orphaned_edits,
     classify_reconcile,
     norm_path,
@@ -265,12 +267,32 @@ def _gather_acknowledged_missing() -> list[AcknowledgedMissingItem]:
     ]
 
 
-def _gather_incomplete_metadata() -> list[IncompleteMetadataItem]:
-    """Active assets missing caption, tags, or CLIP embedding (steps enabled in settings
-    only). One item per asset — an asset with multiple person instances would otherwise
-    show up once per instance, but the gap doesn't depend on which person it's filed
-    under, so only the first instance encountered is kept."""
+# Human labels for the blocked-capability summary rows.
+_BLOCKED_STEP_LABELS = {
+    "tags": "Tagging",
+    "caption": "Bildunterschriften",
+    "embedding": "Embedding",
+}
+
+
+def _gather_incomplete_metadata() -> tuple[list[IncompleteMetadataItem], list[BlockedMetadataItem]]:
+    """Active assets whose tags/caption/embedding never finished, split two ways.
+
+    A step counts as a real, reprocessable gap only when it is enabled in settings
+    *and* a model that can run it is currently active — otherwise "Nachziehen" would
+    no-op forever (the job skips without setting the ledger flag) and the item would
+    reappear on every scan. Steps wanted but with no model active are collapsed into a
+    per-capability `BlockedMetadataItem` summary instead of one dead row per asset.
+
+    One item per asset — an asset with multiple person instances would otherwise show
+    up once per instance, but the gap doesn't depend on which person it's filed under,
+    so only the first instance encountered is kept.
+    """
     allowed = steps_from_settings()
+    available = model_availability()
+    wanted = {"tags": allowed.tags, "caption": allowed.caption, "embedding": allowed.embedding}
+    available_map = available.as_mapping()
+
     with SessionLocal() as session:
         rows = session.execute(
             select(
@@ -290,18 +312,16 @@ def _gather_incomplete_metadata() -> list[IncompleteMetadataItem]:
         ).all()
 
     items: list[IncompleteMetadataItem] = []
+    blocked_counts: dict[str, int] = {}
     seen: set[int] = set()
     for asset_id, path, person_name, tags_done, caption_done, embedding_done in rows:
         if asset_id in seen:
             continue
         seen.add(asset_id)
-        missing: list[str] = []
-        if allowed.tags and not tags_done:
-            missing.append("tags")
-        if allowed.caption and not caption_done:
-            missing.append("caption")
-        if allowed.embedding and not embedding_done:
-            missing.append("embedding")
+        done = {"tags": bool(tags_done), "caption": bool(caption_done), "embedding": bool(embedding_done)}
+        missing, blocked = classify_metadata_gap(wanted, available_map, done)
+        for step in blocked:
+            blocked_counts[step] = blocked_counts.get(step, 0) + 1
         if not missing:
             continue
         items.append(
@@ -313,7 +333,20 @@ def _gather_incomplete_metadata() -> list[IncompleteMetadataItem]:
                 detail=f"asset.id={asset_id} · fehlt: {', '.join(missing)}",
             )
         )
-    return items
+
+    blocked_items = [
+        BlockedMetadataItem(
+            step=step,
+            asset_count=blocked_counts[step],
+            detail=(
+                f"{_BLOCKED_STEP_LABELS.get(step, step)} ist aktiviert, aber kein Modell "
+                f"dafür ist aktiv — {blocked_counts[step]} Bild(er) betroffen"
+            ),
+        )
+        for step in ("tags", "caption", "embedding")
+        if blocked_counts.get(step)
+    ]
+    return items, blocked_items
 
 
 def _is_decodable(path: Path) -> bool:
@@ -404,7 +437,7 @@ def _run_reconcile() -> int:
         _walk_edits_dirs(data_root), _gather_active_version_paths()
     )
     report.stranded_faces = _gather_stranded_faces(data_root)
-    report.incomplete_metadata = _gather_incomplete_metadata()
+    report.incomplete_metadata, report.blocked_metadata = _gather_incomplete_metadata()
     report.corrupted_files = _gather_corrupted_files()
 
     with SessionLocal() as session:
@@ -413,7 +446,7 @@ def _run_reconcile() -> int:
     log.info(
         "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces, "
         "%d misassigned, %d acknowledged-missing, %d orphaned edits, %d stranded faces, "
-        "%d incomplete metadata, %d corrupted",
+        "%d incomplete metadata, %d corrupted, %d blocked-metadata capabilities",
         len(report.orphaned_files),
         len(report.missing_files),
         len(report.path_drift),
@@ -424,6 +457,7 @@ def _run_reconcile() -> int:
         len(report.stranded_faces),
         len(report.incomplete_metadata),
         len(report.corrupted_files),
+        len(report.blocked_metadata),
     )
     return report.total
 

@@ -9,6 +9,7 @@ import { Store } from '@ngrx/store';
 import { Icon } from '@photofant/ui';
 import type {
   AcknowledgedMissing,
+  BlockedMetadata,
   CorruptedFile,
   DriftFile,
   IncompleteMetadata,
@@ -155,6 +156,11 @@ export class ReviewReconcile {
       name: this.fileName(file.path),
       meta: `${file.person_name ?? '_unknown'} · ${this.corruptedReasonLabel(file.reason)}`,
     }))
+  );
+
+  // Config gaps (step on, no model) — a per-capability summary, not a repair bucket.
+  protected readonly blockedMetadata = computed((): BlockedMetadata[] =>
+    this.report()?.blocked_metadata ?? []
   );
 
   protected readonly totalIssues = computed((): number =>

@@ -155,6 +155,12 @@ class CorruptedFileDto(BaseModel):
     detail: str
 
 
+class BlockedMetadataDto(BaseModel):
+    step: str
+    asset_count: int
+    detail: str
+
+
 class ReconcileReportDto(BaseModel):
     generated_at: str | None
     orphaned_files: list[OrphanDto]
@@ -167,6 +173,7 @@ class ReconcileReportDto(BaseModel):
     stranded_faces: list[StrandedFaceDto] = []
     incomplete_metadata: list[IncompleteMetadataDto] = []
     corrupted_files: list[CorruptedFileDto] = []
+    blocked_metadata: list[BlockedMetadataDto] = []
 
 
 _EMPTY_REPORT = ReconcileReportDto(
@@ -181,6 +188,7 @@ _EMPTY_REPORT = ReconcileReportDto(
     stranded_faces=[],
     incomplete_metadata=[],
     corrupted_files=[],
+    blocked_metadata=[],
 )
 
 

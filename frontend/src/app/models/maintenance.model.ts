@@ -105,6 +105,14 @@ export interface CorruptedFile {
   detail: string;
 }
 
+/** A metadata step switched on but with no model active to run it — a config gap,
+ *  summarised per capability instead of one dead reprocess row per asset. */
+export interface BlockedMetadata {
+  step: string;  // 'tags' | 'caption' | 'embedding'
+  asset_count: number;
+  detail: string;
+}
+
 export interface ReconcileReport {
   generated_at: string | null;
   orphaned_files: OrphanFile[];
@@ -117,6 +125,7 @@ export interface ReconcileReport {
   stranded_faces: StrandedFace[];
   incomplete_metadata: IncompleteMetadata[];
   corrupted_files: CorruptedFile[];
+  blocked_metadata: BlockedMetadata[];
 }
 
 export interface RepairItem {

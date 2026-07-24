@@ -66,6 +66,15 @@ def _resolve_active_captioner() -> _CaptionerInfo | None:
         )
 
 
+def active_captioner_available() -> bool:
+    """True if a captioner model is enabled and would actually produce a caption.
+
+    Cheap registry check (no model load), used by the reconcile scan to tell a real
+    "caption never finished" gap apart from "captioning is on but no model is active".
+    """
+    return _resolve_active_captioner() is not None
+
+
 # ---------------------------------------------------------------------------
 # Preset resolution
 # ---------------------------------------------------------------------------

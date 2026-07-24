@@ -13,14 +13,33 @@
     </div>
     <button class="rr__scan-btn" (click)="triggerScan()">Scan starten</button>
   </div>
-} @else if (totalIssues() === 0) {
-  <div class="rr__ok">
-    <pf-icon name="check" [size]="40" />
-    <div class="rr__ok-title">Alles in Ordnung</div>
-    <div class="rr__ok-sub">Scan vom {{ report()!.generated_at | date:'dd.MM.yyyy HH:mm' }} — keine Abweichungen.</div>
-    <button class="rr__scan-btn rr__scan-btn--sec" (click)="triggerScan()">Erneut scannen</button>
-  </div>
 } @else {
+  @if (blockedMetadata().length > 0) {
+    <div class="rr__blocked">
+      <div class="rr__blocked-head">
+        <pf-icon name="alertTriangle" [size]="20" />
+        <span>Verarbeitung eingeschaltet, aber kein Modell aktiv</span>
+      </div>
+      <ul class="rr__blocked-list">
+        @for (gap of blockedMetadata(); track gap.step) {
+          <li>{{ gap.detail }}</li>
+        }
+      </ul>
+      <div class="rr__blocked-hint">
+        Solange kein passendes Modell aktiv ist, kann „Nachziehen" diese Bilder nicht
+        vervollständigen — aktiviere zuerst ein Modell unter „Modelle".
+      </div>
+    </div>
+  }
+
+  @if (totalIssues() === 0) {
+    <div class="rr__ok">
+      <pf-icon name="check" [size]="40" />
+      <div class="rr__ok-title">Alles in Ordnung</div>
+      <div class="rr__ok-sub">Scan vom {{ report()!.generated_at | date:'dd.MM.yyyy HH:mm' }} — keine reparierbaren Abweichungen.</div>
+      <button class="rr__scan-btn rr__scan-btn--sec" (click)="triggerScan()">Erneut scannen</button>
+    </div>
+  } @else {
   <div class="rr__header">
     <span class="rr__meta">
       Letzter Scan: {{ report()!.generated_at | date:'dd.MM.yyyy HH:mm' }} ·
@@ -152,4 +171,5 @@
       />
     }
   </div>
+  }
 }

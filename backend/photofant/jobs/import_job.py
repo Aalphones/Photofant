@@ -388,6 +388,44 @@ def steps_from_settings() -> PipelineSteps:
     )
 
 
+@dataclass(frozen=True)
+class StepAvailability:
+    """Which metadata steps have a usable model enabled right now.
+
+    The companion to `steps_from_settings()`: that says what the user *wants* run,
+    this says what *can* run. A step wanted but with no model enabled (auto_tag on,
+    no WD14 active) is a config gap, not an incomplete-processing defect — a job for
+    it skips cleanly without ever setting its ledger flag, so anything that treats
+    "wanted" as "should be done" reports a permanent false positive. The reconcile
+    scan uses this to keep the two apart.
+    """
+
+    tags: bool
+    caption: bool
+    embedding: bool
+
+    def as_mapping(self) -> dict[str, bool]:
+        return {"tags": self.tags, "caption": self.caption, "embedding": self.embedding}
+
+
+def model_availability() -> StepAvailability:
+    """Probe whether a model that can run each metadata step is currently enabled.
+
+    Uses the *exact* resolvers the jobs use (WD14 tagger, active captioner, semantic
+    image embedder), so the scan and the job can never disagree on "available". The
+    resolvers only query the ModelRegistry — no model weights are loaded here.
+    """
+    from photofant.inference.adapters.wd14 import resolve_wd14_tagger
+    from photofant.inference.image_embedder import resolve_image_embedder
+    from photofant.jobs.caption_job import active_captioner_available
+
+    return StepAvailability(
+        tags=resolve_wd14_tagger() is not None,
+        caption=active_captioner_available(),
+        embedding=resolve_image_embedder() is not None,
+    )
+
+
 async def enqueue_pipeline_steps(asset_id: int, steps: PipelineSteps) -> None:
     """Enqueue the selected steps for one asset, wiring up the ordering rules.
 

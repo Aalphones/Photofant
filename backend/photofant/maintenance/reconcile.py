@@ -161,8 +161,9 @@ class IncompleteMetadataItem:
     unlike `reprocess_job`'s catch-up run (which also covers faces/heuristics/
     classification for the whole library), this bucket surfaces a specific gap spotted
     during the FS↔DB scan so it can be closed without a full reprocess pass. A step only
-    counts as "missing" if it's enabled in settings — a disabled `auto_caption` never
-    finishes by design and would otherwise show up as a permanent false positive.
+    lands here when it is enabled in settings *and* a model that can run it is actually
+    active — so "Nachziehen" always does something. A step wanted but with no model
+    active is a config gap, not a defect; it goes to `BlockedMetadataItem` instead.
     """
 
     asset_id: int
@@ -170,6 +171,56 @@ class IncompleteMetadataItem:
     person_name: str | None
     missing: list[str]  # subset of ["embedding", "tags", "caption"]
     detail: str
+
+
+# The three metadata steps this bucket reasons about, in display order.
+METADATA_STEPS = ("tags", "caption", "embedding")
+
+
+@dataclass
+class BlockedMetadataItem:
+    """A metadata step that is switched on but has no model to run it — a config gap.
+
+    This is the other half of the fix for the "fixed it, it comes back" bug: a step
+    enabled in settings whose model isn't active never sets its ledger flag, so every
+    scan re-reports it and every "Nachziehen" no-ops. Rather than showing one dead
+    reprocess row per asset, the scan collapses the whole capability into a single
+    summary line ("Embedding an, aber kein Modell aktiv — N Bilder betroffen") the user
+    resolves once by enabling a model, not per photo.
+    """
+
+    step: str  # one of METADATA_STEPS
+    asset_count: int
+    detail: str
+
+
+def classify_metadata_gap(
+    wanted: dict[str, bool],
+    available: dict[str, bool],
+    done: dict[str, bool],
+) -> tuple[list[str], list[str]]:
+    """Split one asset's unfinished metadata steps into reprocessable vs blocked.
+
+    Pure, so the scan/repair contract can be unit-tested without a DB. For each step:
+
+    - not wanted (settings off) or already done → ignored, no gap.
+    - wanted, not done, a model is available → *reprocessable* (the Nachziehen button
+      will actually run it).
+    - wanted, not done, no model available → *blocked* (a config gap, surfaced as a
+      capability summary, never as a per-asset reprocess row).
+
+    Returns (reprocessable_steps, blocked_steps), each a subset of METADATA_STEPS.
+    """
+    reprocessable: list[str] = []
+    blocked: list[str] = []
+    for step in METADATA_STEPS:
+        if not wanted.get(step, False) or done.get(step, False):
+            continue
+        if available.get(step, False):
+            reprocessable.append(step)
+        else:
+            blocked.append(step)
+    return reprocessable, blocked
 
 
 @dataclass
@@ -185,9 +236,12 @@ class ReconcileReport:
     stranded_faces: list[StrandedFaceItem] = field(default_factory=list)
     incomplete_metadata: list[IncompleteMetadataItem] = field(default_factory=list)
     corrupted_files: list[CorruptedFileItem] = field(default_factory=list)
+    blocked_metadata: list[BlockedMetadataItem] = field(default_factory=list)
 
     @property
     def total(self) -> int:
+        # blocked_metadata is deliberately excluded: it is an informational config
+        # summary, not a per-item discrepancy the user repairs from this list.
         return (
             len(self.orphaned_files)
             + len(self.missing_files)
@@ -214,6 +268,7 @@ class ReconcileReport:
             "stranded_faces": [asdict(item) for item in self.stranded_faces],
             "incomplete_metadata": [asdict(item) for item in self.incomplete_metadata],
             "corrupted_files": [asdict(item) for item in self.corrupted_files],
+            "blocked_metadata": [asdict(item) for item in self.blocked_metadata],
         }
 
 
