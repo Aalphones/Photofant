@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -15,6 +14,7 @@ from photofant.config import get_data_root
 from photofant.db.models import Asset, AssetInstance, Person, ProcessingLedger
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
+from photofant.media.atomic_io import atomic_copy
 from photofant.media.meta import SUPPORTED_EXTENSIONS, ImageMeta, read_meta
 
 log = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def _import_single(source_path: Path) -> int | None:
         dest = _dest_path(data_root, meta, source_path)
 
         if not dest.exists():
-            shutil.copy2(source_path, dest)
+            atomic_copy(source_path, dest)
             log.info("Copied %s → %s", source_path.name, dest)
 
         unknown_person = session.scalar(select(Person).where(Person.is_unknown.is_(True)))

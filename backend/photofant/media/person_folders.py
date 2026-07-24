@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from photofant.db.models import Asset, AssetInstance, Face, Person, SmartTrigger
+from photofant.media.atomic_io import atomic_copy
 
 log = logging.getLogger(__name__)
 
@@ -239,9 +240,7 @@ def _safe_copy(source: Path, dest: Path) -> Path:
     if not source.exists():
         raise FileNotFoundError(f"Source file missing for copy: {source}")
     final = _resolve_collision(dest)
-    final.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(str(source), str(final))
-    return final
+    return atomic_copy(source, final)
 
 
 # ── instance materialization ─────────────────────────────────────────────
