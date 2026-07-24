@@ -27,6 +27,7 @@ from collections.abc import Sequence
 
 import numpy as np
 from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from photofant.db.models import Asset, AssetEmbedding
@@ -46,20 +47,24 @@ def _to_blob(embedding: np.ndarray) -> bytes:
     return np.ascontiguousarray(embedding, dtype=_DTYPE).tobytes()
 
 
-def _row_for_write(session: Session, asset_id: int) -> AssetEmbedding | None:
-    """The asset's side row, creating it on first write — but only if the asset exists.
+def _upsert_column(session: Session, asset_id: int, column: str, blob: bytes) -> None:
+    """Insert-or-update a single embedding column for *asset_id* (no commit).
 
-    Mirrors the pre-move guard that silently skipped writes to a non-existent asset
-    (the SQLite FK is not enforced, so a blind insert would leave an orphan row).
+    Two embedding jobs for the same asset can legitimately overlap (import plus a
+    concurrent repair/reconcile pass) — each runs in its own session, and SQLite
+    sessions never see each other's uncommitted work. A get-or-create-then-INSERT
+    loses that race: both sessions see "no row yet", both INSERT, and the loser hits
+    the ``asset_embedding.asset_id`` UNIQUE constraint (the exact
+    ``sqlite3.IntegrityError`` this replaces). ``ON CONFLICT DO UPDATE`` makes the
+    write atomic so the race can't produce two competing INSERTs. Still guards
+    against a non-existent asset — the SQLite FK is not enforced, so a blind write
+    would leave an orphan row.
     """
-    row = session.get(AssetEmbedding, asset_id)
-    if row is not None:
-        return row
     if session.get(Asset, asset_id) is None:
-        return None
-    row = AssetEmbedding(asset_id=asset_id)
-    session.add(row)
-    return row
+        return
+    stmt = sqlite_insert(AssetEmbedding).values(asset_id=asset_id, **{column: blob})
+    stmt = stmt.on_conflict_do_update(index_elements=[AssetEmbedding.asset_id], set_={column: blob})
+    session.execute(stmt)
 
 
 def delete(session: Session, asset_id: int) -> None:
@@ -132,9 +137,7 @@ def load_all_semantic(session: Session) -> dict[int, np.ndarray]:
 
 def set_semantic(session: Session, asset_id: int, embedding: np.ndarray) -> None:
     """Persist the asset's semantic embedding (no commit — caller owns the tx)."""
-    row = _row_for_write(session, asset_id)
-    if row is not None:
-        row.clip_embedding = _to_blob(embedding)
+    _upsert_column(session, asset_id, "clip_embedding", _to_blob(embedding))
 
 
 # ----------------------------------------------------------------------------
@@ -187,6 +190,4 @@ def load_all_visual(session: Session) -> dict[int, np.ndarray]:
 
 def set_visual(session: Session, asset_id: int, embedding: np.ndarray) -> None:
     """Persist the asset's visual embedding (no commit — caller owns the tx)."""
-    row = _row_for_write(session, asset_id)
-    if row is not None:
-        row.dino_embedding = _to_blob(embedding)
+    _upsert_column(session, asset_id, "dino_embedding", _to_blob(embedding))
