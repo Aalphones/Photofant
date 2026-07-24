@@ -116,7 +116,8 @@ def _embed_asset_inner(asset_id: int, *, semantic: bool, dino: bool) -> None:
         log.warning("Asset %d has no readable file — skipping embedding", asset_id)
         return
 
-    image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
+    with PILImage.open(asset_path) as raw:
+        image = np.array(raw.convert("RGB"), dtype=np.uint8)
 
     semantic_embedding: np.ndarray | None = None
     dino_embedding: np.ndarray | None = None

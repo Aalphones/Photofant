@@ -131,8 +131,8 @@ def _run_face_job(asset_id: int) -> None:
 
     from PIL import Image as PILImage
 
-    image_pil = PILImage.open(asset_path).convert("RGB")
-    image = np.array(image_pil, dtype=np.uint8)
+    with PILImage.open(asset_path) as raw:
+        image = np.array(raw.convert("RGB"), dtype=np.uint8)
 
     try:
         faces = engine.detect(image, conf_threshold=conf_threshold, iou_threshold=iou_threshold)

@@ -103,8 +103,8 @@ def _rebuild_faces_sync() -> int:
         if source is None:
             continue
         try:
-            img_pil = PILImage.open(source).convert("RGB")
-            image = np.array(img_pil, dtype=np.uint8)
+            with PILImage.open(source) as raw:
+                image = np.array(raw.convert("RGB"), dtype=np.uint8)
 
             if bbox:
                 pad = padding or 40

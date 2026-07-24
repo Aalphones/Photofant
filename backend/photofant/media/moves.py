@@ -15,9 +15,9 @@ dest, sync DB only).
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import logging
 import shutil
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -36,9 +36,56 @@ _TRASH_SUBDIR = Path(".photofant") / "trash"
 _PHOTOS_SUBFOLDER = "photos"
 _FAVOURITES_SUBFOLDER = "favourites"
 
+# Windows briefly denies rename/unlink on a file that another handle still has
+# open for reading — e.g. GET /assets/{id}/file (api/assets.py) streaming the
+# same file to a client via FileResponse, or a pipeline job mid-read. On POSIX
+# this never happens (rename works around open handles); on Windows it's a
+# transient ERROR_SHARING_VIOLATION (WinError 32) that normally clears within
+# milliseconds once the reader finishes. Retry briefly instead of failing the
+# request outright.
+_LOCK_RETRY_ATTEMPTS = 5
+_LOCK_RETRY_BASE_DELAY_SECONDS = 0.2
+
 
 class MoveError(Exception):
     """A tracked file move could not be completed."""
+
+
+def _is_transient_windows_lock(exc: OSError) -> bool:
+    return getattr(exc, "winerror", None) == 32  # ERROR_SHARING_VIOLATION
+
+
+def _move_with_retry(source: Path, dest: Path) -> None:
+    for attempt in range(1, _LOCK_RETRY_ATTEMPTS + 1):
+        try:
+            shutil.move(str(source), str(dest))
+            return
+        except OSError as exc:
+            if attempt == _LOCK_RETRY_ATTEMPTS or not _is_transient_windows_lock(exc):
+                raise
+            log.warning(
+                "Move %s → %s hit a transient lock (attempt %d/%d) — retrying",
+                source, dest, attempt, _LOCK_RETRY_ATTEMPTS,
+            )
+            time.sleep(_LOCK_RETRY_BASE_DELAY_SECONDS * attempt)
+
+
+def _unlink_with_retry(path: Path) -> None:
+    """Delete path if it exists, riding out the same transient Windows lock."""
+    for attempt in range(1, _LOCK_RETRY_ATTEMPTS + 1):
+        try:
+            path.unlink()
+            return
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            if attempt == _LOCK_RETRY_ATTEMPTS or not _is_transient_windows_lock(exc):
+                raise
+            log.warning(
+                "Unlink %s hit a transient lock (attempt %d/%d) — retrying",
+                path, attempt, _LOCK_RETRY_ATTEMPTS,
+            )
+            time.sleep(_LOCK_RETRY_BASE_DELAY_SECONDS * attempt)
 
 
 def _now_utc() -> datetime:
@@ -90,7 +137,7 @@ def _perform_move(source: Path, dest: Path) -> Path:
     final = _resolve_collision(dest)
     final.parent.mkdir(parents=True, exist_ok=True)
     try:
-        shutil.move(str(source), str(final))
+        _move_with_retry(source, final)
     except OSError as exc:
         raise MoveError(f"Failed to move {source} → {final}: {exc}") from exc
     return final
@@ -180,8 +227,7 @@ async def trash_orphan_file(source: Path, data_root: Path) -> Path:
 
 
 def _delete_file_and_thumbnails(file_path: Path, cache_db_path: Path, asset_id: int) -> None:
-    with contextlib.suppress(FileNotFoundError):
-        file_path.unlink()
+    _unlink_with_retry(file_path)
     init_cache_db(cache_db_path)
     delete_thumbnails(cache_db_path, asset_id)
 
@@ -193,8 +239,7 @@ def _delete_face_crops_and_thumbnails(
     """Delete derived face crop files and their thumbnails from the cache DB."""
     init_cache_db(cache_db_path)
     for face_id, crop_path in face_data:
-        with contextlib.suppress(FileNotFoundError):
-            Path(crop_path).unlink()
+        _unlink_with_retry(Path(crop_path))
         delete_thumbnails(cache_db_path, face_id, "face")
 
 

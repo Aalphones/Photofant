@@ -50,7 +50,8 @@ def _run_tagging_inner(asset_id: int) -> None:
         log.warning("Asset %d has no readable file — skipping tagging", asset_id)
         return
 
-    image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
+    with PILImage.open(asset_path) as raw:
+        image = np.array(raw.convert("RGB"), dtype=np.uint8)
     tag_scores = tagger.tag(image)
     tag_scores = tag_scores[:max_tags]  # tagger already sorts by score desc
 

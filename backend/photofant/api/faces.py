@@ -394,8 +394,8 @@ async def import_faces_direct(
         if engine is not None:
             try:
                 from PIL import Image as PILImage
-                img_pil = PILImage.open(dest).convert("RGB")
-                img_np = np.array(img_pil, dtype=np.uint8)
+                with PILImage.open(dest) as raw:
+                    img_np = np.array(raw.convert("RGB"), dtype=np.uint8)
                 emb = await asyncio.to_thread(engine.embed_crop, img_np)
                 if emb is not None:
                     embedding_bytes = emb.astype(np.float32).tobytes()

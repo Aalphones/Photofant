@@ -96,7 +96,8 @@ def _run_heuristics(asset_id: int) -> None:
         return
 
     blur_threshold = load_settings()["blur_threshold"]
-    image = np.array(PILImage.open(asset_path).convert("RGB"), dtype=np.uint8)
+    with PILImage.open(asset_path) as raw:
+        image = np.array(raw.convert("RGB"), dtype=np.uint8)
     quality = _compute_quality(image, blur_threshold)
 
     height, width = image.shape[:2]

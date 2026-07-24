@@ -93,8 +93,8 @@ def _import_face_file(
     embedding_bytes: bytes | None = None
     if engine is not None:
         try:
-            img_pil = PILImage.open(file_path).convert("RGB")
-            img_np = np.array(img_pil, dtype=np.uint8)
+            with PILImage.open(file_path) as raw:
+                img_np = np.array(raw.convert("RGB"), dtype=np.uint8)
             emb = engine.embed_crop(img_np)
             if emb is not None:
                 embedding_bytes = emb.astype(np.float32).tobytes()

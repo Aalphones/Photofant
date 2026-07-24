@@ -106,6 +106,122 @@ def test_perform_move_noop_when_already_at_dest(tmp_path: Path) -> None:
     assert path.exists()
 
 
+# ── retry helpers (Windows transient lock — WinError 32) ────────────────────
+#
+# Windows denies rename/unlink while another handle still has the file open
+# for reading (e.g. GET /assets/{id}/file streaming it to a client). That
+# shows up as OSError with winerror == 32 and normally clears within
+# milliseconds — see the module docstring on _LOCK_RETRY_ATTEMPTS.
+
+
+def test_is_transient_windows_lock_detects_winerror_32() -> None:
+    exc = OSError("in use")
+    exc.winerror = 32  # type: ignore[attr-defined]
+    assert moves._is_transient_windows_lock(exc) is True
+
+
+def test_is_transient_windows_lock_ignores_other_errors() -> None:
+    assert moves._is_transient_windows_lock(PermissionError("denied")) is False
+    other = OSError("in use")
+    other.winerror = 5  # type: ignore[attr-defined]  # ERROR_ACCESS_DENIED, not a lock
+    assert moves._is_transient_windows_lock(other) is False
+
+
+def test_move_with_retry_recovers_from_transient_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "a.png"
+    source.write_bytes(b"x")
+    dest = tmp_path / "b.png"
+    real_move = shutil.move
+    calls = {"n": 0}
+
+    def flaky_move(src: str, dst: str) -> None:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            exc = OSError("in use")
+            exc.winerror = 32  # type: ignore[attr-defined]
+            raise exc
+        real_move(src, dst)
+
+    monkeypatch.setattr(moves.shutil, "move", flaky_move)
+    monkeypatch.setattr(moves.time, "sleep", lambda _seconds: None)
+
+    moves._move_with_retry(source, dest)
+
+    assert calls["n"] == 3
+    assert dest.exists()
+
+
+def test_move_with_retry_gives_up_on_non_transient_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "a.png"
+    source.write_bytes(b"x")
+    dest = tmp_path / "b.png"
+
+    def always_denied(src: str, dst: str) -> None:
+        raise PermissionError("real access denied")
+
+    sleep_calls: list[float] = []
+    monkeypatch.setattr(moves.shutil, "move", always_denied)
+    monkeypatch.setattr(moves.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+
+    with pytest.raises(PermissionError):
+        moves._move_with_retry(source, dest)
+
+    assert sleep_calls == []  # not a transient lock — no retry wasted
+
+
+class _FlakyUnlink:
+    """Stand-in for a Path whose first `fail_times` unlink() calls hit a transient lock."""
+
+    def __init__(self, real_path: Path, fail_times: int) -> None:
+        self._real_path = real_path
+        self._fail_times = fail_times
+        self.calls = 0
+
+    def unlink(self) -> None:
+        self.calls += 1
+        if self.calls <= self._fail_times:
+            exc = OSError("in use")
+            exc.winerror = 32  # type: ignore[attr-defined]
+            raise exc
+        self._real_path.unlink()
+
+
+def test_unlink_with_retry_recovers_from_transient_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_path = tmp_path / "a.png"
+    real_path.write_bytes(b"x")
+    flaky = _FlakyUnlink(real_path, fail_times=2)
+    monkeypatch.setattr(moves.time, "sleep", lambda _seconds: None)
+
+    moves._unlink_with_retry(flaky)  # type: ignore[arg-type]
+
+    assert flaky.calls == 3
+    assert not real_path.exists()
+
+
+def test_unlink_with_retry_is_noop_when_file_already_gone(tmp_path: Path) -> None:
+    moves._unlink_with_retry(tmp_path / "missing.png")  # must not raise
+
+
+def test_unlink_with_retry_gives_up_on_non_transient_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _AlwaysDenied:
+        def unlink(self) -> None:
+            raise PermissionError("real access denied")
+
+    sleep_calls: list[float] = []
+    monkeypatch.setattr(moves.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+
+    with pytest.raises(PermissionError):
+        moves._unlink_with_retry(_AlwaysDenied())  # type: ignore[arg-type]
+
+    assert sleep_calls == []
+
+
 # ── set_favourite ───────────────────────────────────────────────────────────
 
 
