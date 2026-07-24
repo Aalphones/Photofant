@@ -121,8 +121,8 @@ _TAGGING_KINDS: frozenset[JobKind] = frozenset({JobKind.TAGGING})
 _CAPTIONING_KINDS: frozenset[JobKind] = frozenset({JobKind.CAPTIONING})
 
 # Job kinds whose Handler im Worker-Prozess läuft statt lokal im API-Prozess (ADR-037).
-# Startet mit DEMO (Phase 1, Beweis-Fall), wächst in Phase 2/3 um die echten Inferenz-Jobs.
-_REMOTE_KINDS: frozenset[JobKind] = frozenset({JobKind.DEMO})
+# Startet mit DEMO (Phase 1, Beweis-Fall), Phase 2 ergänzt CAPTIONING + TAGGING, Phase 3 den Rest.
+_REMOTE_KINDS: frozenset[JobKind] = frozenset({JobKind.DEMO, JobKind.CAPTIONING, JobKind.TAGGING})
 
 
 @dataclass
@@ -288,6 +288,25 @@ class JobQueue:
         await asyncio.to_thread(self._request_queue.put, request)
         return status
 
+    async def enqueue_remote_and_wait(self, kind: JobKind, label: str, payload: dict[str, Any]) -> JobStatus:
+        """Wie `enqueue_remote()`, wartet aber auf DONE/ERROR statt Fire-and-Forget.
+
+        Für Aufrufer wie `rerun_job.py`, die den nächsten Schritt für ein Asset erst nach
+        Abschluss dieses Jobs starten dürfen. Muss sich **vor** `enqueue_remote()` auf den
+        Status-Stream abonnieren — sonst könnte ein sehr schneller Worker-Job schon fertig
+        gemeldet haben, bevor der Abonnent überhaupt lauscht (verpasste Terminal-Nachricht,
+        ewiges Warten).
+        """
+        subscriber = self.subscribe()
+        try:
+            status = await self.enqueue_remote(kind, label, payload)
+            while True:
+                update = await subscriber.get()
+                if update.id == status.id and update.state in (JobState.DONE, JobState.ERROR):
+                    return update
+        finally:
+            self.unsubscribe(subscriber)
+
     def update(self, status: JobStatus, progress: float, state: JobState, error: str | None = None) -> None:
         status.progress = progress
         status.state = state
@@ -369,7 +388,13 @@ class JobQueue:
             except Empty:
                 continue
             if message.type == "pipeline_signal":
-                # Ab Phase 2 verdrahtet: face_pipeline/classification_pipeline.signal(asset_id)
+                from photofant.jobs.classification_pipeline import classification_pipeline
+                from photofant.jobs.face_pipeline import face_pipeline
+
+                if message.pipeline == "face":
+                    face_pipeline.signal(message.asset_id)
+                else:
+                    classification_pipeline.signal(message.asset_id)
                 continue
             status = self._jobs.get(message.job_id)
             if status is None:

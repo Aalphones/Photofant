@@ -1,20 +1,28 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-07-22_ml-jobs-worker-prozess/`
-**Phase:** 1/4 — Fundament: IPC-Brücke + Worker-Skeleton (complete, Code fertig)
-**Nächster Schritt:** `/clear`, dann `/model sonnet` (Phase 2 ist heikel — nach den ersten zwei
-Job-Migrationen ggf. `opusplan` prüfen, falls der Cross-Process-Signalisierungs-Check hakt),
-danach `/implement` → Phase 2 „Erstmigration — Captioning + Tagging".
+**Phase:** 2/4 — Erstmigration: Captioning + Tagging (complete, Code fertig)
+**Nächster Schritt:** `/clear`, dann `/model sonnet` (Phase 3 ist als „standard" eingestuft —
+die Cross-Process-Signalisierung und der Remote-Wait-Pfad stehen jetzt als Muster, Phase 3
+wiederholt sie nur für vier weitere Job-Arten), danach `/implement` → Phase 3
+„Rest-Migration — Embedding, Heuristics, Classification, Face, Clustering, Dupe-Scan".
 
-**🟡 Phase 1 komplett, Laufzeit-Verhalten noch nicht gegengeprüft (private-Profil, User-Smoke):**
-Worker-Prozess (`backend/photofant/worker/`) + Remote-Proxy in `jobs/queue.py` stehen, `ruff`
-und `mypy --strict` sind grün (0 Fehler in den 7 berührten Dateien). Noch nicht live getestet:
-Worker startet automatisch (Log „Worker-Prozess bereit"), `POST /api/jobs/demo` läuft über die
-neue IPC-Strecke mit weiterhin live sichtbarem Fortschritt im Job-Dock, sauberer Shutdown ohne
-Zombie-Prozess, Kill-Test (Worker im Task-Manager beenden → API bleibt erreichbar). Details +
-Deviations: `docs/planning/2026-07-22_ml-jobs-worker-prozess/phase-1-fundament-ipc.md` →
-„Report-Back". SQLite-Parallelzugriff-Check konnte mit dem DEMO-Job noch nicht sinnvoll geprüft
-werden (rührt die DB nicht an) — auf Phase 2 verschoben, in FINDINGS.md getaggt.
+**🟡 Phase 2 komplett, Laufzeit-Verhalten noch nicht gegengeprüft (private-Profil, User-Smoke):**
+Captioning + Tagging laufen ab jetzt über den Worker-Prozess (`enqueue_remote`), die
+Cross-Process-Pipeline-Signalisierung für FACE/CLASSIFICATION ist verdrahtet
+(`worker/signals.py::emit_pipeline_signal`), `ruff` und `mypy --strict` sind grün (nur 3
+vorbestehende Fehler in `caption_job.py`, unverändert seit vor diesem Plan). Noch nicht live
+getestet: Worker-PID-Log beim Captioning/Tagging, FACE wird in beiden Job-Reihenfolgen genau
+einmal ausgelöst, Lightbox bleibt während Captioning/Tagging flott, `session_manager` im
+API-Prozess bleibt leer. Details + Deviations:
+`docs/planning/2026-07-22_ml-jobs-worker-prozess/phase-2-captioning-tagging.md` → „Report-Back".
+
+**🟡 Architektur-Lücke gefunden und für diese Phase mitgefixt:** `rerun_job.py` rief
+Tagging/Captioning bisher direkt auf (nicht über die Job-Queue) — das hätte Florence-2/WD14
+weiterhin im API-Prozess geladen, sobald jemand „Bilder erneut verarbeiten" nutzt, und damit
+genau das Problem reproduziert, das dieser Plan beheben soll. Für Tags/Caption jetzt gefixt
+(neuer `enqueue_remote_and_wait()`-Pfad); Embedding/Heuristics/Classification/Face haben
+denselben Bug noch, behoben in Phase 3 (in FINDINGS.md getaggt, dort auch das Wie).
 
 ADR-033 war beim Planen die nächste freie Nummer, ist inzwischen an vier andere Pläne vergeben
 (033-036) — die reale Nummer für diesen Plan ist **ADR-037**

@@ -23,6 +23,7 @@ from photofant.inference.caption_config import (
     default_task_token_config,
 )
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
+from photofant.worker.signals import emit_pipeline_signal
 
 log = logging.getLogger(__name__)
 
@@ -176,12 +177,10 @@ def _run_caption_with_preset(
     force: bool = False,
 ) -> None:
     """Blocking: resolve the active captioner, run inference, persist the caption."""
-    from photofant.jobs.face_pipeline import face_pipeline
-
     try:
         _run_caption_with_preset_inner(asset_id, override_preset_id, force)
     finally:
-        face_pipeline.signal(asset_id)
+        emit_pipeline_signal("face", asset_id)
 
 
 def _run_caption_with_preset_inner(
@@ -258,21 +257,19 @@ def _run_caption_with_preset_inner(
     log.info("Captioned asset %d (%d chars, preset %s, model %s)", asset_id, len(caption), preset_id, manifest_id)
 
 
-def _run_caption(asset_id: int) -> None:
-    _run_caption_with_preset(asset_id)
-
-
-async def run_caption_job(status: JobStatus, asset_id: int) -> None:
+async def run_caption_job(
+    status: JobStatus, asset_id: int, override_preset_id: int | None = None, force: bool = False
+) -> None:
     import asyncio
 
     job_queue.update(status, progress=0.1, state=JobState.RUNNING)
-    await asyncio.to_thread(_run_caption, asset_id)
+    await asyncio.to_thread(_run_caption_with_preset, asset_id, override_preset_id, force)
     job_queue.update(status, progress=1.0, state=JobState.DONE)
 
 
 async def enqueue_caption(asset_id: int) -> JobStatus:
-    return await job_queue.enqueue(
+    return await job_queue.enqueue_remote(
         kind=JobKind.CAPTIONING,
         label=f"Caption: Asset {asset_id}",
-        coro_factory=lambda job_status: run_caption_job(job_status, asset_id),
+        payload={"asset_id": asset_id},
     )

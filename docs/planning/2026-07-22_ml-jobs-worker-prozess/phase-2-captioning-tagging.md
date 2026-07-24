@@ -92,10 +92,44 @@ da keine Aufrufer mehr) — kein funktionales Problem, nur eine tote Instanz bis
 
 ## Doc-Updates
 
-- [ ] `docs/code-map.md` — Zeilen „Tags" und „Captions & Presets" um den Hinweis „läuft im
-      Worker-Prozess" ergänzen (nicht neu schreiben, anhängen).
+- [x] `docs/code-map.md` — Zeilen „Tags" und „Captions & Presets" um den Hinweis „läuft im
+      Worker-Prozess" ergänzt.
 
 ## Report-Back
 
-_(nach Umsetzung ausfüllen: Ergebnis des FACE-Auslöse-Tests in beiden Reihenfolgen, tatsächlicher
-Payload-Umfang von Tagging, jede Abweichung vom Plan-Wortlaut)_
+**Code fertig, ruff + mypy --strict grün (nur die 3 vorbestehenden `caption_job.py`-Fehler aus
+`_run_captioner`, unverändert). Alle vier AK sind Laufzeit-Checks (Worker-PID im Log,
+FACE-Reihenfolge, Lightbox-Reaktionsfähigkeit, leere `session_manager`-Instanz) — private-Profil,
+nicht von mir gelaufen, siehe „Offene Smoke-Tests" in STATE.md.**
+
+- **Payload-Umfang Tagging:** bestätigt schlank — nur `{"asset_id": asset_id}`, keine weiteren
+  Skalare oder Objekte (Gegencheck aus Aufgabe 2 abgeschlossen).
+- **Payload-Umfang Captioning:** erweitert um `override_preset_id`/`force` (genau wie im
+  README-Kontrakt vorgezeichnet) — `run_caption_job()` reicht beide jetzt durch, `_run_caption()`
+  (der alte Wrapper ohne diese Parameter) ist entfallen, da er nach der Erweiterung redundant war.
+- **FACE-Auslöse-Test in beiden Reihenfolgen:** nicht live gelaufen. Der Cross-Process-Pfad ist
+  aber durchgängig verdrahtet: `caption_job.py`/`tagging_job.py` rufen in ihrem `finally`-Block
+  jetzt `worker/signals.py::emit_pipeline_signal()` statt direkt `face_pipeline.signal()` — die
+  neue Funktion erkennt selbst, ob sie im Worker- oder API-Prozess läuft (Handle, das
+  `worker/process.py` beim Start setzt) und wählt entsprechend IPC oder lokalen Aufruf.
+  `jobs/queue.py::_remote_status_forwarder()` empfängt `pipeline_signal`-Nachrichten jetzt und
+  ruft `face_pipeline.signal()`/`classification_pipeline.signal()` im API-Prozess auf.
+
+### Abweichung vom Plan-Wortlaut — Architektur-Lücke gefunden und mitgefixt
+
+Beim Umsetzen von Aufgabe 1 fiel auf: `rerun_job.py::run_rerun_job()` ruft `_run_tagging()` und
+`_run_caption_with_preset()` **nicht** über `enqueue_tagging()`/`enqueue_caption()` auf, sondern
+direkt (`asyncio.to_thread(_run_tagging, asset_id)` etc., synchron im API-Prozess). Ohne Fix hätte
+„Bilder erneut verarbeiten" (Rerun) Florence-2/WD14 weiterhin im API-Prozess geladen — genau das,
+was AK 4 dieser Phase ausschließt, und der ganze Grund für den Plan (API friert während Inferenz
+ein) wäre für den Rerun-Pfad unverändert geblieben.
+
+Fix: neue Methode `JobQueue.enqueue_remote_and_wait()` (reiht im Worker ein, wartet aber auf
+DONE/ERROR statt Fire-and-Forget) + `rerun_job.py::_run_remote_step()` als schlanker Wrapper
+darüber (fail-fast wie vorher: ein Fehler bricht den Rerun ab). `rerun_job.py`s Tags-/
+Caption-Schritte laufen jetzt darüber; Embedding/Heuristics/Categories/Faces bleiben unverändert
+lokal (die migrieren erst in Phase 3 — siehe FINDINGS.md, dort wartet derselbe Fix auf dieselbe
+Weise für die restlichen vier Schritte).
+
+Nicht im Plan-Wortlaut vorgesehen, aber notwendig, um AK 4 ehrlich zu erfüllen statt sie
+stillschweigend zu unterlaufen.

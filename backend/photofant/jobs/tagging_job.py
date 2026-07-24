@@ -11,6 +11,7 @@ import numpy as np
 from photofant.db.models import Asset, AssetTag, ProcessingLedger, Tag
 from photofant.db.session import SessionLocal
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
+from photofant.worker.signals import emit_pipeline_signal
 
 log = logging.getLogger(__name__)
 
@@ -21,14 +22,11 @@ def _run_tagging(asset_id: int) -> None:
     The follow-up signals fire in `finally`: face detection and classification
     wait for this step, and a tagging failure must not strand them forever.
     """
-    from photofant.jobs.classification_pipeline import classification_pipeline
-    from photofant.jobs.face_pipeline import face_pipeline
-
     try:
         _run_tagging_inner(asset_id)
     finally:
-        face_pipeline.signal(asset_id)
-        classification_pipeline.signal(asset_id)
+        emit_pipeline_signal("face", asset_id)
+        emit_pipeline_signal("classification", asset_id)
 
 
 def _run_tagging_inner(asset_id: int) -> None:
@@ -128,8 +126,8 @@ async def run_tagging_job(status: JobStatus, asset_id: int) -> None:
 
 
 async def enqueue_tagging(asset_id: int) -> JobStatus:
-    return await job_queue.enqueue(
+    return await job_queue.enqueue_remote(
         kind=JobKind.TAGGING,
         label=f"Tagging: Asset {asset_id}",
-        coro_factory=lambda job_status: run_tagging_job(job_status, asset_id),
+        payload={"asset_id": asset_id},
     )

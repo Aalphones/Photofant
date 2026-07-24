@@ -1,8 +1,7 @@
 """Dispatch-Tabelle des Worker-Prozesses: JobKind → Handler.
 
-Eine Zeile pro migriertem Job — Phase 1 nur DEMO als Beweis-Fall, Phase 2/3 ergänzen den
-Rest (CAPTIONING, TAGGING, EMBEDDING, HEURISTICS, CLASSIFICATION, FACE, CLUSTERING,
-DUPE_SCAN).
+Eine Zeile pro migriertem Job — Phase 1 nur DEMO als Beweis-Fall, Phase 2 ergänzt CAPTIONING +
+TAGGING, Phase 3 den Rest (EMBEDDING, HEURISTICS, CLASSIFICATION, FACE, CLUSTERING, DUPE_SCAN).
 """
 from __future__ import annotations
 
@@ -10,7 +9,9 @@ import asyncio
 from collections.abc import Callable, Coroutine
 from typing import Any
 
+from photofant.jobs.caption_job import run_caption_job
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
+from photofant.jobs.tagging_job import run_tagging_job
 
 
 async def _demo_handler(status: JobStatus, _payload: dict[str, Any]) -> None:
@@ -30,4 +31,8 @@ JobHandler = Callable[[JobStatus, dict[str, Any]], Coroutine[Any, Any, None]]
 
 JOB_HANDLERS: dict[JobKind, JobHandler] = {
     JobKind.DEMO: _demo_handler,
+    JobKind.CAPTIONING: lambda status, payload: run_caption_job(
+        status, payload["asset_id"], payload.get("override_preset_id"), payload.get("force", False)
+    ),
+    JobKind.TAGGING: lambda status, payload: run_tagging_job(status, payload["asset_id"]),
 }

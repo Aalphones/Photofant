@@ -15,7 +15,7 @@
 | # | Phase | Komplexität | Status |
 |---|---|---|---|
 | 1 | Fundament — IPC-Brücke + Worker-Skeleton, ADR-037 | heikel | complete |
-| 2 | Erstmigration — Captioning + Tagging | heikel | pending |
+| 2 | Erstmigration — Captioning + Tagging | heikel | complete |
 | 3 | Rest-Migration — Embedding, Heuristics, Classification, Face, Clustering, Dupe-Scan | standard | pending |
 | 4 | Härtung + Cleanup | standard | pending |
 

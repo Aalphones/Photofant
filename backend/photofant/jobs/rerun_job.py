@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 from sqlalchemy import select
 
@@ -117,18 +117,29 @@ def _reset_ledger_flags(content_hash: str, steps: list[ClassifyStep]) -> None:
         session.commit()
 
 
+async def _run_remote_step(kind: JobKind, label: str, payload: dict[str, Any]) -> None:
+    """Reiht einen Job im Worker-Prozess ein und wartet auf sein Ergebnis (ADR-037).
+
+    Für TAGGING/CAPTIONING statt der lokalen `_run_tagging`/`_run_caption_with_preset`-Aufrufe
+    — die laufen seit Phase 2 ausschließlich im Worker-Prozess (Florence-2/WD14-Sessions leben
+    dort). Ein Fehlschlag bricht den Rerun ab (fail-fast), wie es der direkte Aufruf vorher auch
+    tat — `enqueue_remote_and_wait()` selbst schluckt den Fehler nur in den JobStatus.
+    """
+    result = await job_queue.enqueue_remote_and_wait(kind, label, payload)
+    if result.state == JobState.ERROR:
+        raise RuntimeError(result.error or f"Remote-Job {kind.value} fehlgeschlagen (job_id={result.id})")
+
+
 async def run_rerun_job(
     status: JobStatus,
     asset_ids: list[int] | Literal["all"],
     steps: list[ClassifyStep],
     caption_preset_id: int | None,
 ) -> None:
-    from photofant.jobs.caption_job import _run_caption_with_preset
     from photofant.jobs.classification_job import _run_classification
     from photofant.jobs.embedding_job import _run_dino_embedding, _run_embedding
     from photofant.jobs.face_job import _run_face_job
     from photofant.jobs.heuristics_job import _run_heuristics
-    from photofant.jobs.tagging_job import _run_tagging
 
     assets = await asyncio.to_thread(_resolve_assets, asset_ids)
     total = max(len(assets), 1)
@@ -141,9 +152,13 @@ async def run_rerun_job(
         if "heuristics" in steps:
             await asyncio.to_thread(_run_heuristics, asset_id)
         if "tags" in steps:
-            await asyncio.to_thread(_run_tagging, asset_id)
+            await _run_remote_step(JobKind.TAGGING, f"Rerun Tagging: Asset {asset_id}", {"asset_id": asset_id})
         if "caption" in steps:
-            await asyncio.to_thread(_run_caption_with_preset, asset_id, caption_preset_id, True)
+            await _run_remote_step(
+                JobKind.CAPTIONING,
+                f"Rerun Caption: Asset {asset_id}",
+                {"asset_id": asset_id, "override_preset_id": caption_preset_id, "force": True},
+            )
         if "embedding" in steps:
             await asyncio.to_thread(_run_embedding, asset_id)
         elif "dino_embedding" in steps:

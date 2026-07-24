@@ -21,11 +21,14 @@ from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
 
 from photofant.jobs.queue import JobKind, JobQueue, JobStatus, job_queue
+from photofant.worker import signals
 from photofant.worker.dispatch import JOB_HANDLERS, JobHandler
 from photofant.worker.protocol import JobRequest, JobStatusMessage
 
 if TYPE_CHECKING:
     import multiprocessing as mp
+
+    from photofant.worker.protocol import WorkerStatusMessage
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +64,7 @@ async def _request_listener(worker_queue: JobQueue, request_queue: mp.Queue[JobR
         )
 
 
-async def _status_forwarder(worker_queue: JobQueue, status_queue: mp.Queue[JobStatusMessage]) -> None:
+async def _status_forwarder(worker_queue: JobQueue, status_queue: mp.Queue[WorkerStatusMessage]) -> None:
     subscriber = worker_queue.subscribe()
     while True:
         status = await subscriber.get()
@@ -78,8 +81,11 @@ async def _status_forwarder(worker_queue: JobQueue, status_queue: mp.Queue[JobSt
 
 
 async def _run_worker(
-    request_queue: mp.Queue[JobRequest | None], status_queue: mp.Queue[JobStatusMessage]
+    request_queue: mp.Queue[JobRequest | None], status_queue: mp.Queue[WorkerStatusMessage]
 ) -> None:
+    # Vor job_queue.start(): markiert für signals.py "wir laufen im Worker-Prozess" — jeder
+    # emit_pipeline_signal()-Aufruf ab hier schreibt auf die IPC-Queue statt lokal zu signalisieren.
+    signals.set_status_queue(status_queue)
     job_queue.start()
     log.info("Worker-Prozess bereit")
     forwarder_task = asyncio.create_task(_status_forwarder(job_queue, status_queue))
@@ -93,7 +99,7 @@ async def _run_worker(
 
 
 def run_worker_process(
-    request_queue: mp.Queue[JobRequest | None], status_queue: mp.Queue[JobStatusMessage]
+    request_queue: mp.Queue[JobRequest | None], status_queue: mp.Queue[WorkerStatusMessage]
 ) -> None:
     """Synchroner Einstiegspunkt für `multiprocessing.Process(target=...)`."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
