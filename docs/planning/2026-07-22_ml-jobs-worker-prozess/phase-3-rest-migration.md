@@ -55,14 +55,27 @@ Job-Arten übersehen wird.
 
 ## Aufgabe 4 — Idle-Eviction-Loop umziehen
 
+**🟡 Vorgezogener Teilfix (2026-07-24, außerhalb der Plan-Reihenfolge):** Nutzer meldete
+VRAM-Leck live nach Phase 2 (Tagging/Captioning-Modelle blieben nach Import dauerhaft geladen).
+Ursache war exakt diese Aufgabe. Um die Lücke nicht bis Phase 3 offen zu lassen, läuft
+`worker/process.py::_idle_eviction_loop` (analog zu `main.py`s Version) bereits **seit jetzt** im
+Worker-Prozess, gestartet/gecancelt in `_run_worker` (`eviction_task`, symmetrisch zu
+`forwarder_task`), plus expliziter `generative_engine.unload()`/`gguf_engine.unload()`/
+`session_manager.shutdown()` im `finally`-Block beim Worker-Stop. Das deckt die zwei migrierten
+Job-Arten (CAPTIONING/TAGGING) ab. `main.py::_idle_eviction_loop` bleibt **bewusst unverändert**
+stehen, weil CLIP/SigLIP2/DINOv2/buffalo_l (Embedding/Face) bis Phase 3 weiterhin im API-Prozess
+laufen und die dortige Schleife brauchen.
+
+Wenn diese Phase jetzt umgesetzt wird: die Worker-seitige Schleife existiert schon (nicht
+neu bauen) — offen bleibt nur noch der **zweite Teil**, der ursprünglich hier beschrieben war:
 `main.py::_idle_eviction_loop` (`session_manager.evict_idle()`, `generative_engine.evict_idle()`,
-`gguf_engine.evict_idle()`) läuft nach dieser Phase komplett gegen tote, ungenutzte Instanzen im
-API-Prozess (kein Aufrufer lädt dort noch Sessions). Die Schleife zieht in den Worker-Prozess um
-(gestartet in `worker/process.py::_run_worker`, analog zu den beiden IPC-Coroutinen aus Phase 1).
-`main.py` verliert den `eviction_task`-Code; `session_manager`/`generative_engine`/`gguf_engine`-
-Importe in `main.py` fallen ebenfalls weg, sofern nichts anderes dort noch darauf zugreift
-(verifizieren: `grep -n "session_manager\|generative_engine\|gguf_engine" backend/photofant/main.py`
-sollte danach nur noch im Worker-Kontext auftauchen, nicht mehr in `main.py`).
+`gguf_engine.evict_idle()`) läuft nach vollständiger Migration von Embedding/Heuristics/
+Classification/Face/Clustering/Dupe-Scan komplett gegen tote, ungenutzte Instanzen im API-Prozess.
+`main.py` verliert dann den `eviction_task`-Code; `session_manager`/`generative_engine`/
+`gguf_engine`-Importe in `main.py` fallen ebenfalls weg, sofern nichts anderes dort noch darauf
+zugreift (verifizieren: `grep -n "session_manager\|generative_engine\|gguf_engine"
+backend/photofant/main.py` sollte danach nur noch im Worker-Kontext auftauchen, nicht mehr in
+`main.py`).
 
 ## AK dieser Phase
 

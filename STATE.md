@@ -17,6 +17,17 @@ einmal ausgelöst, Lightbox bleibt während Captioning/Tagging flott, `session_m
 API-Prozess bleibt leer. Details + Deviations:
 `docs/planning/2026-07-22_ml-jobs-worker-prozess/phase-2-captioning-tagging.md` → „Report-Back".
 
+**🟡 Vorgezogener Teilfix (2026-07-24, außerhalb der Plan-Reihenfolge):** VRAM-Leck live
+gemeldet — Tagging-/Captioning-Modelle (WD14, Florence-2/JoyCaption/Qwen2.5-VL) blieben nach
+dem Import dauerhaft im VRAM, weil `main.py::_idle_eviction_loop` seit Phase 2 nur noch gegen
+die leere API-Prozess-Instanz von `session_manager`/`generative_engine` läuft — die echten
+Instanzen leben seit Phase 2 im Worker-Prozess, dort räumte niemand auf. Fix: Teil von Phase 3
+Aufgabe 4 vorgezogen — `worker/process.py` hat jetzt seine eigene Idle-Eviction-Schleife plus
+Shutdown-Cleanup. `main.py`s Schleife bleibt bestehen (wird noch für Embedding/Face gebraucht,
+bis die in Phase 3 migrieren). Details: `phase-3-rest-migration.md` → Aufgabe 4. `ruff`/
+`mypy --strict` grün auf der geänderten Datei; Laufzeit-Bestätigung (VRAM nach Import-Batch
+wirklich frei nach `idleTimeoutSeconds`) noch offen — private-Profil, User-Smoke.
+
 **🟡 Architektur-Lücke gefunden und für diese Phase mitgefixt:** `rerun_job.py` rief
 Tagging/Captioning bisher direkt auf (nicht über die Job-Queue) — das hätte Florence-2/WD14
 weiterhin im API-Prozess geladen, sobald jemand „Bilder erneut verarbeiten" nutzt, und damit

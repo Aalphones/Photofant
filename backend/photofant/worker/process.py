@@ -32,6 +32,33 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+IDLE_EVICTION_INTERVAL_SECONDS: float = 60.0
+
+
+async def _idle_eviction_loop() -> None:
+    """Räumt ONNX-/Torch-/GGUF-Modelle auf, die im Worker-Prozess idle geworden sind.
+
+    Gegenstück zu `main.py::_idle_eviction_loop` im API-Prozess. Seit ADR-037 Phase 2 laufen
+    CAPTIONING (Florence-2/JoyCaption/Qwen2.5-VL) und TAGGING (WD14) hier im Worker-Prozess —
+    wegen Windows `spawn` sind `session_manager`/`generative_engine`/`gguf_engine` hier eigene
+    Instanzen, getrennt von denen im API-Prozess. Ohne diese Schleife bleiben ihre Modelle bis
+    zum Prozess-Ende im VRAM, weil niemand `evict_idle()` aufruft. Volle Migration der Schleife
+    (inkl. Entfernen aus `main.py`) ist für Phase 3 vorgesehen, sobald auch die restlichen
+    Modell-Jobs hierher umziehen — dieser Vorgriff schließt die Lücke schon für die zwei
+    bereits migrierten Job-Arten.
+    """
+    from photofant.inference.generative_engine import generative_engine
+    from photofant.inference.gguf_engine import gguf_engine
+    from photofant.inference.session_manager import session_manager
+    from photofant.settings import load_settings
+
+    while True:
+        await asyncio.sleep(IDLE_EVICTION_INTERVAL_SECONDS)
+        session_manager.evict_idle()
+        ai_idle_timeout = load_settings()["ai"]["idleTimeoutSeconds"]
+        generative_engine.evict_idle(ai_idle_timeout)
+        gguf_engine.evict_idle(ai_idle_timeout)
+
 
 def _bind_handler(handler: JobHandler, payload: dict[str, Any]) -> Callable[[JobStatus], Coroutine[Any, Any, None]]:
     """Bindet Handler + Payload zu einem `CoroFactory` — vermeidet ein Late-Binding-Closure-Problem
@@ -89,13 +116,25 @@ async def _run_worker(
     job_queue.start()
     log.info("Worker-Prozess bereit")
     forwarder_task = asyncio.create_task(_status_forwarder(job_queue, status_queue))
+    eviction_task = asyncio.create_task(_idle_eviction_loop())
     try:
         await _request_listener(job_queue, request_queue)
     finally:
+        eviction_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await eviction_task
         forwarder_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await forwarder_task
         await job_queue.stop()
+
+        from photofant.inference.generative_engine import generative_engine
+        from photofant.inference.gguf_engine import gguf_engine
+        from photofant.inference.session_manager import session_manager
+
+        generative_engine.unload()
+        gguf_engine.unload()
+        session_manager.shutdown()
 
 
 def run_worker_process(
