@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
@@ -117,7 +117,10 @@ def _insert_smart_member(session: Session, collection_id: int, asset_id: int) ->
     stmt = (
         sqlite_insert(CollectionItem)
         .values(collection_id=collection_id, asset_id=asset_id, source="smart")
-        .on_conflict_do_nothing(index_elements=["collection_id", "asset_id"])
+        .on_conflict_do_nothing(
+            index_elements=["collection_id", "asset_id"],
+            index_where=text("asset_id IS NOT NULL"),
+        )
     )
     session.execute(stmt)
 

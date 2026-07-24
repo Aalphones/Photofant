@@ -212,6 +212,17 @@ class CollectionItem(Base):
             "(asset_id IS NOT NULL AND face_id IS NULL) OR (asset_id IS NULL AND face_id IS NOT NULL)",
             name="ck_collection_item_xor",
         ),
+        # Partielle Unique-Indizes (Migration 0042) — hier gespiegelt, damit Base.metadata.create_all
+        # (Tests) dasselbe Schema wie Alembic (Produktion) erzeugt. Ein normaler Multi-Spalten-Unique
+        # greift bei NULL-Werten laut SQL-Standard nicht, daher pro Achse ein WHERE-eingeschränkter Index.
+        Index(
+            "uq_collection_item_asset", "collection_id", "asset_id",
+            unique=True, sqlite_where=text("asset_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_collection_item_face", "collection_id", "face_id",
+            unique=True, sqlite_where=text("face_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
