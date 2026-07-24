@@ -56,6 +56,17 @@ class RerankSettings(TypedDict):
     candidate_pool_size: int    # wie viele SigLIP2-Kandidaten in den DINOv2-Rerank gehen
 
 
+class MaintenanceReconcileSettings(TypedDict):
+    # "size" = Datei-Größe auf Disk gegen Asset.file_size prüfen (fängt 0-Byte/halb kopiert,
+    # rehasht nichts). "off" = Integritäts-Topf im FS↔DB-Abgleich abschalten. Bewusst ein
+    # Enum, kein bool: ein späteres "hash" (voller Rehash) passt rein, ohne den Key zu tauschen.
+    integrity_check: str
+
+
+class MaintenanceSettings(TypedDict):
+    reconcile: MaintenanceReconcileSettings
+
+
 class KnowledgeSettings(TypedDict):
     vault_path: str | None      # Wurzel der Markdown-Wissensbasis; None = <data_root>/.photofant/knowledge
     default_domain: str         # Domäne für neue Entities ohne explizite Angabe (P22)
@@ -141,6 +152,7 @@ class AppSettings(TypedDict):
     knowledge: KnowledgeSettings
     recommendations: RecommendationSettings
     ai: AiSettings
+    maintenance: MaintenanceSettings
 
 
 SETTINGS_DEFAULTS: AppSettings = {
@@ -264,6 +276,13 @@ SETTINGS_DEFAULTS: AppSettings = {
         },
         "promptLibraryPath": "",
     },
+    # FS↔DB-Abgleich: der Integritäts-Topf prüft, ob am DB-Pfad liegende Dateien auch lesbar
+    # sind (nicht nur, ob sie existieren). "size" ist der billige Standard, "off" schaltet ihn ab.
+    "maintenance": {
+        "reconcile": {
+            "integrity_check": "size",
+        },
+    },
 }
 
 # Maps known top-level keys to their expected Python types.
@@ -315,6 +334,7 @@ _EXPECTED_TYPES: dict[str, type | tuple[type, ...]] = {
     "knowledge": dict,
     "recommendations": dict,
     "ai": dict,
+    "maintenance": dict,
 }
 
 

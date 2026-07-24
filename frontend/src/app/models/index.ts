@@ -115,6 +115,7 @@ export type {
   AcknowledgedMissing,
   StrandedFace,
   IncompleteMetadata,
+  CorruptedFile,
   ReconcileReport,
   RepairItem,
   RepairAction,

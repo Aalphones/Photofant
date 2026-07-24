@@ -13,18 +13,23 @@ from photofant.db.session import SessionLocal
 from photofant.jobs.import_job import steps_from_settings
 from photofant.jobs.queue import JobKind, JobState, JobStatus, job_queue
 from photofant.maintenance.reconcile import (
+    CORRUPT_EMPTY,
+    CORRUPT_SIZE_MISMATCH,
     AcknowledgedMissingItem,
+    CorruptedFileItem,
     IncompleteMetadataItem,
     InstanceRecord,
     MisassignedInstanceItem,
     OrphanedFaceItem,
     StrandedFaceItem,
+    assess_file_integrity,
     classify_orphaned_edits,
     classify_reconcile,
     norm_path,
 )
 from photofant.maintenance.store import persist_report
 from photofant.media.meta import SUPPORTED_EXTENSIONS
+from photofant.settings import load_settings
 
 log = logging.getLogger(__name__)
 
@@ -311,6 +316,82 @@ def _gather_incomplete_metadata() -> list[IncompleteMetadataItem]:
     return items
 
 
+def _is_decodable(path: Path) -> bool:
+    """Cheap image-header probe — used only when no reference size is on record."""
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        with Image.open(path) as image:
+            image.verify()
+        return True
+    except (UnidentifiedImageError, OSError, ValueError):
+        return False
+
+
+def _corrupt_detail(reason: str, on_disk_size: int, expected_size: int | None) -> str:
+    """Plain-language explanation for the report row."""
+    if reason == CORRUPT_EMPTY:
+        return "Datei ist leer (0 Bytes) — beim Verschieben abgebrochen"
+    if reason == CORRUPT_SIZE_MISMATCH:
+        return f"Größe weicht ab: {on_disk_size} statt {expected_size} Bytes — unvollständig kopiert"
+    return "Datei ist kein lesbares Bild"
+
+
+def _gather_corrupted_files() -> list[CorruptedFileItem]:
+    """Active instances whose file is present at the recorded path but unreadable.
+
+    `classify_reconcile` drops these as "consistent" — it only checks that a file *exists*
+    at the path, never that the bytes are intact. This is the second question: does the
+    on-disk size match what we recorded at import? A stat per instance, no rehash of the
+    library. Disjoint from missing/drift by construction — those cover the *absent* rows,
+    this one only the present-but-broken ones. Skips instances the file is missing for
+    (that's the missing/drift bucket's job) and honours the `integrity_check` off-switch.
+    """
+    mode = load_settings()["maintenance"]["reconcile"]["integrity_check"]
+    if mode == "off":
+        return []
+
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(
+                AssetInstance.id,
+                AssetInstance.asset_id,
+                AssetInstance.path,
+                Asset.file_size,
+                Person.name,
+            )
+            .join(Asset, Asset.id == AssetInstance.asset_id)
+            .join(Person, Person.id == AssetInstance.person_id)
+            .where(AssetInstance.deleted_at.is_(None))
+            .where(AssetInstance.missing_at.is_(None))
+        ).all()
+
+    items: list[CorruptedFileItem] = []
+    for instance_id, asset_id, path_str, expected_size, person_name in rows:
+        path = Path(path_str)
+        try:
+            on_disk_size = path.stat().st_size
+        except OSError:
+            continue  # file absent → missing/drift already covers it
+
+        decodable = _is_decodable(path) if expected_size is None else None
+        reason = assess_file_integrity(on_disk_size, expected_size, decodable)
+        if reason is None:
+            continue
+
+        items.append(
+            CorruptedFileItem(
+                instance_id=instance_id,
+                asset_id=asset_id,
+                path=path_str,
+                person_name=person_name,
+                reason=reason,
+                detail=_corrupt_detail(reason, on_disk_size, expected_size),
+            )
+        )
+    return items
+
+
 def _run_reconcile() -> int:
     data_root = get_data_root()
     active = _gather_active_instances()
@@ -324,6 +405,7 @@ def _run_reconcile() -> int:
     )
     report.stranded_faces = _gather_stranded_faces(data_root)
     report.incomplete_metadata = _gather_incomplete_metadata()
+    report.corrupted_files = _gather_corrupted_files()
 
     with SessionLocal() as session:
         persist_report(session, report)
@@ -331,7 +413,7 @@ def _run_reconcile() -> int:
     log.info(
         "Reconcile done: %d orphaned, %d missing, %d drift, %d orphaned faces, "
         "%d misassigned, %d acknowledged-missing, %d orphaned edits, %d stranded faces, "
-        "%d incomplete metadata",
+        "%d incomplete metadata, %d corrupted",
         len(report.orphaned_files),
         len(report.missing_files),
         len(report.path_drift),
@@ -341,6 +423,7 @@ def _run_reconcile() -> int:
         len(report.orphaned_edits),
         len(report.stranded_faces),
         len(report.incomplete_metadata),
+        len(report.corrupted_files),
     )
     return report.total
 

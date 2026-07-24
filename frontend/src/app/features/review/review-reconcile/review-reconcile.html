@@ -32,6 +32,18 @@
   </div>
 
   <div class="rr__sections">
+    @if (corruptedRows().length > 0) {
+      <pf-rr-section
+        title="Beschädigte Dateien"
+        subtitle="Am richtigen Pfad, aber leer oder unvollständig — Thumbnail da, Bild lädt nicht."
+        variant="danger"
+        [rows]="corruptedRows()"
+        [actions]="CORRUPTED_ACTIONS"
+        [busy]="isRepairing()"
+        (repair)="onRepair('corrupted', $event)"
+      />
+    }
+
     @if (orphanRows().length > 0) {
       <pf-rr-section
         title="Verwaiste Dateien"

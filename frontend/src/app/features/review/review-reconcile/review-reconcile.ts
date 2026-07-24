@@ -9,6 +9,7 @@ import { Store } from '@ngrx/store';
 import { Icon } from '@photofant/ui';
 import type {
   AcknowledgedMissing,
+  CorruptedFile,
   DriftFile,
   IncompleteMetadata,
   IssueKind,
@@ -68,6 +69,10 @@ export class ReviewReconcile {
   ];
   protected readonly INCOMPLETE_METADATA_ACTIONS: RrAction[] = [
     { label: 'Nachziehen', variant: 'primary', action: 'reprocess_metadata', icon: 'refresh' },
+  ];
+  protected readonly CORRUPTED_ACTIONS: RrAction[] = [
+    { label: 'Bereinigen', variant: 'danger', action: 'purge', icon: 'trash' },
+    { label: 'Verstecken', variant: 'primary', action: 'mark_missing', icon: 'x' },
   ];
 
   // ── Buckets projected to display rows ───────────────────────────────────────
@@ -144,6 +149,14 @@ export class ReviewReconcile {
     }))
   );
 
+  protected readonly corruptedRows = computed((): RrRow[] =>
+    (this.report()?.corrupted_files ?? []).map((file: CorruptedFile) => ({
+      key: file.instance_id,
+      name: this.fileName(file.path),
+      meta: `${file.person_name ?? '_unknown'} · ${this.corruptedReasonLabel(file.reason)}`,
+    }))
+  );
+
   protected readonly totalIssues = computed((): number =>
     this.orphanRows().length +
     this.missingRows().length +
@@ -153,7 +166,8 @@ export class ReviewReconcile {
     this.ackMissingRows().length +
     this.orphanedEditRows().length +
     this.strandedFaceRows().length +
-    this.incompleteMetadataRows().length
+    this.incompleteMetadataRows().length +
+    this.corruptedRows().length
   );
 
   // ── Actions ─────────────────────────────────────────────────────────────────
@@ -193,8 +207,21 @@ export class ReviewReconcile {
       case 'incomplete_metadata':
         return { item: { kind, asset_id: key as number }, action };
       default:
-        // missing, misassigned, acknowledged_missing — all keyed by instance id.
+        // missing, misassigned, acknowledged_missing, corrupted — all keyed by instance id.
         return { item: { kind, instance_id: key as number }, action };
+    }
+  }
+
+  protected corruptedReasonLabel(reason: string): string {
+    switch (reason) {
+      case 'empty':
+        return 'leer (0 Bytes)';
+      case 'size_mismatch':
+        return 'unvollständig kopiert';
+      case 'undecodable':
+        return 'kein lesbares Bild';
+      default:
+        return 'beschädigt';
     }
   }
 

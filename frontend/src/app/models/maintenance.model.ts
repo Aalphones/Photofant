@@ -15,6 +15,7 @@ export const ISSUE_KINDS = [
   'orphaned_edit',
   'stranded_face',
   'incomplete_metadata',
+  'corrupted',
 ] as const;
 export type IssueKind = typeof ISSUE_KINDS[number];
 
@@ -95,6 +96,15 @@ export interface IncompleteMetadata {
   detail: string;
 }
 
+export interface CorruptedFile {
+  instance_id: number;
+  asset_id: number;
+  path: string;
+  person_name: string | null;
+  reason: string;  // 'empty' | 'size_mismatch' | 'undecodable'
+  detail: string;
+}
+
 export interface ReconcileReport {
   generated_at: string | null;
   orphaned_files: OrphanFile[];
@@ -106,6 +116,7 @@ export interface ReconcileReport {
   orphaned_edits: OrphanFile[];
   stranded_faces: StrandedFace[];
   incomplete_metadata: IncompleteMetadata[];
+  corrupted_files: CorruptedFile[];
 }
 
 export interface RepairItem {

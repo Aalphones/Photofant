@@ -146,6 +146,15 @@ class IncompleteMetadataDto(BaseModel):
     detail: str
 
 
+class CorruptedFileDto(BaseModel):
+    instance_id: int
+    asset_id: int
+    path: str
+    person_name: str | None
+    reason: str
+    detail: str
+
+
 class ReconcileReportDto(BaseModel):
     generated_at: str | None
     orphaned_files: list[OrphanDto]
@@ -157,6 +166,7 @@ class ReconcileReportDto(BaseModel):
     orphaned_edits: list[OrphanDto] = []
     stranded_faces: list[StrandedFaceDto] = []
     incomplete_metadata: list[IncompleteMetadataDto] = []
+    corrupted_files: list[CorruptedFileDto] = []
 
 
 _EMPTY_REPORT = ReconcileReportDto(
@@ -170,13 +180,14 @@ _EMPTY_REPORT = ReconcileReportDto(
     orphaned_edits=[],
     stranded_faces=[],
     incomplete_metadata=[],
+    corrupted_files=[],
 )
 
 
 class RepairItem(BaseModel):
     kind: Literal[
         "orphan", "missing", "drift", "orphaned_face", "misassigned", "acknowledged_missing",
-        "orphaned_edit", "stranded_face", "incomplete_metadata",
+        "orphaned_edit", "stranded_face", "incomplete_metadata", "corrupted",
     ]
     instance_id: int | None = None
     face_id: int | None = None
@@ -282,6 +293,16 @@ async def _apply_one(
         if item.asset_id is None:
             raise repair.RepairError("reprocess_metadata requires an asset_id")
         await repair.reprocess_incomplete_metadata(session, item.asset_id)
+    elif item.kind == "corrupted" and action == "mark_missing":
+        if item.instance_id is None:
+            raise repair.RepairError("mark_missing requires an instance_id")
+        repair.mark_missing(session, item.instance_id)
+    elif item.kind == "corrupted" and action == "purge":
+        # "Bereinigen": the broken file + its DB row go — purge_missing deletes exactly the
+        # path the instance points at (the corrupt file), so the asset can be re-imported clean.
+        if item.instance_id is None:
+            raise repair.RepairError("corrupted purge requires an instance_id")
+        await repair.purge_missing(session, item.instance_id, get_cache_db_path())
     else:
         raise repair.RepairError(f"unsupported action '{action}' for kind '{item.kind}'")
 

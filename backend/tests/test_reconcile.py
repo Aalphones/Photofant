@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 from photofant.maintenance.reconcile import (
+    CORRUPT_EMPTY,
+    CORRUPT_SIZE_MISMATCH,
+    CORRUPT_UNDECODABLE,
     InstanceRecord,
+    assess_file_integrity,
     classify_orphaned_edits,
     classify_reconcile,
     norm_path,
@@ -152,3 +156,32 @@ def test_ensure_under_root_accepts_inside_path(tmp_path: Path) -> None:
     resolved = ensure_under_root(inside, data_root)
 
     assert str(resolved).startswith(str(data_root.resolve()))
+
+
+# ── integrity assessment: the "present but broken" decision (data-critical) ──
+
+
+def test_zero_bytes_is_empty_regardless_of_expected() -> None:
+    assert assess_file_integrity(0, expected_size=1234, decodable=None) == CORRUPT_EMPTY
+    assert assess_file_integrity(0, expected_size=None, decodable=True) == CORRUPT_EMPTY
+
+
+def test_size_mismatch_flags_half_written_copy() -> None:
+    # The move was interrupted: only part of the file made it to the new path.
+    assert assess_file_integrity(500, expected_size=1234, decodable=None) == CORRUPT_SIZE_MISMATCH
+
+
+def test_size_match_is_trusted_without_decoding() -> None:
+    # Bytes on disk match what we recorded at import → intact, no decode probe needed.
+    assert assess_file_integrity(1234, expected_size=1234, decodable=None) is None
+
+
+def test_unknown_size_falls_back_to_decode_probe() -> None:
+    # Older asset without a recorded size: the decode probe is the only signal.
+    assert assess_file_integrity(999, expected_size=None, decodable=False) == CORRUPT_UNDECODABLE
+    assert assess_file_integrity(999, expected_size=None, decodable=True) is None
+
+
+def test_unknown_size_and_no_probe_result_is_treated_as_intact() -> None:
+    # decodable=None with no reference size → nothing to accuse the file of.
+    assert assess_file_integrity(999, expected_size=None, decodable=None) is None

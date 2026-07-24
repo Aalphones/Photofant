@@ -128,6 +128,31 @@ class AcknowledgedMissingItem:
     detail: str
 
 
+# Reasons a present file is still unusable — kept as constants so the frontend and
+# tests never match against bare strings.
+CORRUPT_EMPTY = "empty"  # 0 bytes on disk
+CORRUPT_SIZE_MISMATCH = "size_mismatch"  # on-disk size ≠ the size recorded at import
+CORRUPT_UNDECODABLE = "undecodable"  # no reference size, and the file won't decode as an image
+
+
+@dataclass
+class CorruptedFileItem:
+    """An active instance whose file exists at the recorded path but can't be read.
+
+    The main scan treats "a file is at the path" as consistent and drops the row — it
+    never checks the bytes. A move interrupted mid-copy (re-sorting a photo while its
+    import job still runs) leaves a 0-byte or half-written file the scan calls healthy,
+    yet the lightbox gets undecodable content. This is the bucket that catches it.
+    """
+
+    instance_id: int
+    asset_id: int
+    path: str
+    person_name: str | None
+    reason: str  # one of CORRUPT_*
+    detail: str
+
+
 @dataclass
 class IncompleteMetadataItem:
     """An active asset whose caption, tags, or CLIP embedding never finished computing.
@@ -159,6 +184,7 @@ class ReconcileReport:
     orphaned_edits: list[OrphanItem] = field(default_factory=list)
     stranded_faces: list[StrandedFaceItem] = field(default_factory=list)
     incomplete_metadata: list[IncompleteMetadataItem] = field(default_factory=list)
+    corrupted_files: list[CorruptedFileItem] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -172,6 +198,7 @@ class ReconcileReport:
             + len(self.orphaned_edits)
             + len(self.stranded_faces)
             + len(self.incomplete_metadata)
+            + len(self.corrupted_files)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -186,6 +213,7 @@ class ReconcileReport:
             "orphaned_edits": [asdict(item) for item in self.orphaned_edits],
             "stranded_faces": [asdict(item) for item in self.stranded_faces],
             "incomplete_metadata": [asdict(item) for item in self.incomplete_metadata],
+            "corrupted_files": [asdict(item) for item in self.corrupted_files],
         }
 
 
@@ -297,6 +325,36 @@ def classify_reconcile(
         )
 
     return report
+
+
+def assess_file_integrity(
+    on_disk_size: int,
+    expected_size: int | None,
+    decodable: bool | None,
+) -> str | None:
+    """Decide whether a present file is corrupted — pure, so it's unit-testable.
+
+    Returns a CORRUPT_* reason, or None when the file looks intact. The caller does the
+    filesystem I/O (a `stat`, and only when there's no reference size, a decode probe);
+    this function holds just the decision.
+
+    - 0 bytes → empty, always corrupt.
+    - a known `expected_size` (Asset.file_size, recorded at import) is the cheap, exact
+      signal: any mismatch means the copy was interrupted or the wrong file sits here.
+      A size match is trusted outright — no decode needed.
+    - only when the size is unknown (older assets) do we fall back to the decode probe.
+    """
+    if on_disk_size == 0:
+        return CORRUPT_EMPTY
+
+    if expected_size is not None:
+        if on_disk_size != expected_size:
+            return CORRUPT_SIZE_MISMATCH
+        return None
+
+    if decodable is False:
+        return CORRUPT_UNDECODABLE
+    return None
 
 
 def classify_orphaned_edits(
